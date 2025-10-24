@@ -1,0 +1,5652 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Planificateur de menus hebdomadaires avec génération automatique de liste de courses">
+  <title>Menu Hebdo - Planificateur de Menus</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍽️</text></svg>">
+
+  <style>
+/**
+ * Menu Hebdo - Planificateur de Menus
+ * Style principal optimisé
+ * @author Claude Code
+ * @version 2.0
+ */
+
+/* ============================================
+   IMPORTS & FONTS
+   ============================================ */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+/* ============================================
+   RESET & BASE
+   ============================================ */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* ============================================
+   THEME VARIABLES
+   ============================================ */
+:root {
+  /* Colors */
+  --primary: #667eea;
+  --primary-dark: #5568d3;
+  --secondary: #764ba2;
+  --accent: #a78bfa;
+  --success: #10b981;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+
+  /* Backgrounds */
+  --bg-1: #0f172a;
+  --bg-2: #1e293b;
+  --bg-3: #334155;
+  --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+  /* Text */
+  --text-1: #f1f5f9;
+  --text-2: #cbd5e1;
+  --text-3: #94a3b8;
+
+  /* Effects */
+  --glass: rgba(255, 255, 255, 0.1);
+  --glass-border: rgba(255, 255, 255, 0.2);
+  --shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+  --radius: 16px;
+
+  /* Animations */
+  --transition-base: 0.3s ease;
+  --transition-fast: 0.2s ease;
+}
+
+/* Dark Theme */
+[data-theme="dark"] {
+  --primary: #8b5cf6;
+  --primary-dark: #7c3aed;
+  --secondary: #6366f1;
+  --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  --accent: #a78bfa;
+  --glass: rgba(255, 255, 255, 0.05);
+  --glass-border: rgba(255, 255, 255, 0.1);
+}
+
+/* Light Theme */
+[data-theme="light"] {
+  --primary: #6366f1;
+  --primary-dark: #4f46e5;
+  --secondary: #8b5cf6;
+  --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  --accent: #818cf8;
+  --text-1: #0f172a;
+  --text-2: #334155;
+  --text-3: #64748b;
+  --glass: rgba(15, 23, 42, 0.05);
+  --glass-border: rgba(15, 23, 42, 0.1);
+}
+
+/* Forest Theme */
+[data-theme="forest"] {
+  --primary: #10b981;
+  --primary-dark: #059669;
+  --secondary: #14b8a6;
+  --bg-gradient: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
+  --accent: #34d399;
+}
+
+/* ============================================
+   BODY & LAYOUT
+   ============================================ */
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg-gradient);
+  min-height: 100vh;
+  padding: 20px;
+  color: var(--text-1);
+  position: relative;
+  overflow-x: hidden;
+  transition: background var(--transition-base);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.1), transparent 50%),
+              radial-gradient(circle at 80% 70%, rgba(255, 255, 255, 0.1), transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.container {
+  max-width: 1600px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+/* ============================================
+   TYPOGRAPHY
+   ============================================ */
+h1 {
+  font-size: clamp(1.8em, 5vw, 2.5em);
+  font-weight: 800;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+[data-theme="dark"] h1,
+[data-theme="forest"] h1 {
+  background: linear-gradient(135deg, #fff, #e0e7ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+[data-theme="light"] h1 {
+  color: #0f172a;
+}
+
+h2 {
+  color: var(--text-1);
+  font-weight: 700;
+  font-size: 1.8em;
+  margin-bottom: 15px;
+}
+
+/* ============================================
+   HEADER
+   ============================================ */
+header {
+  background: var(--glass);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  padding: 30px;
+  margin-bottom: 30px;
+  box-shadow: var(--shadow);
+}
+
+/* ============================================
+   THEME SELECTOR
+   ============================================ */
+.theme-selector {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.theme-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  position: relative;
+}
+
+.theme-btn:hover {
+  transform: scale(1.15);
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+}
+
+.theme-btn.active {
+  border-color: #fff;
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+}
+
+.theme-btn[data-theme="dark"] {
+  background: linear-gradient(135deg, #0f172a, #8b5cf6);
+}
+
+.theme-btn[data-theme="light"] {
+  background: linear-gradient(135deg, #f8fafc, #6366f1);
+}
+
+.theme-btn[data-theme="forest"] {
+  background: linear-gradient(135deg, #064e3b, #10b981);
+}
+
+/* ============================================
+   NAVIGATION BUTTONS
+   ============================================ */
+.nav-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.nav-buttons button {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--text-1);
+  padding: 12px 28px;
+  border-radius: 50px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-base) cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.nav-buttons button:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+.nav-buttons button.active {
+  background: var(--primary);
+  border-color: transparent;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+/* ============================================
+   CONTENT & VIEWS
+   ============================================ */
+.content {
+  background: var(--glass);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  padding: 30px;
+  box-shadow: var(--shadow);
+}
+
+.view {
+  display: none;
+}
+
+.view.active {
+  display: block;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ============================================
+   BUTTONS
+   ============================================ */
+.btn {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  padding: 14px 32px;
+  border-radius: 50px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  display: inline-block;
+  text-decoration: none;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, var(--danger), #dc2626);
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+}
+
+.btn-danger:hover {
+  box-shadow: 0 8px 25px rgba(239, 68, 68, 0.5);
+}
+
+.btn-clear {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  border: 2px solid rgba(239, 68, 68, 0.4);
+  padding: 12px 24px;
+  border-radius: 50px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.btn-clear:hover {
+  background: rgba(239, 68, 68, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+}
+
+.back-button {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--text-1);
+  padding: 12px 24px;
+  border-radius: 50px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-bottom: 20px;
+  transition: all var(--transition-base);
+}
+
+.back-button:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateX(-5px);
+}
+
+.random-meal-btn {
+  background: linear-gradient(135deg, var(--warning), #ea580c);
+  color: #fff;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 50px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
+}
+
+.random-meal-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(245, 158, 11, 0.5);
+}
+
+/* ============================================
+   WEEK CARDS
+   ============================================ */
+.weeks-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.week-card {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius);
+  padding: 24px;
+  cursor: pointer;
+  transition: all var(--transition-base) cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.week-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--primary);
+  transform: scaleX(0);
+  transition: transform var(--transition-base);
+}
+
+.week-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.week-card:hover::before {
+  transform: scaleX(1);
+}
+
+.week-card.current {
+  border-color: var(--primary);
+  box-shadow: 0 0 30px var(--primary);
+}
+
+.week-card.current::after {
+  content: '⭐ Actuelle';
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: var(--primary);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.week-title {
+  font-size: 1.4em;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.week-dates {
+  color: var(--text-3);
+  font-size: 0.95em;
+  margin-bottom: 15px;
+}
+
+.week-stats {
+  color: var(--text-2);
+  font-size: 0.9em;
+  margin-bottom: 15px;
+}
+
+.week-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.week-actions button {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-edit {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.btn-edit:hover {
+  background: rgba(59, 130, 246, 0.3);
+  transform: translateY(-2px);
+}
+
+.btn-delete {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.btn-delete:hover {
+  background: rgba(239, 68, 68, 0.3);
+  transform: translateY(-2px);
+}
+
+.add-week-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px dashed rgba(255, 255, 255, 0.3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  min-height: 200px;
+  transition: all var(--transition-base);
+}
+
+.add-week-card:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--primary);
+}
+
+.add-week-icon {
+  font-size: 3em;
+}
+
+/* ============================================
+   MENU TABLE
+   ============================================ */
+.menu-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 12px;
+  margin-top: 20px;
+}
+
+.menu-table th {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 16px;
+  font-weight: 700;
+  border-radius: 10px;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.menu-table td {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 16px;
+  vertical-align: top;
+  min-height: 150px;
+  position: relative;
+  transition: all var(--transition-base);
+}
+
+.menu-table td:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.02);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+.day-header {
+  background: var(--primary) !important;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.meal-cell {
+  min-height: 180px;
+  cursor: pointer;
+  position: relative;
+}
+
+.cell-actions {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  display: none;
+  gap: 4px;
+  flex-wrap: wrap;
+  max-width: 100px;
+  z-index: 5;
+}
+
+.meal-cell:hover .cell-actions {
+  display: flex;
+}
+
+.meal-cell.has-popup .cell-actions {
+  display: none !important;
+}
+
+.cell-btn {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border: none;
+  padding: 4px 7px;
+  font-size: 11px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.cell-btn:hover {
+  background: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* ============================================
+   INGREDIENT TAGS
+   ============================================ */
+.ingredient-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 30px;
+}
+
+.ingredient-tag,
+.recipe-tag {
+  padding: 8px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.ingredient-tag:hover,
+.recipe-tag:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.recipe-tag {
+  background: var(--primary);
+  color: #fff;
+  font-weight: 700;
+}
+
+/* Tag Types - Dark & Forest Themes */
+[data-theme="dark"] .type-proteine,
+[data-theme="forest"] .type-proteine {
+  background: #fca5a5;
+  color: #7f1d1d;
+  border: 2px solid #ef4444;
+  font-weight: 700;
+}
+
+[data-theme="dark"] .type-feculent,
+[data-theme="forest"] .type-feculent {
+  background: #fcd34d;
+  color: #78350f;
+  border: 2px solid #f59e0b;
+  font-weight: 700;
+}
+
+[data-theme="dark"] .type-legume,
+[data-theme="forest"] .type-legume {
+  background: #6ee7b7;
+  color: #064e3b;
+  border: 2px solid #10b981;
+  font-weight: 700;
+}
+
+[data-theme="dark"] .type-autre,
+[data-theme="forest"] .type-autre {
+  background: #93c5fd;
+  color: #1e3a8a;
+  border: 2px solid #3b82f6;
+  font-weight: 700;
+}
+
+/* Tag Types - Light Theme */
+[data-theme="light"] .type-proteine {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 2px solid #dc2626;
+  font-weight: 700;
+}
+
+[data-theme="light"] .type-feculent {
+  background: #fef3c7;
+  color: #92400e;
+  border: 2px solid #f59e0b;
+  font-weight: 700;
+}
+
+[data-theme="light"] .type-legume {
+  background: #d1fae5;
+  color: #065f46;
+  border: 2px solid #10b981;
+  font-weight: 700;
+}
+
+[data-theme="light"] .type-autre {
+  background: #dbeafe;
+  color: #1e40af;
+  border: 2px solid #3b82f6;
+  font-weight: 700;
+}
+
+/* ============================================
+   INPUT & AUTOCOMPLETE
+   ============================================ */
+.input-container {
+  position: relative;
+  display: none;
+}
+
+.input-container.active {
+  display: block;
+}
+
+.ingredient-input,
+.search-input {
+  width: 100%;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 2px solid var(--primary);
+  border-radius: 10px;
+  font-size: 14px;
+  color: #1e293b;
+  font-weight: 500;
+}
+
+.autocomplete-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(10px);
+  border: 2px solid var(--primary);
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.autocomplete-item {
+  padding: 12px;
+  cursor: pointer;
+  color: #1e293b;
+  font-weight: 500;
+  transition: background var(--transition-fast);
+}
+
+.autocomplete-item:hover {
+  background: rgba(102, 126, 234, 0.1);
+}
+
+/* ============================================
+   PORTIONS
+   ============================================ */
+.portion-badge {
+  position: absolute;
+  top: 35px;
+  right: 12px;
+  background: linear-gradient(135deg, var(--warning), #ea580c);
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  z-index: 10;
+  transition: all var(--transition-base);
+  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
+}
+
+.portion-badge:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.6);
+}
+
+.portion-input-popup {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(30, 41, 59, 0.98);
+  backdrop-filter: blur(20px);
+  border: 2px solid var(--warning);
+  border-radius: 12px;
+  padding: 18px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: none;
+  pointer-events: auto;
+}
+
+.portion-input-popup.active {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.portion-input-popup input {
+  width: 70px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-1);
+  margin-right: 10px;
+}
+
+.portion-input-popup button {
+  padding: 8px 14px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+  margin-left: 6px;
+  transition: all var(--transition-fast);
+  background: var(--primary);
+  color: #fff;
+}
+
+.portion-input-popup button:hover {
+  transform: scale(1.05);
+}
+
+/* ============================================
+   MEAL STATUS
+   ============================================ */
+.status-selector {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.status-option {
+  padding: 18px;
+  border-radius: 12px;
+  text-align: center;
+  cursor: pointer;
+  font-weight: 700;
+  color: #fff;
+  transition: all var(--transition-base);
+  border: 3px solid transparent;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.status-option:hover {
+  transform: scale(1.05);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+.status-option.selected {
+  border-color: #fff;
+  box-shadow: 0 0 25px rgba(255, 255, 255, 0.5);
+}
+
+.status-restaurant {
+  background: linear-gradient(135deg, #ff6b6b, #ee5a6f);
+}
+
+.status-verseaux {
+  background: linear-gradient(135deg, #4ecdc4, #44a08d);
+}
+
+.status-copains {
+  background: linear-gradient(135deg, #f093fb, #f5576c);
+}
+
+.status-joker {
+  background: linear-gradient(135deg, #ffd89b, #19547b);
+}
+
+.status-normal {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-1);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.meal-status-restaurant {
+  background: linear-gradient(135deg, rgba(255, 107, 107, 0.3), rgba(238, 90, 111, 0.3)) !important;
+  border: 2px solid #ff6b6b !important;
+}
+
+.meal-status-verseaux {
+  background: linear-gradient(135deg, rgba(78, 205, 196, 0.3), rgba(68, 160, 141, 0.3)) !important;
+  border: 2px solid #4ecdc4 !important;
+}
+
+.meal-status-copains {
+  background: linear-gradient(135deg, rgba(240, 147, 251, 0.3), rgba(245, 87, 108, 0.3)) !important;
+  border: 2px solid #f093fb !important;
+}
+
+.meal-status-joker {
+  background: linear-gradient(135deg, rgba(255, 216, 155, 0.3), rgba(25, 84, 123, 0.3)) !important;
+  border: 2px solid #ffd89b !important;
+}
+
+.meal-status-label {
+  color: #fff;
+  font-weight: 800;
+  font-size: 18px;
+  text-align: center;
+  padding: 30px;
+  text-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
+}
+
+/* ============================================
+   INGREDIENTS LIST
+   ============================================ */
+.ingredients-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.ingredient-card {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 16px;
+  border-radius: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all var(--transition-base);
+}
+
+.ingredient-card:hover {
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+.ingredient-card .name {
+  font-weight: 700;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ingredient-card .actions {
+  display: flex;
+  gap: 8px;
+}
+
+.ingredient-card button {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.ingredient-card button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+.favorite-star {
+  font-size: 20px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  user-select: none;
+}
+
+.favorite-star:hover {
+  transform: scale(1.2);
+}
+
+.favorite-star.active {
+  color: #fbbf24;
+  text-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
+}
+
+.ingredient-rayon {
+  font-size: 12px;
+  color: var(--text-3);
+  margin-top: 5px;
+}
+
+/* ============================================
+   FORMS
+   ============================================ */
+.add-ingredient-form {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 25px;
+  border-radius: var(--radius);
+  margin-bottom: 25px;
+}
+
+.form-group {
+  margin-bottom: 18px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 700;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-2);
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  color: var(--text-1);
+  font-size: 15px;
+  font-weight: 500;
+  transition: all var(--transition-base);
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+/* ============================================
+   FILTERS
+   ============================================ */
+.filter-buttons,
+.type-filters {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.filter-btn,
+.type-filter-btn {
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50px;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-1);
+  transition: all var(--transition-base);
+}
+
+.filter-btn.active,
+.type-filter-btn.active {
+  background: var(--primary);
+  border-color: transparent;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+/* ============================================
+   RECIPES
+   ============================================ */
+.recipe-card {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 15px;
+  transition: all var(--transition-base);
+}
+
+.recipe-card:hover {
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+.recipe-name {
+  font-size: 1.3em;
+  font-weight: 700;
+  margin-bottom: 15px;
+  color: var(--text-1);
+}
+
+.recipe-ingredients {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.recipe-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.recipe-tag-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  transition: all var(--transition-fast);
+  cursor: pointer;
+}
+
+.recipe-tag-item:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* ============================================
+   TAG SELECTOR
+   ============================================ */
+.tag-selector {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 20px;
+  border-radius: 12px;
+  margin: 15px 0;
+}
+
+.tag-selector h4 {
+  margin-bottom: 12px;
+  color: var(--text-1);
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.available-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.tag-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  opacity: 0.6;
+  border: 2px solid transparent;
+}
+
+.tag-option:hover {
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+.tag-option.selected {
+  opacity: 1;
+  border-color: #fff;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.custom-tag-input {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.custom-tag-input input {
+  flex: 1;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  color: var(--text-1);
+  font-weight: 600;
+}
+
+.custom-tag-input input[type="color"] {
+  width: 60px;
+  height: 40px;
+  cursor: pointer;
+}
+
+/* ============================================
+   SHOPPING LIST
+   ============================================ */
+.shopping-category {
+  margin-bottom: 25px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 20px;
+  border-radius: 12px;
+}
+
+.shopping-category h3 {
+  color: var(--text-1);
+  font-size: 1.2em;
+  font-weight: 700;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--primary);
+}
+
+.shopping-item {
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 8px 0;
+  border-radius: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all var(--transition-fast);
+}
+
+.shopping-item:hover {
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateX(5px);
+}
+
+.shopping-item.checked {
+  opacity: 0.4;
+  text-decoration: line-through;
+}
+
+.shopping-item input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+  accent-color: var(--primary);
+}
+
+.quantity-badge {
+  background: var(--primary);
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 14px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+/* ============================================
+   SEASONAL CALENDAR
+   ============================================ */
+.seasonal-tabs {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.seasonal-tab {
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  color: var(--text-1);
+}
+
+.seasonal-tab:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.seasonal-tab.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.seasonal-search {
+  margin-bottom: 20px;
+}
+
+.seasonal-search input {
+  width: 100%;
+  padding: 12px 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  font-size: 15px;
+  color: var(--text-1);
+}
+
+.seasonal-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+}
+
+.seasonal-table th {
+  color: #fff;
+  padding: 12px 8px;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.seasonal-table td {
+  padding: 12px;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 13px;
+  transition: all var(--transition-base);
+}
+
+.seasonal-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: scale(1.02);
+}
+
+.seasonal-table td:first-child {
+  text-align: left;
+  font-weight: 700;
+  padding-left: 15px;
+  color: var(--text-1);
+  background: rgba(255, 255, 255, 0.05);
+  min-width: 180px;
+  position: sticky;
+  left: 0;
+  z-index: 10;
+}
+
+.season-dot {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  transition: all var(--transition-fast);
+}
+
+.season-dot:hover {
+  transform: scale(1.3);
+}
+
+.season-peak {
+  background: #10b981;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+}
+
+.season-available {
+  background: #fbbf24;
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.3);
+}
+
+/* ============================================
+   MODALS
+   ============================================ */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(10px);
+  z-index: 2000;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-overlay.active {
+  display: flex;
+  animation: fadeIn 0.2s;
+}
+
+.custom-modal {
+  background: var(--bg-2);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  padding: 35px;
+  border-radius: 20px;
+  max-width: 550px;
+  width: 90%;
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5);
+  animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-theme="light"] .custom-modal {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 25px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modal-icon {
+  font-size: 2.5em;
+}
+
+.modal-title {
+  font-size: 1.6em;
+  font-weight: 800;
+}
+
+.modal-body {
+  margin-bottom: 30px;
+  color: var(--text-2);
+  line-height: 1.6;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.modal-btn {
+  padding: 14px 28px;
+  border: none;
+  border-radius: 50px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.modal-btn-cancel {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.modal-btn-cancel:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.modal-btn-confirm {
+  background: var(--primary);
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.modal-btn-confirm:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+}
+
+.modal-btn-danger {
+  background: linear-gradient(135deg, var(--danger), #dc2626);
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+}
+
+.modal-btn-danger:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(239, 68, 68, 0.5);
+}
+
+.modal-input-group {
+  margin: 20px 0;
+}
+
+.modal-input-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 700;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.modal-input-group input,
+.modal-input-group select {
+  width: 100%;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  color: var(--text-1);
+  font-size: 15px;
+  font-weight: 500;
+  transition: all var(--transition-base);
+}
+
+.modal-input-group input:focus,
+.modal-input-group select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+.type-selector {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.type-option {
+  padding: 20px;
+  border-radius: 12px;
+  text-align: center;
+  cursor: pointer;
+  font-weight: 700;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  transition: all var(--transition-base);
+}
+
+.type-option:hover {
+  transform: scale(1.05);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+.type-option.selected {
+  border-color: var(--primary);
+  box-shadow: 0 0 20px var(--primary);
+}
+
+/* ============================================
+   TOAST NOTIFICATIONS
+   ============================================ */
+.toast {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  background: rgba(30, 41, 59, 0.98);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 20px 30px;
+  border-radius: 15px;
+  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.5);
+  display: flex;
+  gap: 15px;
+  z-index: 3000;
+  animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.toast.success {
+  border-left: 4px solid var(--success);
+}
+
+.toast.error {
+  border-left: 4px solid var(--danger);
+}
+
+.toast.info {
+  border-left: 4px solid var(--primary);
+}
+
+.toast-icon {
+  font-size: 1.5em;
+}
+
+.toast-message {
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+@media (max-width: 768px) {
+  body {
+    padding: 10px;
+  }
+
+  header {
+    padding: 20px;
+  }
+
+  .content {
+    padding: 20px;
+  }
+
+  .menu-table {
+    border-spacing: 6px;
+  }
+
+  .menu-table th,
+  .menu-table td {
+    padding: 10px;
+    font-size: 12px;
+  }
+
+  .weeks-list {
+    grid-template-columns: 1fr;
+  }
+
+  .ingredients-list {
+    grid-template-columns: 1fr;
+  }
+
+  .nav-buttons button {
+    padding: 10px 20px;
+    font-size: 13px;
+  }
+
+  .custom-modal {
+    width: 95%;
+    padding: 25px;
+  }
+
+  .toast {
+    right: 10px;
+    left: 10px;
+    bottom: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  h1 {
+    font-size: 1.5em;
+  }
+
+  h2 {
+    font-size: 1.3em;
+  }
+
+  .status-selector,
+  .type-selector {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================
+   UTILITIES
+   ============================================ */
+.hidden {
+  display: none !important;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.mt-20 {
+  margin-top: 20px;
+}
+
+.mb-20 {
+  margin-bottom: 20px;
+}
+
+/* ============================================
+   PRINT STYLES
+   ============================================ */
+@media print {
+  body {
+    background: white;
+    color: black;
+  }
+
+  header,
+  .nav-buttons,
+  .cell-actions,
+  .btn,
+  .back-button {
+    display: none;
+  }
+
+  .content {
+    box-shadow: none;
+    border: none;
+  }
+}
+
+  </style>
+</head>
+
+<body data-theme="dark">
+  <div class="container">
+    <header>
+      <h1>🍽️ Planificateur de Menus</h1>
+      <nav class="nav-buttons" role="navigation" aria-label="Navigation principale">
+        <button type="button" onclick="APP.openCurrentWeek()">📅 Menu en cours</button>
+        <button type="button" onclick="APP.showView('weeks')">🗂️ Gestion semaines</button>
+        <button type="button" onclick="APP.showView('recipes')">📖 Recettes</button>
+        <button type="button" onclick="APP.showView('ingredients')">🥕 Ingrédients</button>
+        <button type="button" onclick="APP.showView('settings')">⚙️ Paramètres</button>
+      </nav>
+    </header>
+
+    <main class="content">
+      <section id="weeks-view" class="view active">
+        <div class="weeks-list" id="weeks-list" role="list"></div>
+      </section>
+
+      <section id="menu-view" class="view">
+        <button type="button" class="back-button" onclick="APP.backToWeeks()">← Retour</button>
+        <h2 id="current-week-title" style="margin-bottom:20px"></h2>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:15px">
+          <button type="button" class="btn-clear" onclick="APP.clearAllMenu()">🗑️ Vider tout le menu</button>
+          <button type="button" class="random-meal-btn" onclick="APP.fillWeekRandomly()">🎲 Remplir aléatoirement</button>
+          <button type="button" class="btn" onclick="APP.openSeasonalCalendar()">📅 Calendrier fruits & légumes</button>
+        </div>
+        <table class="menu-table" role="table">
+          <thead>
+            <tr>
+              <th scope="col" style="width:15%">Jour</th>
+              <th scope="col" style="width:42.5%">Midi</th>
+              <th scope="col" style="width:42.5%">Soir</th>
+            </tr>
+          </thead>
+          <tbody id="menu-body"></tbody>
+        </table>
+        <button type="button" class="btn" onclick="APP.generateAndShowShoppingList()">🛒 Générer liste de courses</button>
+      </section>
+
+      <section id="shopping-view" class="view">
+        <button type="button" class="back-button" onclick="APP.backToMenu()">← Retour</button>
+        <h2>🛒 Liste de courses - <span id="shopping-week-title"></span></h2>
+        <div style="margin-top:15px;margin-bottom:15px;display:flex;gap:10px;flex-wrap:wrap">
+          <button type="button" class="btn" onclick="APP.showAddCustomItemModal()">➕ Ajouter un article</button>
+          <button type="button" class="btn-clear" onclick="APP.clearShoppingList()">🗑️ Vider la liste</button>
+          <button type="button" class="btn" onclick="APP.exportToPDF()">📄 Export PDF</button>
+        </div>
+        <div id="shopping-list-container" style="margin-top:20px"></div>
+      </section>
+
+      <section id="recipes-view" class="view">
+        <div class="add-ingredient-form">
+          <h2>📖 Créer une recette</h2>
+          <form id="add-recipe-form" onsubmit="APP.handleRecipeSubmit(event);return false">
+            <div class="form-group">
+              <label for="new-recipe-name">Nom de la recette</label>
+              <input type="text" id="new-recipe-name" required>
+            </div>
+            <div class="form-group">
+              <label for="recipe-search-input">Ingrédients</label>
+              <input type="text" id="recipe-search-input" class="search-input" placeholder="🔍 Rechercher..." oninput="APP.filterRecipeIngredients()">
+              <div class="type-filters" role="group">
+                <button type="button" class="type-filter-btn active" onclick="APP.filterRecipeByType('all')">Tous</button>
+                <button type="button" class="type-filter-btn" onclick="APP.filterRecipeByType('proteine')">🍗</button>
+                <button type="button" class="type-filter-btn" onclick="APP.filterRecipeByType('feculent')">🍚</button>
+                <button type="button" class="type-filter-btn" onclick="APP.filterRecipeByType('legume')">🥬</button>
+                <button type="button" class="type-filter-btn" onclick="APP.filterRecipeByType('autre')">🧂</button>
+              </div>
+              <div id="recipe-ingredients-selector" class="ingredients-list" style="max-height:300px;overflow-y:auto;border:2px solid #dee2e6;padding:15px;border-radius:8px"></div>
+            </div>
+            <div class="form-group">
+              <label>🏷️ Tags</label>
+              <div class="tag-selector">
+                <h4>Tags pré-définis</h4>
+                <div class="available-tags" id="predefined-tags-selector"></div>
+                <h4 style="margin-top:20px">Tags personnalisés</h4>
+                <div class="available-tags" id="custom-tags-selector"></div>
+                <div class="custom-tag-input">
+                  <input type="text" id="new-tag-name" placeholder="Nom du tag">
+                  <input type="text" id="new-tag-emoji" placeholder="🏷️" maxlength="2" style="width:60px;text-align:center">
+                  <input type="color" id="new-tag-color" value="#6366f1">
+                  <button type="button" class="btn" onclick="APP.addCustomTag()" style="padding:10px 20px">+ Ajouter</button>
+                </div>
+              </div>
+            </div>
+            <button type="submit" class="btn">Créer</button>
+          </form>
+        </div>
+        <h2 style="margin-top:30px;margin-bottom:15px">Mes recettes</h2>
+        <div id="recipes-list"></div>
+      </section>
+
+      <section id="ingredients-view" class="view">
+        <div class="add-ingredient-form">
+          <h2>Ajouter un ingrédient</h2>
+          <form id="add-ingredient-form" onsubmit="APP.handleIngredientSubmit(event);return false">
+            <div class="form-group">
+              <label for="new-ingredient-name">Nom</label>
+              <input type="text" id="new-ingredient-name" required>
+            </div>
+            <div class="form-group">
+              <label for="new-ingredient-type">Type</label>
+              <select id="new-ingredient-type">
+                <option value="proteine">Protéine</option>
+                <option value="feculent">Féculent</option>
+                <option value="legume">Légume</option>
+                <option value="autre">Autre</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="new-ingredient-rayon">Rayon</label>
+              <select id="new-ingredient-rayon">
+                <option value="boucherie">🍖 Boucherie</option>
+                <option value="poissonnerie">🐟 Poissonnerie</option>
+                <option value="frais">🥬 Fruits & Légumes</option>
+                <option value="cremerie">🧀 Crèmerie</option>
+                <option value="epicerie">🛒 Épicerie</option>
+                <option value="surgeles">❄️ Surgelés</option>
+                <option value="boulangerie">🥖 Boulangerie</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="new-ingredient-portion-type">📊 Type de portion</label>
+              <select id="new-ingredient-portion-type" onchange="APP.togglePortionWeightField('new')">
+                <option value="quantity">🔢 Quantité (pièces)</option>
+                <option value="weight">⚖️ Poids (grammes)</option>
+                <option value="volume">📏 Volume (ml)</option>
+                <option value="spoon">🥄 Cuillères</option>
+              </select>
+            </div>
+            <div class="form-group" id="new-portion-weight-group" style="display:none">
+              <label for="new-ingredient-portion-weight" id="new-portion-weight-label">Poids par portion (g)</label>
+              <input type="number" id="new-ingredient-portion-weight" min="1" step="1" placeholder="100">
+              <p style="color:var(--text-3);font-size:12px;margin-top:5px">Exemple : 100g pour les pâtes, 80g pour le riz</p>
+            </div>
+            <button type="submit" class="btn">Ajouter</button>
+          </form>
+        </div>
+        <div class="filter-buttons" role="group">
+          <button class="filter-btn active" onclick="APP.filterIngredients('all')">Tous</button>
+          <button class="filter-btn" onclick="APP.filterIngredients('favorites')">⭐ Favoris</button>
+          <button class="filter-btn" onclick="APP.filterIngredients('proteine')">Protéines</button>
+          <button class="filter-btn" onclick="APP.filterIngredients('feculent')">Féculents</button>
+          <button class="filter-btn" onclick="APP.filterIngredients('legume')">Légumes</button>
+          <button class="filter-btn" onclick="APP.filterIngredients('autre')">Autres</button>
+        </div>
+        <div class="ingredients-list" id="ingredients-list"></div>
+      </section>
+
+      <section id="settings-view" class="view">
+        <h2>⚙️ Paramètres</h2>
+        <div class="add-ingredient-form">
+          <h3 style="margin-bottom:20px">🎨 Thème de l'application</h3>
+          <div class="theme-selector" style="position:static;background:transparent;border:none;padding:0;box-shadow:none;justify-content:flex-start">
+            <button type="button" class="theme-btn active" data-theme="dark" onclick="APP.changeTheme('dark')" title="Sombre"></button>
+            <button type="button" class="theme-btn" data-theme="light" onclick="APP.changeTheme('light')" title="Clair"></button>
+            <button type="button" class="theme-btn" data-theme="forest" onclick="APP.changeTheme('forest')" title="Forêt"></button>
+          </div>
+          <p style="color:var(--text-3);font-size:13px;margin-top:15px">Choisissez le thème de couleur de l'application</p>
+        </div>
+        <div class="add-ingredient-form">
+          <h3 style="margin-bottom:20px">👥 Portions par défaut</h3>
+          <div class="form-group">
+            <label for="default-portions-input">Nombre de portions pour les nouvelles semaines</label>
+            <input type="number" id="default-portions-input" value="2" min="1" max="20" onchange="APP.updateDefaultPortions()">
+            <p style="color:var(--text-3);font-size:13px;margin-top:8px">Cette valeur sera utilisée par défaut lors de la création d'une nouvelle semaine.</p>
+          </div>
+        </div>
+        <div class="add-ingredient-form">
+          <h3 style="margin-bottom:20px">🥕 Base de données des ingrédients</h3>
+          <p style="color:var(--text-2);font-size:14px;margin-bottom:15px">Vous avez actuellement <strong id="ingredient-count">0</strong> ingrédients dans votre base de données.</p>
+          <button type="button" class="btn" onclick="APP.resetIngredientsToDefault()">🔄 Réinitialiser aux 166 ingrédients par défaut</button>
+          <p style="color:var(--text-3);font-size:13px;margin-top:10px">⚠️ Attention : Cette action remplacera tous vos ingrédients actuels par la liste complète des 166 ingrédients par défaut.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- MODALES (Toutes les modales ici) -->
+  <div id="create-ingredient-modal" class="modal-overlay" onclick="if(event.target.id==='create-ingredient-modal')APP.closeCreateIngredientModal()">
+    <div class="custom-modal">
+      <div class="modal-header"><div class="modal-icon">✨</div><div class="modal-title">Créer</div></div>
+      <div class="modal-body">
+        <p>Nom: <strong id="modal-ingredient-name"></strong></p>
+        <div class="type-selector">
+          <div class="type-option type-proteine" data-type="proteine" onclick="APP.selectType(this)">🍗 Protéine</div>
+          <div class="type-option type-feculent" data-type="feculent" onclick="APP.selectType(this)">🍚 Féculent</div>
+          <div class="type-option type-legume" data-type="legume" onclick="APP.selectType(this)">🥬 Légume</div>
+          <div class="type-option type-autre" data-type="autre" onclick="APP.selectType(this)">🧂 Autre</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn modal-btn-cancel" onclick="APP.closeCreateIngredientModal()">Annuler</button>
+        <button class="modal-btn modal-btn-confirm" onclick="APP.confirmCreateIngredient()">Créer</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="confirm-modal" class="modal-overlay" onclick="if(event.target.id==='confirm-modal')APP.closeConfirmModal(false)">
+    <div class="custom-modal">
+      <div class="modal-header"><div class="modal-icon" id="confirm-modal-icon">❓</div><div class="modal-title" id="confirm-modal-title">Confirmation</div></div>
+      <div class="modal-body" id="confirm-modal-body"></div>
+      <div class="modal-footer">
+        <button class="modal-btn modal-btn-cancel" onclick="APP.closeConfirmModal(false)">Annuler</button>
+        <button class="modal-btn modal-btn-danger" onclick="APP.closeConfirmModal(true)">Confirmer</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="edit-ingredient-modal" class="modal-overlay" onclick="if(event.target.id==='edit-ingredient-modal')APP.closeEditIngredientModal(false)">
+    <div class="custom-modal">
+      <div class="modal-header"><div class="modal-icon">✏️</div><div class="modal-title">Modifier</div></div>
+      <div class="modal-body">
+        <div class="modal-input-group"><label>Nom</label><input type="text" id="edit-ingredient-name"></div>
+        <div class="modal-input-group"><label>Rayon</label>
+          <select id="edit-ingredient-rayon">
+            <option value="boucherie">🍖 Boucherie</option>
+            <option value="poissonnerie">🐟 Poissonnerie</option>
+            <option value="frais">🥬 Fruits & Légumes</option>
+            <option value="cremerie">🧀 Crèmerie</option>
+            <option value="epicerie">🛒 Épicerie</option>
+            <option value="surgeles">❄️ Surgelés</option>
+            <option value="boulangerie">🥖 Boulangerie</option>
+          </select>
+        </div>
+        <div class="modal-input-group">
+          <label>📊 Type de portion</label>
+          <select id="edit-ingredient-portion-type" onchange="APP.togglePortionWeightField('edit')">
+            <option value="quantity">🔢 Quantité (pièces)</option>
+            <option value="weight">⚖️ Poids (grammes)</option>
+            <option value="volume">📏 Volume (ml)</option>
+            <option value="spoon">🥄 Cuillères</option>
+          </select>
+        </div>
+        <div class="modal-input-group" id="edit-portion-weight-group" style="display:none">
+          <label id="edit-portion-weight-label">Poids par portion (g)</label>
+          <input type="number" id="edit-ingredient-portion-weight" min="1" step="1" placeholder="100">
+          <p style="color:var(--text-3);font-size:12px;margin-top:5px">Exemple : 100g pour les pâtes, 80g pour le riz</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn modal-btn-cancel" onclick="APP.closeEditIngredientModal(false)">Annuler</button>
+        <button class="modal-btn modal-btn-confirm" onclick="APP.closeEditIngredientModal(true)">Sauvegarder</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="week-modal" class="modal-overlay" onclick="if(event.target.id==='week-modal')APP.closeWeekModal(false)">
+    <div class="custom-modal">
+      <div class="modal-header"><div class="modal-icon">📅</div><div class="modal-title" id="week-modal-title">Créer</div></div>
+      <div class="modal-body">
+        <div class="modal-input-group"><label>Nom</label><input type="text" id="week-name-input"></div>
+        <div class="modal-input-group"><label>Date début</label><input type="date" id="week-start-input"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn modal-btn-cancel" onclick="APP.closeWeekModal(false)">Annuler</button>
+        <button class="modal-btn modal-btn-confirm" onclick="APP.closeWeekModal(true)">Créer</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="status-modal" class="modal-overlay" onclick="if(event.target.id==='status-modal')APP.closeStatusModal()">
+    <div class="custom-modal">
+      <div class="modal-header"><div class="modal-icon">🏠</div><div class="modal-title">Statut du repas</div></div>
+      <div class="modal-body">
+        <p style="margin-bottom:15px">Choisissez le statut pour ce repas :</p>
+        <div class="status-selector">
+          <div class="status-option status-normal" data-status="normal" onclick="APP.selectStatus(this)">🍽️ Normal</div>
+          <div class="status-option status-restaurant" data-status="restaurant" onclick="APP.selectStatus(this)">🍴 Restaurant</div>
+          <div class="status-option status-verseaux" data-status="verseaux" onclick="APP.selectStatus(this)">🏡 Les Verseaux</div>
+          <div class="status-option status-copains" data-status="copains" onclick="APP.selectStatus(this)">👥 Copains</div>
+          <div class="status-option status-joker" data-status="joker" onclick="APP.selectStatus(this)">🃏 Joker</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn modal-btn-cancel" onclick="APP.closeStatusModal()">Annuler</button>
+        <button class="modal-btn modal-btn-confirm" onclick="APP.confirmStatus()">Valider</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="custom-shopping-item-modal" class="modal-overlay" onclick="if(event.target.id==='custom-shopping-item-modal')APP.closeCustomItemModal(false)">
+    <div class="custom-modal">
+      <div class="modal-header"><div class="modal-icon">➕</div><div class="modal-title">Ajouter un article</div></div>
+      <div class="modal-body">
+        <div class="modal-input-group"><label>Nom de l'article</label><input type="text" id="custom-item-name" placeholder="Ex: Pain, Lait..."></div>
+        <div class="modal-input-group"><label>Quantité (optionnel)</label><input type="text" id="custom-item-quantity" placeholder="Ex: 2, 500g, 1L..."></div>
+        <div class="modal-input-group"><label>Rayon</label>
+          <select id="custom-item-rayon">
+            <option value="frais">🥬 Fruits & Légumes</option>
+            <option value="boucherie">🍖 Boucherie</option>
+            <option value="poissonnerie">🐟 Poissonnerie</option>
+            <option value="cremerie">🧀 Crèmerie</option>
+            <option value="boulangerie">🥖 Boulangerie</option>
+            <option value="epicerie">🛒 Épicerie</option>
+            <option value="surgeles">❄️ Surgelés</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn modal-btn-cancel" onclick="APP.closeCustomItemModal(false)">Annuler</button>
+        <button class="modal-btn modal-btn-confirm" onclick="APP.closeCustomItemModal(true)">Ajouter</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="seasonal-calendar-modal" class="modal-overlay" onclick="if(event.target.id==='seasonal-calendar-modal')APP.closeSeasonalCalendar()">
+    <div class="custom-modal" style="max-width:1100px;width:95%;max-height:90vh">
+      <div class="modal-header"><div class="modal-icon">📅</div><div class="modal-title">Calendrier des Fruits & Légumes</div></div>
+      <div class="modal-body" style="overflow-y:auto;max-height:70vh">
+        <div class="seasonal-tabs">
+          <button class="seasonal-tab active" onclick="APP.showSeasonalTab('legumes')">🥬 Légumes</button>
+          <button class="seasonal-tab" onclick="APP.showSeasonalTab('fruits')">🍓 Fruits</button>
+        </div>
+        <div class="seasonal-search"><input type="text" id="seasonal-search-input" placeholder="🔍 Rechercher un produit..." oninput="APP.filterSeasonalData()"></div>
+        <div id="seasonal-content"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn modal-btn-confirm" onclick="APP.closeSeasonalCalendar()" style="width:100%">Fermer</button>
+      </div>
+    </div>
+  </div>
+
+  <footer style="text-align:center;padding:20px;color:var(--text-3);font-size:14px;margin-top:40px">
+    <p>Menu Hebdo v2.0 - Version Standalone</p>
+    <p style="margin-top:5px">💾 Données sauvegardées localement dans votre navigateur</p>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script>
+// === CODE JAVASCRIPT CONSOLIDÉ ===
+/**
+ * Menu Hebdo - Données par défaut
+ * @description Contient les ingrédients, tags et données saisonnières par défaut
+ */
+
+// Ingrédients par défaut (166 ingrédients)
+const DEFAULT_INGREDIENTS = [
+  // Boucherie - Bœuf
+  { id: 1, name: 'Bœuf (steak)', type: 'proteine', rayon: 'boucherie', portionType: 'quantity' },
+  { id: 2, name: 'Bœuf (haché)', type: 'proteine', rayon: 'boucherie', portionType: 'weight', portionWeight: 125 },
+  { id: 3, name: 'Bœuf (rôti)', type: 'proteine', rayon: 'boucherie', portionType: 'weight', portionWeight: 150 },
+
+  // Boucherie - Porc
+  { id: 4, name: 'Porc (côtelette)', type: 'proteine', rayon: 'boucherie', portionType: 'quantity' },
+  { id: 5, name: 'Porc (filet mignon)', type: 'proteine', rayon: 'boucherie', portionType: 'weight', portionWeight: 150 },
+  { id: 6, name: 'Saucisse', type: 'proteine', rayon: 'boucherie', portionType: 'quantity' },
+  { id: 7, name: 'Lardons', type: 'autre', rayon: 'boucherie', portionType: 'weight', portionWeight: 75 },
+
+  // Boucherie - Volaille
+  { id: 8, name: 'Poulet (escalope)', type: 'proteine', rayon: 'boucherie', portionType: 'quantity' },
+  { id: 9, name: 'Poulet (cuisse)', type: 'proteine', rayon: 'boucherie', portionType: 'quantity' },
+  { id: 10, name: 'Poulet (aile)', type: 'proteine', rayon: 'boucherie', portionType: 'quantity' },
+  { id: 11, name: 'Dinde (escalope)', type: 'proteine', rayon: 'boucherie', portionType: 'quantity' },
+  { id: 12, name: 'Dinde (rôti)', type: 'proteine', rayon: 'boucherie', portionType: 'weight', portionWeight: 150 },
+
+  // Boucherie - Autres viandes
+  { id: 13, name: 'Veau (escalope)', type: 'proteine', rayon: 'boucherie', portionType: 'quantity' },
+  { id: 14, name: 'Veau (côte)', type: 'proteine', rayon: 'boucherie', portionType: 'quantity' },
+  { id: 15, name: 'Agneau (gigot)', type: 'proteine', rayon: 'boucherie', portionType: 'weight', portionWeight: 150 },
+  { id: 16, name: 'Agneau (côtelette)', type: 'proteine', rayon: 'boucherie', portionType: 'quantity' },
+  { id: 17, name: 'Canard (magret)', type: 'proteine', rayon: 'boucherie', portionType: 'quantity' },
+  { id: 18, name: 'Canard (confit)', type: 'proteine', rayon: 'boucherie', portionType: 'quantity' },
+
+  // Poissonnerie
+  { id: 19, name: 'Saumon', type: 'proteine', rayon: 'poissonnerie', portionType: 'weight', portionWeight: 150 },
+  { id: 20, name: 'Thon frais', type: 'proteine', rayon: 'poissonnerie', portionType: 'weight', portionWeight: 150 },
+  { id: 21, name: 'Thon en conserve', type: 'proteine', rayon: 'epicerie', portionType: 'quantity' },
+  { id: 22, name: 'Cabillaud', type: 'proteine', rayon: 'poissonnerie', portionType: 'weight', portionWeight: 150 },
+  { id: 23, name: 'Lieu noir', type: 'proteine', rayon: 'poissonnerie', portionType: 'weight', portionWeight: 150 },
+  { id: 24, name: 'Sardine', type: 'proteine', rayon: 'poissonnerie', portionType: 'quantity' },
+  { id: 25, name: 'Maquereau', type: 'proteine', rayon: 'poissonnerie', portionType: 'quantity' },
+  { id: 26, name: 'Crevettes', type: 'proteine', rayon: 'poissonnerie', portionType: 'weight', portionWeight: 150 },
+  { id: 27, name: 'Moules', type: 'proteine', rayon: 'poissonnerie', portionType: 'weight', portionWeight: 400 },
+  { id: 28, name: 'Huîtres', type: 'proteine', rayon: 'poissonnerie', portionType: 'quantity' },
+  { id: 29, name: 'Saint-Jacques', type: 'proteine', rayon: 'poissonnerie', portionType: 'quantity' },
+
+  // Protéines alternatives
+  { id: 30, name: 'Œufs', type: 'proteine', rayon: 'cremerie', portionType: 'quantity' },
+  { id: 31, name: 'Tofu', type: 'proteine', rayon: 'epicerie', portionType: 'weight', portionWeight: 150 },
+  { id: 32, name: 'Tempeh', type: 'proteine', rayon: 'epicerie', portionType: 'weight', portionWeight: 100 },
+  { id: 33, name: 'Seitan', type: 'proteine', rayon: 'epicerie', portionType: 'weight', portionWeight: 100 },
+
+  // Légumineuses
+  { id: 34, name: 'Lentilles vertes', type: 'proteine', rayon: 'epicerie', portionType: 'weight', portionWeight: 80 },
+  { id: 35, name: 'Lentilles corail', type: 'proteine', rayon: 'epicerie', portionType: 'weight', portionWeight: 80 },
+  { id: 36, name: 'Lentilles brunes', type: 'proteine', rayon: 'epicerie', portionType: 'weight', portionWeight: 80 },
+  { id: 37, name: 'Pois chiches', type: 'proteine', rayon: 'epicerie', portionType: 'weight', portionWeight: 80 },
+  { id: 38, name: 'Haricots rouges', type: 'proteine', rayon: 'epicerie', portionType: 'weight', portionWeight: 80 },
+  { id: 39, name: 'Haricots blancs', type: 'proteine', rayon: 'epicerie', portionType: 'weight', portionWeight: 80 },
+  { id: 40, name: 'Soja', type: 'proteine', rayon: 'epicerie', portionType: 'weight', portionWeight: 80 },
+
+  // Légumes feuilles
+  { id: 41, name: 'Salade (laitue)', type: 'legume', rayon: 'frais', portionType: 'quantity' },
+  { id: 42, name: 'Roquette', type: 'legume', rayon: 'frais', portionType: 'quantity' },
+  { id: 43, name: 'Mâche', type: 'legume', rayon: 'frais', portionType: 'quantity' },
+  { id: 44, name: 'Épinards', type: 'legume', rayon: 'frais', portionType: 'weight', portionWeight: 200 },
+  { id: 45, name: 'Blettes', type: 'legume', rayon: 'frais', portionType: 'weight', portionWeight: 200 },
+
+  // Choux
+  { id: 46, name: 'Chou vert', type: 'legume', rayon: 'frais', portionType: 'weight', portionWeight: 200 },
+  { id: 47, name: 'Chou rouge', type: 'legume', rayon: 'frais', portionType: 'weight', portionWeight: 200 },
+  { id: 48, name: 'Chou frisé', type: 'legume', rayon: 'frais', portionType: 'weight', portionWeight: 150 },
+
+  // Légumes racines
+  { id: 49, name: 'Pomme de terre', type: 'feculent', rayon: 'frais', portionType: 'weight', portionWeight: 200 },
+  { id: 50, name: 'Carotte', type: 'legume', rayon: 'frais', portionType: 'quantity' },
+  { id: 51, name: 'Navet', type: 'legume', rayon: 'frais', portionType: 'quantity' },
+  { id: 52, name: 'Panais', type: 'legume', rayon: 'frais', portionType: 'quantity' },
+  { id: 53, name: 'Betterave', type: 'legume', rayon: 'frais', portionType: 'quantity' },
+  { id: 54, name: 'Radis', type: 'legume', rayon: 'frais', portionType: 'quantity' },
+
+  // Tomates
+  { id: 55, name: 'Tomate fraîche', type: 'legume', rayon: 'frais', portionType: 'quantity' },
+  { id: 56, name: 'Tomate concassée', type: 'legume', rayon: 'epicerie', portionType: 'quantity' },
+  { id: 57, name: 'Concentré de tomate', type: 'autre', rayon: 'epicerie', portionType: 'spoon' },
+
+  // Légumes fruits
+  { id: 58, name: 'Courgette', type: 'legume', rayon: 'frais', portionType: 'quantity' },
+  { id: 59, name: 'Aubergine', type: 'legume', rayon: 'frais', portionType: 'quantity' },
+  { id: 60, name: 'Poivron vert', type: 'legume', rayon: 'frais', portionType: 'quantity' },
+  { id: 61, name: 'Poivron rouge', type: 'legume', rayon: 'frais', portionType: 'quantity' },
+  { id: 62, name: 'Poivron jaune', type: 'legume', rayon: 'frais', portionType: 'quantity' },
+  { id: 63, name: 'Concombre', type: 'legume', rayon: 'frais', portionType: 'quantity' },
+  { id: 64, name: 'Avocat', type: 'legume', rayon: 'frais', portionType: 'quantity' },
+
+  // Cucurbitacées
+  { id: 65, name: 'Citrouille', type: 'legume', rayon: 'frais', portionType: 'weight', portionWeight: 250 },
+  { id: 66, name: 'Potimarron', type: 'legume', rayon: 'frais', portionType: 'weight', portionWeight: 250 },
+
+  // Alliacés
+  { id: 67, name: 'Oignon', type: 'legume', rayon: 'frais', portionType: 'quantity' },
+  { id: 68, name: 'Ail', type: 'autre', rayon: 'frais', portionType: 'quantity' },
+  { id: 69, name: 'Échalote', type: 'autre', rayon: 'frais', portionType: 'quantity' },
+  { id: 70, name: 'Poireau', type: 'legume', rayon: 'frais', portionType: 'quantity' },
+
+  // Légumes fleurs
+  { id: 71, name: 'Brocoli', type: 'legume', rayon: 'frais', portionType: 'quantity' },
+  { id: 72, name: 'Chou-fleur', type: 'legume', rayon: 'frais', portionType: 'quantity' },
+  { id: 73, name: 'Asperge', type: 'legume', rayon: 'frais', portionType: 'quantity' },
+
+  // Légumes cosses
+  { id: 74, name: 'Haricots verts', type: 'legume', rayon: 'frais', portionType: 'weight', portionWeight: 200 },
+  { id: 75, name: 'Petits pois', type: 'legume', rayon: 'frais', portionType: 'weight', portionWeight: 150 },
+
+  // Champignons
+  { id: 76, name: 'Champignons de Paris', type: 'legume', rayon: 'frais', portionType: 'weight', portionWeight: 150 },
+
+  // Pâtes
+  { id: 77, name: 'Pâtes spaghetti', type: 'feculent', rayon: 'epicerie', portionType: 'weight', portionWeight: 100 },
+  { id: 78, name: 'Pâtes penne', type: 'feculent', rayon: 'epicerie', portionType: 'weight', portionWeight: 100 },
+  { id: 79, name: 'Lasagne', type: 'feculent', rayon: 'epicerie', portionType: 'weight', portionWeight: 100 },
+
+  // Riz
+  { id: 80, name: 'Riz basmati', type: 'feculent', rayon: 'epicerie', portionType: 'weight', portionWeight: 80 },
+  { id: 81, name: 'Riz thaï', type: 'feculent', rayon: 'epicerie', portionType: 'weight', portionWeight: 80 },
+  { id: 82, name: 'Riz rond', type: 'feculent', rayon: 'epicerie', portionType: 'weight', portionWeight: 80 },
+  { id: 83, name: 'Riz complet', type: 'feculent', rayon: 'epicerie', portionType: 'weight', portionWeight: 80 },
+
+  // Autres céréales
+  { id: 84, name: 'Semoule', type: 'feculent', rayon: 'epicerie', portionType: 'weight', portionWeight: 70 },
+  { id: 85, name: 'Boulgour', type: 'feculent', rayon: 'epicerie', portionType: 'weight', portionWeight: 70 },
+  { id: 86, name: 'Épeautre', type: 'feculent', rayon: 'epicerie', portionType: 'weight', portionWeight: 70 },
+  { id: 87, name: 'Quinoa', type: 'feculent', rayon: 'epicerie', portionType: 'weight', portionWeight: 70 },
+  { id: 88, name: 'Sarrasin', type: 'feculent', rayon: 'epicerie', portionType: 'weight', portionWeight: 70 },
+  { id: 89, name: 'Maïs en grain', type: 'feculent', rayon: 'epicerie', portionType: 'weight', portionWeight: 80 },
+  { id: 90, name: 'Polenta', type: 'feculent', rayon: 'epicerie', portionType: 'weight', portionWeight: 70 },
+
+  // Pain
+  { id: 91, name: 'Baguette', type: 'feculent', rayon: 'boulangerie', portionType: 'weight', portionWeight: 50 },
+  { id: 92, name: 'Pain de mie', type: 'feculent', rayon: 'boulangerie', portionType: 'quantity' },
+  { id: 93, name: 'Pain complet', type: 'feculent', rayon: 'boulangerie', portionType: 'weight', portionWeight: 50 },
+  { id: 94, name: 'Flocons d\'avoine', type: 'feculent', rayon: 'epicerie', portionType: 'weight', portionWeight: 60 },
+
+  // Fruits
+  { id: 95, name: 'Pomme', type: 'autre', rayon: 'frais', portionType: 'quantity' },
+  { id: 96, name: 'Poire', type: 'autre', rayon: 'frais', portionType: 'quantity' },
+  { id: 97, name: 'Banane', type: 'autre', rayon: 'frais', portionType: 'quantity' },
+  { id: 98, name: 'Orange', type: 'autre', rayon: 'frais', portionType: 'quantity' },
+  { id: 99, name: 'Citron', type: 'autre', rayon: 'frais', portionType: 'quantity' },
+  { id: 100, name: 'Clémentine', type: 'autre', rayon: 'frais', portionType: 'quantity' },
+  { id: 101, name: 'Mandarine', type: 'autre', rayon: 'frais', portionType: 'quantity' },
+  { id: 102, name: 'Pamplemousse', type: 'autre', rayon: 'frais', portionType: 'quantity' },
+  { id: 103, name: 'Fraise', type: 'autre', rayon: 'frais', portionType: 'weight', portionWeight: 250 },
+  { id: 104, name: 'Framboise', type: 'autre', rayon: 'frais', portionType: 'weight', portionWeight: 150 },
+  { id: 105, name: 'Myrtille', type: 'autre', rayon: 'frais', portionType: 'weight', portionWeight: 150 },
+  { id: 106, name: 'Pêche', type: 'autre', rayon: 'frais', portionType: 'quantity' },
+  { id: 107, name: 'Abricot', type: 'autre', rayon: 'frais', portionType: 'quantity' },
+  { id: 108, name: 'Raisin', type: 'autre', rayon: 'frais', portionType: 'weight', portionWeight: 200 },
+  { id: 109, name: 'Kiwi', type: 'autre', rayon: 'frais', portionType: 'quantity' },
+  { id: 110, name: 'Melon', type: 'autre', rayon: 'frais', portionType: 'quantity' },
+  { id: 111, name: 'Pastèque', type: 'autre', rayon: 'frais', portionType: 'weight', portionWeight: 300 },
+
+  // Produits laitiers
+  { id: 112, name: 'Lait de vache', type: 'autre', rayon: 'cremerie', portionType: 'volume', portionWeight: 250 },
+  { id: 113, name: 'Lait de chèvre', type: 'autre', rayon: 'cremerie', portionType: 'volume', portionWeight: 250 },
+  { id: 114, name: 'Lait de brebis', type: 'autre', rayon: 'cremerie', portionType: 'volume', portionWeight: 250 },
+  { id: 115, name: 'Yaourt nature', type: 'autre', rayon: 'cremerie', portionType: 'quantity' },
+  { id: 116, name: 'Fromage blanc', type: 'autre', rayon: 'cremerie', portionType: 'weight', portionWeight: 100 },
+  { id: 117, name: 'Crème fraîche liquide', type: 'autre', rayon: 'cremerie', portionType: 'volume', portionWeight: 100 },
+  { id: 118, name: 'Crème fraîche épaisse', type: 'autre', rayon: 'cremerie', portionType: 'weight', portionWeight: 100 },
+  { id: 119, name: 'Beurre', type: 'autre', rayon: 'cremerie', portionType: 'weight', portionWeight: 50 },
+
+  // Fromages
+  { id: 120, name: 'Emmental', type: 'autre', rayon: 'cremerie', portionType: 'weight', portionWeight: 50 },
+  { id: 121, name: 'Comté', type: 'autre', rayon: 'cremerie', portionType: 'weight', portionWeight: 50 },
+  { id: 122, name: 'Chèvre', type: 'autre', rayon: 'cremerie', portionType: 'weight', portionWeight: 50 },
+  { id: 123, name: 'Parmesan', type: 'autre', rayon: 'cremerie', portionType: 'weight', portionWeight: 30 },
+  { id: 124, name: 'Mozzarella', type: 'autre', rayon: 'cremerie', portionType: 'weight', portionWeight: 100 },
+  { id: 125, name: 'Roquefort', type: 'autre', rayon: 'cremerie', portionType: 'weight', portionWeight: 40 },
+
+  // Alternatives végétales
+  { id: 126, name: 'Boisson soja', type: 'autre', rayon: 'epicerie', portionType: 'volume', portionWeight: 250 },
+  { id: 127, name: 'Boisson amande', type: 'autre', rayon: 'epicerie', portionType: 'volume', portionWeight: 250 },
+  { id: 128, name: 'Boisson avoine', type: 'autre', rayon: 'epicerie', portionType: 'volume', portionWeight: 250 },
+  { id: 129, name: 'Crème soja', type: 'autre', rayon: 'epicerie', portionType: 'volume', portionWeight: 100 },
+  { id: 130, name: 'Crème coco', type: 'autre', rayon: 'epicerie', portionType: 'volume', portionWeight: 100 },
+  { id: 131, name: 'Margarine', type: 'autre', rayon: 'epicerie', portionType: 'weight', portionWeight: 50 },
+
+  // Huiles et vinaigres
+  { id: 132, name: 'Huile d\'olive', type: 'autre', rayon: 'epicerie', portionType: 'spoon' },
+  { id: 133, name: 'Huile de tournesol', type: 'autre', rayon: 'epicerie', portionType: 'spoon' },
+  { id: 134, name: 'Vinaigre de vin', type: 'autre', rayon: 'epicerie', portionType: 'spoon' },
+  { id: 135, name: 'Vinaigre de cidre', type: 'autre', rayon: 'epicerie', portionType: 'spoon' },
+  { id: 136, name: 'Vinaigre balsamique', type: 'autre', rayon: 'epicerie', portionType: 'spoon' },
+
+  // Condiments
+  { id: 137, name: 'Moutarde', type: 'autre', rayon: 'epicerie', portionType: 'spoon' },
+  { id: 138, name: 'Mayonnaise', type: 'autre', rayon: 'epicerie', portionType: 'spoon' },
+  { id: 139, name: 'Ketchup', type: 'autre', rayon: 'epicerie', portionType: 'spoon' },
+  { id: 140, name: 'Sauce soja', type: 'autre', rayon: 'epicerie', portionType: 'spoon' },
+
+  // Sucres
+  { id: 141, name: 'Miel', type: 'autre', rayon: 'epicerie', portionType: 'spoon' },
+  { id: 142, name: 'Sirop d\'érable', type: 'autre', rayon: 'epicerie', portionType: 'spoon' },
+  { id: 143, name: 'Sucre blanc', type: 'autre', rayon: 'epicerie', portionType: 'spoon' },
+  { id: 144, name: 'Sucre roux', type: 'autre', rayon: 'epicerie', portionType: 'spoon' },
+
+  // Farines et levures
+  { id: 145, name: 'Farine de blé', type: 'autre', rayon: 'epicerie', portionType: 'weight', portionWeight: 50 },
+  { id: 146, name: 'Levure chimique', type: 'autre', rayon: 'epicerie', portionType: 'spoon' },
+
+  // Bouillons
+  { id: 147, name: 'Bouillon cube', type: 'autre', rayon: 'epicerie', portionType: 'quantity' },
+  { id: 148, name: 'Bouillon poudre', type: 'autre', rayon: 'epicerie', portionType: 'spoon' },
+
+  // Épices et herbes
+  { id: 149, name: 'Sel', type: 'autre', rayon: 'epicerie', portionType: 'spoon' },
+  { id: 150, name: 'Poivre', type: 'autre', rayon: 'epicerie', portionType: 'spoon' },
+  { id: 151, name: 'Herbes de Provence', type: 'autre', rayon: 'epicerie', portionType: 'spoon' },
+  { id: 152, name: 'Persil', type: 'autre', rayon: 'epicerie', portionType: 'spoon' },
+  { id: 153, name: 'Ciboulette', type: 'autre', rayon: 'epicerie', portionType: 'spoon' },
+  { id: 154, name: 'Basilic', type: 'autre', rayon: 'epicerie', portionType: 'spoon' },
+  { id: 155, name: 'Thym', type: 'autre', rayon: 'epicerie', portionType: 'spoon' },
+  { id: 156, name: 'Laurier', type: 'autre', rayon: 'epicerie', portionType: 'quantity' },
+  { id: 157, name: 'Paprika', type: 'autre', rayon: 'epicerie', portionType: 'spoon' },
+  { id: 158, name: 'Cumin', type: 'autre', rayon: 'epicerie', portionType: 'spoon' },
+  { id: 159, name: 'Curry', type: 'autre', rayon: 'epicerie', portionType: 'spoon' },
+  { id: 160, name: 'Noix de muscade', type: 'autre', rayon: 'epicerie', portionType: 'spoon' },
+
+  // Fruits secs
+  { id: 161, name: 'Noix de Grenoble', type: 'autre', rayon: 'epicerie', portionType: 'weight', portionWeight: 50 },
+  { id: 162, name: 'Noix de cajou', type: 'autre', rayon: 'epicerie', portionType: 'weight', portionWeight: 50 },
+  { id: 163, name: 'Amandes', type: 'autre', rayon: 'epicerie', portionType: 'weight', portionWeight: 50 },
+
+  // Divers
+  { id: 164, name: 'Chocolat noir', type: 'autre', rayon: 'epicerie', portionType: 'weight', portionWeight: 50 },
+  { id: 165, name: 'Café', type: 'autre', rayon: 'epicerie', portionType: 'spoon' },
+  { id: 166, name: 'Thé', type: 'autre', rayon: 'epicerie', portionType: 'quantity' }
+];
+
+// Tags pré-définis
+const PREDEFINED_TAGS = [
+  { id: 1, name: 'Végétarien', emoji: '🌱', color: '#10b981' },
+  { id: 2, name: 'Vegan', emoji: '🥬', color: '#059669' },
+  { id: 3, name: 'Sans gluten', emoji: '🌾', color: '#f59e0b' },
+  { id: 4, name: 'Sans lactose', emoji: '🥛', color: '#3b82f6' },
+  { id: 5, name: 'Rapide', emoji: '⚡', color: '#eab308' },
+  { id: 6, name: 'Élaboré', emoji: '👨‍🍳', color: '#8b5cf6' },
+  { id: 7, name: 'Congélation', emoji: '❄️', color: '#06b6d4' },
+  { id: 8, name: 'Épicé', emoji: '🔥', color: '#ef4444' }
+];
+
+// Données saisonnières
+const SEASONAL_DATA = {
+  legumes: [
+    { name: 'Artichaut', months: [5, 6, 7, 9, 10] },
+    { name: 'Asperge', months: [4, 5, 6] },
+    { name: 'Aubergine', months: [6, 7, 8, 9] },
+    { name: 'Betterave', months: [5, 6, 7, 8, 9, 10] },
+    { name: 'Blette', months: [5, 6, 7, 8, 9, 10, 11] },
+    { name: 'Brocoli', months: [9, 10, 11, 12, 1, 2, 3, 4] },
+    { name: 'Carotte', months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] },
+    { name: 'Céleri', months: [8, 9, 10, 11, 12] },
+    { name: 'Champignon', months: [9, 10, 11, 12, 1] },
+    { name: 'Chou blanc', months: [1, 2, 3, 9, 10, 11, 12] },
+    { name: 'Chou-fleur', months: [9, 10, 11, 12, 1, 2, 3, 4, 5] },
+    { name: 'Chou de Bruxelles', months: [10, 11, 12, 1, 2] },
+    { name: 'Chou rouge', months: [10, 11, 12, 1, 2, 3] },
+    { name: 'Concombre', months: [5, 6, 7, 8, 9] },
+    { name: 'Courge', months: [9, 10, 11, 12, 1, 2] },
+    { name: 'Courgette', months: [5, 6, 7, 8, 9, 10] },
+    { name: 'Endive', months: [10, 11, 12, 1, 2, 3, 4] },
+    { name: 'Épinard', months: [1, 2, 3, 4, 9, 10, 11, 12] },
+    { name: 'Fenouil', months: [5, 6, 7, 8, 9, 10] },
+    { name: 'Haricot vert', months: [6, 7, 8, 9, 10] },
+    { name: 'Laitue', months: [4, 5, 6, 7, 8, 9, 10] },
+    { name: 'Navet', months: [10, 11, 12, 1, 2, 3, 4, 5] },
+    { name: 'Oignon', months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] },
+    { name: 'Panais', months: [10, 11, 12, 1, 2, 3] },
+    { name: 'Petit pois', months: [5, 6, 7] },
+    { name: 'Poireau', months: [1, 2, 3, 9, 10, 11, 12] },
+    { name: 'Poivron', months: [6, 7, 8, 9, 10] },
+    { name: 'Pomme de terre', months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] },
+    { name: 'Potiron', months: [9, 10, 11, 12, 1] },
+    { name: 'Radis', months: [3, 4, 5, 6, 7, 8, 9] },
+    { name: 'Salade', months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] },
+    { name: 'Tomate', months: [5, 6, 7, 8, 9, 10] }
+  ],
+  fruits: [
+    { name: 'Abricot', months: [6, 7, 8] },
+    { name: 'Ananas', months: [1, 2, 3, 11, 12] },
+    { name: 'Banane', months: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] },
+    { name: 'Cassis', months: [6, 7, 8] },
+    { name: 'Cerise', months: [5, 6, 7, 8] },
+    { name: 'Châtaigne', months: [10, 11, 12] },
+    { name: 'Citron', months: [1, 2, 3, 11, 12] },
+    { name: 'Clémentine', months: [11, 12, 1, 2] },
+    { name: 'Coing', months: [9, 10, 11] },
+    { name: 'Fraise', months: [4, 5, 6, 7] },
+    { name: 'Framboise', months: [6, 7, 8, 9] },
+    { name: 'Groseille', months: [6, 7, 8] },
+    { name: 'Kiwi', months: [11, 12, 1, 2, 3, 4] },
+    { name: 'Mandarine', months: [11, 12, 1, 2] },
+    { name: 'Mangue', months: [12, 1, 2, 3, 4] },
+    { name: 'Melon', months: [6, 7, 8, 9] },
+    { name: 'Mirabelle', months: [8, 9] },
+    { name: 'Mûre', months: [7, 8, 9] },
+    { name: 'Myrtille', months: [7, 8, 9] },
+    { name: 'Nectarine', months: [6, 7, 8, 9] },
+    { name: 'Noix', months: [9, 10, 11, 12] },
+    { name: 'Orange', months: [12, 1, 2, 3, 4] },
+    { name: 'Pamplemousse', months: [11, 12, 1, 2, 3, 4] },
+    { name: 'Pastèque', months: [6, 7, 8, 9] },
+    { name: 'Pêche', months: [6, 7, 8, 9] },
+    { name: 'Poire', months: [8, 9, 10, 11, 12, 1] },
+    { name: 'Pomme', months: [8, 9, 10, 11, 12, 1, 2, 3, 4] },
+    { name: 'Prune', months: [7, 8, 9, 10] },
+    { name: 'Raisin', months: [8, 9, 10, 11] },
+    { name: 'Rhubarbe', months: [4, 5, 6] }
+  ]
+};
+
+// Labels des rayons
+const RAYON_LABELS = {
+  frais: '🥬 Fruits & Légumes',
+  boucherie: '🍖 Boucherie',
+  poissonnerie: '🐟 Poissonnerie',
+  cremerie: '🧀 Crèmerie',
+  epicerie: '🛒 Épicerie',
+  surgeles: '❄️ Surgelés',
+  boulangerie: '🥖 Boulangerie'
+};
+
+// Labels des statuts de repas
+const STATUS_LABELS = {
+  restaurant: '🍴 Restaurant',
+  verseaux: '🏡 Les Verseaux',
+  copains: '👥 Copains',
+  joker: '🃏 Joker'
+};
+
+// Jours de la semaine
+const DAYS = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+
+// Repas
+const MEALS = ['midi', 'soir'];
+
+
+/**
+ * Menu Hebdo - Gestion du stockage local
+ * @description Gère le localStorage avec gestion d'erreurs robuste
+ */
+
+const STORAGE_KEY = 'menuData';
+const THEME_KEY = 'menuTheme';
+const PORTIONS_KEY = 'defaultPortions';
+
+/**
+ * Vérifie si le localStorage est disponible
+ * @returns {boolean}
+ */
+function isStorageAvailable() {
+  try {
+    const test = '__storage_test__';
+    localStorage.setItem(test, test);
+    localStorage.removeItem(test);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * Sauvegarde les données dans le localStorage
+ * @param {Object} data - Les données à sauvegarder
+ * @returns {boolean} - Succès de l'opération
+ */
+function saveData(data) {
+  if (!isStorageAvailable()) {
+    console.error('localStorage non disponible');
+    return false;
+  }
+
+  try {
+    const jsonData = JSON.stringify(data);
+    localStorage.setItem(STORAGE_KEY, jsonData);
+    return true;
+  } catch (error) {
+    console.error('Erreur lors de la sauvegarde:', error);
+
+    // Si l'erreur est due à un quota dépassé
+    if (error.name === 'QuotaExceededError') {
+      alert('Espace de stockage saturé. Certaines données anciennes vont être supprimées.');
+      // Ici on pourrait implémenter une logique de nettoyage
+    }
+
+    return false;
+  }
+}
+
+/**
+ * Charge les données depuis le localStorage
+ * @returns {Object|null} - Les données chargées ou null en cas d'erreur
+ */
+function loadData() {
+  if (!isStorageAvailable()) {
+    console.warn('localStorage non disponible');
+    return null;
+  }
+
+  try {
+    const jsonData = localStorage.getItem(STORAGE_KEY);
+    if (!jsonData) {
+      return null;
+    }
+
+    return JSON.parse(jsonData);
+  } catch (error) {
+    console.error('Erreur lors du chargement:', error);
+    return null;
+  }
+}
+
+/**
+ * Supprime toutes les données
+ * @returns {boolean} - Succès de l'opération
+ */
+function clearData() {
+  if (!isStorageAvailable()) {
+    return false;
+  }
+
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+    return true;
+  } catch (error) {
+    console.error('Erreur lors de la suppression:', error);
+    return false;
+  }
+}
+
+/**
+ * Sauvegarde le thème
+ * @param {string} theme - Le thème à sauvegarder
+ */
+function saveTheme(theme) {
+  if (isStorageAvailable()) {
+    try {
+      localStorage.setItem(THEME_KEY, theme);
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde du thème:', error);
+    }
+  }
+}
+
+/**
+ * Charge le thème
+ * @returns {string} - Le thème chargé ou 'dark' par défaut
+ */
+function loadTheme() {
+  if (isStorageAvailable()) {
+    try {
+      return localStorage.getItem(THEME_KEY) || 'dark';
+    } catch (error) {
+      console.error('Erreur lors du chargement du thème:', error);
+    }
+  }
+  return 'dark';
+}
+
+/**
+ * Sauvegarde les portions par défaut
+ * @param {number} portions - Le nombre de portions
+ */
+function saveDefaultPortions(portions) {
+  if (isStorageAvailable()) {
+    try {
+      localStorage.setItem(PORTIONS_KEY, portions.toString());
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde des portions:', error);
+    }
+  }
+}
+
+/**
+ * Charge les portions par défaut
+ * @returns {number} - Le nombre de portions ou 2 par défaut
+ */
+function loadDefaultPortions() {
+  if (isStorageAvailable()) {
+    try {
+      const portions = localStorage.getItem(PORTIONS_KEY);
+      return portions ? parseInt(portions, 10) : 2;
+    } catch (error) {
+      console.error('Erreur lors du chargement des portions:', error);
+    }
+  }
+  return 2;
+}
+
+/**
+ * Exporte les données en JSON pour téléchargement
+ * @param {Object} data - Les données à exporter
+ * @param {string} filename - Nom du fichier
+ */
+function exportToFile(data, filename = 'menu-hebdo-export.json') {
+  try {
+    const jsonData = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonData], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(url);
+    return true;
+  } catch (error) {
+    console.error('Erreur lors de l\'export:', error);
+    return false;
+  }
+}
+
+/**
+ * Importe les données depuis un fichier JSON
+ * @param {File} file - Le fichier à importer
+ * @returns {Promise<Object>} - Les données importées
+ */
+function importFromFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = (event) => {
+      try {
+        const data = JSON.parse(event.target.result);
+        resolve(data);
+      } catch (error) {
+        reject(new Error('Fichier JSON invalide'));
+      }
+    };
+
+    reader.onerror = () => {
+      reject(new Error('Erreur lors de la lecture du fichier'));
+    };
+
+    reader.readAsText(file);
+  });
+}
+
+/**
+ * Calcule la taille des données stockées
+ * @returns {string} - Taille formatée (ex: "150 Ko")
+ */
+function getStorageSize() {
+  if (!isStorageAvailable()) {
+    return '0 o';
+  }
+
+  try {
+    const data = localStorage.getItem(STORAGE_KEY) || '';
+    const sizeInBytes = new Blob([data]).size;
+
+    if (sizeInBytes < 1024) {
+      return `${sizeInBytes} o`;
+    } else if (sizeInBytes < 1024 * 1024) {
+      return `${(sizeInBytes / 1024).toFixed(2)} Ko`;
+    } else {
+      return `${(sizeInBytes / (1024 * 1024)).toFixed(2)} Mo`;
+    }
+  } catch (error) {
+    console.error('Erreur lors du calcul de la taille:', error);
+    return '? o';
+  }
+}
+
+
+/**
+ * Menu Hebdo - Fonctions utilitaires
+ * @description Helpers et fonctions utilitaires
+ */
+
+/**
+ * Debounce une fonction
+ * @param {Function} func - La fonction à debouncer
+ * @param {number} wait - Le délai d'attente en ms
+ * @returns {Function} - La fonction debouncée
+ */
+function debounce(func, wait = 300) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
+/**
+ * Throttle une fonction
+ * @param {Function} func - La fonction à throttler
+ * @param {number} limit - L'intervalle minimum en ms
+ * @returns {Function} - La fonction throttlée
+ */
+function throttle(func, limit = 300) {
+  let inThrottle;
+  return function executedFunction(...args) {
+    if (!inThrottle) {
+      func.apply(this, args);
+      inThrottle = true;
+      setTimeout(() => inThrottle = false, limit);
+    }
+  };
+}
+
+/**
+ * Récupère le lundi d'une date donnée
+ * @param {Date} date - La date de référence
+ * @returns {Date} - Le lundi de la semaine
+ */
+function getMonday(date) {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  return new Date(d.setDate(diff));
+}
+
+/**
+ * Formate une plage de dates pour une semaine
+ * @param {string} startDate - Date de début au format ISO
+ * @returns {string} - Plage formatée (ex: "15 jan - 21 jan")
+ */
+function formatDateRange(startDate) {
+  const start = new Date(startDate);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+
+  const options = { day: 'numeric', month: 'short' };
+  return `${start.toLocaleDateString('fr-FR', options)} - ${end.toLocaleDateString('fr-FR', options)}`;
+}
+
+/**
+ * Formate une date au format ISO (YYYY-MM-DD)
+ * @param {Date} date - La date à formater
+ * @returns {string} - Date au format ISO
+ */
+function formatDateISO(date) {
+  const d = new Date(date);
+  return d.toISOString().split('T')[0];
+}
+
+/**
+ * Génère un ID unique
+ * @returns {number} - ID basé sur le timestamp
+ */
+function generateId() {
+  return Date.now() + Math.floor(Math.random() * 1000);
+}
+
+/**
+ * Capitalise la première lettre d'une chaîne
+ * @param {string} str - La chaîne à capitaliser
+ * @returns {string} - Chaîne capitalisée
+ */
+function capitalize(str) {
+  if (!str) return '';
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+/**
+ * Nettoie une chaîne pour la recherche
+ * @param {string} str - La chaîne à nettoyer
+ * @returns {string} - Chaîne normalisée
+ */
+function normalizeString(str) {
+  return str
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+/**
+ * Filtre un tableau d'objets par recherche textuelle
+ * @param {Array} items - Les items à filtrer
+ * @param {string} searchTerm - Le terme de recherche
+ * @param {string[]} fields - Les champs à rechercher
+ * @returns {Array} - Items filtrés
+ */
+function filterBySearch(items, searchTerm, fields = ['name']) {
+  if (!searchTerm) return items;
+
+  const normalizedSearch = normalizeString(searchTerm);
+
+  return items.filter(item => {
+    return fields.some(field => {
+      const value = item[field];
+      if (!value) return false;
+      return normalizeString(value.toString()).includes(normalizedSearch);
+    });
+  });
+}
+
+/**
+ * Trie un tableau d'objets
+ * @param {Array} items - Les items à trier
+ * @param {string} field - Le champ de tri
+ * @param {string} order - 'asc' ou 'desc'
+ * @returns {Array} - Items triés
+ */
+function sortItems(items, field, order = 'asc') {
+  return [...items].sort((a, b) => {
+    const aValue = a[field];
+    const bValue = b[field];
+
+    if (aValue === bValue) return 0;
+
+    const comparison = aValue > bValue ? 1 : -1;
+    return order === 'asc' ? comparison : -comparison;
+  });
+}
+
+/**
+ * Groupe un tableau d'objets par un champ
+ * @param {Array} items - Les items à grouper
+ * @param {string} field - Le champ de groupement
+ * @returns {Object} - Objet avec les groupes
+ */
+function groupBy(items, field) {
+  return items.reduce((groups, item) => {
+    const key = item[field];
+    if (!groups[key]) {
+      groups[key] = [];
+    }
+    groups[key].push(item);
+    return groups;
+  }, {});
+}
+
+/**
+ * Copie du texte dans le presse-papiers
+ * @param {string} text - Le texte à copier
+ * @returns {Promise<boolean>} - Succès de l'opération
+ */
+export async function copyToClipboard(text) {
+  try {
+    if (navigator.clipboard) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } else {
+      // Fallback pour navigateurs anciens
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      const success = document.execCommand('copy');
+      document.body.removeChild(textarea);
+      return success;
+    }
+  } catch (error) {
+    console.error('Erreur lors de la copie:', error);
+    return false;
+  }
+}
+
+/**
+ * Échappe les caractères HTML
+ * @param {string} str - La chaîne à échapper
+ * @returns {string} - Chaîne échappée
+ */
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+/**
+ * Crée un élément DOM avec des attributs et du contenu
+ * @param {string} tag - Le tag HTML
+ * @param {Object} attributes - Les attributs
+ * @param {string|Node|Node[]} content - Le contenu
+ * @returns {HTMLElement} - L'élément créé
+ */
+function createElement(tag, attributes = {}, content = null) {
+  const element = document.createElement(tag);
+
+  // Ajouter les attributs
+  Object.entries(attributes).forEach(([key, value]) => {
+    if (key === 'className') {
+      element.className = value;
+    } else if (key === 'dataset') {
+      Object.entries(value).forEach(([dataKey, dataValue]) => {
+        element.dataset[dataKey] = dataValue;
+      });
+    } else if (key.startsWith('on') && typeof value === 'function') {
+      element.addEventListener(key.substring(2).toLowerCase(), value);
+    } else {
+      element.setAttribute(key, value);
+    }
+  });
+
+  // Ajouter le contenu
+  if (content) {
+    if (typeof content === 'string') {
+      element.textContent = content;
+    } else if (Array.isArray(content)) {
+      content.forEach(child => {
+        if (child instanceof Node) {
+          element.appendChild(child);
+        }
+      });
+    } else if (content instanceof Node) {
+      element.appendChild(content);
+    }
+  }
+
+  return element;
+}
+
+/**
+ * Vérifie si un élément est visible dans le viewport
+ * @param {HTMLElement} element - L'élément à vérifier
+ * @returns {boolean} - Visibilité de l'élément
+ */
+function isElementInViewport(element) {
+  const rect = element.getBoundingClientRect();
+  return (
+    rect.top >= 0 &&
+    rect.left >= 0 &&
+    rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+    rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+  );
+}
+
+/**
+ * Scroll vers un élément de manière smooth
+ * @param {HTMLElement|string} target - L'élément ou le sélecteur
+ * @param {Object} options - Options de scroll
+ */
+function scrollToElement(target, options = {}) {
+  const element = typeof target === 'string' ? document.querySelector(target) : target;
+
+  if (element) {
+    element.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+      ...options
+    });
+  }
+}
+
+/**
+ * Attend un délai
+ * @param {number} ms - Délai en millisecondes
+ * @returns {Promise} - Promise résolue après le délai
+ */
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Formate un nombre avec des séparateurs de milliers
+ * @param {number} num - Le nombre à formater
+ * @returns {string} - Nombre formaté
+ */
+function formatNumber(num) {
+  return new Intl.NumberFormat('fr-FR').format(num);
+}
+
+/**
+ * Calcule le pourcentage
+ * @param {number} value - La valeur
+ * @param {number} total - Le total
+ * @param {number} decimals - Nombre de décimales
+ * @returns {number} - Pourcentage
+ */
+function calculatePercentage(value, total, decimals = 0) {
+  if (total === 0) return 0;
+  return Number(((value / total) * 100).toFixed(decimals));
+}
+
+/**
+ * Détecte si l'appareil est mobile
+ * @returns {boolean} - true si mobile
+ */
+function isMobileDevice() {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
+/**
+ * Détecte si l'appareil supporte le touch
+ * @returns {boolean} - true si touch supporté
+ */
+function isTouchDevice() {
+  return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+}
+
+/**
+ * Clone profondément un objet
+ * @param {*} obj - L'objet à cloner
+ * @returns {*} - Clone de l'objet
+ */
+function deepClone(obj) {
+  return JSON.parse(JSON.stringify(obj));
+}
+
+/**
+ * Mélange aléatoirement un tableau
+ * @param {Array} array - Le tableau à mélanger
+ * @returns {Array} - Tableau mélangé
+ */
+function shuffleArray(array) {
+  const result = [...array];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+/**
+ * Sélectionne un élément aléatoire d'un tableau
+ * @param {Array} array - Le tableau
+ * @returns {*} - Élément aléatoire
+ */
+function randomElement(array) {
+  return array[Math.floor(Math.random() * array.length)];
+}
+
+/**
+ * Vérifie si deux objets sont égaux (deep equality)
+ * @param {*} obj1 - Premier objet
+ * @param {*} obj2 - Deuxième objet
+ * @returns {boolean} - Égalité
+ */
+function deepEqual(obj1, obj2) {
+  return JSON.stringify(obj1) === JSON.stringify(obj2);
+}
+
+
+/**
+ * Menu Hebdo - Application principale
+ * @description Application de planification de menus hebdomadaires
+ * @version 2.0
+ */
+
+
+class MenuApp {
+  constructor() {
+    // Données
+    this.ingredients = [];
+    this.recipes = [];
+    this.weeks = [];
+    this.availableTags = [...PREDEFINED_TAGS];
+    this.customTags = [];
+    this.customShoppingItems = [];
+    this.seasonalData = SEASONAL_DATA;
+
+    // État de l'application
+    this.currentWeekId = null;
+    this.currentCell = null;
+    this.currentFilter = 'all';
+    this.recipeSearchFilter = '';
+    this.recipeTypeFilter = 'all';
+    this.selectedRecipeIngredients = [];
+    this.copiedMeal = null;
+    this.confirmCallback = null;
+    this.editIngredientId = null;
+    this.editWeekId = null;
+    this.newIngredientData = null;
+    this.currentStatusCell = null;
+    this.selectedStatus = null;
+    this.currentSeasonalTab = 'legumes';
+    this.seasonalSearchTerm = '';
+
+    // Configuration
+    this.defaultPortions = 2;
+    this.defaultIngredients = Utils.deepClone(DEFAULT_INGREDIENTS);
+
+    // Constantes
+    this.rayonLabels = RAYON_LABELS;
+    this.statusLabels = STATUS_LABELS;
+    this.days = DAYS;
+    this.meals = MEALS;
+  }
+
+  /**
+   * Initialise l'application
+   */
+  init() {
+    console.log('🚀 Initialisation de Menu Hebdo v2.0');
+
+    // Charger les données
+    this.loadData();
+
+    // Charger les préférences
+    this.loadTheme();
+    this.defaultPortions = Storage.loadDefaultPortions();
+
+    // Initialiser les ingrédients avec les types de portion
+    this.initializeIngredients();
+
+    // Créer une semaine par défaut si nécessaire
+    if (this.weeks.length === 0) {
+      this.createDefaultWeek();
+    }
+
+    // Attacher les gestionnaires d'événements
+    this.attachEventListeners();
+
+    // Rendre l'interface
+    this.renderWeeksList();
+
+    console.log('✅ Application initialisée');
+  }
+
+  /**
+   * Initialise les ingrédients avec les champs manquants
+   */
+  initializeIngredients() {
+    this.ingredients.forEach(ing => {
+      if (ing.favorite === undefined) ing.favorite = false;
+      if (ing.portionType === undefined) {
+        // Déterminer le type par défaut
+        const defaultIng = this.defaultIngredients.find(di => di.id === ing.id);
+        if (defaultIng) {
+          ing.portionType = defaultIng.portionType;
+          ing.portionWeight = defaultIng.portionWeight;
+        } else {
+          ing.portionType = 'quantity';
+          ing.portionWeight = null;
+        }
+      }
+    });
+  }
+
+  /**
+   * Crée une semaine par défaut
+   */
+  createDefaultWeek() {
+    const today = new Date();
+    const monday = Utils.getMonday(today);
+
+    this.weeks.push({
+      id: Utils.generateId(),
+      name: 'Semaine en cours',
+      startDate: Utils.formatDateISO(monday),
+      portions: this.defaultPortions,
+      menu: {},
+      isCurrent: true
+    });
+
+    this.saveData();
+  }
+
+  /**
+   * Charge les données depuis le localStorage
+   */
+  loadData() {
+    const data = Storage.loadData();
+
+    if (data) {
+      // Charger les ingrédients seulement s'ils existent et ne sont pas vides
+      if (data.ingredients && data.ingredients.length > 0) {
+        this.ingredients = data.ingredients;
+      } else {
+        this.ingredients = Utils.deepClone(DEFAULT_INGREDIENTS);
+      }
+
+      this.recipes = data.recipes || [];
+      this.weeks = data.weeks || [];
+      this.customTags = data.customTags || [];
+      this.customShoppingItems = data.customShoppingItems || [];
+    } else {
+      // Première utilisation
+      this.ingredients = Utils.deepClone(DEFAULT_INGREDIENTS);
+      this.saveData();
+    }
+  }
+
+  /**
+   * Sauvegarde les données
+   */
+  saveData() {
+    const success = Storage.saveData({
+      ingredients: this.ingredients,
+      recipes: this.recipes,
+      weeks: this.weeks,
+      customTags: this.customTags,
+      customShoppingItems: this.customShoppingItems
+    });
+
+    if (!success) {
+      this.toast('Erreur lors de la sauvegarde', 'error');
+    }
+  }
+
+  /**
+   * Charge le thème
+   */
+  loadTheme() {
+    const savedTheme = Storage.loadTheme();
+    document.body.setAttribute('data-theme', savedTheme);
+
+    // Mettre à jour les boutons
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.theme === savedTheme);
+    });
+  }
+
+  /**
+   * Change le thème
+   */
+  changeTheme(theme) {
+    document.body.setAttribute('data-theme', theme);
+
+    // Mettre à jour les boutons
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.theme === theme);
+    });
+
+    Storage.saveTheme(theme);
+    this.toast('Thème changé ! 🎨', 'info');
+  }
+
+  /**
+   * Affiche une notification toast
+   */
+  toast(message, type = 'success') {
+    const icons = {
+      success: '✅',
+      error: '❌',
+      info: 'ℹ️'
+    };
+
+    const toast = Utils.createElement('div', {
+      className: `toast ${type}`
+    }, [
+      Utils.createElement('div', { className: 'toast-icon' }, icons[type] || icons.success),
+      Utils.createElement('div', { className: 'toast-message' }, message)
+    ]);
+
+    document.body.appendChild(toast);
+
+    setTimeout(() => toast.remove(), 3000);
+  }
+
+  /**
+   * Affiche une boîte de dialogue de confirmation
+   */
+  confirm(title, message, callback) {
+    document.getElementById('confirm-modal-title').textContent = title;
+    document.getElementById('confirm-modal-body').innerHTML = message;
+    document.getElementById('confirm-modal').classList.add('active');
+    this.confirmCallback = callback;
+  }
+
+  /**
+   * Ferme la boîte de confirmation
+   */
+  closeConfirmModal(confirmed) {
+    document.getElementById('confirm-modal').classList.remove('active');
+
+    if (confirmed && this.confirmCallback) {
+      this.confirmCallback();
+    }
+
+    this.confirmCallback = null;
+  }
+
+  /**
+   * Attache les gestionnaires d'événements globaux
+   */
+  attachEventListeners() {
+    // Fermer les popups en cliquant à l'extérieur
+    document.addEventListener('click', (e) => {
+      if (this.currentCell && !e.target.closest('.meal-cell')) {
+        this.closeCurrentInput();
+      }
+    });
+
+    // Empêcher le scroll sur les modales
+    document.querySelectorAll('.modal-overlay').forEach(modal => {
+      modal.addEventListener('wheel', (e) => {
+        e.stopPropagation();
+      });
+    });
+  }
+
+  /**
+   * Affiche une vue
+   */
+  showView(viewName) {
+    // Masquer toutes les vues
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+
+    // Désactiver tous les boutons de navigation
+    document.querySelectorAll('.nav-buttons button').forEach(b => b.classList.remove('active'));
+
+    // Afficher la vue demandée
+    const view = document.getElementById(`${viewName}-view`);
+    if (view) {
+      view.classList.add('active');
+    }
+
+    // Activer le bouton correspondant
+    const activeButton = Array.from(document.querySelectorAll('.nav-buttons button'))
+      .find(btn => btn.onclick && btn.onclick.toString().includes(viewName));
+
+    if (activeButton) {
+      activeButton.classList.add('active');
+    }
+
+    // Actions spécifiques par vue
+    switch (viewName) {
+      case 'recipes':
+        this.renderRecipeIngredientSelector();
+        this.renderTagsSelector();
+        this.renderRecipesList();
+        break;
+      case 'weeks':
+        this.renderWeeksList();
+        break;
+      case 'ingredients':
+        this.renderIngredientsList();
+        break;
+      case 'settings':
+        this.initSettingsView();
+        break;
+    }
+  }
+
+  /**
+   * Initialise la vue des paramètres
+   */
+  initSettingsView() {
+    const input = document.getElementById('default-portions-input');
+    if (input) {
+      input.value = this.defaultPortions;
+    }
+
+    const countElem = document.getElementById('ingredient-count');
+    if (countElem) {
+      countElem.textContent = this.ingredients.length;
+    }
+  }
+
+  /**
+   * Met à jour les portions par défaut
+   */
+  updateDefaultPortions() {
+    const input = document.getElementById('default-portions-input');
+    if (input) {
+      this.defaultPortions = parseInt(input.value, 10) || 2;
+      Storage.saveDefaultPortions(this.defaultPortions);
+      this.toast('Portions par défaut mises à jour !');
+    }
+  }
+
+  /**
+   * Réinitialise les ingrédients aux valeurs par défaut
+   */
+  resetIngredientsToDefault() {
+    this.confirm(
+      'Réinitialiser ?',
+      `Êtes-vous sûr de vouloir remplacer tous vos ingrédients actuels (${this.ingredients.length}) par les 166 ingrédients par défaut ?`,
+      () => {
+        this.ingredients = Utils.deepClone(DEFAULT_INGREDIENTS);
+        this.saveData();
+        this.renderIngredientsList();
+
+        const countElem = document.getElementById('ingredient-count');
+        if (countElem) {
+          countElem.textContent = this.ingredients.length;
+        }
+
+        this.toast(`Base de données réinitialisée ! ${this.ingredients.length} ingrédients`);
+      }
+    );
+  }
+
+  // ==================== GESTION DES SEMAINES ====================
+
+  /**
+   * Rend la liste des semaines
+   */
+  renderWeeksList() {
+    const container = document.getElementById('weeks-list');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    // Rendre les cartes de semaines
+    this.weeks.forEach(week => {
+      const card = this.createWeekCard(week);
+      container.appendChild(card);
+    });
+
+    // Ajouter la carte "Créer une semaine"
+    container.appendChild(this.createAddWeekCard());
+  }
+
+  /**
+   * Crée une carte de semaine
+   */
+  createWeekCard(week) {
+    const mealCount = Object.keys(week.menu || {}).length;
+    const card = Utils.createElement('div', {
+      className: `week-card${week.isCurrent ? ' current' : ''}`,
+      onclick: () => this.openWeek(week.id)
+    }, [
+      Utils.createElement('div', { className: 'week-title' }, week.name),
+      Utils.createElement('div', { className: 'week-dates' }, Utils.formatDateRange(week.startDate)),
+      Utils.createElement('div', { style: 'color:var(--text-2);margin-bottom:10px' }, `🍽️ ${mealCount} repas`),
+      this.createWeekActions(week.id)
+    ]);
+
+    return card;
+  }
+
+  /**
+   * Crée les actions d'une carte de semaine
+   */
+  createWeekActions(weekId) {
+    return Utils.createElement('div', { className: 'week-actions' }, [
+      Utils.createElement('button', {
+        className: 'btn-edit',
+        onclick: (e) => {
+          e.stopPropagation();
+          this.editWeek(weekId);
+        }
+      }, '✏️ Modifier'),
+      Utils.createElement('button', {
+        className: 'btn-delete',
+        onclick: (e) => {
+          e.stopPropagation();
+          this.deleteWeek(weekId);
+        }
+      }, '🗑️ Supprimer')
+    ]);
+  }
+
+  /**
+   * Crée la carte "Ajouter une semaine"
+   */
+  createAddWeekCard() {
+    return Utils.createElement('div', {
+      className: 'week-card add-week-card',
+      onclick: () => this.showWeekModal()
+    }, [
+      Utils.createElement('div', { className: 'add-week-icon' }, '➕'),
+      Utils.createElement('div', {}, Utils.createElement('strong', {}, 'Créer une semaine'))
+    ]);
+  }
+
+  /**
+   * Affiche la modale de création/édition de semaine
+   */
+  showWeekModal(weekId = null) {
+    this.editWeekId = weekId;
+
+    const modal = document.getElementById('week-modal');
+    const titleElem = document.getElementById('week-modal-title');
+    const nameInput = document.getElementById('week-name-input');
+    const dateInput = document.getElementById('week-start-input');
+
+    if (weekId) {
+      const week = this.weeks.find(w => w.id === weekId);
+      if (week) {
+        titleElem.textContent = 'Modifier la semaine';
+        nameInput.value = week.name;
+        dateInput.value = week.startDate;
+      }
+    } else {
+      titleElem.textContent = 'Créer une semaine';
+      nameInput.value = '';
+
+      // Définir la date du prochain lundi
+      const nextMonday = Utils.getMonday(new Date());
+      nextMonday.setDate(nextMonday.getDate() + 7);
+      dateInput.value = Utils.formatDateISO(nextMonday);
+    }
+
+    modal.classList.add('active');
+  }
+
+  /**
+   * Ferme la modale de semaine
+   */
+  closeWeekModal(save) {
+    const modal = document.getElementById('week-modal');
+    modal.classList.remove('active');
+
+    if (save) {
+      const name = document.getElementById('week-name-input').value.trim();
+      const startDate = document.getElementById('week-start-input').value;
+
+      if (!name || !startDate) {
+        this.toast('Veuillez remplir tous les champs', 'error');
+        return;
+      }
+
+      if (this.editWeekId) {
+        // Modifier une semaine existante
+        const week = this.weeks.find(w => w.id === this.editWeekId);
+        if (week) {
+          week.name = name;
+          week.startDate = startDate;
+          this.toast('Semaine modifiée !');
+        }
+      } else {
+        // Créer une nouvelle semaine
+        this.weeks.push({
+          id: Utils.generateId(),
+          name,
+          startDate,
+          portions: this.defaultPortions,
+          menu: {},
+          isCurrent: false
+        });
+        this.toast('Semaine créée !');
+      }
+
+      this.saveData();
+      this.renderWeeksList();
+    }
+
+    this.editWeekId = null;
+  }
+
+  /**
+   * Édite une semaine
+   */
+  editWeek(weekId) {
+    this.showWeekModal(weekId);
+  }
+
+  /**
+   * Supprime une semaine
+   */
+  deleteWeek(weekId) {
+    const week = this.weeks.find(w => w.id === weekId);
+    if (!week) return;
+
+    this.confirm(
+      'Supprimer la semaine ?',
+      `La semaine "${week.name}" sera définitivement supprimée.`,
+      () => {
+        this.weeks = this.weeks.filter(w => w.id !== weekId);
+        this.saveData();
+        this.renderWeeksList();
+        this.toast('Semaine supprimée');
+      }
+    );
+  }
+
+  /**
+   * Ouvre une semaine pour l'éditer
+   */
+  openWeek(weekId) {
+    this.currentWeekId = weekId;
+    const week = this.weeks.find(w => w.id === weekId);
+
+    if (!week) {
+      this.toast('Semaine introuvable', 'error');
+      return;
+    }
+
+    // Mettre à jour le titre
+    document.getElementById('current-week-title').textContent =
+      `${week.name} - ${Utils.formatDateRange(week.startDate)}`;
+
+    // Afficher la vue du menu
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('menu-view').classList.add('active');
+
+    // Rendre le menu
+    this.renderMenu();
+  }
+
+  /**
+   * Ouvre la semaine en cours
+   */
+  openCurrentWeek() {
+    const currentWeek = this.weeks.find(w => w.isCurrent);
+    const week = currentWeek || this.weeks[0];
+
+    if (week) {
+      this.openWeek(week.id);
+    } else {
+      this.toast('Aucune semaine disponible. Créez-en une !', 'error');
+      this.showView('weeks');
+    }
+  }
+
+  /**
+   * Retour à la liste des semaines
+   */
+  backToWeeks() {
+    this.currentWeekId = null;
+    this.showView('weeks');
+  }
+
+  /**
+   * Récupère la semaine en cours
+   */
+  getWeek() {
+    return this.weeks.find(w => w.id === this.currentWeekId);
+  }
+
+  // ==================== GESTION DU MENU ====================
+
+  /**
+   * Rend le menu de la semaine
+   */
+  renderMenu() {
+    const week = this.getWeek();
+    if (!week) return;
+
+    const tbody = document.getElementById('menu-body');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+
+    this.days.forEach(day => {
+      const row = Utils.createElement('tr');
+
+      // Cellule du jour
+      row.appendChild(Utils.createElement('td', { className: 'day-header' }, day));
+
+      // Cellules des repas
+      this.meals.forEach(meal => {
+        const cell = this.createMealCell(day, meal, week);
+        row.appendChild(cell);
+      });
+
+      tbody.appendChild(row);
+    });
+  }
+
+  /**
+   * Crée une cellule de repas
+   */
+  createMealCell(day, meal, week) {
+    const key = `${day}-${meal}`;
+    const mealData = week.menu[key] || { ingredients: [], recipes: [] };
+
+    const cell = Utils.createElement('td', {
+      className: 'meal-cell',
+      dataset: { day, meal },
+      onclick: () => this.openInputForCell(cell)
+    });
+
+    // Ajouter les actions
+    cell.appendChild(this.createCellActions(day, meal));
+
+    // Badge de portions personnalisées
+    if (mealData.portions && mealData.portions !== week.portions) {
+      const badge = Utils.createElement('div', {
+        className: 'portion-badge',
+        onclick: (e) => {
+          e.stopPropagation();
+          this.showPortionPopup(day, meal, badge, e);
+        }
+      }, `${mealData.portions}👤`);
+      cell.appendChild(badge);
+    }
+
+    // Vérifier le statut du repas
+    if (mealData.status && mealData.status !== 'normal') {
+      cell.className += ` meal-status-${mealData.status}`;
+      const statusLabel = Utils.createElement('div', {
+        className: 'meal-status-label'
+      }, this.statusLabels[mealData.status] || mealData.status);
+      cell.appendChild(statusLabel);
+    }
+
+    // Tags des recettes et ingrédients
+    const tags = Utils.createElement('div', { className: 'ingredient-tags' });
+
+    // Ajouter les recettes
+    if (mealData.recipes) {
+      mealData.recipes.forEach(recipeId => {
+        const recipe = this.recipes.find(r => r.id === recipeId);
+        if (recipe) {
+          const tag = this.createRecipeTag(recipe, day, meal);
+          tags.appendChild(tag);
+        }
+      });
+    }
+
+    // Ajouter les ingrédients
+    if (mealData.ingredients) {
+      mealData.ingredients.forEach(ingId => {
+        const ing = this.ingredients.find(i => i.id === ingId);
+        if (ing) {
+          const tag = this.createIngredientTag(ing, day, meal);
+          tags.appendChild(tag);
+        }
+      });
+    }
+
+    cell.appendChild(tags);
+
+    // Input d'autocomplete
+    cell.appendChild(this.createInputContainer(day, meal));
+
+    return cell;
+  }
+
+  /**
+   * Crée les actions d'une cellule de repas
+   */
+  createCellActions(day, meal) {
+    const actions = Utils.createElement('div', { className: 'cell-actions' });
+
+    const buttons = [
+      { icon: '👤', title: 'Portions', action: (e) => this.showPortionPopup(day, meal, e.target, e) },
+      { icon: '🏠', title: 'Statut', action: (e) => { e.stopPropagation(); this.showStatusModal(day, meal); } },
+      { icon: '📋', title: 'Copier', action: (e) => { e.stopPropagation(); this.copyMeal(day, meal); } },
+      { icon: '📄', title: 'Coller', action: (e) => { e.stopPropagation(); this.pasteMeal(day, meal); } },
+      { icon: '🗑️', title: 'Vider', action: (e) => { e.stopPropagation(); this.clearMeal(day, meal); } },
+      { icon: '🎲', title: 'Aléatoire', action: (e) => { e.stopPropagation(); this.generateRandomMeal(day, meal); } }
+    ];
+
+    buttons.forEach(btn => {
+      const button = Utils.createElement('button', {
+        className: 'cell-btn',
+        title: btn.title,
+        onclick: btn.action
+      }, btn.icon);
+      actions.appendChild(button);
+    });
+
+    return actions;
+  }
+
+  /**
+   * Crée un tag d'ingrédient
+   */
+  createIngredientTag(ingredient, day, meal) {
+    return Utils.createElement('span', {
+      className: `ingredient-tag type-${ingredient.type}`,
+      onclick: (e) => {
+        e.stopPropagation();
+        this.removeIngredientFromMeal(day, meal, ingredient.id);
+      }
+    }, ingredient.name);
+  }
+
+  /**
+   * Crée un tag de recette
+   */
+  createRecipeTag(recipe, day, meal) {
+    return Utils.createElement('span', {
+      className: 'recipe-tag',
+      onclick: (e) => {
+        e.stopPropagation();
+        this.removeRecipeFromMeal(day, meal, recipe.id);
+      }
+    }, `📖 ${recipe.name}`);
+  }
+
+  /**
+   * Crée le conteneur d'input avec autocomplete
+   */
+  createInputContainer(day, meal) {
+    const container = Utils.createElement('div', {
+      className: 'input-container',
+      onclick: (e) => e.stopPropagation()
+    });
+
+    const input = Utils.createElement('input', {
+      type: 'text',
+      className: 'ingredient-input',
+      placeholder: 'Ajouter un ingrédient ou une recette...'
+    });
+
+    const autocompleteList = Utils.createElement('div', {
+      className: 'autocomplete-list'
+    });
+
+    container.appendChild(input);
+    container.appendChild(autocompleteList);
+
+    return container;
+  }
+
+  /**
+   * Ouvre l'input pour une cellule
+   */
+  openInputForCell(cell) {
+    // Fermer l'input précédent
+    if (this.currentCell && this.currentCell !== cell) {
+      this.closeCurrentInput();
+    }
+
+    this.currentCell = cell;
+    cell.classList.add('has-popup');
+
+    const container = cell.querySelector('.input-container');
+    const input = cell.querySelector('.ingredient-input');
+
+    container.classList.add('active');
+    input.focus();
+
+    // Setup de l'autocomplete
+    this.setupAutocomplete(cell, input);
+  }
+
+  /**
+   * Ferme l'input actuel
+   */
+  closeCurrentInput() {
+    if (this.currentCell) {
+      this.currentCell.classList.remove('has-popup');
+      const container = this.currentCell.querySelector('.input-container');
+      const input = this.currentCell.querySelector('.ingredient-input');
+      const list = this.currentCell.querySelector('.autocomplete-list');
+
+      container.classList.remove('active');
+      input.value = '';
+      list.innerHTML = '';
+
+      this.currentCell = null;
+    }
+  }
+
+  /**
+   * Configure l'autocomplete pour un input
+   */
+  setupAutocomplete(cell, input) {
+    const list = cell.querySelector('.autocomplete-list');
+    const day = cell.dataset.day;
+    const meal = cell.dataset.meal;
+
+    // Debounce de la recherche
+    const handleInput = Utils.debounce(() => {
+      const value = input.value.toLowerCase().trim();
+      list.innerHTML = '';
+
+      if (value.length === 0) return;
+
+      // Rechercher dans les recettes
+      const matchedRecipes = this.recipes.filter(r =>
+        r.name.toLowerCase().includes(value)
+      );
+
+      // Rechercher dans les ingrédients
+      const matchedIngredients = Utils.filterBySearch(
+        this.ingredients,
+        value,
+        ['name']
+      ).sort((a, b) => {
+        if (a.favorite && !b.favorite) return -1;
+        if (!a.favorite && b.favorite) return 1;
+        return a.name.localeCompare(b.name);
+      });
+
+      // Afficher les recettes
+      if (matchedRecipes.length > 0) {
+        const header = Utils.createElement('div', {
+          style: 'padding:8px 12px;font-weight:bold;color:var(--primary);background:rgba(102,126,234,0.1)'
+        }, '📖 RECETTES');
+        list.appendChild(header);
+
+        matchedRecipes.forEach(recipe => {
+          const item = Utils.createElement('div', {
+            className: 'autocomplete-item',
+            onclick: (e) => {
+              e.stopPropagation();
+              this.addRecipeToMeal(day, meal, recipe.id);
+              this.closeCurrentInput();
+            }
+          }, `📖 ${recipe.name}`);
+          list.appendChild(item);
+        });
+      }
+
+      // Afficher les ingrédients
+      if (matchedIngredients.length > 0) {
+        matchedIngredients.forEach(ing => {
+          const item = Utils.createElement('div', {
+            className: 'autocomplete-item',
+            onclick: (e) => {
+              e.stopPropagation();
+              this.addIngredientToMeal(day, meal, ing.id);
+              this.closeCurrentInput();
+            }
+          });
+
+          if (ing.favorite) {
+            item.style.background = '#fffbeb';
+            item.style.borderLeft = '3px solid #fbbf24';
+          }
+
+          item.textContent = (ing.favorite ? '⭐ ' : '') + ing.name;
+          list.appendChild(item);
+        });
+      }
+
+      // Option pour créer un nouvel ingrédient
+      const existingMatch = matchedIngredients.some(i =>
+        i.name.toLowerCase() === value
+      );
+
+      if (!existingMatch) {
+        const newItem = Utils.createElement('div', {
+          className: 'autocomplete-item',
+          style: 'background:#e7f3ff;font-weight:600',
+          onclick: (e) => {
+            e.stopPropagation();
+            this.showCreateIngredientDialog(input.value, cell);
+            list.innerHTML = '';
+          }
+        }, `✨ Créer "${input.value}"`);
+        list.appendChild(newItem);
+      }
+    }, 300);
+
+    input.oninput = handleInput;
+  }
+
+  /**
+   * Ajoute un ingrédient à un repas
+   */
+  addIngredientToMeal(day, meal, ingId) {
+    const week = this.getWeek();
+    if (!week) return;
+
+    const key = `${day}-${meal}`;
+    if (!week.menu[key]) {
+      week.menu[key] = { ingredients: [], recipes: [] };
+    }
+
+    if (!week.menu[key].ingredients.includes(ingId)) {
+      week.menu[key].ingredients.push(ingId);
+      this.saveData();
+      this.renderMenu();
+    }
+  }
+
+  /**
+   * Ajoute une recette à un repas
+   */
+  addRecipeToMeal(day, meal, recipeId) {
+    const week = this.getWeek();
+    if (!week) return;
+
+    const key = `${day}-${meal}`;
+    if (!week.menu[key]) {
+      week.menu[key] = { ingredients: [], recipes: [] };
+    }
+
+    if (!week.menu[key].recipes) {
+      week.menu[key].recipes = [];
+    }
+
+    if (!week.menu[key].recipes.includes(recipeId)) {
+      week.menu[key].recipes.push(recipeId);
+      this.saveData();
+      this.renderMenu();
+    }
+  }
+
+  /**
+   * Retire un ingrédient d'un repas
+   */
+  removeIngredientFromMeal(day, meal, ingId) {
+    const week = this.getWeek();
+    if (!week) return;
+
+    const key = `${day}-${meal}`;
+    if (week.menu[key] && week.menu[key].ingredients) {
+      week.menu[key].ingredients = week.menu[key].ingredients.filter(id => id !== ingId);
+      this.saveData();
+      this.renderMenu();
+      this.toast('Ingrédient retiré');
+    }
+  }
+
+  /**
+   * Retire une recette d'un repas
+   */
+  removeRecipeFromMeal(day, meal, recipeId) {
+    const week = this.getWeek();
+    if (!week) return;
+
+    const key = `${day}-${meal}`;
+    if (week.menu[key] && week.menu[key].recipes) {
+      week.menu[key].recipes = week.menu[key].recipes.filter(id => id !== recipeId);
+      this.saveData();
+      this.renderMenu();
+      this.toast('Recette retirée');
+    }
+  }
+
+  /**
+   * Copie un repas
+   */
+  copyMeal(day, meal) {
+    const week = this.getWeek();
+    if (!week) return;
+
+    const key = `${day}-${meal}`;
+    if (week.menu[key]) {
+      this.copiedMeal = Utils.deepClone(week.menu[key]);
+      this.toast('Repas copié !', 'info');
+    } else {
+      this.toast('Case vide', 'error');
+    }
+  }
+
+  /**
+   * Colle un repas
+   */
+  pasteMeal(day, meal) {
+    if (!this.copiedMeal) {
+      this.toast('Rien à coller', 'error');
+      return;
+    }
+
+    const week = this.getWeek();
+    if (!week) return;
+
+    const key = `${day}-${meal}`;
+    week.menu[key] = Utils.deepClone(this.copiedMeal);
+    this.saveData();
+    this.renderMenu();
+    this.toast('Repas collé !');
+  }
+
+  /**
+   * Vide un repas
+   */
+  clearMeal(day, meal) {
+    this.confirm(
+      'Vider le repas ?',
+      'Tous les ingrédients et recettes seront supprimés.',
+      () => {
+        const week = this.getWeek();
+        if (week) {
+          const key = `${day}-${meal}`;
+          week.menu[key] = { ingredients: [], recipes: [] };
+          this.saveData();
+          this.renderMenu();
+          this.toast('Repas vidé !');
+        }
+      }
+    );
+  }
+
+  /**
+   * Vide tout le menu
+   */
+  clearAllMenu() {
+    this.confirm(
+      'Vider tout le menu ?',
+      'Tous les repas de la semaine seront supprimés.',
+      () => {
+        const week = this.getWeek();
+        if (week) {
+          week.menu = {};
+          this.saveData();
+          this.renderMenu();
+          this.toast('Menu vidé !');
+        }
+      }
+    );
+  }
+
+  /**
+   * Génère un repas aléatoire
+   */
+  generateRandomMeal(day, meal) {
+    const proteines = this.ingredients.filter(i => i.type === 'proteine');
+    const feculents = this.ingredients.filter(i => i.type === 'feculent');
+    const legumes = this.ingredients.filter(i => i.type === 'legume');
+
+    if (proteines.length === 0 || feculents.length === 0 || legumes.length === 0) {
+      this.toast('Ingrédients manquants pour générer un repas', 'error');
+      return;
+    }
+
+    const week = this.getWeek();
+    if (!week) return;
+
+    const key = `${day}-${meal}`;
+    week.menu[key] = {
+      ingredients: [
+        Utils.randomElement(proteines).id,
+        Utils.randomElement(feculents).id,
+        Utils.randomElement(legumes).id
+      ],
+      recipes: []
+    };
+
+    this.saveData();
+    this.renderMenu();
+    this.toast('Repas généré !');
+  }
+
+  /**
+   * Remplit toute la semaine aléatoirement
+   */
+  fillWeekRandomly() {
+    this.confirm(
+      'Remplir la semaine aléatoirement ?',
+      'Tous les repas actuels seront remplacés.',
+      () => {
+        const proteines = this.ingredients.filter(i => i.type === 'proteine');
+        const feculents = this.ingredients.filter(i => i.type === 'feculent');
+        const legumes = this.ingredients.filter(i => i.type === 'legume');
+
+        if (proteines.length === 0 || feculents.length === 0 || legumes.length === 0) {
+          this.toast('Ingrédients manquants', 'error');
+          return;
+        }
+
+        const week = this.getWeek();
+        if (week) {
+          this.days.forEach(day => {
+            this.meals.forEach(meal => {
+              const key = `${day}-${meal}`;
+              week.menu[key] = {
+                ingredients: [
+                  Utils.randomElement(proteines).id,
+                  Utils.randomElement(feculents).id,
+                  Utils.randomElement(legumes).id
+                ],
+                recipes: []
+              };
+            });
+          });
+
+          this.saveData();
+          this.renderMenu();
+          this.toast('Semaine générée !');
+        }
+      }
+    );
+  }
+
+  // ==================== PORTIONS ====================
+
+  /**
+   * Affiche la popup de portions
+   */
+  showPortionPopup(day, meal, button, event) {
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
+
+    const week = this.getWeek();
+    if (!week) return;
+
+    // Fermer les autres popups
+    document.querySelectorAll('.portion-input-popup').forEach(p => p.remove());
+
+    const key = `${day}-${meal}`;
+    const currentPortions = week.menu[key]?.portions || week.portions || this.defaultPortions;
+
+    const popup = Utils.createElement('div', {
+      className: 'portion-input-popup active',
+      onclick: (e) => e.stopPropagation()
+    });
+
+    const input = Utils.createElement('input', {
+      type: 'number',
+      min: '1',
+      max: '20',
+      value: currentPortions.toString(),
+      onclick: (e) => e.stopPropagation()
+    });
+
+    input.onkeydown = (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        this.saveCustomPortion(day, meal, input.value);
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        popup.remove();
+      }
+    };
+
+    const btnValidate = Utils.createElement('button', {
+      onclick: (e) => {
+        e.stopPropagation();
+        this.saveCustomPortion(day, meal, input.value);
+      }
+    }, '✓ OK');
+
+    const btnCancel = Utils.createElement('button', {
+      onclick: (e) => {
+        e.stopPropagation();
+        popup.remove();
+      },
+      style: 'background:#ef4444'
+    }, '✗');
+
+    popup.appendChild(Utils.createElement('label', {
+      style: 'color:var(--text-1);font-weight:700;margin-right:10px'
+    }, 'Portions:'));
+    popup.appendChild(input);
+    popup.appendChild(btnValidate);
+    popup.appendChild(btnCancel);
+
+    const cell = button.closest('.meal-cell');
+    cell.style.position = 'relative';
+    cell.appendChild(popup);
+
+    input.focus();
+    input.select();
+  }
+
+  /**
+   * Sauvegarde les portions personnalisées
+   */
+  saveCustomPortion(day, meal, value) {
+    const week = this.getWeek();
+    if (!week) return;
+
+    const portions = parseInt(value, 10);
+    if (isNaN(portions) || portions < 1) {
+      this.toast('Nombre invalide', 'error');
+      return;
+    }
+
+    const key = `${day}-${meal}`;
+    if (!week.menu[key]) {
+      week.menu[key] = { ingredients: [], recipes: [] };
+    }
+
+    if (portions === week.portions) {
+      delete week.menu[key].portions;
+    } else {
+      week.menu[key].portions = portions;
+    }
+
+    this.saveData();
+    this.renderMenu();
+    this.toast('Portions mises à jour !');
+  }
+
+  // ==================== STATUTS DE REPAS ====================
+
+  /**
+   * Affiche la modale de statut
+   */
+  showStatusModal(day, meal) {
+    this.currentStatusCell = { day, meal };
+
+    const week = this.getWeek();
+    const key = `${day}-${meal}`;
+    const currentStatus = week.menu[key]?.status || 'normal';
+
+    // Mettre à jour la sélection
+    document.querySelectorAll('.status-option').forEach(opt => {
+      opt.classList.toggle('selected', opt.dataset.status === currentStatus);
+    });
+
+    this.selectedStatus = currentStatus;
+    document.getElementById('status-modal').classList.add('active');
+  }
+
+  /**
+   * Sélectionne un statut
+   */
+  selectStatus(element) {
+    document.querySelectorAll('.status-option').forEach(opt => {
+      opt.classList.remove('selected');
+    });
+    element.classList.add('selected');
+    this.selectedStatus = element.dataset.status;
+  }
+
+  /**
+   * Ferme la modale de statut
+   */
+  closeStatusModal() {
+    document.getElementById('status-modal').classList.remove('active');
+    this.currentStatusCell = null;
+    this.selectedStatus = null;
+  }
+
+  /**
+   * Confirme le statut
+   */
+  confirmStatus() {
+    if (!this.currentStatusCell || !this.selectedStatus) return;
+
+    const week = this.getWeek();
+    if (!week) return;
+
+    const { day, meal } = this.currentStatusCell;
+    const key = `${day}-${meal}`;
+
+    if (!week.menu[key]) {
+      week.menu[key] = { ingredients: [], recipes: [] };
+    }
+
+    week.menu[key].status = this.selectedStatus;
+
+    // Si statut spécial, vider le contenu
+    if (this.selectedStatus !== 'normal') {
+      week.menu[key].ingredients = [];
+      week.menu[key].recipes = [];
+    }
+
+    this.saveData();
+    this.renderMenu();
+    this.closeStatusModal();
+    this.toast('Statut mis à jour !');
+  }
+
+  // ==================== INGRÉDIENTS ====================
+
+  /**
+   * Rend la liste des ingrédients
+   */
+  renderIngredientsList() {
+    const container = document.getElementById('ingredients-list');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    // Filtrer les ingrédients
+    let filtered;
+    if (this.currentFilter === 'all') {
+      filtered = this.ingredients;
+    } else if (this.currentFilter === 'favorites') {
+      filtered = this.ingredients.filter(i => i.favorite === true);
+    } else {
+      filtered = this.ingredients.filter(i => i.type === this.currentFilter);
+    }
+
+    // Trier : favoris en premier
+    filtered = Utils.sortItems(filtered, 'name').sort((a, b) => {
+      if (a.favorite && !b.favorite) return -1;
+      if (!a.favorite && b.favorite) return 1;
+      return 0;
+    });
+
+    // Créer les cartes
+    filtered.forEach(ing => {
+      const card = this.createIngredientCard(ing);
+      container.appendChild(card);
+    });
+
+    if (filtered.length === 0) {
+      container.innerHTML = `<p style="text-align:center;color:var(--text-3);padding:40px">Aucun ingrédient${this.currentFilter === 'favorites' ? ' favori' : ''}</p>`;
+    }
+  }
+
+  /**
+   * Crée une carte d'ingrédient
+   */
+  createIngredientCard(ingredient) {
+    const card = Utils.createElement('div', {
+      className: `ingredient-card type-${ingredient.type}`
+    });
+
+    // Nom avec étoile de favori
+    const nameDiv = Utils.createElement('div', { className: 'name' });
+
+    const star = Utils.createElement('span', {
+      className: `favorite-star${ingredient.favorite ? ' active' : ''}`,
+      onclick: () => this.toggleFavorite(ingredient.id)
+    }, ingredient.favorite ? '⭐' : '☆');
+
+    nameDiv.appendChild(star);
+    nameDiv.appendChild(Utils.createElement('span', {}, ingredient.name));
+
+    // Actions
+    const actionsContainer = Utils.createElement('div');
+
+    // Rayon et portions
+    if (ingredient.rayon) {
+      let rayonText = this.rayonLabels[ingredient.rayon] || ingredient.rayon;
+
+      // Info portion
+      if (ingredient.portionType === 'weight' && ingredient.portionWeight) {
+        rayonText += ` • ${ingredient.portionWeight}g/portion`;
+      } else if (ingredient.portionType === 'volume' && ingredient.portionWeight) {
+        rayonText += ` • ${ingredient.portionWeight}ml/portion`;
+      } else if (ingredient.portionType === 'spoon') {
+        rayonText += ' • En cuillères';
+      }
+
+      const rayon = Utils.createElement('div', {
+        className: 'ingredient-rayon'
+      }, rayonText);
+      actionsContainer.appendChild(rayon);
+    }
+
+    // Boutons d'action
+    const actions = Utils.createElement('div', { className: 'actions' });
+
+    const editBtn = Utils.createElement('button', {
+      onclick: () => this.editIngredient(ingredient.id)
+    }, '✏️');
+
+    const deleteBtn = Utils.createElement('button', {
+      onclick: () => this.deleteIngredient(ingredient.id)
+    }, '🗑️');
+
+    actions.appendChild(editBtn);
+    actions.appendChild(deleteBtn);
+    actionsContainer.appendChild(actions);
+
+    card.appendChild(nameDiv);
+    card.appendChild(actionsContainer);
+
+    return card;
+  }
+
+  /**
+   * Bascule le favori d'un ingrédient
+   */
+  toggleFavorite(ingId) {
+    const ing = this.ingredients.find(i => i.id === ingId);
+    if (ing) {
+      ing.favorite = !ing.favorite;
+      this.saveData();
+      this.renderIngredientsList();
+      this.toast(ing.favorite ? '⭐ Ajouté aux favoris' : 'Retiré des favoris');
+    }
+  }
+
+  /**
+   * Filtre les ingrédients
+   */
+  filterIngredients(filter) {
+    this.currentFilter = filter;
+
+    // Mettre à jour les boutons
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.classList.remove('active');
+    });
+    event.target.classList.add('active');
+
+    this.renderIngredientsList();
+  }
+
+  /**
+   * Gère la soumission du formulaire d'ingrédient
+   */
+  handleIngredientSubmit(event) {
+    event.preventDefault();
+
+    const name = document.getElementById('new-ingredient-name').value.trim();
+    const type = document.getElementById('new-ingredient-type').value;
+    const rayon = document.getElementById('new-ingredient-rayon').value;
+    const portionType = document.getElementById('new-ingredient-portion-type').value;
+    const portionWeight = parseInt(document.getElementById('new-ingredient-portion-weight').value, 10) || null;
+
+    if (!name) {
+      this.toast('Veuillez entrer un nom', 'error');
+      return;
+    }
+
+    this.ingredients.push({
+      id: Utils.generateId(),
+      name,
+      type,
+      rayon,
+      portionType,
+      portionWeight,
+      favorite: false
+    });
+
+    this.saveData();
+    this.renderIngredientsList();
+
+    // Réinitialiser le formulaire
+    document.getElementById('new-ingredient-name').value = '';
+    document.getElementById('new-ingredient-portion-weight').value = '';
+
+    this.toast(`"${name}" ajouté !`);
+  }
+
+  /**
+   * Active/désactive le champ de poids de portion
+   */
+  togglePortionWeightField(prefix) {
+    const select = document.getElementById(`${prefix}-ingredient-portion-type`);
+    const group = document.getElementById(`${prefix}-portion-weight-group`);
+    const label = document.getElementById(`${prefix}-portion-weight-label`);
+
+    if (!select || !group) return;
+
+    const type = select.value;
+
+    if (type === 'quantity' || type === 'spoon') {
+      group.style.display = 'none';
+    } else {
+      group.style.display = 'block';
+      if (type === 'weight') {
+        label.textContent = 'Poids par portion (g)';
+        document.getElementById(`${prefix}-ingredient-portion-weight`).placeholder = '100';
+      } else if (type === 'volume') {
+        label.textContent = 'Volume par portion (ml)';
+        document.getElementById(`${prefix}-ingredient-portion-weight`).placeholder = '250';
+      }
+    }
+  }
+
+  /**
+   * Édite un ingrédient
+   */
+  editIngredient(ingId) {
+    const ing = this.ingredients.find(i => i.id === ingId);
+    if (!ing) return;
+
+    this.editIngredientId = ingId;
+
+    document.getElementById('edit-ingredient-name').value = ing.name;
+    document.getElementById('edit-ingredient-rayon').value = ing.rayon || 'epicerie';
+    document.getElementById('edit-ingredient-portion-type').value = ing.portionType || 'quantity';
+    document.getElementById('edit-ingredient-portion-weight').value = ing.portionWeight || '';
+
+    this.togglePortionWeightField('edit');
+
+    document.getElementById('edit-ingredient-modal').classList.add('active');
+  }
+
+  /**
+   * Ferme la modale d'édition d'ingrédient
+   */
+  closeEditIngredientModal(save) {
+    document.getElementById('edit-ingredient-modal').classList.remove('active');
+
+    if (save && this.editIngredientId) {
+      const ing = this.ingredients.find(i => i.id === this.editIngredientId);
+      if (ing) {
+        const newName = document.getElementById('edit-ingredient-name').value.trim();
+        const newRayon = document.getElementById('edit-ingredient-rayon').value;
+        const newPortionType = document.getElementById('edit-ingredient-portion-type').value;
+        const newPortionWeight = parseInt(document.getElementById('edit-ingredient-portion-weight').value, 10) || null;
+
+        if (newName) {
+          ing.name = newName;
+          ing.rayon = newRayon;
+          ing.portionType = newPortionType;
+          ing.portionWeight = newPortionWeight;
+
+          this.saveData();
+          this.renderIngredientsList();
+          this.renderMenu();
+          this.renderRecipesList();
+          this.toast('Ingrédient modifié !');
+        }
+      }
+    }
+
+    this.editIngredientId = null;
+  }
+
+  /**
+   * Supprime un ingrédient
+   */
+  deleteIngredient(ingId) {
+    const ing = this.ingredients.find(i => i.id === ingId);
+    if (!ing) return;
+
+    this.confirm(
+      'Supprimer l\'ingrédient ?',
+      `"${ing.name}" sera supprimé de tous les menus et recettes.`,
+      () => {
+        // Supprimer l'ingrédient
+        this.ingredients = this.ingredients.filter(i => i.id !== ingId);
+
+        // Supprimer des menus
+        this.weeks.forEach(week => {
+          Object.values(week.menu).forEach(meal => {
+            if (meal.ingredients) {
+              meal.ingredients = meal.ingredients.filter(id => id !== ingId);
+            }
+          });
+        });
+
+        // Supprimer des recettes
+        this.recipes.forEach(recipe => {
+          recipe.ingredients = recipe.ingredients.filter(id => id !== ingId);
+        });
+
+        this.saveData();
+        this.renderIngredientsList();
+        this.renderRecipesList();
+        this.toast('Ingrédient supprimé');
+      }
+    );
+  }
+
+  /**
+   * Affiche la modale de création d'ingrédient
+   */
+  showCreateIngredientDialog(name, cell) {
+    this.newIngredientData = { name, cell };
+
+    document.getElementById('modal-ingredient-name').textContent = name;
+    document.querySelectorAll('.type-option').forEach(opt => opt.classList.remove('selected'));
+    document.getElementById('create-ingredient-modal').classList.add('active');
+  }
+
+  /**
+   * Sélectionne un type d'ingrédient
+   */
+  selectType(element) {
+    document.querySelectorAll('.type-option').forEach(opt => opt.classList.remove('selected'));
+    element.classList.add('selected');
+  }
+
+  /**
+   * Ferme la modale de création d'ingrédient
+   */
+  closeCreateIngredientModal() {
+    document.getElementById('create-ingredient-modal').classList.remove('active');
+    this.newIngredientData = null;
+  }
+
+  /**
+   * Confirme la création d'un ingrédient
+   */
+  confirmCreateIngredient() {
+    const selected = document.querySelector('.type-option.selected');
+    if (!selected) {
+      this.toast('Veuillez sélectionner un type', 'error');
+      return;
+    }
+
+    const type = selected.dataset.type;
+    const name = this.newIngredientData.name;
+
+    // Déterminer le rayon par défaut
+    let rayon = 'epicerie';
+    if (type === 'proteine') rayon = 'boucherie';
+    if (type === 'legume') rayon = 'frais';
+
+    const newIng = {
+      id: Utils.generateId(),
+      name,
+      type,
+      rayon,
+      portionType: 'quantity',
+      favorite: false
+    };
+
+    this.ingredients.push(newIng);
+    this.saveData();
+    this.renderIngredientsList();
+
+    // Ajouter au repas si nécessaire
+    if (this.newIngredientData.cell) {
+      const { day, meal } = this.newIngredientData.cell.dataset;
+      this.addIngredientToMeal(day, meal, newIng.id);
+      this.closeCurrentInput();
+    }
+
+    this.closeCreateIngredientModal();
+    this.toast('Ingrédient créé !');
+  }
+
+  // ==================== RECETTES ====================
+
+  /**
+   * Rend la liste des recettes
+   */
+  renderRecipesList() {
+    const container = document.getElementById('recipes-list');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    if (this.recipes.length === 0) {
+      container.innerHTML = '<p style="text-align:center;color:var(--text-3);padding:40px">Aucune recette</p>';
+      return;
+    }
+
+    this.recipes.forEach(recipe => {
+      const card = this.createRecipeCard(recipe);
+      container.appendChild(card);
+    });
+  }
+
+  /**
+   * Crée une carte de recette
+   */
+  createRecipeCard(recipe) {
+    const card = Utils.createElement('div', { className: 'recipe-card' });
+
+    // En-tête avec nom et bouton supprimer
+    const header = Utils.createElement('div', {
+      style: 'display:flex;justify-content:space-between;align-items:center;margin-bottom:15px'
+    });
+
+    const name = Utils.createElement('div', {
+      className: 'recipe-name'
+    }, recipe.name);
+
+    const deleteBtn = Utils.createElement('button', {
+      className: 'btn-delete',
+      onclick: () => this.deleteRecipe(recipe.id)
+    }, '🗑️ Supprimer');
+
+    header.appendChild(name);
+    header.appendChild(deleteBtn);
+    card.appendChild(header);
+
+    // Ingrédients
+    const ingredients = Utils.createElement('div', { className: 'recipe-ingredients' });
+    recipe.ingredients.forEach(ingId => {
+      const ing = this.ingredients.find(i => i.id === ingId);
+      if (ing) {
+        const tag = Utils.createElement('span', {
+          className: `ingredient-tag type-${ing.type}`,
+          style: 'cursor:default'
+        }, ing.name);
+        ingredients.appendChild(tag);
+      }
+    });
+    card.appendChild(ingredients);
+
+    // Tags
+    if (recipe.tags && recipe.tags.length > 0) {
+      const tagsContainer = Utils.createElement('div', { className: 'recipe-tags' });
+      recipe.tags.forEach(tag => {
+        const tagElem = Utils.createElement('span', {
+          className: 'recipe-tag-item',
+          style: `background-color:${tag.color}`
+        }, `${tag.emoji} ${tag.name}`);
+        tagsContainer.appendChild(tagElem);
+      });
+      card.appendChild(tagsContainer);
+    }
+
+    return card;
+  }
+
+  /**
+   * Gère la soumission du formulaire de recette
+   */
+  handleRecipeSubmit(event) {
+    event.preventDefault();
+
+    const name = document.getElementById('new-recipe-name').value.trim();
+
+    if (!name) {
+      this.toast('Veuillez entrer un nom', 'error');
+      return;
+    }
+
+    if (this.selectedRecipeIngredients.length === 0) {
+      this.toast('Veuillez sélectionner au moins un ingrédient', 'error');
+      return;
+    }
+
+    const selectedTags = this.getSelectedTags();
+
+    this.recipes.push({
+      id: Utils.generateId(),
+      name,
+      ingredients: [...this.selectedRecipeIngredients],
+      tags: selectedTags
+    });
+
+    this.saveData();
+    this.renderRecipesList();
+
+    // Réinitialiser le formulaire
+    document.getElementById('new-recipe-name').value = '';
+    this.selectedRecipeIngredients = [];
+    this.recipeSearchFilter = '';
+    this.recipeTypeFilter = 'all';
+    document.getElementById('recipe-search-input').value = '';
+
+    // Désélectionner tous les tags
+    document.querySelectorAll('.tag-option.selected').forEach(elem => {
+      elem.classList.remove('selected');
+    });
+
+    this.renderRecipeIngredientSelector();
+    this.toast(`Recette "${name}" créée !`);
+  }
+
+  /**
+   * Supprime une recette
+   */
+  deleteRecipe(recipeId) {
+    const recipe = this.recipes.find(r => r.id === recipeId);
+    if (!recipe) return;
+
+    this.confirm(
+      'Supprimer la recette ?',
+      `La recette "${recipe.name}" sera supprimée de tous les menus.`,
+      () => {
+        // Supprimer la recette
+        this.recipes = this.recipes.filter(r => r.id !== recipeId);
+
+        // Supprimer des menus
+        this.weeks.forEach(week => {
+          Object.values(week.menu).forEach(meal => {
+            if (meal.recipes) {
+              meal.recipes = meal.recipes.filter(id => id !== recipeId);
+            }
+          });
+        });
+
+        this.saveData();
+        this.renderRecipesList();
+        this.toast('Recette supprimée');
+      }
+    );
+  }
+
+  /**
+   * Rend le sélecteur d'ingrédients pour les recettes
+   */
+  renderRecipeIngredientSelector() {
+    const container = document.getElementById('recipe-ingredients-selector');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    // Filtrer les ingrédients
+    let filtered = [...this.ingredients];
+
+    if (this.recipeTypeFilter !== 'all') {
+      filtered = filtered.filter(i => i.type === this.recipeTypeFilter);
+    }
+
+    if (this.recipeSearchFilter) {
+      filtered = Utils.filterBySearch(filtered, this.recipeSearchFilter, ['name']);
+    }
+
+    filtered = Utils.sortItems(filtered, 'name');
+
+    if (filtered.length === 0) {
+      container.innerHTML = '<p style="text-align:center;color:var(--text-3);padding:20px">Aucun ingrédient</p>';
+      return;
+    }
+
+    filtered.forEach(ing => {
+      const isSelected = this.selectedRecipeIngredients.includes(ing.id);
+
+      const card = Utils.createElement('div', {
+        className: `ingredient-card type-${ing.type}`,
+        style: `cursor:pointer;opacity:${isSelected ? '1' : '0.5'};border:${isSelected ? '3px solid var(--primary)' : '2px solid rgba(255,255,255,0.2)'}`,
+        onclick: () => {
+          if (isSelected) {
+            this.selectedRecipeIngredients = this.selectedRecipeIngredients.filter(id => id !== ing.id);
+          } else {
+            this.selectedRecipeIngredients.push(ing.id);
+          }
+          this.renderRecipeIngredientSelector();
+        }
+      });
+
+      const name = Utils.createElement('div', { className: 'name' }, ing.name);
+      card.appendChild(name);
+      container.appendChild(card);
+    });
+  }
+
+  /**
+   * Filtre les ingrédients pour les recettes
+   */
+  filterRecipeIngredients() {
+    this.recipeSearchFilter = document.getElementById('recipe-search-input').value;
+    this.renderRecipeIngredientSelector();
+  }
+
+  /**
+   * Filtre les ingrédients par type pour les recettes
+   */
+  filterRecipeByType(type) {
+    this.recipeTypeFilter = type;
+
+    // Mettre à jour les boutons
+    document.querySelectorAll('.type-filter-btn').forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+
+    this.renderRecipeIngredientSelector();
+  }
+
+  // ==================== TAGS ====================
+
+  /**
+   * Rend le sélecteur de tags
+   */
+  renderTagsSelector() {
+    const predefinedContainer = document.getElementById('predefined-tags-selector');
+    const customContainer = document.getElementById('custom-tags-selector');
+
+    if (!predefinedContainer || !customContainer) return;
+
+    // Tags pré-définis
+    predefinedContainer.innerHTML = '';
+    this.availableTags.forEach(tag => {
+      const tagElem = this.createTagOption(tag, 'predefined');
+      predefinedContainer.appendChild(tagElem);
+    });
+
+    // Tags personnalisés
+    customContainer.innerHTML = '';
+    this.customTags.forEach(tag => {
+      const tagElem = this.createTagOption(tag, 'custom');
+
+      // Bouton de suppression
+      const deleteBtn = Utils.createElement('span', {
+        style: 'margin-left:8px;opacity:0.7;cursor:pointer',
+        onclick: (e) => {
+          e.stopPropagation();
+          this.deleteCustomTag(tag.id);
+        }
+      }, '🗑️');
+
+      tagElem.appendChild(deleteBtn);
+      customContainer.appendChild(tagElem);
+    });
+  }
+
+  /**
+   * Crée une option de tag
+   */
+  createTagOption(tag, type) {
+    return Utils.createElement('div', {
+      className: 'tag-option',
+      style: `background-color:${tag.color}`,
+      dataset: { tagId: tag.id.toString(), tagType: type },
+      onclick: function() {
+        this.classList.toggle('selected');
+      }
+    }, `${tag.emoji} ${tag.name}`);
+  }
+
+  /**
+   * Récupère les tags sélectionnés
+   */
+  getSelectedTags() {
+    const selected = [];
+
+    // Tags pré-définis
+    document.querySelectorAll('#predefined-tags-selector .tag-option.selected').forEach(elem => {
+      const tagId = parseInt(elem.dataset.tagId, 10);
+      const tag = this.availableTags.find(t => t.id === tagId);
+      if (tag) {
+        selected.push({
+          type: 'predefined',
+          id: tag.id,
+          name: tag.name,
+          emoji: tag.emoji,
+          color: tag.color
+        });
+      }
+    });
+
+    // Tags personnalisés
+    document.querySelectorAll('#custom-tags-selector .tag-option.selected').forEach(elem => {
+      const tagId = parseInt(elem.dataset.tagId, 10);
+      const tag = this.customTags.find(t => t.id === tagId);
+      if (tag) {
+        selected.push({
+          type: 'custom',
+          id: tag.id,
+          name: tag.name,
+          emoji: tag.emoji,
+          color: tag.color
+        });
+      }
+    });
+
+    return selected;
+  }
+
+  /**
+   * Ajoute un tag personnalisé
+   */
+  addCustomTag() {
+    const name = document.getElementById('new-tag-name').value.trim();
+    const emoji = document.getElementById('new-tag-emoji').value.trim() || '🏷️';
+    const color = document.getElementById('new-tag-color').value;
+
+    if (!name) {
+      this.toast('Veuillez entrer un nom', 'error');
+      return;
+    }
+
+    this.customTags.push({
+      id: Utils.generateId(),
+      name,
+      emoji,
+      color
+    });
+
+    document.getElementById('new-tag-name').value = '';
+    document.getElementById('new-tag-emoji').value = '';
+    document.getElementById('new-tag-color').value = '#6366f1';
+
+    this.saveData();
+    this.renderTagsSelector();
+    this.toast('Tag créé ! 🏷️');
+  }
+
+  /**
+   * Supprime un tag personnalisé
+   */
+  deleteCustomTag(tagId) {
+    this.confirm(
+      'Supprimer ce tag ?',
+      'Il sera retiré de toutes les recettes.',
+      () => {
+        // Supprimer le tag
+        this.customTags = this.customTags.filter(t => t.id !== tagId);
+
+        // Retirer des recettes
+        this.recipes.forEach(recipe => {
+          if (recipe.tags) {
+            recipe.tags = recipe.tags.filter(t => !(t.type === 'custom' && t.id === tagId));
+          }
+        });
+
+        this.saveData();
+        this.renderTagsSelector();
+        this.renderRecipesList();
+        this.toast('Tag supprimé');
+      }
+    );
+  }
+
+  // ==================== LISTE DE COURSES ====================
+
+  /**
+   * Génère et affiche la liste de courses
+   */
+  generateAndShowShoppingList() {
+    const week = this.getWeek();
+    if (!week) return;
+
+    document.getElementById('shopping-week-title').textContent = week.name;
+
+    // Afficher la vue
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('shopping-view').classList.add('active');
+
+    this.generateShoppingList();
+  }
+
+  /**
+   * Génère la liste de courses
+   */
+  generateShoppingList() {
+    const week = this.getWeek();
+    if (!week) return;
+
+    const container = document.getElementById('shopping-list-container');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    // Compter les ingrédients
+    const counts = {};
+
+    Object.entries(week.menu).forEach(([key, meal]) => {
+      // Ignorer les repas avec statut spécial
+      if (meal.status && meal.status !== 'normal') {
+        return;
+      }
+
+      const portions = meal.portions || week.portions;
+
+      // Ingrédients
+      if (meal.ingredients) {
+        meal.ingredients.forEach(id => {
+          counts[id] = (counts[id] || 0) + portions;
+        });
+      }
+
+      // Recettes
+      if (meal.recipes) {
+        meal.recipes.forEach(recipeId => {
+          const recipe = this.recipes.find(r => r.id === recipeId);
+          if (recipe) {
+            recipe.ingredients.forEach(id => {
+              counts[id] = (counts[id] || 0) + portions;
+            });
+          }
+        });
+      }
+    });
+
+    if (Object.keys(counts).length === 0 && this.customShoppingItems.length === 0) {
+      container.innerHTML = '<p style="text-align:center;color:var(--text-3);padding:40px">Menu vide</p>';
+      return;
+    }
+
+    // Grouper par rayon
+    const byRayon = {};
+
+    Object.entries(counts).forEach(([ingId, count]) => {
+      const ing = this.ingredients.find(i => i.id === parseInt(ingId, 10));
+      if (ing) {
+        const rayon = ing.rayon || 'epicerie';
+        if (!byRayon[rayon]) {
+          byRayon[rayon] = [];
+        }
+        byRayon[rayon].push({ ingredient: ing, count });
+      }
+    });
+
+    // Afficher par rayon
+    ['frais', 'boucherie', 'poissonnerie', 'cremerie', 'boulangerie', 'epicerie', 'surgeles'].forEach(rayon => {
+      const items = byRayon[rayon];
+      if (items && items.length > 0) {
+        container.appendChild(this.createShoppingCategory(rayon, items));
+      }
+    });
+
+    // Articles personnalisés
+    if (this.customShoppingItems && this.customShoppingItems.length > 0) {
+      container.appendChild(this.createCustomItemsCategory());
+    }
+  }
+
+  /**
+   * Crée une catégorie de la liste de courses
+   */
+  createShoppingCategory(rayon, items) {
+    const category = Utils.createElement('div', { className: 'shopping-category' });
+
+    const title = Utils.createElement('h3', {}, this.rayonLabels[rayon] || 'Autres');
+    category.appendChild(title);
+
+    // Trier les items
+    items.sort((a, b) => a.ingredient.name.localeCompare(b.ingredient.name));
+
+    items.forEach(item => {
+      const shoppingItem = this.createShoppingItem(item);
+      category.appendChild(shoppingItem);
+    });
+
+    return category;
+  }
+
+  /**
+   * Crée un item de la liste de courses
+   */
+  createShoppingItem(item) {
+    const div = Utils.createElement('div', { className: 'shopping-item' });
+
+    // Partie gauche (checkbox + nom)
+    const left = Utils.createElement('div', {
+      style: 'display:flex;gap:10px;align-items:center;flex:1'
+    });
+
+    const checkbox = Utils.createElement('input', {
+      type: 'checkbox',
+      onchange: function() {
+        div.classList.toggle('checked', this.checked);
+      }
+    });
+
+    const name = Utils.createElement('span', { style: 'flex:1' }, item.ingredient.name);
+
+    left.appendChild(checkbox);
+    left.appendChild(name);
+
+    // Partie droite (quantité + delete)
+    const right = Utils.createElement('div', {
+      style: 'display:flex;gap:8px;align-items:center'
+    });
+
+    // Badge de quantité
+    const badge = this.createQuantityBadge(item);
+    right.appendChild(badge);
+
+    // Bouton supprimer
+    const deleteBtn = Utils.createElement('button', {
+      className: 'cell-btn',
+      style: 'padding:6px 10px;font-size:14px',
+      title: 'Supprimer',
+      onclick: () => this.removeShoppingItem(item.ingredient.id)
+    }, '🗑️');
+    right.appendChild(deleteBtn);
+
+    div.appendChild(left);
+    div.appendChild(right);
+
+    return div;
+  }
+
+  /**
+   * Crée un badge de quantité
+   */
+  createQuantityBadge(item) {
+    const { ingredient, count } = item;
+    let displayText = '';
+
+    const portionType = ingredient.portionType || 'quantity';
+    const portionWeight = ingredient.portionWeight;
+
+    if (portionType === 'weight' && portionWeight) {
+      const totalGrams = count * portionWeight;
+      displayText = totalGrams >= 1000
+        ? `${(totalGrams / 1000).toFixed(1).replace('.0', '')} kg`
+        : `${totalGrams} g`;
+    } else if (portionType === 'volume' && portionWeight) {
+      const totalMl = count * portionWeight;
+      displayText = totalMl >= 1000
+        ? `${(totalMl / 1000).toFixed(1).replace('.0', '')} L`
+        : `${totalMl} ml`;
+    } else if (portionType === 'spoon') {
+      displayText = `${count} c.à.s`;
+    } else {
+      displayText = `×${count}`;
+    }
+
+    return Utils.createElement('span', {
+      className: 'quantity-badge',
+      style: 'cursor:pointer',
+      title: 'Quantité',
+      onclick: () => {
+        // Possibilité d'éditer la quantité dans une future version
+      }
+    }, displayText);
+  }
+
+  /**
+   * Crée la catégorie des articles personnalisés
+   */
+  createCustomItemsCategory() {
+    const category = Utils.createElement('div', { className: 'shopping-category' });
+
+    const title = Utils.createElement('h3', {}, '✨ Articles ajoutés manuellement');
+    category.appendChild(title);
+
+    this.customShoppingItems.forEach(item => {
+      const div = Utils.createElement('div', { className: 'shopping-item' });
+
+      // Partie gauche
+      const left = Utils.createElement('div', {
+        style: 'display:flex;gap:10px;align-items:center;flex:1'
+      });
+
+      const checkbox = Utils.createElement('input', {
+        type: 'checkbox',
+        onchange: function() {
+          div.classList.toggle('checked', this.checked);
+        }
+      });
+
+      const name = Utils.createElement('span', { style: 'flex:1' }, item.name);
+
+      left.appendChild(checkbox);
+      left.appendChild(name);
+
+      // Partie droite
+      const right = Utils.createElement('div', {
+        style: 'display:flex;gap:8px;align-items:center'
+      });
+
+      const badge = Utils.createElement('span', {
+        className: 'quantity-badge'
+      }, item.quantity || '×1');
+      right.appendChild(badge);
+
+      const deleteBtn = Utils.createElement('button', {
+        className: 'cell-btn',
+        style: 'padding:6px 10px;font-size:14px',
+        onclick: () => this.removeCustomShoppingItem(item.id)
+      }, '🗑️');
+      right.appendChild(deleteBtn);
+
+      div.appendChild(left);
+      div.appendChild(right);
+      category.appendChild(div);
+    });
+
+    return category;
+  }
+
+  /**
+   * Retour au menu depuis la liste de courses
+   */
+  backToMenu() {
+    this.showView('menu');
+    if (this.currentWeekId) {
+      this.openWeek(this.currentWeekId);
+    }
+  }
+
+  /**
+   * Vide la liste de courses (décoche tous les items)
+   */
+  clearShoppingList() {
+    this.confirm(
+      'Vider la liste ?',
+      'Tous les items seront décochés.',
+      () => {
+        document.querySelectorAll('#shopping-list-container input[type="checkbox"]').forEach(cb => {
+          cb.checked = false;
+          cb.closest('.shopping-item').classList.remove('checked');
+        });
+        this.toast('Liste vidée !');
+      }
+    );
+  }
+
+  /**
+   * Retire un item de la liste de courses
+   */
+  removeShoppingItem(ingId) {
+    // Dans une version future, on pourrait retirer réellement l'ingrédient
+    this.toast('Fonctionnalité à venir', 'info');
+  }
+
+  /**
+   * Affiche la modale d'ajout d'article personnalisé
+   */
+  showAddCustomItemModal() {
+    document.getElementById('custom-item-name').value = '';
+    document.getElementById('custom-item-quantity').value = '';
+    document.getElementById('custom-item-rayon').value = 'epicerie';
+    document.getElementById('custom-shopping-item-modal').classList.add('active');
+  }
+
+  /**
+   * Ferme la modale d'article personnalisé
+   */
+  closeCustomItemModal(save) {
+    const modal = document.getElementById('custom-shopping-item-modal');
+    modal.classList.remove('active');
+
+    if (save) {
+      const name = document.getElementById('custom-item-name').value.trim();
+      const quantity = document.getElementById('custom-item-quantity').value.trim();
+      const rayon = document.getElementById('custom-item-rayon').value;
+
+      if (name) {
+        if (!this.customShoppingItems) {
+          this.customShoppingItems = [];
+        }
+
+        this.customShoppingItems.push({
+          id: Utils.generateId(),
+          name,
+          quantity: quantity || '×1',
+          rayon
+        });
+
+        this.toast('Article ajouté !');
+        this.generateShoppingList();
+      }
+    }
+  }
+
+  /**
+   * Retire un article personnalisé
+   */
+  removeCustomShoppingItem(itemId) {
+    this.confirm(
+      'Supprimer cet article ?',
+      'L\'article sera définitivement supprimé.',
+      () => {
+        this.customShoppingItems = this.customShoppingItems.filter(item => item.id !== itemId);
+        this.toast('Article supprimé');
+        this.generateShoppingList();
+      }
+    );
+  }
+
+  /**
+   * Exporte la liste de courses en PDF
+   */
+  exportToPDF() {
+    if (typeof window.jspdf === 'undefined') {
+      this.toast('Erreur: jsPDF non chargé', 'error');
+      return;
+    }
+
+    const week = this.getWeek();
+    if (!week) return;
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    // Compter les ingrédients
+    const counts = {};
+
+    Object.values(week.menu).forEach(meal => {
+      if (meal.status && meal.status !== 'normal') return;
+
+      const portions = meal.portions || week.portions;
+
+      if (meal.ingredients) {
+        meal.ingredients.forEach(id => {
+          counts[id] = (counts[id] || 0) + portions;
+        });
+      }
+
+      if (meal.recipes) {
+        meal.recipes.forEach(recipeId => {
+          const recipe = this.recipes.find(r => r.id === recipeId);
+          if (recipe) {
+            recipe.ingredients.forEach(id => {
+              counts[id] = (counts[id] || 0) + portions;
+            });
+          }
+        });
+      }
+    });
+
+    if (Object.keys(counts).length === 0) {
+      this.toast('Menu vide', 'error');
+      return;
+    }
+
+    // Grouper par rayon
+    const byRayon = {};
+
+    Object.entries(counts).forEach(([ingId, count]) => {
+      const ing = this.ingredients.find(i => i.id === parseInt(ingId, 10));
+      if (ing) {
+        const rayon = ing.rayon || 'epicerie';
+        if (!byRayon[rayon]) {
+          byRayon[rayon] = [];
+        }
+        byRayon[rayon].push({ name: ing.name, count });
+      }
+    });
+
+    // Générer le PDF
+    let y = 20;
+
+    doc.setFontSize(20);
+    doc.text('Liste de Courses', 105, y, { align: 'center' });
+
+    y += 8;
+    doc.setFontSize(12);
+    doc.text(week.name, 105, y, { align: 'center' });
+
+    y += 6;
+    doc.text(`Générée le ${new Date().toLocaleDateString('fr-FR')}`, 105, y, { align: 'center' });
+
+    y += 15;
+
+    ['frais', 'boucherie', 'poissonnerie', 'cremerie', 'boulangerie', 'epicerie', 'surgeles'].forEach(rayon => {
+      const items = byRayon[rayon];
+      if (items && items.length > 0) {
+        if (y > 270) {
+          doc.addPage();
+          y = 20;
+        }
+
+        doc.setFontSize(14);
+        doc.setFont(undefined, 'bold');
+        doc.text(this.rayonLabels[rayon], 20, y);
+
+        y += 8;
+        doc.setFontSize(11);
+        doc.setFont(undefined, 'normal');
+
+        items.sort((a, b) => a.name.localeCompare(b.name));
+
+        items.forEach(item => {
+          if (y > 280) {
+            doc.addPage();
+            y = 20;
+          }
+
+          doc.text(`☐ ${item.name} (×${item.count})`, 25, y);
+          y += 7;
+        });
+
+        y += 5;
+      }
+    });
+
+    doc.save(`liste-${week.name.replace(/\s+/g, '-')}.pdf`);
+    this.toast('PDF généré !');
+  }
+
+  // ==================== CALENDRIER SAISONNIER ====================
+
+  /**
+   * Ouvre le calendrier saisonnier
+   */
+  openSeasonalCalendar() {
+    document.getElementById('seasonal-calendar-modal').classList.add('active');
+    this.currentSeasonalTab = 'legumes';
+    this.seasonalSearchTerm = '';
+    document.getElementById('seasonal-search-input').value = '';
+    this.renderSeasonalCalendar();
+  }
+
+  /**
+   * Ferme le calendrier saisonnier
+   */
+  closeSeasonalCalendar() {
+    document.getElementById('seasonal-calendar-modal').classList.remove('active');
+  }
+
+  /**
+   * Affiche un onglet du calendrier saisonnier
+   */
+  showSeasonalTab(tab) {
+    this.currentSeasonalTab = tab;
+
+    document.querySelectorAll('.seasonal-tab').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+
+    this.renderSeasonalCalendar();
+  }
+
+  /**
+   * Filtre les données saisonnières
+   */
+  filterSeasonalData() {
+    this.seasonalSearchTerm = document.getElementById('seasonal-search-input').value.toLowerCase();
+    this.renderSeasonalCalendar();
+  }
+
+  /**
+   * Rend le calendrier saisonnier
+   */
+  renderSeasonalCalendar() {
+    const container = document.getElementById('seasonal-content');
+    if (!container) return;
+
+    const data = this.seasonalData[this.currentSeasonalTab];
+    let filtered = data;
+
+    if (this.seasonalSearchTerm) {
+      filtered = data.filter(item =>
+        item.name.toLowerCase().includes(this.seasonalSearchTerm)
+      );
+    }
+
+    if (filtered.length === 0) {
+      container.innerHTML = '<p style="text-align:center;color:var(--text-3);padding:40px">Aucun résultat</p>';
+      return;
+    }
+
+    const currentMonth = new Date().getMonth() + 1;
+    const monthsShort = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
+    const monthsFull = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+
+    let html = '<div style="margin-bottom:20px">';
+
+    // Légende
+    html += '<div style="display:flex;gap:25px;justify-content:center;padding:15px;background:rgba(255,255,255,0.05);border-radius:10px;margin-bottom:20px;flex-wrap:wrap">';
+    html += '<div style="display:flex;align-items:center;gap:8px"><div style="width:24px;height:24px;background:#10b981;border-radius:6px"></div><span style="color:var(--text-1);font-weight:600;font-size:14px">Pleine saison</span></div>';
+    html += '<div style="display:flex;align-items:center;gap:8px"><div style="width:24px;height:24px;background:#fbbf24;border-radius:6px"></div><span style="color:var(--text-1);font-weight:600;font-size:14px">Disponible</span></div>';
+    html += '<div style="display:flex;align-items:center;gap:8px"><div style="width:24px;height:24px;background:rgba(255,255,255,0.05);border:2px solid rgba(255,255,255,0.2);border-radius:6px"></div><span style="color:var(--text-1);font-weight:600;font-size:14px">Hors saison</span></div>';
+    html += '</div>';
+
+    // Tableau
+    html += '<table style="width:100%;border-collapse:collapse;background:rgba(255,255,255,0.03);border-radius:10px;overflow:hidden">';
+    html += '<thead><tr style="background:var(--primary)">';
+    html += '<th style="padding:12px;text-align:left;color:#fff;font-weight:700;font-size:13px;position:sticky;left:0;background:var(--primary);z-index:10;min-width:140px">PRODUIT</th>';
+
+    // En-têtes des mois
+    for (let i = 1; i <= 12; i++) {
+      const isCurrentMonth = i === currentMonth;
+      const style = `padding:10px 6px;text-align:center;color:#fff;font-weight:700;font-size:12px;min-width:35px;${isCurrentMonth ? 'background:#fbbf24;' : ''}`;
+      html += `<th style="${style}" title="${monthsFull[i - 1]}">${monthsShort[i - 1]}`;
+      if (isCurrentMonth) {
+        html += '<div style="position:absolute;bottom:-3px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:5px solid #fbbf24"></div>';
+      }
+      html += '</th>';
+    }
+    html += '</tr></thead><tbody>';
+
+    // Lignes des produits
+    filtered.forEach((item, index) => {
+      const rowStyle = `border-bottom:1px solid rgba(255,255,255,0.05);${index % 2 === 0 ? 'background:rgba(255,255,255,0.02);' : ''}`;
+
+      html += `<tr style="${rowStyle}">`;
+      html += `<td style="padding:10px 12px;font-weight:600;color:var(--text-1);font-size:13px;position:sticky;left:0;background:${index % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.03)'};z-index:5">${item.name}</td>`;
+
+      for (let month = 1; month <= 12; month++) {
+        const isInSeason = item.months.includes(month);
+        const cellStyle = 'padding:10px 6px;text-align:center;';
+
+        if (isInSeason) {
+          const isPeak = this.isPeakSeason(item.months, month);
+          const bgColor = isPeak ? '#10b981' : '#fbbf24';
+          html += `<td style="${cellStyle}background:${bgColor};">●</td>`;
+        } else {
+          html += `<td style="${cellStyle}"></td>`;
+        }
+      }
+      html += '</tr>';
+    });
+
+    html += '</tbody></table>';
+
+    // Info mois actuel
+    html += '<div style="text-align:center;margin-top:20px;padding:12px;background:linear-gradient(135deg,#10b981,#059669);border-radius:10px;color:#fff;font-weight:600;font-size:14px">';
+    html += `📅 Mois actuel : ${monthsFull[currentMonth - 1]}`;
+    html += '</div>';
+
+    html += '</div>';
+    container.innerHTML = html;
+  }
+
+  /**
+   * Détermine si un mois est en pleine saison
+   */
+  isPeakSeason(months, month) {
+    if (months.length < 3) return true;
+
+    const index = months.indexOf(month);
+    if (index === -1) return false;
+
+    const prevMonth = month === 1 ? 12 : month - 1;
+    const nextMonth = month === 12 ? 1 : month + 1;
+
+    const hasPrev = months.includes(prevMonth);
+    const hasNext = months.includes(nextMonth);
+
+    return hasPrev && hasNext;
+  }
+}
+
+// ==================== INITIALISATION ====================
+
+// Créer l'instance globale de l'application
+const app = new MenuApp();
+
+// Exposer les méthodes nécessaires au HTML
+window.APP = {
+  // Thème
+  changeTheme: (theme) => app.changeTheme(theme),
+
+  // Vues
+  showView: (view) => app.showView(view),
+  openCurrentWeek: () => app.openCurrentWeek(),
+  backToWeeks: () => app.backToWeeks(),
+  backToMenu: () => app.backToMenu(),
+
+  // Semaines
+  openWeek: (id) => app.openWeek(id),
+  editWeek: (id) => app.editWeek(id),
+  deleteWeek: (id) => app.deleteWeek(id),
+  closeWeekModal: (save) => app.closeWeekModal(save),
+
+  // Menu
+  clearAllMenu: () => app.clearAllMenu(),
+  fillWeekRandomly: () => app.fillWeekRandomly(),
+  generateRandomMeal: (day, meal) => app.generateRandomMeal(day, meal),
+  copyMeal: (day, meal) => app.copyMeal(day, meal),
+  pasteMeal: (day, meal) => app.pasteMeal(day, meal),
+  clearMeal: (day, meal) => app.clearMeal(day, meal),
+
+  // Portions
+  showPortionPopup: (day, meal, btn, e) => app.showPortionPopup(day, meal, btn, e),
+
+  // Statuts
+  showStatusModal: (day, meal) => app.showStatusModal(day, meal),
+  closeStatusModal: () => app.closeStatusModal(),
+  selectStatus: (elem) => app.selectStatus(elem),
+  confirmStatus: () => app.confirmStatus(),
+
+  // Ingrédients
+  filterIngredients: (filter) => app.filterIngredients(filter),
+  handleIngredientSubmit: (e) => app.handleIngredientSubmit(e),
+  togglePortionWeightField: (prefix) => app.togglePortionWeightField(prefix),
+  editIngredient: (id) => app.editIngredient(id),
+  closeEditIngredientModal: (save) => app.closeEditIngredientModal(save),
+  deleteIngredient: (id) => app.deleteIngredient(id),
+  selectType: (elem) => app.selectType(elem),
+  closeCreateIngredientModal: () => app.closeCreateIngredientModal(),
+  confirmCreateIngredient: () => app.confirmCreateIngredient(),
+
+  // Recettes
+  handleRecipeSubmit: (e) => app.handleRecipeSubmit(e),
+  filterRecipeIngredients: () => app.filterRecipeIngredients(),
+  filterRecipeByType: (type) => app.filterRecipeByType(type),
+  deleteRecipe: (id) => app.deleteRecipe(id),
+
+  // Tags
+  addCustomTag: () => app.addCustomTag(),
+  deleteCustomTag: (id) => app.deleteCustomTag(id),
+
+  // Liste de courses
+  generateAndShowShoppingList: () => app.generateAndShowShoppingList(),
+  clearShoppingList: () => app.clearShoppingList(),
+  showAddCustomItemModal: () => app.showAddCustomItemModal(),
+  closeCustomItemModal: (save) => app.closeCustomItemModal(save),
+  exportToPDF: () => app.exportToPDF(),
+
+  // Calendrier saisonnier
+  openSeasonalCalendar: () => app.openSeasonalCalendar(),
+  closeSeasonalCalendar: () => app.closeSeasonalCalendar(),
+  showSeasonalTab: (tab) => app.showSeasonalTab(tab),
+  filterSeasonalData: () => app.filterSeasonalData(),
+
+  // Paramètres
+  updateDefaultPortions: () => app.updateDefaultPortions(),
+  resetIngredientsToDefault: () => app.resetIngredientsToDefault(),
+
+  // Modales
+  closeConfirmModal: (confirmed) => app.closeConfirmModal(confirmed)
+};
+
+// Initialiser l'application au chargement de la page
+window.addEventListener('load', () => app.init());
+
+app;
+
+  </script>
+</body>
+</html>

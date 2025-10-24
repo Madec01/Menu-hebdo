@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🚀 Lancer Menu Hebdo</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      color: white;
+    }
+    .container {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 20px;
+      padding: 40px;
+      max-width: 800px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+    h1 {
+      font-size: 2.5em;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .alert {
+      background: rgba(255, 193, 7, 0.2);
+      border: 2px solid #ffc107;
+      border-radius: 10px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .alert h2 {
+      font-size: 1.3em;
+      margin-bottom: 10px;
+    }
+    .methods {
+      margin-top: 30px;
+    }
+    .method {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      padding: 20px;
+      margin: 15px 0;
+    }
+    .method h3 {
+      font-size: 1.2em;
+      margin-bottom: 10px;
+      color: #ffc107;
+    }
+    code {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 5px 10px;
+      border-radius: 5px;
+      display: inline-block;
+      margin: 5px 0;
+      font-family: 'Courier New', monospace;
+    }
+    .btn {
+      display: inline-block;
+      background: #10b981;
+      color: white;
+      padding: 15px 30px;
+      border-radius: 50px;
+      text-decoration: none;
+      font-weight: bold;
+      margin: 10px 5px;
+      transition: all 0.3s;
+    }
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+    }
+    .btn-secondary {
+      background: #667eea;
+    }
+    ul {
+      margin: 15px 0 15px 30px;
+    }
+    li {
+      margin: 10px 0;
+      line-height: 1.6;
+    }
+    .note {
+      background: rgba(16, 185, 129, 0.2);
+      border-left: 4px solid #10b981;
+      padding: 15px;
+      margin: 20px 0;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🍽️ Menu Hebdo v2.0</h1>
+
+    <div class="alert">
+      <h2>⚠️ Important</h2>
+      <p>L'application utilise des <strong>modules JavaScript ES6</strong> qui nécessitent un serveur HTTP pour fonctionner correctement (à cause de la politique CORS des navigateurs).</p>
+    </div>
+
+    <div class="methods">
+      <h2>🚀 3 méthodes pour lancer l'application :</h2>
+
+      <div class="method">
+        <h3>1️⃣ Méthode Python (Recommandée - Simple)</h3>
+        <p>Si vous avez Python installé :</p>
+        <ol>
+          <li>Ouvrez un terminal dans ce dossier</li>
+          <li>Lancez : <code>python -m http.server 8000</code></li>
+          <li>Ouvrez votre navigateur sur : <code>http://localhost:8000</code></li>
+        </ol>
+      </div>
+
+      <div class="method">
+        <h3>2️⃣ Méthode Node.js</h3>
+        <p>Si vous avez Node.js installé :</p>
+        <ol>
+          <li>Ouvrez un terminal dans ce dossier</li>
+          <li>Lancez: <code>npx serve</code></li>
+          <li>Suivez l'URL affichée (généralement http://localhost:3000)</li>
+        </ol>
+      </div>
+
+      <div class="method">
+        <h3>3️⃣ Extension VS Code</h3>
+        <p>Si vous utilisez Visual Studio Code :</p>
+        <ol>
+          <li>Installez l'extension "Live Server"</li>
+          <li>Clic droit sur <code>index.html</code></li>
+          <li>Sélectionnez "Open with Live Server"</li>
+        </ol>
+      </div>
+
+      <div class="method">
+        <h3>4️⃣ Version Standalone (Sans serveur)</h3>
+        <p>Pour ouvrir directement dans le navigateur :</p>
+        <ol>
+          <li>Je vais créer une version standalone pour vous</li>
+          <li>Cliquez sur le bouton ci-dessous pour la générer</li>
+          <li>Puis ouvrez simplement le fichier dans votre navigateur</li>
+        </ol>
+        <div style="text-align: center; margin-top: 20px;">
+          <button class="btn" onclick="createStandalone()">
+            ✨ Créer la version standalone
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="note">
+      <strong>💡 Astuce :</strong> Une fois l'application lancée, elle fonctionnera hors ligne car toutes les données sont sauvegardées localement dans votre navigateur !
+    </div>
+
+    <div style="text-align: center; margin-top: 30px;">
+      <a href="https://github.com/Madec01/Menu-hebdo" class="btn btn-secondary" target="_blank">
+        📚 Voir la documentation
+      </a>
+    </div>
+  </div>
+
+  <script>
+    function createStandalone() {
+      alert('🚧 Création de la version standalone en cours...\n\nUn fichier "menu-hebdo-standalone.html" va être créé dans le dossier.');
+
+      // Info pour l'utilisateur
+      const info = `
+Pour créer la version standalone, exécutez dans un terminal :
+
+python create-standalone.py
+
+Ou je peux le faire via Claude Code !
+      `;
+
+      if (confirm('Voulez-vous que je crée automatiquement la version standalone ?\n\n(Nécessite Python)')) {
+        window.location.href = 'create-standalone.html';
+      }
+    }
+  </script>
+</body>
+</html>
