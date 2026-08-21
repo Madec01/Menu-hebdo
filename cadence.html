@@ -569,6 +569,7 @@ const CONFIG = {
   faillite: -15000,
   remboursementCasse: 0.6,     // remboursement à la démolition
   prixTuileAtelier: 46,        // coût de base d'une tuile de surface gagnée
+  cour: 5,                     // profondeur de la cour, tout autour de l'atelier
   reposFatigue: 0.055,         // récupération par minute en salle de pause
   reposMinutes: 40,            // durée d'une vraie pause
   formationJours: 6,
@@ -590,7 +591,7 @@ const CONFIG = {
   arretChangementHuile: 45,    // minutes de jeu, friteuse à l'arrêt
   rebutMax: 0.5,
   sauvegarde: "cadence_save_v1",
-  version: 1
+  version: 2
 };
 
 // minutes de jeu écoulées par tick de simulation
@@ -1036,7 +1037,7 @@ const LIB_ETAT = {
 let etat = null;
 
 // Index reconstruit à la volée : jamais sauvegardé.
-const idx = { parId:new Map(), noeuds:[], besoinsServis:new Set(), renduConv:new Map(), quai:null };
+const idx = { parId:new Map(), noeuds:[], besoinsServis:new Set(), renduConv:new Map(), quai:null, portes:null };
 
 // État de la vue et des interactions : jamais sauvegardé.
 const vue = {
@@ -1227,7 +1228,12 @@ function semaineVierge(){
 function creerUsine(nom, largeur, hauteur){
   const u = {
     id: 0, nom, largeur, hauteur,
-    grille: new Uint16Array(largeur*hauteur),
+    // `largeur`/`hauteur` sont celles de l'atelier — les murs. La grille, elle,
+    // couvre en plus la cour : une bande de `cour` tuiles tout autour, où se
+    // posent les bâtiments. Les coordonnées y sont négatives à gauche et en
+    // haut ; tout passe par indexCase().
+    cour: CONFIG.cour,
+    grille: new Uint16Array((largeur + 2*CONFIG.cour) * (hauteur + 2*CONFIG.cour)),
     machines: [], convoyeurs: [], ouvriers: [],
     stocks: {},          // ce qui entre : matières et pièces
     stocksSortie: {},    // ce qui part : produits finis et rebut
@@ -1248,7 +1254,7 @@ function placerQuais(u){
     q.x = clamp(q.x, 0, u.largeur - q.l);
     for (let dy=0; dy<q.h; dy++)
       for (let dx=0; dx<q.l; dx++)
-        u.grille[(q.y+dy)*u.largeur + (q.x+dx)] = id;
+        u.grille[indexCase(u, q.x+dx, q.y+dy)] = id;
   };
   poser(u.quaiEntree, 1);
   poser(u.quaiSortie, 2);
@@ -1275,21 +1281,76 @@ function creerOuvrier(prenom, nom, competences, salaire, traitId){
 }
 
 /* ------------------------------------------------------ Grille et occupants */
-function dansGrille(u,x,y){ return x>=0 && y>=0 && x<u.largeur && y<u.hauteur; }
+/* Le terrain va de (−cour, −cour) à (largeur+cour, hauteur+cour). L'atelier
+   occupe le rectangle (0,0)–(largeur,hauteur) ; le reste est la cour. */
+function profondeurCour(u){ return u.cour != null ? u.cour : CONFIG.cour; }
+function largeurPlan(u){ return u.largeur + 2*profondeurCour(u); }
+function indexCase(u,x,y){
+  const c = profondeurCour(u);
+  return (y+c)*(u.largeur + 2*c) + (x+c);
+}
+function dansPlan(u,x,y){
+  const c = profondeurCour(u);
+  return x >= -c && y >= -c && x < u.largeur + c && y < u.hauteur + c;
+}
+function dansAtelier(u,x,y){ return x>=0 && y>=0 && x<u.largeur && y<u.hauteur; }
+function dansCour(u,x,y){ return dansPlan(u,x,y) && !dansAtelier(u,x,y); }
+/** Un rectangle entièrement dans l'atelier, ou entièrement dans la cour. */
+function rectDansAtelier(u,x,y,l,h){ return dansAtelier(u,x,y) && dansAtelier(u,x+l-1,y+h-1); }
+function rectDansCour(u,x,y,l,h){
+  if (!dansPlan(u,x,y) || !dansPlan(u,x+l-1,y+h-1)) return false;
+  // il suffit qu'aucun coin ne morde l'atelier : les rectangles sont convexes
+  return x+l <= 0 || x >= u.largeur || y+h <= 0 || y >= u.hauteur;
+}
+function dansGrille(u,x,y){ return dansPlan(u,x,y); }
+
+/** Les portes : quatre passages dans les murs, un par façade, au milieu ou
+ *  au plus près si le milieu est occupé. C'est par là qu'on sort dans la cour,
+ *  et c'est ce qui explique à l'oeil le trajet des ouvriers. */
+function portesAtelier(u){
+  if (idx.portes) return idx.portes;      // vidé par reindexer()
+  const libre = (x,y) => { const o = occupant(u,x,y); return o === 0 || (noeudParId(o)||{}).type === "convoyeur"; };
+  const sur = (axe, fixe, milieu, taille) => {
+    for (let d=0; d<taille; d++){
+      for (const v of (d ? [milieu-d, milieu+d] : [milieu])){
+        if (v < 0 || v >= taille) continue;
+        const x = axe === "h" ? v : fixe, y = axe === "h" ? fixe : v;
+        if (libre(x,y)) return { x, y };
+      }
+    }
+    return null;
+  };
+  const mx = Math.floor(u.largeur/2), my = Math.floor(u.hauteur/2);
+  idx.portes = [ sur("h", 0, mx, u.largeur),              // façade nord
+                 sur("h", u.hauteur-1, mx, u.largeur),    // façade sud
+                 sur("v", 0, my, u.hauteur),              // pignon ouest
+                 sur("v", u.largeur-1, my, u.hauteur) ].filter(Boolean);
+  return idx.portes;
+}
+function estPorte(u,x,y){
+  for (const p of portesAtelier(u)) if (p.x === x && p.y === y) return true;
+  return false;
+}
+/** On ne traverse un mur qu'à une porte. */
+function franchissable(u, x1,y1, x2,y2){
+  const a = dansAtelier(u,x1,y1), b = dansAtelier(u,x2,y2);
+  if (a === b) return true;
+  return a ? estPorte(u,x1,y1) : estPorte(u,x2,y2);
+}
 function occupant(u,x,y){
-  if (!dansGrille(u,x,y)) return -1;
-  return u.grille[y*u.largeur+x];
+  if (!dansPlan(u,x,y)) return -1;
+  return u.grille[indexCase(u,x,y)];
 }
 function poserSurGrille(u, noeud){
   for (let dy=0; dy<noeud.h; dy++)
     for (let dx=0; dx<noeud.l; dx++)
-      u.grille[(noeud.y+dy)*u.largeur + (noeud.x+dx)] = noeud.id;
+      u.grille[indexCase(u, noeud.x+dx, noeud.y+dy)] = noeud.id;
 }
 function retirerDeGrille(u, noeud){
   for (let dy=0; dy<noeud.h; dy++)
     for (let dx=0; dx<noeud.l; dx++)
-      if (u.grille[(noeud.y+dy)*u.largeur + (noeud.x+dx)] === noeud.id)
-        u.grille[(noeud.y+dy)*u.largeur + (noeud.x+dx)] = 0;
+      if (u.grille[indexCase(u, noeud.x+dx, noeud.y+dy)] === noeud.id)
+        u.grille[indexCase(u, noeud.x+dx, noeud.y+dy)] = 0;
 }
 
 /** Reconstruit l'index id → noeud. À rappeler après toute modification. */
@@ -1297,6 +1358,7 @@ function reindexer(){
   idx.parId.clear();
   idx.noeuds.length = 0;
   idx.renduConv.clear();
+  idx.portes = null;
   for (const u of etat.usines){
     for (const m of u.machines){ idx.parId.set(m.id, m); idx.noeuds.push(m); }
     for (const c of u.convoyeurs) idx.parId.set(c.id, c);
@@ -1929,8 +1991,8 @@ function traversable(u, x, y){
 /** A* simplifié. Grilles petites, appels rares : pas besoin de tas binaire. */
 function cheminVers(u, sx, sy, tx, ty){
   if (sx === tx && sy === ty) return [];
-  const L = u.largeur, H = u.hauteur;
-  const dep = sy*L+sx, arr = ty*L+tx;
+  const L = largeurPlan(u), cour = profondeurCour(u);
+  const dep = indexCase(u,sx,sy), arr = indexCase(u,tx,ty);
   if (!traversable(u,tx,ty)) return null;
 
   const ouvert = [dep];
@@ -1940,24 +2002,25 @@ function cheminVers(u, sx, sy, tx, ty){
   const clos = new Set();
   let garde = 0;
 
-  while (ouvert.length && garde++ < 4000){
+  while (ouvert.length && garde++ < 12000){
     let bi = 0;
     for (let i=1;i<ouvert.length;i++) if ((f.get(ouvert[i])||1e9) < (f.get(ouvert[bi])||1e9)) bi = i;
     const cur = ouvert.splice(bi,1)[0];
     if (cur === arr){
       const chemin = [];
       let c = cur;
-      while (c !== dep){ chemin.push({ x:c%L, y:Math.floor(c/L) }); c = vientDe.get(c); }
+      while (c !== dep){ chemin.push({ x:c%L - cour, y:Math.floor(c/L) - cour }); c = vientDe.get(c); }
       chemin.reverse();
       return chemin;
     }
     clos.add(cur);
-    const cx = cur%L, cy = Math.floor(cur/L);
+    const cx = cur%L - cour, cy = Math.floor(cur/L) - cour;
     for (let d=0; d<4; d++){
       const nx = cx + (d===0?1:d===1?-1:0), ny = cy + (d===2?1:d===3?-1:0);
-      if (!dansGrille(u,nx,ny)) continue;
-      const ni = ny*L+nx;
+      if (!dansPlan(u,nx,ny)) continue;
+      const ni = indexCase(u,nx,ny);
       if (clos.has(ni) || !traversable(u,nx,ny)) continue;
+      if (!franchissable(u,cx,cy,nx,ny)) continue;     // on sort par la porte
       const ng = (g.get(cur)||0) + 1;
       if (ng < (g.get(ni) ?? 1e9)){
         vientDe.set(ni,cur); g.set(ni,ng);
@@ -2898,11 +2961,30 @@ function redimensionnerUsine(l, h, tailleQuai){
   l = Math.max(l, u.largeur); h = Math.max(h, u.hauteur);
   if (l === u.largeur && h === u.hauteur && !tailleQuai) return false;
 
-  const g = new Uint16Array(l*h);
-  for (let y=0; y<u.hauteur; y++)
-    for (let x=0; x<u.largeur; x++)
-      g[y*l+x] = u.grille[y*u.largeur+x];
+  // Le mur pousse vers la droite et vers le bas. Ce qui est dans la cour de ce
+  // côté-là recule d'autant : un bâtiment ne se retrouve jamais avalé.
+  const dl = l - u.largeur, dh = h - u.hauteur;
+  const pousses = [];
+  if (dl || dh) for (const m of u.machines){
+    const dx = (dl && m.x >= u.largeur) ? dl : 0;
+    const dy = (dh && m.y >= u.hauteur) ? dh : 0;
+    if (dx || dy) pousses.push({ m, dx, dy });
+  }
+  for (const p of pousses) retirerDeGrille(u, p.m);
+
+  const c = profondeurCour(u);
+  const g = new Uint16Array((l + 2*c) * (h + 2*c));
+  const Lg = l + 2*c;
+  for (let y=-c; y<u.hauteur+c; y++)
+    for (let x=-c; x<u.largeur+c; x++){
+      const v = u.grille[indexCase(u,x,y)];
+      if (v) g[(y+c)*Lg + (x+c)] = v;
+    }
   u.grille = g; u.largeur = l; u.hauteur = h;
+  for (const p of pousses){ p.m.x += p.dx; p.m.y += p.dy; poserSurGrille(u, p.m); }
+  if (pousses.length)
+    notif("La cour a reculé", pousses.length + (pousses.length > 1 ? " bâtiments ont suivi" : " bâtiment a suivi") +
+          " le mur qui avance.", "");
 
   const taille = clamp(tailleQuai || u.quaiEntree.h, 4, Math.max(4, h-2));
   u.quaiEntree.x = 0;
@@ -2960,8 +3042,8 @@ function libererPourQuai(u, q){
   for (let dy=0; dy<q.h; dy++)
     for (let dx=0; dx<q.l; dx++){
       const x = q.x+dx, y = q.y+dy;
-      if (x<0||y<0||x>=u.largeur||y>=u.hauteur) continue;
-      const o = u.grille[y*u.largeur+x];
+      if (!dansPlan(u,x,y)) continue;
+      const o = u.grille[indexCase(u,x,y)];
       if (o > 2) gene.add(o);
     }
   for (const id of gene){
@@ -2997,15 +3079,32 @@ function finDePartie(){
 }
 
 /* ------------------------------------------------------- Poser / démolir */
+/** Une machine va dans l'atelier, un bâtiment va dans la cour : les deux ne se
+ *  mélangent pas. C'est la seule règle de placement, et elle est visible à
+ *  l'écran — le mur est la frontière. */
 function peutPoser(u, type, x, y, rotation){
   const d = MACHINES[type];
   const tourne = rotation % 2 === 1;
   const l = tourne ? d.h : d.l, h = tourne ? d.l : d.h;
-  if (x < 0 || y < 0 || x+l > u.largeur || y+h > u.hauteur) return false;
+  if (d.batiment ? !rectDansCour(u,x,y,l,h) : !rectDansAtelier(u,x,y,l,h)) return false;
   for (let dy=0; dy<h; dy++)
     for (let dx=0; dx<l; dx++)
-      if (u.grille[(y+dy)*u.largeur + (x+dx)] !== 0) return false;
+      if (u.grille[indexCase(u, x+dx, y+dy)] !== 0) return false;
   return true;
+}
+
+/** Pourquoi ça ne se pose pas ici : de quoi écrire un refus compréhensible. */
+function refusPose(u, type, x, y, rotation){
+  const d = MACHINES[type];
+  const tourne = rotation % 2 === 1;
+  const l = tourne ? d.h : d.l, h = tourne ? d.l : d.h;
+  if (d.batiment && !rectDansCour(u,x,y,l,h))
+    return dansAtelier(u,x,y) ? "Les bâtiments se posent dans la cour, autour de l'atelier."
+                              : "Le terrain s'arrête ici.";
+  if (!d.batiment && !rectDansAtelier(u,x,y,l,h))
+    return dansCour(u,x,y) ? "Les machines se posent dans l'atelier, à l'abri."
+                           : "Le terrain s'arrête ici.";
+  return "La place est prise.";
 }
 
 function poserMachine(type, x, y, rotation){
@@ -3029,7 +3128,7 @@ function poserMachine(type, x, y, rotation){
 function demolir(n, remboursementForce){
   const u = U();
   if (n.type === "convoyeur"){
-    for (const t of n.chemin) if (u.grille[t.y*u.largeur+t.x] === n.id) u.grille[t.y*u.largeur+t.x] = 0;
+    for (const t of n.chemin) if (u.grille[indexCase(u,t.x,t.y)] === n.id) u.grille[indexCase(u,t.x,t.y)] = 0;
     u.convoyeurs = u.convoyeurs.filter(c => c.id !== n.id);
     encaisser(Math.round(CONV.coutParTuile * n.chemin.length * CONFIG.remboursementCasse), "casse");
   } else {
@@ -3436,6 +3535,71 @@ function majCacheSol(){
   }
 }
 
+/** La cour : le bitume, les places de parking, la pelouse des coins et la
+ *  clôture. Rien n'y bouge, donc tout tient dans une image calculée une fois. */
+let cacheCour = null, cacheCourCle = "";
+function majCacheCour(){
+  const u = U(), c = profondeurCour(u), T = CONFIG.tuile;
+  const L = u.largeur + 2*c, H = u.hauteur + 2*c;
+  const cle = L + "x" + H + ":" + u.quaiEntree.y + "," + u.quaiEntree.h + ":" + u.quaiSortie.y;
+  if (cacheCour && cle === cacheCourCle) return;
+  cacheCourCle = cle;
+  if (!cacheCour) cacheCour = document.createElement("canvas");
+  cacheCour.width = L*T; cacheCour.height = H*T;
+  const g = cacheCour.getContext("2d");
+  g.clearRect(0,0,cacheCour.width,cacheCour.height);
+
+  // herbe rase sur les bords du terrain
+  g.fillStyle = "#343a2d";
+  g.fillRect(0,0,cacheCour.width,cacheCour.height);
+  for (let i=0;i<Math.round(L*H*0.6);i++){
+    const x = Math.random()*cacheCour.width, y = Math.random()*cacheCour.height;
+    g.fillStyle = Math.random() < 0.5 ? "rgba(104,120,78,.28)" : "rgba(0,0,0,.18)";
+    g.beginPath();
+    g.ellipse(x, y, 3+Math.random()*14, 2+Math.random()*7, Math.random()*3, 0, 7);
+    g.fill();
+  }
+  // l'enrobé : toute la cour sauf une bande d'herbe le long de la clôture
+  const b = c - 0.8;
+  g.fillStyle = "#494d54";
+  g.fillRect((c-b)*T, (c-b)*T, (u.largeur+2*b)*T, (u.hauteur+2*b)*T);
+  for (let i=0;i<Math.round(L*H*0.45);i++){
+    const x = ((c-b) + Math.random()*(u.largeur+2*b))*T, y = ((c-b) + Math.random()*(u.hauteur+2*b))*T;
+    g.fillStyle = Math.random() < 0.6 ? "rgba(0,0,0,.055)" : "rgba(255,255,255,.03)";
+    g.beginPath(); g.ellipse(x,y, 3+Math.random()*13, 2+Math.random()*5, Math.random()*3, 0, 7); g.fill();
+  }
+  // le pied des murs, plus sombre : l'atelier pose son ombre sur la cour
+  const om = g.createLinearGradient(0, (c-1.4)*T, 0, c*T);
+  om.addColorStop(0,"rgba(0,0,0,0)"); om.addColorStop(1,"rgba(0,0,0,.30)");
+  g.fillStyle = om; g.fillRect((c-1.4)*T, (c-1.4)*T, (u.largeur+2.8)*T, 1.4*T);
+  g.fillStyle = "rgba(0,0,0,.16)";
+  g.fillRect((c-1.4)*T, (c+u.hauteur)*T, (u.largeur+2.8)*T, 1.4*T);
+  g.fillRect((c-1.4)*T, (c-1.4)*T, 1.4*T, (u.hauteur+2.8)*T);
+  g.fillRect((c+u.largeur)*T, (c-1.4)*T, 1.4*T, (u.hauteur+2.8)*T);
+  // places de stationnement au nord-ouest, et la voie des camions vers le quai
+  g.strokeStyle = "rgba(226,226,226,.22)"; g.lineWidth = 2;
+  for (let k=0; k<6; k++){
+    const x = (c + 1 + k*2.2)*T;
+    g.beginPath(); g.moveTo(x, (c-b+0.4)*T); g.lineTo(x, (c-b+2.3)*T); g.stroke();
+  }
+  g.beginPath();
+  g.moveTo((c+1)*T, (c-b+2.3)*T); g.lineTo((c+1+5*2.2)*T, (c-b+2.3)*T); g.stroke();
+  // la voie camion : deux traits qui mènent du bord du terrain au quai d'entrée
+  const qy = c + u.quaiEntree.y + u.quaiEntree.h/2;
+  g.strokeStyle = "rgba(226,182,44,.28)"; g.lineWidth = 2.5;
+  g.setLineDash([14,10]);
+  g.beginPath(); g.moveTo(0.6*T, qy*T); g.lineTo(c*T, qy*T); g.stroke();
+  const sy = c + u.quaiSortie.y + u.quaiSortie.h/2;
+  g.beginPath(); g.moveTo((c+u.largeur)*T, sy*T); g.lineTo((L-0.6)*T, sy*T); g.stroke();
+  g.setLineDash([]);
+  // la clôture, sur le pourtour du terrain
+  g.strokeStyle = "rgba(126,136,148,.55)"; g.lineWidth = 2.5;
+  g.strokeRect(7, 7, cacheCour.width-14, cacheCour.height-14);
+  g.fillStyle = "rgba(126,136,148,.55)";
+  for (let x=0; x<L; x+=1.2){ g.fillRect(x*T+5, 3, 3, 9); g.fillRect(x*T+5, cacheCour.height-12, 3, 9); }
+  for (let y=0; y<H; y+=1.2){ g.fillRect(3, y*T+5, 9, 3); g.fillRect(cacheCour.width-12, y*T+5, 9, 3); }
+}
+
 /** Béton : bruit fin pré-calculé une fois, jamais recalculé par frame. */
 function fabriquerTextureSol(){
   const c = document.createElement("canvas");
@@ -3502,7 +3666,8 @@ function centrerCamera(){
   const u = U();
   vue.camX = u.largeur/2; vue.camY = u.hauteur/2;
   const t = CONFIG.tuile;
-  vue.zoom = clamp(Math.min(largeurVue/(u.largeur*t+90), hauteurVue/(u.hauteur*t+90)), CONFIG.zoomMin, 1.4);
+  // On cadre l'atelier plus deux tuiles de cour : on voit qu'il y a un dehors.
+  vue.zoom = clamp(Math.min(largeurVue/((u.largeur+4)*t+60), hauteurVue/((u.hauteur+4)*t+60)), CONFIG.zoomMin, 1.4);
 }
 
 /* ------------------------------------------------- Pictogrammes de pièces
@@ -3621,7 +3786,10 @@ function dessinerSol(){
   ctx.fillRect(0,0,largeurVue,hauteurVue);
   appliquerCamera();
 
-  // Dalle de béton et crasse : une seule image
+  // La cour, puis la dalle de béton et sa crasse : deux images, rien de plus
+  const co = profondeurCour(u);
+  majCacheCour();
+  ctx.drawImage(cacheCour, -co, -co, u.largeur + 2*co, u.hauteur + 2*co);
   majCacheSol();
   ctx.drawImage(cacheSol, 0, 0, u.largeur, u.hauteur);
 
@@ -3649,6 +3817,22 @@ function dessinerSol(){
   ctx.strokeStyle = "#191b1f";
   ctx.lineWidth = 0.08;
   ctx.strokeRect(0,0,u.largeur,u.hauteur);
+
+  // Les portes : là où l'on sort dans la cour. Un trou dans le mur, un paillasson.
+  for (const p of portesAtelier(u)){
+    const nord = p.y === 0, sud = p.y === u.hauteur-1, ouest = p.x === 0;
+    const hx = nord || sud ? p.x : (ouest ? -0.16 : u.largeur-0.84);
+    const hy = nord || sud ? (nord ? -0.16 : u.hauteur-0.84) : p.y;
+    const l = nord || sud ? 1 : 1, h = nord || sud ? 1 : 1;
+    ctx.fillStyle = "#4a4d52";                       // le mur s'ouvre
+    if (nord || sud) ctx.fillRect(p.x+0.05, hy, 0.9, 1);
+    else ctx.fillRect(hx, p.y+0.05, 1, 0.9);
+    ctx.strokeStyle = "rgba(226,182,44,.55)";
+    ctx.lineWidth = 0.07;
+    ctx.setLineDash([0.2,0.16]);
+    ctx.strokeRect(p.x+0.14, p.y+0.14, 0.72, 0.72);
+    ctx.setLineDash([]);
+  }
 }
 
 /* ------------------------------------------------------------- Les quais */
@@ -4560,6 +4744,22 @@ function dessinerApercu(){
     ctx.fillStyle = d.couleur;
     ctx.fillRect(tx+0.14, ty+0.14, l-0.28, 0.16);
     ctx.restore();
+    // Quand ça ne passe pas, on dit pourquoi, au bout du curseur.
+    if (!ok){
+      const txt = etat.finances.solde < d.cout ? "La caisse ne suit pas."
+                                               : refusPose(u, vue.outil.id, tx, ty, vue.rotation);
+      const e = mondeVersEcran(tx + l/2, ty - 0.3);
+      ecranSeul();
+      ctx.font = "600 12px Segoe UI, sans-serif";
+      ctx.textAlign = "center";
+      const w = ctx.measureText(txt).width;
+      ctx.fillStyle = "rgba(18,20,24,.9)";
+      ctx.fillRect(e.x-w/2-7, e.y-14, w+14, 20);
+      ctx.fillStyle = "#f0a094";
+      ctx.fillText(txt, e.x, e.y);
+      ctx.textAlign = "left";
+      appliquerCamera();
+    }
   }
   else if (vue.outil.type === "convoyeur"){
     const trace = vue.traceConvoyeur;
@@ -4599,7 +4799,7 @@ function dessinerApercu(){
       ctx.textAlign = "left";
       appliquerCamera();
     } else {
-      const libre = dansGrille(u,tx,ty) && occupant(u,tx,ty) === 0;
+      const libre = dansAtelier(u,tx,ty) && occupant(u,tx,ty) === 0;
       const surNoeud = !!noeudSous(tx,ty);
       ctx.fillStyle = (libre || surNoeud) ? "rgba(92,186,107,.35)" : "rgba(224,87,74,.35)";
       ctx.fillRect(tx,ty,1,1);
@@ -4688,7 +4888,9 @@ function dessinerLampes(){
 
 /* ------------------------------------------------------- Vue schématique */
 function dessinerSchema(){
-  const u = U();
+  const u = U(), co = profondeurCour(u);
+  ctx.fillStyle = "#1a1d21";
+  ctx.fillRect(-co,-co,u.largeur+2*co,u.hauteur+2*co);
   ctx.fillStyle = "#22262c";
   ctx.fillRect(0,0,u.largeur,u.hauteur);
   ctx.strokeStyle = "rgba(255,255,255,.06)"; ctx.lineWidth = 0.04;
@@ -5271,7 +5473,7 @@ function abordsLibres(n, vers){
       const bordX = dx === -1 || dx === n.l, bordY = dy === -1 || dy === n.h;
       if (bordX === bordY) continue;                       // pas les diagonales
       const x = n.x+dx, y = n.y+dy;
-      if (!dansGrille(u,x,y) || occupant(u,x,y) !== 0) continue;
+      if (!dansAtelier(u,x,y) || occupant(u,x,y) !== 0) continue;
       out.push({ x, y });
     }
   if (n.type === "convoyeur"){
@@ -5279,7 +5481,7 @@ function abordsLibres(n, vers){
     for (const t of n.chemin)
       for (const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
         const x = t.x+dx, y = t.y+dy;
-        if (dansGrille(u,x,y) && occupant(u,x,y) === 0) out.push({ x, y });
+        if (dansAtelier(u,x,y) && occupant(u,x,y) === 0) out.push({ x, y });
       }
   }
   out.sort((a,b) => (a.x-vers.x)**2 + (a.y-vers.y)**2 - ((b.x-vers.x)**2 + (b.y-vers.y)**2));
@@ -5290,7 +5492,7 @@ function abordsLibres(n, vers){
  *  est libre, sinon le meilleur abord du nœud sur lequel on a cliqué. */
 function ancrageConvoyeur(tx, ty, vers){
   const u = U();
-  if (!dansGrille(u,tx,ty)) return null;
+  if (!dansAtelier(u,tx,ty)) return null;      // une bande ne sort pas de l'atelier
   const o = occupant(u,tx,ty);
   if (o === 0) return { x:tx, y:ty, noeud:null };
   const n = noeudSous(tx,ty);
@@ -5306,8 +5508,7 @@ function routerConvoyeur(a, b){
   const u = U();
   if (!a || !b) return null;
   if (a.x === b.x && a.y === b.y) return [{ x:a.x, y:a.y }];
-  const L = u.largeur;
-  const cle = (x,y,d) => (y*L+x)*5 + d;
+  const cle = (x,y,d) => indexCase(u,x,y)*5 + d;
   const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
   const dep = cle(a.x, a.y, 4);
   const ouvert = [{ x:a.x, y:a.y, d:4, g:0, f:0 }];
@@ -5327,7 +5528,7 @@ function routerConvoyeur(a, b){
     }
     for (let d=0; d<4; d++){
       const nx = c.x+dirs[d][0], ny = c.y+dirs[d][1];
-      if (!dansGrille(u,nx,ny)) continue;
+      if (!dansAtelier(u,nx,ny)) continue;
       const libre = occupant(u,nx,ny) === 0;
       if (!libre && !(nx === b.x && ny === b.y)) continue;
       const g = c.g + 1 + (c.d !== 4 && c.d !== d ? 0.45 : 0);
@@ -5377,7 +5578,7 @@ function validerTrace(){
   // un autre convoyeur, ce qui permet de bâtir un réseau par tronçons.
   const c = creerConvoyeur(tuiles, 0, 0);
   u.convoyeurs.push(c);
-  for (const t of tuiles) u.grille[t.y*u.largeur+t.x] = c.id;
+  for (const t of tuiles) u.grille[indexCase(u,t.x,t.y)] = c.id;
   depenser(mode().constructionGratuite ? 0 : cout, "investissement");
   reindexer();
   son("pose");
@@ -7102,7 +7303,26 @@ function SECTIONS_GUIDE(){
     "<p>La <b>fatigue</b> monte dans la journée et retombe la nuit. Le <b>moral</b> dépend du salaire, de la "+
     "propreté de l'atelier et de la charge. Un moral trop bas, et la personne s'en va.</p>"+
     "<p>Les <b>compétences</b> montent avec la pratique : quelqu'un qui tient toujours le même poste finit "+
-    "par y être bien meilleur.</p>" },
+    "par y être bien meilleur.</p>"+
+    "<p>Une <b>prime</b> remonte le moral tout de suite, au cas par cas ou pour toute l'équipe. "+
+    "L'augmentation, elle, coûte tous les jours : c'est l'arbitrage.</p>" },
+
+  { titre:"La cour et les bâtiments", corps:
+    "<p>L'atelier n'est pas tout le terrain. Autour des murs il y a une <b>cour</b> : c'est là, et seulement "+
+    "là, que se posent les <b>bâtiments</b>. Les machines et les convoyeurs, eux, restent à l'intérieur. "+
+    "Le mur est la frontière, et le jeu refuse tout seul ce qui n'est pas du bon côté.</p>"+
+    "<p>L'atelier a <b>quatre portes</b>, une par façade. Les ouvriers ne traversent pas les murs : ils "+
+    "sortent par là. Une salle plantée à l'opposé de la porte la plus proche, c'est du temps de marche "+
+    "perdu à chaque pause.</p>"+
+    "<p>La <b>salle de pause</b> (âge 2) : un ouvrier à bout va vraiment s'y asseoir, et il y récupère "+
+    "environ <b>sept fois plus vite</b> qu'affalé contre un mur. Sa seule présence remonte le moral de "+
+    "toute l'équipe.</p>"+
+    "<p>La <b>salle de formation</b> (âge 3) : on y envoie quelqu'un sur une compétence précise. Il quitte "+
+    "son poste plusieurs jours — c'est le vrai coût — et revient nettement meilleur.</p>"+
+    "<p>Le <b>bureau d'études</b> (âge 4) : sans lui, aucune étude ne démarre. Chaque bureau de plus fait "+
+    "avancer l'étude en cours d'une journée supplémentaire par jour.</p>"+
+    "<p>Quand on pousse le mur, la cour recule devant lui : les bâtiments de ce côté-là suivent, ils ne "+
+    "sont jamais avalés.</p>" },
 
   { titre:"Les convoyeurs", corps:
     "<p>Un <b>premier clic</b> pose le départ — directement sur une machine, un bac, un quai ou une autre "+
@@ -7250,19 +7470,27 @@ function verifierPartie(){
   const u = U();
 
   /* --- 1. Cohérence de la grille --- */
-  let tuilesOrphelines = 0, tuilesManquantes = 0;
-  for (let y=0;y<u.hauteur;y++) for (let x=0;x<u.largeur;x++){
-    const o = u.grille[y*u.largeur+x];
+  let tuilesOrphelines = 0, tuilesManquantes = 0, horsZone = 0;
+  const co = profondeurCour(u);
+  for (let y=-co;y<u.hauteur+co;y++) for (let x=-co;x<u.largeur+co;x++){
+    const o = u.grille[indexCase(u,x,y)];
     if (o > 1 && !noeudParId(o)) tuilesOrphelines++;
   }
-  for (const m of u.machines)
+  for (const m of u.machines){
     for (let dy=0;dy<m.h;dy++) for (let dx=0;dx<m.l;dx++)
-      if (u.grille[(m.y+dy)*u.largeur + (m.x+dx)] !== m.id) tuilesManquantes++;
+      if (u.grille[indexCase(u, m.x+dx, m.y+dy)] !== m.id) tuilesManquantes++;
+    const bat = (MACHINES[m.type]||{}).batiment;
+    if (bat ? !rectDansCour(u,m.x,m.y,m.l,m.h) : !rectDansAtelier(u,m.x,m.y,m.l,m.h)) horsZone++;
+  }
   for (const c of u.convoyeurs)
-    for (const t of c.chemin)
-      if (u.grille[t.y*u.largeur+t.x] !== c.id) tuilesManquantes++;
+    for (const t of c.chemin){
+      if (u.grille[indexCase(u,t.x,t.y)] !== c.id) tuilesManquantes++;
+      if (!dansAtelier(u,t.x,t.y)) horsZone++;
+    }
   ok("Grille cohérente", tuilesOrphelines === 0 && tuilesManquantes === 0,
       tuilesOrphelines + " tuiles orphelines, " + tuilesManquantes + " tuiles manquantes");
+  ok("Chacun de son côté du mur", horsZone === 0,
+      horsZone ? horsZone + " éléments du mauvais côté" : "machines dedans, bâtiments dehors");
 
   /* --- 2. Aucun nombre aberrant --- */
   const nombres = [];
@@ -7293,7 +7521,7 @@ function verifierPartie(){
   let ouvFaux = 0;
   for (const o of u.ouvriers){
     if (o.id == null || o.id === 0) ouvFaux++;
-    if (o.x < -1 || o.y < -1 || o.x > u.largeur+1 || o.y > u.hauteur+1) ouvFaux++;
+    if (!dansPlan(u, Math.round(o.x-0.5), Math.round(o.y-0.5))) ouvFaux++;
     if (o.tache && o.tache.type === "opere" && !noeudParId(o.tache.machineId)) ouvFaux++;
     if (o.tache && o.tache.type === "porte" &&
         (!noeudParId(o.tache.sourceId) || !noeudParId(o.tache.cibleId))) ouvFaux++;
@@ -8305,8 +8533,28 @@ function sauvegardeAuto(){
 /** Prévue dès le départ : chaque version sait relire la précédente. */
 function migrer(o){
   if (!o.version) o.version = 1;
-  // if (o.version === 1){ ...transformations vers la 2...; o.version = 2; }
+  if (o.version < 2){
+    // Version 2 : la grille couvre désormais la cour, une bande tout autour de
+    // l'atelier. On la rebâtit à la bonne taille et on y réinscrit tout.
+    for (const u of o.usines){
+      u.cour = CONFIG.cour;
+      u.grille = null;                 // reconstruite plus bas, une fois l'état posé
+    }
+    o.version = 2;
+  }
   return o;
+}
+
+/** Repose sur la grille tout ce qui l'occupe. Sert à la migration et de filet
+ *  de sécurité : la grille est un index, elle se recalcule toujours. */
+function reconstruireGrille(u){
+  const c = profondeurCour(u);
+  u.grille = new Uint16Array((u.largeur + 2*c) * (u.hauteur + 2*c));
+  placerQuais(u);
+  for (const m of u.machines) poserSurGrille(u, m);
+  for (const cv of u.convoyeurs)
+    for (const t of cv.chemin)
+      if (dansPlan(u,t.x,t.y)) u.grille[indexCase(u,t.x,t.y)] = cv.id;
 }
 
 function appliquer(o){
@@ -8315,8 +8563,12 @@ function appliquer(o){
     notif("Sauvegarde trop récente", "Ce fichier vient d'une version plus récente du jeu.", "ko");
     return false;
   }
-  for (const u of o.usines) u.grille = Uint16Array.from(u.grille);
+  for (const u of o.usines) u.grille = u.grille ? Uint16Array.from(u.grille) : null;
   etat = o;
+  for (const u of etat.usines){
+    if (u.cour == null) u.cour = CONFIG.cour;
+    if (!u.grille) reconstruireGrille(u);
+  }
   // champs ajoutés après coup : on complète sans casser les vieilles parties
   etat.reglages = Object.assign({ volAmbiance:0.5, volEffets:0.6, volMusique:0.35, muet:false }, etat.reglages||{});
   etat.reappro = etat.reappro || {};
@@ -8458,8 +8710,9 @@ function defilementBords(dts){
 
 function bornerCamera(){
   const u = U();
-  vue.camX = clamp(vue.camX, -6, u.largeur+6);
-  vue.camY = clamp(vue.camY, -6, u.hauteur+6);
+  const co = profondeurCour(u) + 3;
+  vue.camX = clamp(vue.camX, -co, u.largeur+co);
+  vue.camY = clamp(vue.camY, -co, u.hauteur+co);
 }
 
 /* ------------------------------------------------------------- Clavier */

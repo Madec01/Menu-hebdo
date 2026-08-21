@@ -373,7 +373,7 @@ cas("recherche-age4", async (nav) => {
   await jeu("sauterAge(4); etat.finances.solde = 200000; remplirStocks();");
   const sansBureau = await jeu(`lancerEtude("Essai sans bureau", { gout:'nature', coupe:'ondulee', cuisson:'chaudron', sel:'normal', format:'familial' })`);
   v("sans bureau, aucune étude ne démarre", sansBureau === false, String(sansBureau));
-  await jeu("poserMachine('bureau',2,9,0);");
+  await jeu("poserMachine('bureau',-4,2,0);");   // dans la cour, à l'ouest
 
   // La note doit dépendre de la composition, pas du hasard seul.
   const notes = await jeu(`(() => {
@@ -599,7 +599,7 @@ cas("batiments-et-equipe", async (nav) => {
   // Les trois bâtiments existent, se posent, et ne produisent rien.
   const b = await jeu(`(() => {
     const ok = ['salle_pause','salle_formation','bureau'].map(t => MACHINES[t] && MACHINES[t].batiment === true);
-    poserMachine('salle_pause',3,8,0); poserMachine('salle_formation',8,8,0); poserMachine('bureau',13,8,0);
+    poserMachine('salle_pause',-4,2,0); poserMachine('salle_formation',-4,6,0); poserMachine('bureau',-4,11,0);
     const u = U();
     const poses = ['salle_pause','salle_formation','bureau'].map(t => u.machines.some(m=>m.type===t));
     const sp = u.machines.find(m=>m.type==='salle_pause');
@@ -618,18 +618,22 @@ cas("batiments-et-equipe", async (nav) => {
     const o = U().ouvriers[0];
     const sp = U().machines.find(m=>m.type==='salle_pause');
     o.x = sp.x + sp.l + 4; o.y = sp.y; o.fatigue = 0.95; libererTache(o);
-    let vuRepos = false, vuAssis = false;
-    for (let t=0;t<40;t++){
+    let vuRepos = false, vuAssis = false, sorti = false;
+    for (let t=0;t<160;t++){        // la salle est dans la cour : le trajet est long
       simTick();
       if (o.tache && o.tache.type === 'repos'){ vuRepos = true; if (o.tache.phase === 'assis') vuAssis = true; }
+      if (!dansAtelier(U(), Math.round(o.x-0.5), Math.round(o.y-0.5))) sorti = true;
       if (vuAssis) break;
     }
     const f0 = o.fatigue;
     for (let t=0;t<12;t++) simTick();
-    return { vuRepos, vuAssis, f0, f1: o.fatigue, moral: o.moral, bonus: bonusSallePause() };
+    return { vuRepos, vuAssis, sorti, f0, f1: o.fatigue, moral: o.moral, bonus: bonusSallePause(),
+             portes: portesAtelier(U()).length };
   })()`);
   v("un ouvrier épuisé part à la salle de pause", rep.vuRepos);
+  v("il sort de l'atelier pour ça", rep.sorti);
   v("il s'y assied", rep.vuAssis);
+  v.egal("l'atelier a ses quatre portes", rep.portes, 4);
   v("et il récupère nettement", rep.f0 - rep.f1 > 0.1,
     rep.f0.toFixed(2) + " → " + rep.f1.toFixed(2));
   v("la salle change l'ambiance de tout l'atelier", rep.bonus > 0, "+" + rep.bonus);
@@ -681,6 +685,91 @@ cas("batiments-et-equipe", async (nav) => {
   for (const t of inv) v("invariant : " + t.nom, t.ok, t.detail);
   await page.close();
   return { echecs: v.echecs.concat(erreurs), note: "pause, formation, primes" };
+});
+
+cas("cour-et-murs", async (nav) => {
+  const { page, jeu, erreurs } = await contexte(nav);
+  const v = verif();
+
+  // Le terrain déborde l'atelier de la profondeur de cour, sur les quatre côtés.
+  const t = await jeu(`(() => {
+    const u = U();
+    return { l:u.largeur, h:u.hauteur, cour:profondeurCour(u), cases:u.grille.length,
+             dedans: dansAtelier(u,3,3), dehors: dansCour(u,-3,3),
+             nordOuest: dansCour(u,-3,-3), horsTerrain: dansPlan(u,-99,0) };
+  })()`);
+  v.egal("la grille couvre l'atelier et sa cour",
+    t.cases, (t.l + 2*t.cour) * (t.h + 2*t.cour));
+  v("l'intérieur est l'atelier", t.dedans && !t.horsTerrain);
+  v("les côtés sont de la cour", t.dehors && t.nordOuest);
+
+  // Chacun de son côté du mur.
+  const p = await jeu(`(() => {
+    sauterAge(4); etat.finances.solde = 300000;
+    const u = U();
+    return {
+      batDedans: poserMachine('salle_pause',6,6,0),
+      batDehors: poserMachine('salle_pause',-4,2,0),
+      machDehors: poserMachine('laveuse',-4,8,0),
+      machDedans: poserMachine('laveuse',6,6,0),
+      refusBat: refusPose(u,'salle_pause',6,6,0),
+      refusMach: refusPose(u,'laveuse',-4,8,0)
+    };
+  })()`);
+  v("un bâtiment ne se pose pas dans l'atelier", p.batDedans === false);
+  v("il se pose dans la cour", p.batDehors === true);
+  v("une machine ne se pose pas dans la cour", p.machDehors === false);
+  v("elle se pose dans l'atelier", p.machDedans === true);
+  v("le refus s'explique", /cour/.test(p.refusBat) && /atelier/.test(p.refusMach),
+    p.refusBat + " / " + p.refusMach);
+
+  // Un convoyeur reste à l'intérieur.
+  const c = await jeu(`(() => {
+    const u = U();
+    return { ancreDehors: ancrageConvoyeur(-3,3,{x:0,y:3}),
+             route: routerConvoyeur({x:2,y:2},{x:-3,y:2}) };
+  })()`);
+  v("on n'ancre pas une bande dans la cour", c.ancreDehors === null);
+  v("et on ne l'y route pas non plus", c.route === null);
+
+  // On ne franchit le mur qu'aux portes.
+  const f = await jeu(`(() => {
+    const u = U(), portes = portesAtelier(u);
+    const pn = portes.find(q => q.y === 0);
+    return { nb: portes.length,
+             parLaPorte: franchissable(u, pn.x, 0, pn.x, -1),
+             parLeMur: franchissable(u, pn.x+2, 0, pn.x+2, -1),
+             dedans: franchissable(u, 5,5, 5,6),
+             cheminDehors: !!cheminVers(u, 4, 4, -1, 20) };
+  })()`);
+  v.egal("quatre portes, une par façade", f.nb, 4);
+  v("on sort par la porte", f.parLaPorte);
+  v("on ne traverse pas le mur ailleurs", !f.parLeMur);
+  v("à l'intérieur on circule librement", f.dedans);
+  v("la cour reste accessible à pied", f.cheminDehors);
+
+  // Le mur qui avance pousse la cour devant lui au lieu d'avaler un bâtiment.
+  const g = await jeu(`(() => {
+    const u = U();
+    const b = u.machines.find(m => m.type === 'salle_pause');
+    poserMachine('salle_formation', u.largeur+1, 4, 0);
+    const est = u.machines.find(m => m.type === 'salle_formation');
+    const avant = { x:est.x, ouest:b.x, l:u.largeur };
+    agrandirAtelier(2,0);
+    return { avant, apres:{ x:est.x, ouest:b.x, l:u.largeur },
+             toujoursDehors: rectDansCour(u, est.x, est.y, est.l, est.h),
+             surGrille: occupant(u, est.x, est.y) === est.id };
+  })()`);
+  v.egal("le mur a bien avancé", g.apres.l, g.avant.l + 2);
+  v.egal("le bâtiment de l'est a reculé d'autant", g.apres.x, g.avant.x + 2);
+  v.egal("celui de l'ouest n'a pas bougé", g.apres.ouest, g.avant.ouest);
+  v("il est toujours dans la cour", g.toujoursDehors);
+  v("et toujours inscrit sur la grille", g.surGrille);
+
+  const inv = await jeu("verifierPartie()");
+  for (const t of inv) v("invariant : " + t.nom, t.ok, t.detail);
+  await page.close();
+  return { echecs: v.echecs.concat(erreurs), note: "cour, portes, murs mobiles" };
 });
 
 /* ============================================================== Exécution ==*/

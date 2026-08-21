@@ -122,8 +122,18 @@ sachets se comptent à l'unité.
   les prix vers le haut. Certains mariages marchent, d'autres non — le joueur
   les découvre en essayant, et le contremaître s'en souvient. Une **mode du
   marché** tourne toutes les six semaines.
+- **Une cour tout autour de l'atelier** : le terrain déborde les murs d'une
+  bande de cinq tuiles — enrobé, places de stationnement, voie camion vers
+  chaque quai, herbe et clôture. Les machines et les convoyeurs restent à
+  l'intérieur ; **les bâtiments se posent dehors, et seulement dehors**. Le mur
+  est la frontière, et le jeu explique son refus au lieu de le subir. L'atelier
+  a **quatre portes**, une par façade : les ouvriers ne traversent pas les
+  murs, ils sortent par là — une salle plantée à l'opposé de la porte la plus
+  proche, c'est de la marche perdue à chaque pause. Quand on pousse le mur, la
+  cour recule devant lui et les bâtiments de ce côté suivent : aucun n'est
+  jamais avalé.
 - **Trois bâtiments qui ne fabriquent rien** mais changent l'atelier, posés
-  comme des machines depuis la catégorie « Bâtiments » :
+  dans la cour depuis la catégorie « Bâtiments » :
   - la **salle de pause** (âge 2) — un ouvrier à bout va vraiment s'y asseoir
     et y récupère sept fois plus vite qu'affalé contre un mur ; sa seule
     présence remonte le moral de toute l'équipe ;
@@ -191,11 +201,11 @@ réelles** à la vitesse ×1.
 
 ## Tests
 
-`node tests/suite.mjs` pilote le jeu dans un vrai navigateur : quinze cas qui
+`node tests/suite.mjs` pilote le jeu dans un vrai navigateur : seize cas qui
 couvrent le didacticiel, la chaîne, la conservation de la matière, le réseau de
 convoyeurs, la qualité, les modes, les cinq âges, les auto-vérifications, la
 sauvegarde, le rythme, la performance, la recherche, le raccord entre bandes,
-les quais et rangements, et les bâtiments d'équipe. Voir [`tests/README.md`](tests/README.md).
+les quais et rangements, les bâtiments d'équipe, et la cour. Voir [`tests/README.md`](tests/README.md).
 
 ## Organisation du code
 

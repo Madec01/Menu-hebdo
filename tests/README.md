@@ -22,7 +22,7 @@ La suite sort en code 1 si un cas échoue.
 | `qualite-age3` | l'huile vieillit, le bain se refait, le raté part chez le client s'il n'est pas trié |
 | `modes-de-partie` | le bac à sable ne débite rien, ne verrouille rien, ne fait pas faillite |
 | `saut-de-niveau` | les cinq âges s'atteignent, l'atelier prend la bonne taille |
-| `auto-verifications` | les 8 invariants du jeu (`verifierPartie()`) tiennent sur une usine qui tourne |
+| `auto-verifications` | les 9 invariants du jeu (`verifierPartie()`) tiennent sur une usine qui tourne |
 | `sauvegarde` | aller-retour complet : la partie rechargée est identique au bit près |
 | `rythme-age1` | l'âge 1 se boucle dans la fenêtre de 15 à 35 minutes réelles |
 | `performance` | un tick reste sous 2 ms, une image sous 40 ms en rendu logiciel |
@@ -30,6 +30,7 @@ La suite sort en code 1 si un cas échoue.
 | `raccord-sans-coupure` | un colis passe d'une bande à l'autre d'un bloc, sans se faire couper en deux |
 | `quais-et-rangement` | deux quais, chaque marchandise dans le bon, bac dédié et filtres de bande |
 | `batiments-et-equipe` | la salle de pause remet debout, la formation forme, la prime remonte le moral |
+| `cour-et-murs` | machines dedans, bâtiments dehors, sortie par les portes, mur qui pousse la cour |
 
 ## Les invariants, aussi dans le jeu
 
@@ -37,7 +38,8 @@ La suite sort en code 1 si un cas échoue.
 (<kbd>F2</kbd> → « Vérifier la partie ») le lance et affiche le rapport, ce qui
 permet de contrôler une partie en cours sans quitter le jeu.
 
-Il contrôle : la cohérence de la grille, l'absence de nombre aberrant, le
+Il contrôle : la cohérence de la grille, le respect des murs (machines
+dedans, bâtiments dehors), l'absence de nombre aberrant, le
 raccordement des convoyeurs, l'état de l'équipe, la validité des recettes, leur
 rentabilité, la prise en charge des objectifs d'âge, et la fidélité de la
 sauvegarde.
