@@ -120,9 +120,10 @@ input,select{font:inherit;color:inherit}
 }
 #panneau.replie{flex-basis:44px}
 #panneau.replie .ongletsLabel,#panneau.replie #contenuPanneau{display:none}
-#onglets{display:flex;border-bottom:1px solid var(--bord);background:var(--fond)}
+#onglets{display:flex;flex-wrap:wrap;border-bottom:1px solid var(--bord);background:var(--fond)}
 #onglets button{
-  flex:1;padding:11px 4px;font-size:11px;letter-spacing:.04em;color:var(--texte-faible);
+  flex:1 1 auto;padding:11px 3px;font-size:10.5px;letter-spacing:0;color:var(--texte-faible);
+  white-space:nowrap;
   border-bottom:2px solid transparent;transition:color .12s,border-color .12s,background .12s;
 }
 #onglets button:hover{color:var(--texte-doux);background:var(--fond2)}
@@ -295,6 +296,48 @@ table.tab tr:hover td{background:rgba(255,255,255,.028)}
 #coinAide{position:absolute;right:12px;bottom:12px;z-index:24;display:flex;gap:6px}
 #coinAide .bt{background:rgba(30,34,39,.9);backdrop-filter:blur(3px)}
 
+/* ---------- Onglet Guide ---------- */
+.fluxEtape{display:flex;align-items:center;gap:9px;padding:6px 0}
+.fluxEtape canvas{flex:0 0 26px;background:#1a1d21;border-radius:4px;border:1px solid var(--bord)}
+.fluxEtape .fNom{flex:1;font-size:12.5px}
+.fluxEtape .fSub{font-size:10.5px;color:var(--texte-faible)}
+.fluxFleche{color:var(--texte-faible);font-size:13px;text-align:center;line-height:1;margin-left:12px}
+.fluxMachine{
+  display:inline-block;font-size:10.5px;padding:2px 7px;border-radius:4px;margin-left:12px;
+  background:var(--fond);border:1px solid var(--bord);color:var(--texte-doux);
+}
+
+.recette{background:var(--fond3);border:1px solid var(--bord);border-radius:var(--r);padding:10px;margin-bottom:9px}
+.recette.verrou{opacity:.45}
+.recette .rMachine{font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;font-weight:700;margin-bottom:2px}
+.recette .rNom{font-size:13.5px;font-weight:600;margin-bottom:7px}
+.recette .rBloc{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:12px}
+.recette .rBloc canvas{flex:0 0 22px;background:#1a1d21;border-radius:3px}
+.recette .rSep{display:flex;align-items:center;gap:8px;margin:5px 0;color:var(--texte-faible);font-size:11px}
+.recette .rSep::before,.recette .rSep::after{content:"";flex:1;height:1px;background:var(--bord)}
+.recette .rCadence{margin-top:7px;font-size:11px;color:var(--texte-faible)}
+
+.guideDetails{border:1px solid var(--bord);border-radius:var(--r);margin-bottom:8px;background:var(--fond3);overflow:hidden}
+.guideDetails>summary{
+  padding:10px 12px;cursor:pointer;font-size:12.5px;font-weight:600;list-style:none;
+  display:flex;justify-content:space-between;align-items:center;transition:background .12s;
+}
+.guideDetails>summary:hover{background:#2c3138}
+.guideDetails>summary::-webkit-details-marker{display:none}
+.guideDetails>summary::after{content:"+";color:var(--texte-faible);font-size:15px;font-weight:400}
+.guideDetails[open]>summary::after{content:"−"}
+.guideDetails[open]>summary{border-bottom:1px solid var(--bord)}
+.guideCorps{padding:10px 12px;font-size:12.5px;line-height:1.55;color:var(--texte-doux)}
+.guideCorps p{margin-bottom:8px}
+.guideCorps p:last-child{margin-bottom:0}
+.guideCorps b{color:var(--texte);font-weight:600}
+.guideCorps ul{margin:0 0 8px 15px}
+.guideCorps li{margin-bottom:4px}
+.guideCorps kbd{
+  background:var(--fond);border:1px solid var(--bord-clair);border-bottom-width:2px;
+  border-radius:4px;padding:1px 5px;font-size:11px;font-family:inherit;color:var(--texte);
+}
+
 .rgl{display:flex;align-items:center;gap:9px;margin:7px 0}
 .rgl label{flex:0 0 82px;font-size:12px;color:var(--texte-doux)}
 .rgl input[type=range]{flex:1;accent-color:var(--or)}
@@ -353,6 +396,7 @@ table.tab tr:hover td{background:rgba(255,255,255,.028)}
         <button data-o="perso">Équipe</button>
         <button data-o="commandes">Commandes</button>
         <button data-o="finances">Argent</button>
+        <button data-o="guide">Guide</button>
       </nav>
       <div id="contenuPanneau"></div>
     </aside>
@@ -676,6 +720,14 @@ function euros(n){
   const s = Math.round(Math.abs(n)).toLocaleString("fr-FR");
   return (n<0?"−":"") + s + " €";
 }
+/** Montants fins (prix au kilo, prix de revient) : l'euro près ne suffit pas.
+ *  Au-delà de 100 €, les centimes n'apprennent plus rien. */
+function eurosPrecis(n){
+  const dec = Math.abs(n) < 100 ? 2 : 0;
+  return (n<0?"−":"") + Math.abs(n).toLocaleString("fr-FR",
+    { minimumFractionDigits:dec, maximumFractionDigits:dec }) + " €";
+}
+
 function eurosSigne(n){
   const s = Math.round(Math.abs(n)).toLocaleString("fr-FR");
   return (n<0?"−":"+") + s + " €";
@@ -3737,6 +3789,7 @@ function majPanneau(){
     case "perso":     panneauPersonnel(z); break;
     case "commandes": panneauCommandes(z); break;
     case "finances":  panneauFinances(z); break;
+    case "guide":     panneauGuide(z); break;
   }
   z.scrollTop = defilement;
 }
@@ -4773,6 +4826,337 @@ function tutoDemarrage(){
 }
 
 /* ============================================================================
+   UI — onglet Guide
+   Tout est calculé à partir de DONNÉES : recettes, rendements et prix de
+   revient ne peuvent pas se désynchroniser de l'équilibrage réel.
+   ========================================================================== */
+
+/** Le même pictogramme que dans la vue usine, dans une vignette du panneau.
+ *  On emprunte le contexte de rendu le temps du dessin. */
+function iconeItem(id, px){
+  const c = document.createElement("canvas");
+  c.width = c.height = px;
+  const g = c.getContext("2d");
+  const sauve = ctx;
+  ctx = g;
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.translate(px/2, px/2);
+  ctx.scale(px, px);                 // dessinerItem raisonne en tuiles
+  dessinerItem(0, 0, 0.82, id);
+  ctx = sauve;
+  c.title = ITEMS[id] ? ITEMS[id].nom : id;
+  return c;
+}
+
+/** Remonte l'arbre des recettes jusqu'aux matières achetées.
+ *  matierePremiere("chips_vrac", 1) → { pdt_brutes: 4.8, huile: 0.583 } */
+function matierePremiere(itemId, qte, acc, profondeur){
+  acc = acc || {};
+  if ((profondeur||0) > 12) return acc;                 // garde-fou
+  const r = Object.values(RECETTES).find(x => x.sortie.id === itemId);
+  if (!r){ acc[itemId] = (acc[itemId]||0) + qte; return acc; }
+  const facteur = qte / r.sortie.qte;
+  for (const e of r.entrees) matierePremiere(e.id, e.qte*facteur, acc, (profondeur||0)+1);
+  return acc;
+}
+
+/** Ce que coûte la matière pour une unité de produit fini. */
+function prixDeRevient(itemId){
+  const m = matierePremiere(itemId, ITEMS[itemId].unite === "kg" ? 1 : 100);
+  let total = 0;
+  for (const k in m) total += m[k] * (ITEMS[k].achat || 0);
+  return { matieres:m, total, base: ITEMS[itemId].unite === "kg" ? 1 : 100 };
+}
+
+/** Une recette est-elle accessible au joueur ? */
+function recetteDebloquee(r){
+  return (r.ageMin || 1) <= etat.meta.age;
+}
+
+function panneauGuide(z){
+  const toutVoir = !!vue.guideToutVoir;
+
+  z.appendChild(elem('<h2 class="titrePan">Guide</h2>'));
+  z.appendChild(elem('<p class="sousTitre">Comment on fabrique, et comment ça marche.</p>'));
+
+  /* ---------------------------------------------------- La chaîne, d'un coup */
+  const bc = blocTitre("La chaîne");
+  const etapes = [];
+  const vues = new Set();
+  for (const id in RECETTES){
+    const r = RECETTES[id];
+    if (!recetteDebloquee(r) && !toutVoir) continue;
+    for (const e of r.entrees) if (!vues.has(e.id)){ vues.add(e.id); }
+    etapes.push(r);
+  }
+  // On part des matières achetées, puis on suit les recettes dans l'ordre
+  const depart = Object.keys(ITEMS).filter(k => ITEMS[k].achat && (ITEMS[k].ageMin||1) <= etat.meta.age);
+  bc.appendChild(rangeeFlux(depart[0], "on achète"));
+  for (const r of etapes){
+    bc.appendChild(elem('<div class="fluxFleche">↓</div>'));
+    bc.appendChild(elem('<div class="fluxMachine">'+MACHINES[r.machine].nom+'</div>'));
+    bc.appendChild(rangeeFlux(r.sortie.id,
+      "il faut " + r.entrees.map(e => quantiteItem(e.id, e.qte, true)).join(" + ")));
+  }
+  if (!etapes.length) bc.appendChild(elem('<div class="vide">Rien de débloqué.</div>'));
+  z.appendChild(bc);
+
+  /* ------------------------------------------------------------- Le rendement */
+  const finis = Object.keys(ITEMS).filter(k => ITEMS[k].vente && ((ITEMS[k].ageMin||1) <= etat.meta.age || toutVoir));
+  if (finis.length){
+    const br = blocTitre("Ce que ça coûte, ce que ça rapporte");
+    for (const id of finis){
+      const pr = prixDeRevient(id);
+      const it = ITEMS[id];
+      const vente = it.vente * pr.base;
+      const d = document.createElement("div");
+      d.style.cssText = "padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05)";
+      const unite = it.unite === "kg" ? "Pour 1 kg" : "Pour 100 " + nomItem(id, 2, true, true);
+      d.innerHTML = '<div style="font-weight:600;font-size:13px;margin-bottom:5px">'+unite+' '+
+                    deDe(nomItem(id,2,true,true))+nomItem(id,2,true,true)+'</div>';
+      for (const k in pr.matieres)
+        d.appendChild(ligne("il faut " + quantiteItem(k, pr.matieres[k], true), eurosPrecis(pr.matieres[k]*(ITEMS[k].achat||0))));
+      const lm = ligne("Matière", eurosPrecis(pr.total));
+      lm.querySelector(".v").style.color = "var(--rouge)";
+      d.appendChild(lm);
+      const lv = ligne("Vendu sur commande", eurosPrecis(vente));
+      lv.querySelector(".v").style.color = "var(--vert)";
+      d.appendChild(lv);
+      const lg = ligne("Reste avant les salaires", eurosPrecis(vente - pr.total));
+      lg.querySelector(".v").style.color = "var(--or)";
+      d.appendChild(lg);
+      br.appendChild(d);
+    }
+    br.appendChild(elem('<div style="font-size:11px;color:var(--texte-faible);margin-top:7px">'+
+      "Il reste à payer là-dessus les salaires, le loyer et l'électricité. "+
+      "L'onglet Argent donne la charge du jour.</div>"));
+    z.appendChild(br);
+  }
+
+  /* ------------------------------------------------------------- Les recettes */
+  const bR = blocTitre("Les recettes");
+  for (const id in RECETTES){
+    const r = RECETTES[id];
+    const ouvert = recetteDebloquee(r);
+    if (!ouvert && !toutVoir){
+      bR.appendChild(elem('<div class="recette verrou"><div class="rNom" style="margin:0">'+
+        MACHINES[r.machine].nom+' — débloqué à l\'âge '+r.ageMin+'</div></div>'));
+      continue;
+    }
+    bR.appendChild(carteRecette(r, ouvert));
+  }
+  z.appendChild(bR);
+
+  /* -------------------------------------------------------------- Les machines */
+  const bM = blocTitre("Les machines");
+  for (const k in MACHINES){
+    const d = MACHINES[k];
+    const ouvert = d.ageMin <= etat.meta.age;
+    if (!ouvert && !toutVoir){
+      bM.appendChild(elem('<div class="ligne" style="opacity:.45"><span class="k">'+d.nom+
+        '</span><span class="v">âge '+d.ageMin+'</span></div>'));
+      continue;
+    }
+    const dd = document.createElement("div");
+    dd.style.cssText = "padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05)" + (ouvert?"":";opacity:.5");
+    dd.innerHTML = '<div style="display:flex;justify-content:space-between;gap:8px">'+
+      '<b style="font-size:12.5px">'+d.nom+'</b><span style="font-variant-numeric:tabular-nums;color:var(--or)">'+
+      nb(d.cout)+' €</span></div>'+
+      '<div style="font-size:11.5px;color:var(--texte-doux);margin:2px 0">'+d.resume+'</div>'+
+      '<div style="font-size:11px;color:var(--texte-faible)">'+
+      d.l+' × '+d.h+' carreaux · '+(d.auto ? "tourne sans personne" : "il faut quelqu'un dessus")+
+      (d.usureParJour ? " · s'use" : "")+'</div>';
+    bM.appendChild(dd);
+  }
+  z.appendChild(bM);
+
+  /* ------------------------------------------------------- Comment ça marche */
+  const bH = blocTitre("Comment ça marche");
+  for (const s of SECTIONS_GUIDE()) bH.appendChild(sectionGuide(s.titre, s.corps));
+  z.appendChild(bH);
+
+  /* ------------------------------------------------------------ Les spoilers */
+  const lab = document.createElement("label");
+  lab.style.cssText = "display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--texte-faible);margin-top:4px;cursor:pointer";
+  const cb = document.createElement("input");
+  cb.type = "checkbox"; cb.checked = toutVoir;
+  cb.onchange = () => { vue.guideToutVoir = cb.checked; majPanneau(); };
+  lab.appendChild(cb);
+  lab.appendChild(document.createTextNode("Montrer aussi ce qui n'est pas encore débloqué"));
+  z.appendChild(lab);
+}
+
+function rangeeFlux(itemId, sous){
+  const d = document.createElement("div");
+  d.className = "fluxEtape";
+  d.appendChild(iconeItem(itemId, 26));
+  const t = document.createElement("div");
+  t.style.flex = "1";
+  t.innerHTML = '<div class="fNom"></div><div class="fSub"></div>';
+  t.querySelector(".fNom").textContent = nomItem(itemId, 2);   // un flux se dit au pluriel
+  t.querySelector(".fSub").textContent = sous;
+  d.appendChild(t);
+  return d;
+}
+
+function carteRecette(r, ouvert){
+  const d = document.createElement("div");
+  d.className = "recette" + (ouvert ? "" : " verrou");
+  const def = MACHINES[r.machine];
+  d.innerHTML = '<div class="rMachine"></div><div class="rNom"></div>';
+  const m = d.querySelector(".rMachine");
+  m.textContent = def.nom;
+  m.style.color = def.couleur;
+  d.querySelector(".rNom").textContent = r.nom;
+
+  for (const e of r.entrees){
+    const l = document.createElement("div");
+    l.className = "rBloc";
+    l.appendChild(iconeItem(e.id, 22));
+    const t = document.createElement("span");
+    t.textContent = quantiteItem(e.id, e.qte, false);
+    l.appendChild(t);
+    d.appendChild(l);
+  }
+
+  const sep = document.createElement("div");
+  sep.className = "rSep";
+  sep.appendChild(document.createTextNode(nb(r.duree) + " min"));
+  d.appendChild(sep);
+
+  const l = document.createElement("div");
+  l.className = "rBloc";
+  l.appendChild(iconeItem(r.sortie.id, 22));
+  const t = document.createElement("span");
+  t.innerHTML = "<b>" + quantiteItem(r.sortie.id, r.sortie.qte, false) + "</b>";
+  l.appendChild(t);
+  d.appendChild(l);
+
+  const parJour = r.sortie.qte * (CONFIG.minutesParJour / r.duree);
+  const c = document.createElement("div");
+  c.className = "rCadence";
+  c.textContent = "Au maximum " + quantiteItem(r.sortie.id, parJour, true) +
+                  " par jour et par poste, si rien ne l'arrête.";
+  d.appendChild(c);
+  return d;
+}
+
+function sectionGuide(titre, corps){
+  const d = document.createElement("details");
+  d.className = "guideDetails";
+  if (vue.guideOuvert && vue.guideOuvert.has(titre)) d.open = true;
+  const s = document.createElement("summary");
+  s.textContent = titre;
+  d.appendChild(s);
+  const c = document.createElement("div");
+  c.className = "guideCorps";
+  c.innerHTML = corps;
+  d.appendChild(c);
+  // on retient ce que le joueur a ouvert, le panneau se reconstruisant souvent
+  d.addEventListener("toggle", () => {
+    vue.guideOuvert = vue.guideOuvert || new Set();
+    if (d.open) vue.guideOuvert.add(titre); else vue.guideOuvert.delete(titre);
+  });
+  return d;
+}
+
+/** Les textes d'explication. Français d'atelier, aucun jargon (§3.1). */
+function SECTIONS_GUIDE(){
+  const loyer = CONFIG.loyerParJour[etat.meta.age-1];
+  return [
+  { titre:"Le temps qui passe", corps:
+    "<p>Une journée de travail fait <b>8 heures</b>, et dure <b>40 secondes</b> à la vitesse ×1. "+
+    "La semaine fait <b>5 jours</b>, du lundi au vendredi.</p>"+
+    "<p>Vendredi 17 h, tout s'arrête : c'est le <b>bilan de la semaine</b>. On y voit ce qui est rentré, "+
+    "ce qui est sorti, et on y prend au plus quatre décisions. La partie est enregistrée à ce moment-là.</p>"+
+    "<p>On peut mettre en pause quand on veut avec <kbd>Espace</kbd> et construire tranquillement.</p>" },
+
+  { titre:"L'argent", corps:
+    "<p>Chaque soir, l'atelier paie : les <b>salaires</b>, le <b>loyer</b> ("+euros(loyer)+" par jour), "+
+    "l'<b>électricité</b> ("+eurosPrecis(CONFIG.energieParMachineJour)+" par machine et par jour) et les "+
+    "<b>remboursements d'emprunt</b>.</p>"+
+    "<p>La banque tolère un découvert jusqu'à "+euros(CONFIG.decouvertMax)+". En dessous, elle fait vendre "+
+    "une machine. À "+euros(CONFIG.faillite)+", c'est le dépôt de bilan.</p>"+
+    "<p>Démolir une machine en rend <b>60 %</b>. Réviser coûte 20 % de son prix, réparer une panne 12 %.</p>" },
+
+  { titre:"Vendre : commande ou comptant", corps:
+    "<p>Une <b>commande</b> se signe le vendredi soir. Elle fixe une quantité, un prix et une date. "+
+    "Ce qui est fini part automatiquement chez le client, au fil de la production.</p>"+
+    "<p>Passé la date, chaque jour de retard coûte une <b>pénalité</b> et abîme la réputation. "+
+    "Au bout de six jours, le client reprend sa commande.</p>"+
+    "<p>Ce qui n'est promis à personne part le soir même chez les <b>commerces du coin</b>, à 12 % sous le "+
+    "prix. C'est du revenu tout de suite, mais une commande rapporte davantage. On peut couper cette vente "+
+    "depuis la fiche du quai.</p>"+
+    "<p>La <b>réputation</b> va de 0 à 100. Elle monte quand on livre à l'heure, ouvre les gros clients et "+
+    "fait monter les prix.</p>" },
+
+  { titre:"Acheter la matière", corps:
+    "<p>Les prix bougent tous les jours, dans une fourchette de <b>±25 %</b> autour d'un prix de référence, "+
+    "avec des tendances qui durent plusieurs semaines. Acheter en creux, c'est de la marge gagnée.</p>"+
+    "<p>Le contremaître prévient <b>avant</b> la rupture, pas après. À partir de l'âge 2, on peut faire "+
+    "recommander automatiquement une matière dès qu'elle descend sous un seuil.</p>" },
+
+  { titre:"L'équipe", corps:
+    "<p>Les machines <b>manuelles</b> ne tournent que si quelqu'un est dessus. Les automatiques tournent "+
+    "seules. Entre les deux, il faut porter la marchandise — c'est là que part le temps, tant qu'il n'y a "+
+    "pas de convoyeur.</p>"+
+    "<p>Un ouvrier choisit tout seul le poste le plus utile. Il lâche une machine dont la sortie s'entasse "+
+    "pour aller nourrir un poste qui attend. On peut lui <b>assigner un poste fixe</b> depuis la fiche de "+
+    "la machine : il y restera.</p>"+
+    "<p>La <b>fatigue</b> monte dans la journée et retombe la nuit. Le <b>moral</b> dépend du salaire, de la "+
+    "propreté de l'atelier et de la charge. Un moral trop bas, et la personne s'en va.</p>"+
+    "<p>Les <b>compétences</b> montent avec la pratique : quelqu'un qui tient toujours le même poste finit "+
+    "par y être bien meilleur.</p>" },
+
+  { titre:"Les convoyeurs", corps:
+    "<p>Un convoyeur se trace en maintenant le clic, du <b>départ</b> vers l'<b>arrivée</b>. Il lui faut une "+
+    "machine, un bac ou le quai <b>à chaque bout</b> — sinon il apparaît en rouge et ne sert à rien.</p>"+
+    "<p>Une machine pousse ce qu'elle fabrique. Un convoyeur qui part du <b>quai</b> ou d'un <b>bac</b> "+
+    "apporte au contraire ce que la machine d'arrivée réclame.</p>"+
+    "<p>Attention : un convoyeur qui amène un ingrédient ne dispense pas d'apporter les autres. Une machine "+
+    "à deux ingrédients a besoin des deux.</p>"+
+    "<p>Si la marchandise s'accumule au bout de la bande, c'est que l'aval ne suit pas. Ça se voit à l'œil "+
+    "nu : les pièces s'entassent.</p>" },
+
+  { titre:"L'entretien", corps:
+    "<p>Une machine s'use en tournant. Elle <b>ralentit</b> d'abord, puis se met à grincer, à vibrer et à "+
+    "fumer. À partir de l'âge 2, elle finit par <b>tomber en panne</b> : un clic dessus pour la remettre en "+
+    "route.</p>"+
+    "<p><b>Réviser</b> avant la casse coûte moins cher que réparer après, et remet la machine à neuf.</p>"+
+    "<p>L'atelier se salit tout seul, semaine après semaine. Ça pèse sur le moral. Un nettoyage se lance "+
+    "depuis l'onglet Détail, sans rien sélectionner.</p>" },
+
+  { titre:"Lire l'usine sans ouvrir un menu", corps:
+    "<ul>"+
+    "<li>Liseré orange qui clignote et pictogramme flottant : <b>il manque cet ingrédient</b>.</li>"+
+    "<li>La marchandise s'entasse devant la machine : <b>l'aval ne consomme pas assez</b>.</li>"+
+    "<li>Petite silhouette barrée : <b>personne sur la machine</b>.</li>"+
+    "<li>Fumée grise, vibrations : <b>la machine est fatiguée</b>.</li>"+
+    "<li>Fumée noire et clé rouge : <b>elle est en panne</b>.</li>"+
+    "<li>Goutte de sueur sur un ouvrier : <b>il fatigue</b>. Bras croisés : <b>il n'a rien à faire</b>.</li>"+
+    "</ul>"+
+    "<p>Le survol d'une machine donne l'essentiel en trois lignes. La fiche complète est dans l'onglet "+
+    "Détail. Et le contremaître, en bas à gauche, répond toujours si on lui clique dessus.</p>" },
+
+  { titre:"Sauvegarder", corps:
+    "<p>La partie est enregistrée <b>automatiquement</b> à chaque fin de semaine, et en quittant la page.</p>"+
+    "<p>Le menu <kbd>☰</kbd> donne trois emplacements manuels, et permet d'<b>exporter la partie dans un "+
+    "fichier</b> pour la garder ailleurs ou la reprendre sur une autre machine.</p>" },
+
+  { titre:"Les raccourcis", corps:
+    "<ul>"+
+    "<li><kbd>Espace</kbd> pause et reprise · <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> les vitesses</li>"+
+    "<li><kbd>R</kbd> tourner une machine avant de la poser</li>"+
+    "<li><kbd>Échap</kbd> annuler l'outil ou la sélection</li>"+
+    "<li><kbd>Suppr</kbd> démolir ce qui est sélectionné</li>"+
+    "<li>Clic droit glissé pour se déplacer · clic droit sec pour démolir</li>"+
+    "<li>Molette ou <kbd>+</kbd> <kbd>−</kbd> pour le zoom · très dézoomé, on passe en vue schématique</li>"+
+    "<li><kbd>M</kbd> couper le son</li>"+
+    "</ul>" }
+  ];
+}
+
+/* ============================================================================
    AUDIO — tout est synthétisé à la volée, aucun fichier (§13)
    ========================================================================== */
 
@@ -5110,7 +5494,9 @@ function boucle(t){
     if (cadenceUI > 0.25){
       cadenceUI = 0;
       majBandeau();
-      majPanneau();
+      // Le guide ne bouge pas : le reconstruire en boucle casserait les
+      // sections que le joueur vient d'ouvrir.
+      if (vue.ongletActif !== "guide") majPanneau();
       majAmbiance();
       majMusique(0.25);
       verifierPremierProduit();

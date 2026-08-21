@@ -41,6 +41,7 @@ sachets se comptent à l'unité.
 | Pause | `Espace` · vitesses `1` `2` `3` |
 | Couper le son | `M` |
 | Demander conseil | Clic sur le contremaître, en bas à gauche |
+| Tout savoir | Onglet **Guide**, dans le panneau de droite |
 
 ## Ce qui est construit
 
@@ -61,6 +62,14 @@ sachets se comptent à l'unité.
 - Phase de décision du vendredi soir : bilan, graphique, 4 décisions maximum,
   jauge d'objectif
 - Le contremaître, qui porte tout le didacticiel et tout le diagnostic
+- Un **onglet Guide** : schéma de la chaîne, fiche de chaque recette, prix de
+  revient matière par produit, tableau des machines, et dix sections
+  dépliables sur les mécaniques (le temps, l'argent, les commandes, l'équipe,
+  les convoyeurs, l'entretien, la lecture visuelle de l'usine, la sauvegarde,
+  les raccourcis). Tout y est **calculé depuis les données** : recettes,
+  rendements et prix de revient ne peuvent pas se désynchroniser de
+  l'équilibrage réel. Ce qui n'est pas encore débloqué reste masqué, avec une
+  case à cocher pour l'afficher quand même.
 - Usure, pannes, révision · saleté de l'atelier et nettoyage
 - Audio entièrement synthétisé (Web Audio) : le brassage de la laveuse, la
   lame de la trancheuse, le grésillement de l'huile, le roulement du tambour,
