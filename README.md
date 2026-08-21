@@ -113,7 +113,7 @@ sachets se comptent à l'unité.
 - **Des outils de développement** (<kbd>F2</kbd>) : sauter à n'importe quel âge,
   changer de mode, remplir le quai, user ou réviser le matériel, avancer d'une
   semaine, et lancer les **auto-vérifications** de la partie.
-- **La recherche** (âge 4) : on compose une recette maison en mélangeant cinq
+- **La recherche** (âge 4), dans l'onglet **Labo** : on compose une recette maison en mélangeant cinq
   axes (le goût, la coupe, la cuisson, le sel, le format du sachet). L'étude
   coûte et prend des jours. À la sortie, le public tranche : une note, des avis
   de consommateurs qui pointent chacun une décision, et des pistes
@@ -122,6 +122,20 @@ sachets se comptent à l'unité.
   les prix vers le haut. Certains mariages marchent, d'autres non — le joueur
   les découvre en essayant, et le contremaître s'en souvient. Une **mode du
   marché** tourne toutes les six semaines.
+- **Trois bâtiments qui ne fabriquent rien** mais changent l'atelier, posés
+  comme des machines depuis la catégorie « Bâtiments » :
+  - la **salle de pause** (âge 2) — un ouvrier à bout va vraiment s'y asseoir
+    et y récupère sept fois plus vite qu'affalé contre un mur ; sa seule
+    présence remonte le moral de toute l'équipe ;
+  - la **salle de formation** (âge 3) — on envoie quelqu'un se former sur une
+    compétence précise : il quitte son poste six jours durant, et revient
+    nettement meilleur ;
+  - le **bureau d'études** (âge 4) — sans lui, pas de recherche. Chaque bureau
+    supplémentaire fait avancer l'étude en cours d'une journée de plus par
+    jour.
+- **La paie** : les primes se versent au cas par cas ou à toute l'équipe d'un
+  coup — de l'argent tout de suite contre du moral tout de suite, à arbitrer
+  contre l'augmentation, qui coûte tous les jours.
 - **Les gros clients** (âge 3) : centrales d'achat, gros volumes, prix serrés
   et **paiement à 30 jours** — on avance la matière et les salaires un mois
   durant.
@@ -177,10 +191,11 @@ réelles** à la vitesse ×1.
 
 ## Tests
 
-`node tests/suite.mjs` pilote le jeu dans un vrai navigateur : onze cas qui
+`node tests/suite.mjs` pilote le jeu dans un vrai navigateur : quinze cas qui
 couvrent le didacticiel, la chaîne, la conservation de la matière, le réseau de
-convoyeurs, la qualité, les modes, les cinq âges, la sauvegarde, le rythme et
-la performance. Voir [`tests/README.md`](tests/README.md).
+convoyeurs, la qualité, les modes, les cinq âges, les auto-vérifications, la
+sauvegarde, le rythme, la performance, la recherche, le raccord entre bandes,
+les quais et rangements, et les bâtiments d'équipe. Voir [`tests/README.md`](tests/README.md).
 
 ## Organisation du code
 

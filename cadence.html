@@ -93,10 +93,14 @@ input,select{font:inherit;color:inherit}
 /* ---------- Barre basse : construction ---------- */
 #barreBasse{
   flex:0 0 auto;background:linear-gradient(180deg,#1d2126,#171a1e);
-  border-top:1px solid var(--bord);padding:8px 12px;display:flex;gap:16px;align-items:flex-start;
-  z-index:20;
+  border-top:1px solid var(--bord);padding:8px 12px;display:flex;gap:14px;align-items:flex-start;
+  z-index:20;min-width:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;
+  scrollbar-color:#3a4048 transparent;
 }
-.catBloc{display:flex;flex-direction:column;gap:5px}
+#barreBasse::-webkit-scrollbar{height:7px}
+#barreBasse::-webkit-scrollbar-thumb{background:#3a4048;border-radius:4px}
+#barreBasse::-webkit-scrollbar-track{background:transparent}
+.catBloc{display:flex;flex-direction:column;gap:5px;flex:0 0 auto}
 .catTitre{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--texte-faible);padding-left:2px}
 .catOutils{display:flex;gap:6px}
 .outil{
@@ -364,8 +368,9 @@ table.tab tr:hover td{background:rgba(255,255,255,.028)}
 .chVal.faible{color:var(--texte-faible)}
 
 /* ---------- Recherche ---------- */
-.rechGrille{display:grid;grid-template-columns:minmax(380px,1fr) minmax(380px,1fr);gap:16px;align-items:start}
-.rechTendance{font-size:14px;color:#f0d493;font-style:italic;line-height:1.5}
+.rechGrille{display:block}
+.rechTendance{font-size:13px;color:#f0d493;font-style:italic;line-height:1.5}
+.rechBureaux{font-size:11.5px;color:var(--texte-faible);margin-bottom:10px}
 .rechAxe{margin-bottom:11px}
 .rechAxeNom{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--texte-faible);margin-bottom:5px}
 .rechOpts{display:flex;flex-wrap:wrap;gap:5px}
@@ -476,7 +481,7 @@ table.tab tr:hover td{background:rgba(255,255,255,.028)}
       <button data-v="2" title="Vitesse double">×2</button>
       <button data-v="4" title="Vitesse quadruple">×4</button>
     </div>
-    <button class="btIcone hidden" id="btRech" title="Recherche (R)">✦</button>
+
     <button class="btIcone" id="btStats" title="Statistiques (S)">▤</button>
     <button class="btIcone" id="btSon" title="Couper le son">♪</button>
     <button class="btIcone" id="btMenu" title="Menu et sauvegarde">☰</button>
@@ -512,6 +517,7 @@ table.tab tr:hover td{background:rgba(255,255,255,.028)}
         <button data-o="perso">Équipe</button>
         <button data-o="commandes">Commandes</button>
         <button data-o="finances">Argent</button>
+        <button data-o="labo" class="hidden">Labo</button>
         <button data-o="guide">Guide</button>
       </nav>
       <div id="contenuPanneau"></div>
@@ -563,6 +569,12 @@ const CONFIG = {
   faillite: -15000,
   remboursementCasse: 0.6,     // remboursement à la démolition
   prixTuileAtelier: 46,        // coût de base d'une tuile de surface gagnée
+  reposFatigue: 0.055,         // récupération par minute en salle de pause
+  reposMinutes: 40,            // durée d'une vraie pause
+  formationJours: 6,
+  formationCout: 2400,
+  formationGain: 0.22,
+  primeMoral: 0.28,
   atelierMax: { l:64, h:48 },
   particulesMax: 300,
   itemsConvoyeurMax: 40,
@@ -759,6 +771,27 @@ const MACHINES = {
     resume:"Écarte la marchandise ratée avant qu'elle parte chez le client.",
     besoinOperateur:"Il faut quelqu'un pour trier à la main."
   },
+  salle_pause: {
+    id:"salle_pause", nom:"Salle de pause", cout:1800, l:3, h:2,
+    couleur:"#5cba6b", accent:"#9fe6ab",
+    recettes:[], auto:true, usureParJour:0, ageMin:2, cat:"batiments", batiment:true,
+    resume:"L'équipe y récupère bien plus vite qu'au pied d'une machine, et l'atelier s'en ressent.",
+    besoinOperateur:"—"
+  },
+  salle_formation: {
+    id:"salle_formation", nom:"Salle de formation", cout:4200, l:3, h:3,
+    couleur:"#9b6dc9", accent:"#c49ef0",
+    recettes:[], auto:true, usureParJour:0, ageMin:3, cat:"batiments", batiment:true,
+    resume:"On y forme quelqu'un à un poste. Ça immobilise la personne, mais elle en ressort bien meilleure.",
+    besoinOperateur:"—"
+  },
+  bureau: {
+    id:"bureau", nom:"Bureau d'études", cout:5200, l:3, h:3,
+    couleur:"#3fb8c4", accent:"#8fe4ec",
+    recettes:[], auto:true, usureParJour:0, ageMin:4, cat:"batiments", batiment:true,
+    resume:"C'est ici qu'on met au point les recettes. Deux bureaux vont deux fois plus vite.",
+    besoinOperateur:"—"
+  },
   caisse: {
     id:"caisse", nom:"Bac de stockage", cout:300, l:2, h:2,
     couleur:"#7d6850", accent:"#b09068",
@@ -796,19 +829,19 @@ const AGES = [
   { n:2, nom:"La fabrique", largeur:20, hauteur:16,
     objectif:{ texte:"Sortir 8 000 sachets en une semaine", type:"produitsSemaine",
                produit:"sachet", cible:8000 },
-    debloque:["convoyeur","caisse","tambour","ensacheuse","sachet","reappro"],
+    debloque:["convoyeur","caisse","tambour","ensacheuse","sachet","reappro","salle_pause"],
     intro:"On casse le mur du fond. Convoyeurs, assaisonnement, ensacheuse — et le sachet, qui rapporte bien plus que le vrac." },
 
   { n:3, nom:"La PME", largeur:32, hauteur:24,
     objectif:{ texte:"Honorer une grosse commande sans une seule réclamation",
                type:"compteur", cle:"grosseCommande", cible:1 },
-    debloque:["tri","qualite","grosClients","caisse_dediee"],
+    debloque:["tri","qualite","grosClients","caisse_dediee","salle_formation"],
     intro:"Les clients deviennent regardants. Un sachet mal cuit qui part chez eux, et ça se sait." },
 
   { n:4, nom:"L'industrie", largeur:48, hauteur:36,
     objectif:{ texte:"Sortir une recette maison dont le public redemande",
                type:"compteur", cle:"recetteReussie", cible:1 },
-    debloque:["recherche","silo"],
+    debloque:["recherche","silo","bureau"],
     intro:"On ne se contente plus de fabriquer ce que les autres ont inventé. On crée nos recettes, et le public tranche." },
 
   { n:5, nom:"Le groupe", largeur:48, hauteur:36,
@@ -1167,6 +1200,7 @@ function nouvellePartie(nomEntreprise, modeChoisi){
     stats: { historiqueSemaines:[], semaineCourante: semaineVierge(), clients:{} },
     tuto: { etape:0, fait:[] },
     reglages: { volAmbiance:0.5, volEffets:0.6, volMusique:0.35, muet:false },
+    formations: [],        // [{ ouvrierId, competence, jours, restant }]
     reappro: {},           // { item: {actif:true, seuil:40, lot:60} }
     venteAuto: (MODES[modeChoisi||"normal"] || MODES.normal).venteAuto,
     journal: []            // faits marquants de la semaine
@@ -1231,7 +1265,7 @@ function creerOuvrier(prenom, nom, competences, salaire, traitId){
     charge: null,                // { item, qte }
     tache: null,                 // { type:'porte'|'opere', ... }
     minuteur: 0,
-    fatigue: 0, moral: 0.7,
+    fatigue: 0, moral: 0.7, enFormation: false,
     salaire: salaire || 120,
     anciennete: 0,
     etat: "attend",
@@ -1464,7 +1498,7 @@ function creerMachine(type, x, y, rotation){
 
 function simMachine(m, dt){
   const d = MACHINES[m.type];
-  if (d.stockage){ m.etat = "produit"; m.debitReel = 0; return; }
+  if (d.stockage || d.batiment){ m.etat = "produit"; m.debitReel = 0; return; }
 
   const r = recetteDe(m);
   if (!r){ m.etat = "arret"; m.debitReel = 0; return; }
@@ -2102,14 +2136,30 @@ function simOuvrier(o, dt){
   o.fatigue = clamp(o.fatigue + dt/CONFIG.minutesParJour * 0.55 * (1/(traitDe(o).fatigue||1)), 0, 1);
   o.minuteur -= dt;
 
-  // Coup de barre
+  // En formation : la personne est mobilisée, elle ne tient aucun poste.
+  if (o.enFormation){ o.etat = "formation"; o.fatigue = clamp(o.fatigue - dt*0.01, 0, 1); return; }
+
+  // Coup de barre. Avec une salle de pause, on va vraiment se poser ; sans,
+  // on souffle sur place, bien moins efficacement.
   if (o.etat === "pause"){
-    o.fatigue = clamp(o.fatigue - dt*0.008, 0, 1);
-    if (o.minuteur <= 0) o.etat = "attend";
+    const enSalle = o.tache && o.tache.type === "repos" && o.tache.phase === "assis";
+    o.fatigue = clamp(o.fatigue - dt*(enSalle ? CONFIG.reposFatigue : 0.008), 0, 1);
+    if (enSalle) o.moral = clamp(o.moral + dt*0.0012, 0, 1);
+    if (o.minuteur <= 0){ libererTache(o); o.etat = "attend"; }
     return;
   }
-  if (o.fatigue > 0.93 && (!o.tache || o.tache.type !== "porte")){
+  if (o.tache && o.tache.type === "repos"){ tacheRepos(o, dt); return; }
+  if (o.fatigue > 0.9 && (!o.tache || o.tache.type !== "porte")){
     libererTache(o);
+    const salle = salleLaPlusProche(o, "salle_pause");
+    if (salle){
+      const acces = tuileAcces(U(), salle, o.x, o.y);
+      if (acces && envoyerVers(o, acces.x, acces.y)){
+        o.tache = { type:"repos", salleId:salle.id, phase:"vers_salle" };
+        o.etat = "deplace";
+        return;
+      }
+    }
     o.etat = "pause"; o.minuteur = 25;
     return;
   }
@@ -2225,6 +2275,33 @@ function tacheOpere(o, dt){
   }
 }
 
+/** Le bâtiment de ce type le plus proche d'un ouvrier. */
+function salleLaPlusProche(o, type){
+  let best = null, bd = 1e9;
+  for (const m of U().machines){
+    if (m.type !== type) continue;
+    const d = (m.x+m.l/2-o.x)**2 + (m.y+m.h/2-o.y)**2;
+    if (d < bd){ bd = d; best = m; }
+  }
+  return best;
+}
+
+/** Aller s'asseoir en salle de pause, puis y récupérer pour de bon. */
+function tacheRepos(o, dt){
+  const salle = noeudParId(o.tache.salleId);
+  if (!salle || salle.type !== "salle_pause"){ libererTache(o); o.etat = "pause"; o.minuteur = 25; return; }
+  if (o.tache.phase === "vers_salle"){
+    o.etat = "deplace";
+    if (avancer(o, dt)){
+      o.tache.phase = "assis";
+      o.etat = "pause";
+      o.minuteur = CONFIG.reposMinutes;
+    }
+    return;
+  }
+  o.etat = "pause";
+}
+
 function flaner(o, dt){
   o.etat = "attend";
   if (o.chemin && o.chemin.length){ avancer(o, dt); return; }
@@ -2333,7 +2410,8 @@ function finJournee(){
   // 7. État de la caisse
   verifierFaillite();
 
-  // 8. La recherche avance, et la mode du marché tourne
+  // 8. Les formations et la recherche avancent, et la mode du marché tourne
+  avancerFormations();
   avancerRecherche();
   majTendance();
 
@@ -2376,13 +2454,38 @@ function alerterRupture(){
     parle("On n'a plus " + deDe(noms) + noms + ", patron. Les machines vont s'arrêter.", 11000);
 }
 
+/** Une formation par jour de moins. À la fin, la compétence a fait un bond. */
+function avancerFormations(){
+  const f = etat.formations;
+  if (!f || !f.length) return;
+  for (const x of f.slice()){
+    x.restant--;
+    if (x.restant > 0) continue;
+    const o = ouvrierParId(x.ouvrierId);
+    etat.formations = etat.formations.filter(y => y !== x);
+    if (!o) continue;
+    o.enFormation = false;
+    o.competences[x.competence] = clamp((o.competences[x.competence]||0.5) + CONFIG.formationGain, 0, 1);
+    o.moral = clamp(o.moral + 0.12, 0, 1);
+    notif("Formation terminée", o.prenom + " " + o.nom + " revient : " +
+          (NOM_COMPETENCE[x.competence]||x.competence).toLowerCase() + ", " +
+          motCompetence(o.competences[x.competence]) + ".", "ok");
+    son("valide");
+  }
+}
+
+/** Une salle de pause, même vide, change l'ambiance de l'atelier. */
+function bonusSallePause(){
+  return U().machines.some(m => m.type === "salle_pause") ? 0.07 : 0;
+}
+
 function majMoral(){
   const u = U();
   const salaireMoyen = u.ouvriers.reduce((s,o)=>s+o.salaire,0) / Math.max(1,u.ouvriers.length);
   for (const o of u.ouvriers){
     let cible = 0.55;
     cible += clamp((o.salaire - salaireMoyen)/120, -0.15, 0.15);
-    cible += (o.salaire >= 130 ? 0.12 : 0) + traitDe(o).moral;
+    cible += (o.salaire >= 130 ? 0.12 : 0) + traitDe(o).moral + bonusSallePause();
     cible -= u.salete * 0.25;
     cible -= o.fatigue * 0.12;
     if (etat.finances.solde < 0) cible -= 0.1;
@@ -3064,8 +3167,18 @@ function joursEtude(traits){
 }
 
 /* -------------------------------------------------- Vie d'une étude */
+/** Combien de bureaux d'études tournent : chacun fait avancer une étude. */
+function bureauxDisponibles(){
+  return U().machines.filter(m => m.type === "bureau").length;
+}
+
 function lancerEtude(nom, traits){
   if (etat.recherche.enCours){ notif("Une étude est déjà en route", "Une seule à la fois.", "ko"); return false; }
+  if (bureauxDisponibles() < 1){
+    notif("Pas de bureau", "Une recette se met au point dans un bureau d'études. Il faut en bâtir un.", "ko");
+    parle("On ne va pas inventer une recette au milieu des friteuses, patron. Il nous faut un bureau.", 10000);
+    return false;
+  }
   const cout = coutEtude(traits);
   if (!mode().argentInfini && etat.finances.solde - cout < CONFIG.faillite){
     notif("Étude trop chère", "Il faut " + euros(cout) + " pour la lancer.", "ko"); return false;
@@ -3087,7 +3200,8 @@ function lancerEtude(nom, traits){
 function avancerRecherche(){
   const e = etat.recherche.enCours;
   if (!e) return;
-  e.restant--;
+  // Chaque bureau fait avancer l'étude d'une journée par jour.
+  e.restant -= Math.max(1, bureauxDisponibles());
   if (e.restant <= 0) finaliserRecette();
 }
 
@@ -3987,6 +4101,78 @@ function detailMachine(m, d, x, y, l, h, produit){
       break;
     }
 
+    case "salle_pause": {
+      // sol clair, une table ronde, des tabourets, une machine à café
+      ctx.fillStyle = "#5a6152";
+      coinsArrondis(x+0.18, y+0.34, l-0.36, h-0.6, 0.08); ctx.fill();
+      ctx.fillStyle = "#8a9478";
+      ctx.beginPath(); ctx.arc(cx, cy+0.1, 0.34, 0, 7); ctx.fill();
+      ctx.fillStyle = "#4a5244";
+      for (let i=0;i<4;i++){
+        const a2 = i/4*Math.PI*2 + 0.6;
+        ctx.beginPath(); ctx.arc(cx+Math.cos(a2)*0.62, cy+0.1+Math.sin(a2)*0.5, 0.13, 0, 7); ctx.fill();
+      }
+      ctx.fillStyle = "#c8cdd2";
+      ctx.fillRect(x+l-0.62, y+0.46, 0.3, 0.38);
+      ctx.fillStyle = "#6b4a2a";
+      ctx.fillRect(x+l-0.56, y+0.7, 0.18, 0.1);
+      // une tasse fume quand quelqu'un est là
+      if (U().ouvriers.some(o => o.tache && o.tache.type === "repos" && o.tache.salleId === m.id)
+          && Math.random() < 0.05)
+        particule(x+l-0.47, y+0.5, "vapeur");
+      break;
+    }
+
+    case "salle_formation": {
+      ctx.fillStyle = "#3e3548";
+      coinsArrondis(x+0.18, y+0.34, l-0.36, h-0.6, 0.08); ctx.fill();
+      // le tableau
+      ctx.fillStyle = "#2a3a2e";
+      ctx.fillRect(x+0.4, y+0.46, l-0.8, 0.42);
+      ctx.strokeStyle = "#c4b088"; ctx.lineWidth = 0.04;
+      ctx.beginPath();
+      ctx.moveTo(x+0.55, y+0.72); ctx.lineTo(x+0.95, y+0.58); ctx.lineTo(x+1.35, y+0.66);
+      ctx.stroke();
+      // deux rangs de sièges
+      ctx.fillStyle = "#6b5f7a";
+      for (let r2=0; r2<2; r2++)
+        for (let i=0;i<3;i++)
+          ctx.fillRect(x+0.5+i*(l-1.1)/2.4, y+1.15+r2*0.5, 0.26, 0.26);
+      if (produit && (etat.formations||[]).length){
+        ctx.fillStyle = "rgba(196,158,240,.12)";
+        coinsArrondis(x+0.18, y+0.34, l-0.36, h-0.6, 0.08); ctx.fill();
+      }
+      break;
+    }
+
+    case "bureau": {
+      // plateau clair, des tables, des écrans, un plan punaisé
+      ctx.fillStyle = "#2f4448";
+      coinsArrondis(x+0.18, y+0.32, l-0.36, h-0.58, 0.08); ctx.fill();
+      ctx.fillStyle = "#4d6e73";
+      for (let i=0;i<2;i++)
+        for (let j2=0;j2<2;j2++)
+          ctx.fillRect(x+0.42+i*(l-1.1)/1.35, y+0.5+j2*(h-1.15)/1.2, (l-1.1)/2.1, 0.34);
+      ctx.fillStyle = "#9fe0e8";
+      for (let i=0;i<2;i++)
+        for (let j2=0;j2<2;j2++)
+          ctx.fillRect(x+0.5+i*(l-1.1)/1.35, y+0.54+j2*(h-1.15)/1.2, 0.22, 0.16);
+      // le plan au mur
+      ctx.fillStyle = "#dfe6ea";
+      ctx.fillRect(x+l-0.72, y+0.38, 0.44, 0.3);
+      ctx.strokeStyle = "#7f9aa2"; ctx.lineWidth = 0.025;
+      ctx.beginPath();
+      ctx.moveTo(x+l-0.66, y+0.5); ctx.lineTo(x+l-0.4, y+0.5);
+      ctx.moveTo(x+l-0.66, y+0.58); ctx.lineTo(x+l-0.48, y+0.58);
+      ctx.stroke();
+      if (etat.recherche && etat.recherche.enCours){
+        const i = 0.5 + 0.5*Math.sin(vue.temps*2.4);
+        ctx.fillStyle = "rgba(143,228,236," + (0.06+i*0.08).toFixed(2) + ")";
+        coinsArrondis(x+0.18, y+0.32, l-0.36, h-0.58, 0.08); ctx.fill();
+      }
+      break;
+    }
+
     case "silo": {
       // cylindre vu du dessus, avec sa jauge de remplissage
       const cap = MACHINES.silo.capacite;
@@ -4605,7 +4791,8 @@ function majBandeau(){
   basculer("#indStock", age >= 2);
   basculer("#indReput", age >= 2);
   basculer("#indPerso", age >= 2);
-  $("#btRech").classList.toggle("hidden", !(age >= 4 || mode().toutDebloque));
+  const labo = document.querySelector('#onglets button[data-o="labo"]');
+  if (labo) labo.classList.toggle("hidden", !(age >= 4 || mode().toutDebloque));
   if (age >= 2){
     const u = U();
     // On montre le produit fini le plus abondant, avec sa vraie unité.
@@ -4804,6 +4991,7 @@ function majBarreConstruction(){
     { id:"machines", nom:"Machines" },
     { id:"convoyeurs", nom:"Convoyeurs" },
     { id:"stockage", nom:"Stockage" },
+    { id:"batiments", nom:"Bâtiments" },
     { id:"outils", nom:"Outils" }
   ];
   for (const cat of cats){
@@ -5222,6 +5410,7 @@ function majPanneau(){
     case "perso":     panneauPersonnel(z); break;
     case "commandes": panneauCommandes(z); break;
     case "finances":  panneauFinances(z); break;
+    case "labo":      panneauRecherche(z); break;
     case "guide":     panneauGuide(z); break;
   }
   z.scrollTop = defilement;
@@ -5330,7 +5519,7 @@ function detailUsine(z){
     l.querySelector(".nom").textContent = grognons.map(o=>o.prenom).join(", ");
     b3.appendChild(l);
   }
-  const soucis = u.machines.filter(m => !MACHINES[m.type].stockage &&
+  const soucis = u.machines.filter(m => !MACHINES[m.type].stockage && !MACHINES[m.type].batiment &&
     ((m.etat !== "produit" && m.etat !== "arret") || m.tauxRebut > 0.12));
   if (!soucis.length) b3.appendChild(elem('<div class="vide">Tout tourne.</div>'));
   else for (const m of soucis.slice(0,6)){
@@ -5465,7 +5654,32 @@ function detailMachinePanneau(z, m){
     be.appendChild(bouton("Réparer (" + euros(d.cout*0.12) + ")", () => { reparerMachine(m); majPanneau(); }, "large plein"));
   z.appendChild(be);
 
-  if (!d.stockage){
+  if (d.batiment){
+    const bb = blocTitre("À quoi ça sert");
+    bb.appendChild(elem('<div style="font-size:12.5px;color:var(--texte-doux);line-height:1.5"></div>'))
+      .textContent = d.resume;
+    if (m.type === "bureau"){
+      const n = bureauxDisponibles();
+      bb.appendChild(ligne("Bureaux en service", n));
+      bb.appendChild(ligne("Une étude avance de", n + " " + pluriel(n,"jour") + " par jour"));
+    }
+    if (m.type === "salle_pause"){
+      const dedans = U().ouvriers.filter(o => o.tache && o.tache.type === "repos" && o.tache.salleId === m.id);
+      bb.appendChild(ligne("En pause ici", dedans.length ? dedans.map(o=>o.prenom).join(", ") : "personne"));
+    }
+    if (m.type === "salle_formation"){
+      const f = etat.formations || [];
+      bb.appendChild(ligne("Formations en cours", f.length || "aucune"));
+      for (const x of f){
+        const o = ouvrierParId(x.ouvrierId);
+        if (o) bb.appendChild(ligne(o.prenom + " " + o.nom,
+          (NOM_COMPETENCE[x.competence]||"") + " · " + x.restant + " j"));
+      }
+    }
+    z.appendChild(bb);
+  }
+
+  if (!d.stockage && !d.batiment){
     // Fabrication
     const bf = blocTitre("Fabrication");
     if (d.recettes.length > 1){
@@ -5543,7 +5757,7 @@ function detailMachinePanneau(z, m){
       bo.appendChild(sel);
       z.appendChild(bo);
     }
-  } else {
+  } else if (d.stockage) {
     const bc = blocTitre("Contenu");
     const items = Object.keys(m.sortie).filter(k => m.sortie[k] > 0.01);
     if (!items.length) bc.appendChild(elem('<div class="vide">Vide.</div>'));
@@ -5805,16 +6019,58 @@ function panneauPersonnel(z){
     }
     b.appendChild(comps);
 
-    const r = document.createElement("div");
-    r.className = "btRang";
-    r.appendChild(bouton("Augmenter de 10 €", () => {
-      o.salaire += 10; o.moral = clamp(o.moral+0.1,0,1);
-      notif("Augmentation", o.prenom + " passe à " + euros(o.salaire) + " par jour.", "ok");
-      majPanneau();
-    }));
-    r.appendChild(bouton("Licencier", () => { licencier(o); majPanneau(); majBandeau(); }, "danger"));
-    b.appendChild(r);
+    if (o.enFormation){
+      const f = (etat.formations||[]).find(x => x.ouvrierId === o.id);
+      b.appendChild(elem('<div class="pastille att" style="margin-top:8px"></div>')).textContent =
+        f ? "En formation · " + f.restant + " " + pluriel(f.restant,"jour") + " restants" : "En formation";
+    } else {
+      const r = document.createElement("div");
+      r.className = "btRang";
+      r.appendChild(bouton("+10 €/jour", () => {
+        o.salaire += 10; o.moral = clamp(o.moral+0.1,0,1);
+        notif("Augmentation", o.prenom + " passe à " + euros(o.salaire) + " par jour.", "ok");
+        majPanneau();
+      }));
+      r.appendChild(bouton("Prime de " + euros(200), () => { verserPrime(o, 200); majPanneau(); }));
+      b.appendChild(r);
+
+      // Formation : il faut une salle, et la personne y part plusieurs jours.
+      const salles = u.machines.filter(m => m.type === "salle_formation").length;
+      if (salles){
+        const bf = document.createElement("div");
+        bf.style.marginTop = "8px";
+        const sel = document.createElement("select");
+        sel.className = "champTexte";
+        sel.style.cssText = "text-align:left;margin:0 0 6px";
+        for (const c in NOM_COMPETENCE){
+          const opt = document.createElement("option");
+          opt.value = c;
+          opt.textContent = NOM_COMPETENCE[c] + " — " + motCompetence(o.competences[c]||0.5);
+          sel.appendChild(opt);
+        }
+        bf.appendChild(sel);
+        bf.appendChild(bouton("Former (" + euros(CONFIG.formationCout) + " · " +
+          CONFIG.formationJours + " jours)", () => { lancerFormation(o, sel.value); majPanneau(); }, "large"));
+        b.appendChild(bf);
+      }
+      b.appendChild(bouton("Licencier", () => { licencier(o); majPanneau(); majBandeau(); }, "large danger"));
+    }
     z.appendChild(b);
+  }
+
+  // Une prime à tout le monde : cher, mais ça remonte l'atelier d'un coup.
+  if (u.ouvriers.length > 1){
+    const bp = blocTitre("Toute l'équipe");
+    const total = u.ouvriers.length * 200;
+    bp.appendChild(elem('<div style="font-size:12.5px;color:var(--texte-doux);margin-bottom:7px">'+
+      "Une prime générale remonte le moral de tout le monde d'un coup. Elle ne remplace pas "+
+      "un atelier propre ni des salaires corrects.</div>"));
+    bp.appendChild(bouton("Prime générale · " + euros(total), () => {
+      for (const x of u.ouvriers) verserPrime(x, 200, true);
+      notif("Prime versée", euros(total) + " pour " + u.ouvriers.length + " personnes.", "ok");
+      majPanneau(); majBandeau();
+    }, "large"));
+    z.appendChild(bp);
   }
 
   const bc = blocTitre("Se présentent à l'embauche");
@@ -5836,6 +6092,44 @@ function panneauPersonnel(z){
     bc.appendChild(d);
   }
   z.appendChild(bc);
+}
+
+/** Une prime : de l'argent tout de suite contre du moral tout de suite. */
+function verserPrime(o, montant, silencieux){
+  if (!mode().argentInfini && etat.finances.solde - montant < CONFIG.faillite){
+    notif("Impossible", "La caisse ne suit pas.", "ko"); return;
+  }
+  depenser(montant, "salaires");
+  o.moral = clamp(o.moral + CONFIG.primeMoral, 0, 1);
+  o.joursMoralBas = 0;
+  if (!silencieux){
+    notif("Prime", o.prenom + " " + o.nom + " touche " + euros(montant) + ".", "ok");
+    son("argent");
+  }
+}
+
+/** Envoyer quelqu'un en formation : il quitte son poste pour plusieurs jours. */
+function lancerFormation(o, competence){
+  const u = U();
+  if (!u.machines.some(m => m.type === "salle_formation")){
+    notif("Pas de salle", "Il faut une salle de formation.", "ko"); return;
+  }
+  if (o.enFormation) return;
+  if (!mode().argentInfini && etat.finances.solde - CONFIG.formationCout < CONFIG.faillite){
+    notif("Trop cher", "Une formation coûte " + euros(CONFIG.formationCout) + ".", "ko"); return;
+  }
+  depenser(CONFIG.formationCout, "salaires");
+  libererTache(o);
+  o.enFormation = true;
+  const salle = salleLaPlusProche(o, "salle_formation");
+  if (salle){
+    const acces = tuileAcces(u, salle, o.x, o.y);
+    if (acces) envoyerVers(o, acces.x, acces.y);
+  }
+  etat.formations.push({ ouvrierId:o.id, competence, jours:CONFIG.formationJours, restant:CONFIG.formationJours });
+  notif("Formation", o.prenom + " part se former : " +
+        (NOM_COMPETENCE[competence]||competence).toLowerCase() + ", " + CONFIG.formationJours + " jours.", "ok");
+  son("signature");
 }
 
 function motCompetence(c){
@@ -5862,7 +6156,8 @@ function texteEtatOuvrier(o){
     }
     case "porte": return o.charge ? "porte des " + nomItem(o.charge.item, 2, true, true) : "porte une pièce";
     case "deplace": return "traverse l'atelier";
-    case "pause": return "souffle un peu";
+    case "pause": return o.tache && o.tache.type === "repos" ? "en salle de pause" : "souffle un peu";
+    case "formation": return "en formation";
     default: return "attend qu'on lui donne quelque chose";
   }
 }
@@ -6359,7 +6654,10 @@ function ouvrirAnnonceAge(age){
     grosClients:"Les centrales d'achat — gros volumes, paiement à 30 jours",
     caisse_dediee:"Les bacs dédiés, qui ne mélangent plus les marchandises",
     silo:"Le silo, de quoi tenir une saison sur une seule marchandise",
-    recherche:"La recherche : on invente enfin ses propres chips (touche R)"
+    recherche:"La recherche : on invente enfin ses propres chips",
+    salle_pause:"La salle de pause, où l'équipe récupère vraiment",
+    salle_formation:"La salle de formation, pour rendre les gens meilleurs",
+    bureau:"Le bureau d'études, sans lequel aucune recette ne se met au point"
   };
   for (const d of age.debloque)
     if (noms[d]) l.appendChild(elem('<div class="ligne"><span class="k">'+noms[d]+'</span></div>'));
@@ -7540,29 +7838,44 @@ function brouillonParDefaut(){
   return { nom:"", traits:t };
 }
 
-function ouvrirRecherche(){
-  if (etat.meta.age < 4 && !mode().toutDebloque){
-    notif("Pas encore", "La recherche s'ouvre à l'âge de l'industrie.", ""); return;
-  }
+/** L'onglet Labo : on compose en haut, on lit les retours en dessous. */
+function panneauRecherche(z){
   if (!brouillon) brouillon = brouillonParDefaut();
-  const z = $("#ecranRecherche");
-  z.innerHTML = `
-    <div class="feuille">
-      <div class="enteteFeuille">
-        <h1>Recherche</h1>
-        <div class="sous">${etat.meta.nomEntreprise} · on connaît la maison à ${Math.round(etat.recherche.notoriete)} sur 100</div>
-        <div style="flex:1"></div>
-        <button class="bt" id="btFermerRech">Retour à l'usine</button>
-      </div>
-      <div class="rechGrille">
-        <div id="rechComposer"></div>
-        <div id="rechSuivi"></div>
-      </div>
-    </div>`;
-  $("#btFermerRech").onclick = () => fermer("#ecranRecherche");
-  ouvrir("#ecranRecherche");
+  z.appendChild(elem('<h2 class="titrePan">Le laboratoire</h2>'));
+  z.appendChild(elem('<p class="sousTitre"></p>')).textContent =
+    "On connaît la maison à " + Math.round(etat.recherche.notoriete) + " sur 100.";
+
+  const nb = bureauxDisponibles();
+  if (!nb){
+    const b = blocTitre("Il manque un bureau");
+    b.appendChild(elem('<div style="font-size:12.5px;color:var(--texte-doux);line-height:1.5">'+
+      "Une recette ne se met pas au point au milieu des friteuses. Bâtissez un "+
+      "<b>bureau d'études</b> — onglet Bâtiments, en bas — et l'équipe pourra s'y mettre. "+
+      "Chaque bureau supplémentaire fait avancer les études d'autant plus vite.</div>"));
+    z.appendChild(b);
+  } else {
+    z.appendChild(elem('<div class="rechBureaux"></div>')).textContent =
+      nb + " " + pluriel(nb,"bureau","bureaux") + " — une étude avance de " + nb +
+      " " + pluriel(nb,"jour") + " par jour.";
+  }
+
+  const composer = document.createElement("div");
+  composer.id = "rechComposer";
+  z.appendChild(composer);
+  const suivi = document.createElement("div");
+  suivi.id = "rechSuivi";
+  z.appendChild(suivi);
   majComposer();
   majSuivi();
+}
+
+/** Le bouton et la touche mènent à l'onglet. */
+function ouvrirRecherche(){
+  if (etat.meta.age < 4 && !mode().toutDebloque){
+    notif("Pas encore", "Le laboratoire ouvre à l'âge de l'industrie.", ""); return;
+  }
+  vue.ongletActif = "labo";
+  majOnglets(); majPanneau();
 }
 
 /* ------------------------------------------------------------ Composer */
@@ -7571,13 +7884,13 @@ function majComposer(){
   z.innerHTML = "";
 
   // Ce que cherche le public : la seule information donnée d'avance.
-  const t = volet("Ce que cherche le public");
+  const t = blocTitre("Ce que cherche le public");
   t.appendChild(elem('<div class="rechTendance"></div>')).textContent = tendanceCourante().texte;
   z.appendChild(t);
 
   const e = etat.recherche.enCours;
   if (e){
-    const v = volet("Étude en cours");
+    const v = blocTitre("Étude en cours");
     v.appendChild(elem('<div style="font-size:16px;font-weight:600;margin-bottom:6px"></div>')).textContent = "« " + e.nom + " »";
     v.appendChild(elem('<div style="font-size:12.5px;color:var(--texte-doux);margin-bottom:8px"></div>'))
      .textContent = resumeTraits(e.traits);
@@ -7590,7 +7903,7 @@ function majComposer(){
     return;
   }
 
-  const v = volet("Composer une recette");
+  const v = blocTitre("Composer une recette");
   const champ = document.createElement("input");
   champ.className = "champTexte";
   champ.style.cssText = "text-align:left;margin-bottom:14px";
@@ -7619,7 +7932,8 @@ function majComposer(){
     v.appendChild(bloc);
   }
 
-  const cout = coutEtude(brouillon.traits), jours = joursEtude(brouillon.traits);
+  const nbB = Math.max(1, bureauxDisponibles());
+  const cout = coutEtude(brouillon.traits), jours = Math.ceil(joursEtude(brouillon.traits)/nbB);
   const g = grammageDe(brouillon.traits);
   const info = document.createElement("div");
   info.className = "rechInfo";
@@ -7692,14 +8006,13 @@ function majSuivi(){
   z.innerHTML = "";
   const rs = etat.recherche.recettes.slice().reverse();
   if (!rs.length){
-    const v = volet("Nos recettes");
+    const v = blocTitre("Nos recettes");
     v.appendChild(elem('<div class="vide">Rien n\'est encore sorti de la maison.</div>'));
     z.appendChild(v);
     return;
   }
   for (const r of rs){
-    const v = volet(null);
-    v.innerHTML = "";
+    const v = blocTitre(null);
     const ent = document.createElement("div");
     ent.className = "rechEntete";
     ent.innerHTML = '<span class="rechPuce"></span><div style="flex:1">' +
@@ -7750,8 +8063,8 @@ function majSuivi(){
       }
       const b = bouton("Repartir de cette recette", () => {
         brouillon = { nom: r.nom + " II", traits: Object.assign({}, r.traits) };
-        majComposer();
-        $("#ecranRecherche").scrollTop = 0;
+        majPanneau();
+        $("#contenuPanneau").scrollTop = 0;
       }, "large");
       b.style.marginTop = "10px";
       v.appendChild(b);
@@ -8007,6 +8320,7 @@ function appliquer(o){
   // champs ajoutés après coup : on complète sans casser les vieilles parties
   etat.reglages = Object.assign({ volAmbiance:0.5, volEffets:0.6, volMusique:0.35, muet:false }, etat.reglages||{});
   etat.reappro = etat.reappro || {};
+  etat.formations = etat.formations || [];
   etat.finances.creances = etat.finances.creances || [];
   etat.progression.compteurs = etat.progression.compteurs || {};
   etat.stats.clients = etat.stats.clients || {};
@@ -8240,7 +8554,7 @@ function init(){
   });
   $("#btMenu").onclick = () => { if (etat) ouvrirMenu(); };
   $("#btStats").onclick = () => { if (etat) ouvrirStats(); };
-  $("#btRech").onclick = () => { if (etat) ouvrirRecherche(); };
+
   $("#btSon").onclick = () => { initAudio(); basculerSon(); };
   $("#btAide").onclick = ouvrirAide;
   $("#portrait").onclick = () => { initAudio(); conseil(); };

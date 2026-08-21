@@ -371,6 +371,9 @@ cas("recherche-age4", async (nav) => {
   const { page, jeu, sim, erreurs } = await contexte(nav);
   const v = verif();
   await jeu("sauterAge(4); etat.finances.solde = 200000; remplirStocks();");
+  const sansBureau = await jeu(`lancerEtude("Essai sans bureau", { gout:'nature', coupe:'ondulee', cuisson:'chaudron', sel:'normal', format:'familial' })`);
+  v("sans bureau, aucune étude ne démarre", sansBureau === false, String(sansBureau));
+  await jeu("poserMachine('bureau',2,9,0);");
 
   // La note doit dépendre de la composition, pas du hasard seul.
   const notes = await jeu(`(() => {
@@ -586,6 +589,98 @@ cas("quais-et-rangement", async (nav) => {
   for (const t of inv) v("invariant : " + t.nom, t.ok, t.detail);
   await page.close();
   return { echecs: v.echecs.concat(erreurs), note: "2 quais, 3 rangements, filtres" };
+});
+
+cas("batiments-et-equipe", async (nav) => {
+  const { page, jeu, sim, erreurs } = await contexte(nav);
+  const v = verif();
+  await jeu("sauterAge(4); etat.finances.solde = 300000; remplirStocks();");
+
+  // Les trois bâtiments existent, se posent, et ne produisent rien.
+  const b = await jeu(`(() => {
+    const ok = ['salle_pause','salle_formation','bureau'].map(t => MACHINES[t] && MACHINES[t].batiment === true);
+    poserMachine('salle_pause',3,8,0); poserMachine('salle_formation',8,8,0); poserMachine('bureau',13,8,0);
+    const u = U();
+    const poses = ['salle_pause','salle_formation','bureau'].map(t => u.machines.some(m=>m.type===t));
+    const sp = u.machines.find(m=>m.type==='salle_pause');
+    for (let t=0;t<20;t++) simTick();
+    return { ok, poses, etatSalle: sp.etat, recette: sp.recette || null, bureaux: bureauxDisponibles() };
+  })()`);
+  v("les trois sont déclarés comme bâtiments", b.ok.every(Boolean), JSON.stringify(b.ok));
+  v("ils se posent tous les trois", b.poses.every(Boolean), JSON.stringify(b.poses));
+  v("un bâtiment ne fabrique rien", b.recette === null, String(b.recette));
+  v.egal("le bureau est compté", b.bureaux, 1);
+
+  // La salle de pause : on y va vraiment, et on y récupère bien plus vite.
+  const rep = await jeu(`(() => {
+    for (const o of U().ouvriers.slice()) licencier(o, true);
+    embaucher(creerCandidat());
+    const o = U().ouvriers[0];
+    const sp = U().machines.find(m=>m.type==='salle_pause');
+    o.x = sp.x + sp.l + 4; o.y = sp.y; o.fatigue = 0.95; libererTache(o);
+    let vuRepos = false, vuAssis = false;
+    for (let t=0;t<40;t++){
+      simTick();
+      if (o.tache && o.tache.type === 'repos'){ vuRepos = true; if (o.tache.phase === 'assis') vuAssis = true; }
+      if (vuAssis) break;
+    }
+    const f0 = o.fatigue;
+    for (let t=0;t<12;t++) simTick();
+    return { vuRepos, vuAssis, f0, f1: o.fatigue, moral: o.moral, bonus: bonusSallePause() };
+  })()`);
+  v("un ouvrier épuisé part à la salle de pause", rep.vuRepos);
+  v("il s'y assied", rep.vuAssis);
+  v("et il récupère nettement", rep.f0 - rep.f1 > 0.1,
+    rep.f0.toFixed(2) + " → " + rep.f1.toFixed(2));
+  v("la salle change l'ambiance de tout l'atelier", rep.bonus > 0, "+" + rep.bonus);
+
+  // La formation : plusieurs jours hors poste, puis une vraie compétence en plus.
+  const f0 = await jeu(`(() => {
+    const o = U().ouvriers[0];
+    o.competences.friture = 0.4;
+    const avant = etat.finances.solde;
+    lancerFormation(o, 'friture');
+    for (let t=0;t<8;t++) simTick();
+    return { cout: avant - etat.finances.solde, enFormation: !!o.enFormation,
+             etat: o.etat, poste: o.tache ? o.tache.type : null,
+             comp: o.competences.friture, jours: (etat.formations[0]||{}).restant };
+  })()`);
+  v.aumoins("la formation est payée", f0.cout, 1000);
+  v("l'ouvrier quitte l'atelier", f0.enFormation && f0.poste === null, f0.etat);
+  v.aumoins("elle dure plusieurs jours", f0.jours, 4);
+  await sim(f0.jours + 1);
+  const f1 = await jeu(`(() => {
+    const o = U().ouvriers[0];
+    return { enFormation: !!o.enFormation, comp: o.competences.friture, restantes: etat.formations.length };
+  })()`);
+  v("il revient au bout du compte", !f1.enFormation);
+  v("mieux formé qu'avant", f1.comp > f0.comp + 0.15, f0.comp.toFixed(2) + " → " + f1.comp.toFixed(2));
+  v.egal("la formation est soldée", f1.restantes, 0);
+
+  // Une prime : de l'argent contre du moral.
+  const pr = await jeu(`(() => {
+    const o = U().ouvriers[0];
+    o.moral = 0.3;
+    const avant = etat.finances.solde;
+    verserPrime(o, 200, true);
+    return { cout: avant - etat.finances.solde, moral: o.moral };
+  })()`);
+  v.egal("la prime sort de la caisse", Math.round(pr.cout), 200);
+  v("et remonte le moral", pr.moral > 0.5, "moral " + pr.moral.toFixed(2));
+
+  // Sans salle de formation, on ne forme personne.
+  const sans = await jeu(`(() => {
+    for (const m of U().machines.filter(m=>m.type==='salle_formation')) demolir(m, true);
+    const o = U().ouvriers[0];
+    lancerFormation(o, 'lavage');
+    return { enFormation: !!o.enFormation, encours: etat.formations.length };
+  })()`);
+  v("pas de salle, pas de formation", !sans.enFormation && sans.encours === 0);
+
+  const inv = await jeu("verifierPartie()");
+  for (const t of inv) v("invariant : " + t.nom, t.ok, t.detail);
+  await page.close();
+  return { echecs: v.echecs.concat(erreurs), note: "pause, formation, primes" };
 });
 
 /* ============================================================== Exécution ==*/
