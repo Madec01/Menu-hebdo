@@ -42,6 +42,8 @@ sachets se comptent à l'unité.
 | Couper le son | `M` |
 | Demander conseil | Clic sur le contremaître, en bas à gauche |
 | Tout savoir | Onglet **Guide**, dans le panneau de droite |
+| Statistiques | <kbd>S</kbd>, ou l'icône ▤ en haut à droite |
+| Outils de développement | <kbd>F2</kbd> |
 
 ## Ce qui est construit
 
@@ -79,6 +81,17 @@ sachets se comptent à l'unité.
   immobilisation) et fonce visiblement en vieillissant. La marchandise ratée
   ne se vend pas : laissée sur le quai, elle part mélangée aux livraisons et
   le client réclame. La **table de tri** l'écarte.
+- **Quatre modes de partie**, choisis à l'écran-titre et changeables en cours
+  de partie : *Partie normale*, *Tranquille* (ni dépôt de bilan ni pénalités),
+  *Exigeant* (matériel fragile, marché nerveux, pas de vente au comptant) et
+  *Bac à sable* (argent illimité, tout débloqué, construction gratuite).
+- **Un écran de statistiques** : résultat semaine par semaine, production par
+  produit, part partie au rebut, répartition des dépenses et palmarès des
+  clients. Les graphiques réagissent au survol et n'utilisent jamais la couleur
+  seule pour porter une information.
+- **Des outils de développement** (<kbd>F2</kbd>) : sauter à n'importe quel âge,
+  changer de mode, remplir le quai, user ou réviser le matériel, avancer d'une
+  semaine, et lancer les **auto-vérifications** de la partie.
 - **Les gros clients** (âge 3) : centrales d'achat, gros volumes, prix serrés
   et **paiement à 30 jours** — on avance la matière et les salaires un mois
   durant.
@@ -130,6 +143,13 @@ commentés en tête du fichier, dans la section `CONFIG` :
 
 Rythme mesuré : l'âge 1 se boucle en **30 journées de jeu, soit 20 minutes
 réelles** à la vitesse ×1.
+
+## Tests
+
+`node tests/suite.mjs` pilote le jeu dans un vrai navigateur : onze cas qui
+couvrent le didacticiel, la chaîne, la conservation de la matière, le réseau de
+convoyeurs, la qualité, les modes, les cinq âges, la sauvegarde, le rythme et
+la performance. Voir [`tests/README.md`](tests/README.md).
 
 ## Organisation du code
 

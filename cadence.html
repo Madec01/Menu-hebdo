@@ -338,6 +338,59 @@ table.tab tr:hover td{background:rgba(255,255,255,.028)}
   border-radius:4px;padding:1px 5px;font-size:11px;font-family:inherit;color:var(--texte);
 }
 
+/* ---------- Panneau de développement (F2) ---------- */
+#panneauDev{
+  position:fixed;top:60px;left:14px;z-index:70;width:330px;max-height:82vh;display:none;
+  background:rgba(22,25,29,.97);border:1px solid var(--bord-clair);border-radius:10px;
+  box-shadow:var(--ombre);backdrop-filter:blur(4px);flex-direction:column;
+}
+#panneauDev.visible{display:flex}
+.devEntete{
+  display:flex;justify-content:space-between;align-items:center;padding:10px 12px;
+  border-bottom:1px solid var(--bord);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--or);
+}
+.devFermer{color:var(--texte-faible);font-size:14px;padding:0 4px}
+.devFermer:hover{color:var(--texte)}
+.devCorps{overflow-y:auto;padding:10px 12px}
+.devGroupe{margin-bottom:11px}
+.devTitre{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--texte-faible);margin-bottom:5px}
+.devBoutons{display:flex;flex-wrap:wrap;gap:5px}
+.devBt{
+  padding:5px 9px;border-radius:5px;background:var(--fond3);border:1px solid var(--bord);
+  font-size:11.5px;color:var(--texte-doux);
+}
+.devBt:hover{background:#333941;color:var(--texte);border-color:var(--bord-clair)}
+.devBtLarge{width:100%;padding:8px;background:var(--or);color:#241b03;border-color:var(--or);font-weight:600}
+.devBtLarge:hover{background:#ffc63f;color:#241b03}
+.devRapport{margin-top:8px}
+.devTest{display:flex;gap:7px;align-items:flex-start;font-size:11.5px;padding:3px 0;line-height:1.4}
+.devTest.ok{color:var(--texte-doux)}
+.devTest.ko{color:#f0a094}
+.devPuce{flex:0 0 12px;font-weight:700}
+.devTest.ok .devPuce{color:var(--vert)}
+.devTest.ko .devPuce{color:var(--rouge)}
+.devBilan{margin-top:7px;padding:7px 9px;border-radius:6px;font-size:12px;font-weight:600;text-align:center}
+.devBilan.ok{background:#1c3021;color:#8fd89c}
+.devBilan.ko{background:#3a1e1a;color:#f0a094}
+
+/* ---------- Statistiques ---------- */
+.kpiRang{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.kpi{background:var(--fond2);border:1px solid var(--bord);border-radius:10px;padding:13px 15px}
+.kpi .kLab{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--texte-faible);margin-bottom:5px;line-height:1.3}
+.kpi .kVal{font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.15}
+.kpi .kVal.pos{color:var(--vert)}
+.kpi .kVal.neg{color:var(--rouge)}
+.kpi .kSous{font-size:11.5px;color:var(--texte-doux);margin-top:3px}
+#statsCorps canvas{display:block;max-width:100%;border-radius:6px;background:#14171b}
+.vizLecture{font-size:11.5px;color:var(--texte-doux);margin-top:6px;min-height:16px;font-variant-numeric:tabular-nums}
+.vizLegende{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:5px 16px;margin-top:11px}
+.vizLegItem{display:flex;align-items:center;gap:7px;font-size:12px}
+.vizPuce{width:10px;height:10px;border-radius:3px;flex:0 0 10px}
+.vizNom{flex:1;color:var(--texte-doux)}
+.vizVal{font-variant-numeric:tabular-nums;color:var(--texte)}
+.petitsMultiples{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.pmTitre{font-size:12.5px;font-weight:600;margin-bottom:6px}
+
 .rgl{display:flex;align-items:center;gap:9px;margin:7px 0}
 .rgl label{flex:0 0 82px;font-size:12px;color:var(--texte-doux)}
 .rgl input[type=range]{flex:1;accent-color:var(--or)}
@@ -366,6 +419,7 @@ table.tab tr:hover td{background:rgba(255,255,255,.028)}
       <button data-v="2" title="Vitesse double">×2</button>
       <button data-v="4" title="Vitesse quadruple">×4</button>
     </div>
+    <button class="btIcone" id="btStats" title="Statistiques">▤</button>
     <button class="btIcone" id="btSon" title="Couper le son">♪</button>
     <button class="btIcone" id="btMenu" title="Menu et sauvegarde">☰</button>
   </header>
@@ -408,6 +462,8 @@ table.tab tr:hover td{background:rgba(255,255,255,.028)}
 <div class="overlay" id="ecranVendredi"></div>
 <div class="overlay" id="ecranMenu"></div>
 <div class="overlay" id="ecranFin"></div>
+<div class="overlay" id="ecranStats"></div>
+<div id="panneauDev"></div>
 
 <script>
 "use strict";
@@ -711,6 +767,40 @@ const BANQUES = [
   { nom:"Fonds Méridien",    montant:35000, taux:0.135, jours:180, texte:"Beaucoup d'argent, tout de suite. Et des intérêts salés." }
 ];
 
+/* ------------------------------------------------------------- Modes de jeu
+   Un mode ne change jamais la chaîne de production : il change ce qui pardonne
+   et ce qui punit. Tout est déclaratif, comme le reste de l'équilibrage. */
+const MODES = {
+  normal: {
+    id:"normal", nom:"Partie normale",
+    resume:"L'équilibrage prévu : dépôt de bilan possible, pénalités de retard, marché qui bouge.",
+    argentInfini:false, constructionGratuite:false, toutDebloque:false,
+    faillite:true, penalites:true,
+    usure:1, volatilite:1, prixClient:1, venteAuto:true
+  },
+  tranquille: {
+    id:"tranquille", nom:"Tranquille",
+    resume:"Pour bâtir sans stress : pas de dépôt de bilan, pas de pénalité de retard, matériel plus endurant.",
+    argentInfini:false, constructionGratuite:false, toutDebloque:false,
+    faillite:false, penalites:false,
+    usure:0.6, volatilite:0.6, prixClient:1.05, venteAuto:true
+  },
+  exigeant: {
+    id:"exigeant", nom:"Exigeant",
+    resume:"Clients plus durs, matériel fragile, marché nerveux — et les commerces du coin ne ramassent plus le surplus.",
+    argentInfini:false, constructionGratuite:false, toutDebloque:false,
+    faillite:true, penalites:true,
+    usure:1.45, volatilite:1.6, prixClient:0.9, venteAuto:false
+  },
+  bacASable: {
+    id:"bacASable", nom:"Bac à sable",
+    resume:"Argent illimité, tout débloqué, construction gratuite. Pour essayer une usine sans compter.",
+    argentInfini:true, constructionGratuite:true, toutDebloque:true,
+    faillite:false, penalites:false,
+    usure:0.5, volatilite:0.5, prixClient:1, venteAuto:true
+  }
+};
+
 /* Libellés d'état de machine — jamais de jargon à l'écran (§3.1) */
 const LIB_ETAT = {
   produit:          { texte:"Tourne bien",                 classe:"ok"  },
@@ -754,6 +844,9 @@ const vue = {
 
 /* ------------------------------------------------------------- Utilitaires */
 const clamp = (v,a,b) => v<a?a:(v>b?b:v);
+
+/** Le mode de partie en cours. Jamais null : une vieille sauvegarde est normale. */
+function mode(){ return (etat && MODES[etat.meta.mode]) || MODES.normal; }
 const lerp  = (a,b,t) => a+(b-a)*t;
 const hasard = (a,b) => a + Math.random()*(b-a);
 const hasardInt = (a,b) => Math.floor(hasard(a,b+1));
@@ -801,8 +894,16 @@ function U(){ return etat.usines[etat.usineActive]; }
 
 /** Une fonctionnalité est-elle débloquée à l'âge courant ? */
 function debloque(cle){
+  if (mode().toutDebloque) return true;
   for (let i=0;i<etat.meta.age;i++) if (AGES[i].debloque.includes(cle)) return true;
   return false;
+}
+
+/** Une machine est-elle constructible ? (l'âge atteint, ou le bac à sable) */
+function machineDisponible(k){
+  if (mode().toutDebloque) return true;
+  const d = MACHINES[k];
+  return d.ageMin <= etat.meta.age && (d.ageMin <= 1 || debloque(k));
 }
 
 /** Écrit une quantité avec son unité : « 1 200 kg de chips », « 620 sachets ».
@@ -848,7 +949,7 @@ function texteDate(){
 }
 
 /* ------------------------------------------------------- Création de partie */
-function nouvellePartie(nomEntreprise){
+function nouvellePartie(nomEntreprise, modeChoisi){
   const age = AGES[0];
   etat = {
     version: CONFIG.version,
@@ -859,7 +960,8 @@ function nouvellePartie(nomEntreprise){
       age: 1,
       prochainId: 1,
       dernierJourTraite: -1,
-      dernierAutoSave: -1
+      dernierAutoSave: -1,
+      mode: modeChoisi || "normal"
     },
     finances: {
       solde: CONFIG.argentDepart,
@@ -877,11 +979,11 @@ function nouvellePartie(nomEntreprise){
     reputation: CONFIG.reputationDepart,
     recherche: { terminees:[], enCours:null },
     progression: { age:1, objectifsCompletes:[], jaugeObjectif:0, vendus:{}, produits:{}, produitsSemaine:{}, compteurs:{} },
-    stats: { historiqueSemaines:[], semaineCourante: semaineVierge() },
+    stats: { historiqueSemaines:[], semaineCourante: semaineVierge(), clients:{} },
     tuto: { etape:0, fait:[] },
     reglages: { volAmbiance:0.5, volEffets:0.6, volMusique:0.35, muet:false },
     reappro: {},           // { item: {actif:true, seuil:40, lot:60} }
-    venteAuto: true,       // les commerces du coin ramassent le surplus
+    venteAuto: (MODES[modeChoisi||"normal"] || MODES.normal).venteAuto,
     journal: []            // faits marquants de la semaine
   };
 
@@ -899,7 +1001,7 @@ function nouvellePartie(nomEntreprise){
 }
 
 function semaineVierge(){
-  return { produits:{}, livres:{}, ca:0, depenses:0, pannes:0, retards:0, rebuts:0, reclamations:0, faits:[] };
+  return { produits:{}, livres:{}, ca:0, depenses:0, depensesParMotif:{}, pannes:0, retards:0, rebuts:0, reclamations:0, faits:[] };
 }
 
 function creerUsine(nom, largeur, hauteur){
@@ -1178,7 +1280,7 @@ function simMachine(m, dt){
   m.debitReel = (v / r.duree) * r.sortie.qte * CONFIG.minutesParJour;
 
   // Usure proportionnelle à la charge
-  m.usure = clamp(m.usure + d.usureParJour * (dt / CONFIG.minutesParJour), 0, 1);
+  m.usure = clamp(m.usure + d.usureParJour * mode().usure * (dt / CONFIG.minutesParJour), 0, 1);
 
   // Le bain d'huile perd sa fraîcheur à mesure qu'on y cuit.
   if (d.bainHuile && etat.meta.age >= 3)
@@ -1470,7 +1572,13 @@ function manqueRelatif(n, item){
 function itemsPortes(src, dst){
   if (estQuai(src) || MACHINES[src.type]?.stockage) return itemsAcceptes(dst);
   const r = recetteDe(src);
-  return r ? [r.sortie.id] : [];
+  if (!r) return [];
+  const out = [r.sortie.id];
+  // Un poste qui joue la qualité sort aussi du raté : la bande l'emporte
+  // également, et les ouvriers n'ont donc pas à s'en charger.
+  const rate = ITEMS[r.sortie.id].rate;
+  if (rate && MACHINES[src.type].qualite) out.push(rate);
+  return out;
 }
 
 /** Un besoin d'entrée est-il déjà couvert par un convoyeur en état de marche ?
@@ -1921,7 +2029,7 @@ function finJournee(){
   for (const c of etat.contrats.acceptes){
     if (c.livre >= c.quantite) continue;
     if (jourCourant() > c.dateLimite){
-      depenser(c.penaliteRetard, "penalite");
+      if (mode().penalites) depenser(c.penaliteRetard, "penalite");
       c.joursRetard = (c.joursRetard||0) + 1;
       etat.stats.semaineCourante.retards++;
       if (c.joursRetard === 1){
@@ -1935,7 +2043,9 @@ function finJournee(){
 
   // 5. Moral, saleté, usure du décor
   majMoral();
+  const saleteAvant = u.salete;
   u.salete = clamp(u.salete + 0.012 + u.machines.length*0.0015, 0, 1);
+  alerterSalete(saleteAvant, u.salete);
 
   // 6. Rupture de matière : le joueur ne doit pas la découvrir en voyant
   //    ses machines à l'arrêt (§3.2 — le problème s'annonce).
@@ -1994,20 +2104,55 @@ function majMoral(){
     cible -= o.fatigue * 0.12;
     if (etat.finances.solde < 0) cible -= 0.1;
     o.moral = clamp(lerp(o.moral, clamp(cible,0,1), 0.25), 0, 1);
-    if (o.moral < 0.2 && Math.random() < 0.15){
-      notif("Démission", o.prenom + " " + o.nom + " s'en va. « Ça n'allait plus. »", "ko");
-      u.ouvriers.splice(u.ouvriers.indexOf(o),1);
-      etat.reputation = clamp(etat.reputation-1,0,100);
-    }
+
+    // On ne claque pas la porte sur un coup de tête : il faut que ça dure,
+    // et le patron est prévenu avant de perdre quelqu'un.
+    if (o.moral < 0.25){
+      o.joursMoralBas = (o.joursMoralBas||0) + 1;
+      if (o.joursMoralBas === 3)
+        notif("Ça gronde", o.prenom + " " + o.nom + " ne tient plus. Une augmentation, un atelier propre, ou il part.", "att");
+      if (o.joursMoralBas >= 6){
+        notif("Démission", o.prenom + " " + o.nom + " s'en va. « Ça n'allait plus. »", "ko");
+        u.ouvriers.splice(u.ouvriers.indexOf(o),1);
+        etat.reputation = clamp(etat.reputation-1,0,100);
+      }
+    } else o.joursMoralBas = 0;
+  }
+}
+
+/** L'atelier qui se crasse est visible au sol, mais ça ne suffit pas :
+ *  un problème qui vide l'usine de son personnel doit s'annoncer (§3.2). */
+function alerterSalete(avant, apres){
+  const seuil = (s, v) => avant < v && apres >= v;
+  if (seuil(avant, 0.5)){
+    notif("L'atelier se salit", "Ça pèse sur le moral, et sur ce qui sort des machines. Un nettoyage s'impose.", "att");
+    parle("Patron, l'atelier est dans un état. L'équipe le voit, et ça se retrouve dans les sachets. Onglet Détail, il y a un bouton pour nettoyer.", 12000);
+  } else if (seuil(avant, 0.8)){
+    notif("L'atelier est crasseux", "L'équipe parle de partir. Nettoyez avant de perdre du monde.", "ko");
+    parle("On ne peut plus travailler là-dedans. Si vous ne faites pas nettoyer, ils s'en iront tous.", 13000);
   }
 }
 
 /* ------------------------------------------------------------- Argent */
 function depenser(n, motif){
   if (n <= 0) return;
-  etat.finances.solde -= n;
+  if (!mode().argentInfini) etat.finances.solde -= n;
   etat.stats.semaineCourante.depenses += n;
+  compter(etat.stats.semaineCourante.depensesParMotif, groupeDepense(motif||"autre"), n);
   if (motif === "achat") etat.finances.totalAchats += n;
+}
+
+/** Six postes de dépense, pas un de plus : au-delà, un graphique ne se lit plus. */
+function groupeDepense(motif){
+  switch (motif){
+    case "salaires":                                    return "salaires";
+    case "achat":                                       return "matiere";
+    case "loyer": case "energie":                       return "loyer";
+    case "investissement": case "reparation":
+    case "revision": case "nettoyage":                  return "machines";
+    case "emprunt":                                     return "emprunts";
+    default:                                            return "ennuis";
+  }
 }
 function encaisser(n, motif){
   if (n <= 0) return;
@@ -2017,6 +2162,7 @@ function encaisser(n, motif){
 }
 
 function verifierFaillite(){
+  if (!mode().faillite) return;
   const s = etat.finances.solde;
   if (s < CONFIG.faillite){ finDePartie(); return; }
   if (s < CONFIG.decouvertMax){
@@ -2051,7 +2197,7 @@ function majMarche(){
     if (!it.achat) continue;
     if (Math.random() < 0.09) etat.marche.tendances[id] = hasard(-0.5,0.5);
     const t = etat.marche.tendances[id];
-    let p = etat.marche.prix[id] * (1 + t*0.012 + hasard(-0.02,0.02));
+    let p = etat.marche.prix[id] * (1 + (t*0.012 + hasard(-0.02,0.02)) * mode().volatilite);
     p = clamp(p, it.achat*0.75, it.achat*1.25);
     etat.marche.prix[id] = p;
   }
@@ -2128,7 +2274,7 @@ function creerContrat(produitId){
   const pas = ITEMS[produitId].unite === "kg" ? (brut > 800 ? 100 : 25) : (brut > 4000 ? 500 : 100);
   const quantite = Math.max(pas, Math.round(brut / pas) * pas);
   const base = ITEMS[produitId].vente;
-  const prixUnitaire = Math.round(base * cl.marge * (0.9 + etat.reputation/100*0.18) * hasard(0.97,1.06));
+  const prixUnitaire = Math.round(base * cl.marge * mode().prixClient * (0.9 + etat.reputation/100*0.18) * hasard(0.97,1.06));
   return {
     id: nouvelId(),
     client: cl.nom, ton: cl.ton,
@@ -2214,6 +2360,8 @@ function livrerContrats(){
     }
     compter(etat.progression.vendus, c.produitId, q);
     compter(etat.stats.semaineCourante.livres, c.produitId, q);
+    const fc = etat.stats.clients[c.client] || (etat.stats.clients[c.client] = { ca:0, commandes:0, reclamations:0 });
+    fc.ca += montant;
 
     if (qMauvais > 0.5) reclamation(c, qMauvais);
 
@@ -2226,6 +2374,8 @@ function livrerContrats(){
       son("valide");
       fait(aLheure ? ("Commande " + c.client + " livrée dans les temps") : ("Commande " + c.client + " livrée en retard"));
       // L'objectif de l'âge 3 : une grosse commande, sans une seule réclamation.
+      const fic = etat.stats.clients[c.client];
+      if (fic){ fic.commandes++; if (c.reclamations > 0) fic.reclamations++; }
       if (c.gros && aLheure && !(c.reclamations > 0))
         compter(etat.progression.compteurs, "grosseCommande", 1);
     }
@@ -2380,13 +2530,13 @@ function peutPoser(u, type, x, y, rotation){
 function poserMachine(type, x, y, rotation){
   const u = U(), d = MACHINES[type];
   if (!peutPoser(u, type, x, y, rotation)) return false;
-  if (etat.finances.solde - d.cout < CONFIG.faillite){
+  if (!mode().constructionGratuite && !mode().argentInfini && etat.finances.solde - d.cout < CONFIG.faillite){
     notif("Trop cher", "Il n'y a pas " + euros(d.cout) + " en caisse.", "ko"); return false;
   }
   const m = creerMachine(type, x, y, rotation);
   u.machines.push(m);
   poserSurGrille(u, m);
-  depenser(d.cout, "investissement");
+  depenser(mode().constructionGratuite ? 0 : d.cout, "investissement");
   reindexer();
   son("pose");
   for (let i=0;i<8;i++) particule(x+m.l/2, y+m.h/2, "poussiere");
@@ -3681,7 +3831,7 @@ function majBandeau(){
   if (!etat) return;
   const s = etat.finances.solde;
   const vA = $("#indArgent .val");
-  vA.textContent = euros(s);
+  vA.textContent = mode().argentInfini ? "illimité" : euros(s);
   vA.className = "val " + (s < 0 ? "neg" : (s > CONFIG.argentDepart ? "pos" : ""));
   $("#indDate .val").textContent = texteDate();
 
@@ -3807,6 +3957,9 @@ function conseil(){
       c.push("Il y a " + quantiteItem(rate[0], u.stocks[rate[0]], true) + " au quai. Sans table de tri, ça part chez le client.");
   }
 
+  if (u.salete > 0.55)
+    c.push("L'atelier est sale, et ça se paie deux fois : sur le moral et sur ce qui sort des machines.");
+
   const moralBas = u.ouvriers.filter(o => o.moral < 0.35);
   if (moralBas.length) c.push("L'équipe fait la tête. " + moralBas[0].prenom + " parle de partir.");
 
@@ -3841,9 +3994,11 @@ function majBarreConstruction(){
       for (const k in MACHINES){
         const d = MACHINES[k];
         if (d.cat !== cat.id) continue;
-        outils.push({ type:"machine", id:k, nom:d.nom, prix:nb(d.cout)+" €", couleur:d.couleur,
-                      verrou: d.ageMin > etat.meta.age || (d.ageMin > 1 && !debloque(k)),
-                      cher: etat.finances.solde < d.cout });
+        outils.push({ type:"machine", id:k, nom:d.nom,
+                      prix: mode().constructionGratuite ? "gratuit" : nb(d.cout)+" €",
+                      couleur:d.couleur,
+                      verrou: !machineDisponible(k),
+                      cher: !mode().constructionGratuite && !mode().argentInfini && etat.finances.solde < d.cout });
       }
     }
     if (!outils.length) continue;
@@ -4205,6 +4360,19 @@ function detailUsine(z){
   z.appendChild(b2);
 
   const b3 = blocTitre("Ce qui cloche");
+  if (u.salete > 0.45){
+    const l = elem('<div class="item"><span class="puce" style="background:#8a7550"></span>'+
+      '<span class="nom">Propreté de l\'atelier</span><span class="pastille ko"></span></div>');
+    l.querySelector(".pastille").textContent = u.salete > 0.75 ? "crasseux" : "ça devient sale";
+    b3.appendChild(l);
+  }
+  const grognons = u.ouvriers.filter(o => (o.joursMoralBas||0) >= 3);
+  if (grognons.length){
+    const l = elem('<div class="item"><span class="puce" style="background:#4a79b8"></span>'+
+      '<span class="nom"></span><span class="pastille ko">sur le départ</span></div>');
+    l.querySelector(".nom").textContent = grognons.map(o=>o.prenom).join(", ");
+    b3.appendChild(l);
+  }
   const soucis = u.machines.filter(m => !MACHINES[m.type].stockage &&
     ((m.etat !== "produit" && m.etat !== "arret") || m.tauxRebut > 0.12));
   if (!soucis.length) b3.appendChild(elem('<div class="vide">Tout tourne.</div>'));
@@ -4794,6 +4962,7 @@ function ouvrirTitre(){
         Trente ans plus tard, on verra bien.
       </div>
       <input class="champTexte" id="champNom" maxlength="28" placeholder="Nom de l'entreprise" value="Chips Cadence">
+      <div id="choixMode"></div>
       <button class="bt plein" id="btNouvelle">Nouvelle partie</button>
       <button class="bt" id="btContinuer">Reprendre la dernière partie</button>
       <button class="bt" id="btImporter">Charger un fichier de sauvegarde</button>
@@ -4802,8 +4971,32 @@ function ouvrirTitre(){
         molette pour zoomer · <b>R</b> pour tourner · <b>Espace</b> pour la pause
       </div>
     </div>`;
+  // Choix du mode : un mode ne change pas la chaîne, seulement ce qui pardonne.
+  let modeChoisi = "normal";
+  const cm = $("#choixMode");
+  cm.style.cssText = "margin-bottom:14px;text-align:left";
+  const desc = document.createElement("div");
+  desc.style.cssText = "font-size:12px;color:var(--texte-faible);min-height:32px;margin-top:7px;line-height:1.45";
+  const rang = document.createElement("div");
+  rang.style.cssText = "display:grid;grid-template-columns:1fr 1fr;gap:6px";
+  for (const k in MODES){
+    const b = document.createElement("button");
+    b.className = "bt" + (k === modeChoisi ? " plein" : "");
+    b.style.cssText = "padding:9px 6px;font-size:12.5px;margin:0";
+    b.textContent = MODES[k].nom;
+    b.onclick = () => {
+      modeChoisi = k;
+      Array.from(rang.children).forEach(x => x.className = "bt");
+      b.className = "bt plein";
+      desc.textContent = MODES[k].resume;
+    };
+    rang.appendChild(b);
+  }
+  cm.appendChild(rang); cm.appendChild(desc);
+  desc.textContent = MODES.normal.resume;
+
   $("#btNouvelle").onclick = () => {
-    nouvellePartie($("#champNom").value.trim() || "Chips Cadence");
+    nouvellePartie($("#champNom").value.trim() || "Chips Cadence", modeChoisi);
     fermer("#ecranTitre");
     demarrer();
   };
@@ -5162,7 +5355,16 @@ function ouvrirMenu(){
         <div class="rgl"><label>Effets</label><input type="range" id="vE" min="0" max="100"></div>
         <div class="rgl"><label>Musique</label><input type="range" id="vM" min="0" max="100"></div>
       </div>
-      <button class="bt large" id="btExport">Exporter la partie dans un fichier</button>
+      <div class="volet" style="margin-bottom:14px">
+        <h2>Mode de partie</h2>
+        <div style="font-size:13px;font-weight:600" id="modeNom"></div>
+        <div style="font-size:12px;color:var(--texte-faible);margin-top:3px" id="modeResume"></div>
+        <div style="font-size:11.5px;color:var(--texte-faible);margin-top:9px">
+          Le mode se change à tout moment depuis les outils de développement (<b>F2</b>).
+        </div>
+      </div>
+      <button class="bt large" id="btStatsMenu">Voir les statistiques</button>
+      <button class="bt large" id="btExport" style="margin-top:8px">Exporter la partie dans un fichier</button>
       <button class="bt large" id="btImport" style="margin-top:8px">Charger un fichier</button>
       <button class="bt large" id="btQuitter" style="margin-top:8px">Retour à l'écran-titre</button>
       <button class="bt plein large" id="btFermer" style="margin-top:16px">Reprendre la partie</button>
@@ -5178,6 +5380,9 @@ function ouvrirMenu(){
   $("#vE").oninput = e => { r.volEffets = e.target.value/100; };
   $("#vM").oninput = e => { r.volMusique = e.target.value/100; majVolumes(); };
 
+  $("#modeNom").textContent = mode().nom;
+  $("#modeResume").textContent = mode().resume;
+  $("#btStatsMenu").onclick = () => { fermer("#ecranMenu"); ouvrirStats(); };
   $("#btExport").onclick = exporterFichier;
   $("#btImport").onclick = importerFichier;
   $("#btQuitter").onclick = () => { fermer("#ecranMenu"); etat.meta.vitesse = 0; ouvrirTitre(); };
@@ -5608,6 +5813,619 @@ function SECTIONS_GUIDE(){
 }
 
 /* ============================================================================
+   UI — outils de développement
+   Ouvert par F2. Sert à atteindre n'importe quel âge sans le jouer, à mettre
+   l'usine dans un état précis, et à vérifier que la partie tient debout.
+   Rien ici n'est nécessaire pour jouer.
+   ========================================================================== */
+
+/** Saute directement à un âge : agrandit l'atelier et marque les objectifs
+ *  précédents comme atteints, sans passer par les écrans d'annonce. */
+function sauterAge(n){
+  n = clamp(Math.round(n), 1, AGES.length);
+  etat.meta.age = n;
+  etat.progression.objectifsCompletes = [];
+  for (let i=1;i<n;i++) etat.progression.objectifsCompletes.push(i);
+  const a = AGES[n-1];
+  if (U().largeur < a.largeur || U().hauteur < a.hauteur) agrandirUsine(a.largeur, a.hauteur);
+  U().nom = a.nom;
+  reindexer();
+  majBarreConstruction(); majBandeau(); majPanneau();
+  notif("Âge " + n, "Vous voilà à « " + a.nom + " ». Atelier " + U().largeur + " × " + U().hauteur + ".", "");
+}
+
+/** Remplit le quai de tout ce qui s'achète, de quoi tenir plusieurs jours. */
+function remplirStocks(){
+  for (const id in ITEMS)
+    if (ITEMS[id].achat) ajouterStock(id, ITEMS[id].unite === "kg" ? 3000 : 300);
+  majPanneau();
+  notif("Quai rempli", "De quoi faire tourner un moment.", "");
+}
+
+/** Fait tourner la simulation d'un coup, sans attendre. */
+function avancerTemps(jours){
+  const n = Math.round(jours * CONFIG.ticksParJour);
+  const v = etat.meta.vitesse;
+  for (let i=0;i<n;i++){
+    simTick();
+    if ($("#ecranVendredi").classList.contains("visible")) break;   // on s'arrête au bilan
+  }
+  etat.meta.vitesse = v;
+  majBandeau(); majPanneau();
+}
+
+/* ==========================================================================
+   Auto-vérifications — les invariants qui doivent tenir à tout moment.
+   Utilisables depuis le panneau, et appelées par la suite de tests.
+   ========================================================================== */
+function verifierPartie(){
+  const r = [];
+  const ok = (nom, cond, detail) => r.push({ nom, ok: !!cond, detail: detail || "" });
+  const u = U();
+
+  /* --- 1. Cohérence de la grille --- */
+  let tuilesOrphelines = 0, tuilesManquantes = 0;
+  for (let y=0;y<u.hauteur;y++) for (let x=0;x<u.largeur;x++){
+    const o = u.grille[y*u.largeur+x];
+    if (o > 1 && !noeudParId(o)) tuilesOrphelines++;
+  }
+  for (const m of u.machines)
+    for (let dy=0;dy<m.h;dy++) for (let dx=0;dx<m.l;dx++)
+      if (u.grille[(m.y+dy)*u.largeur + (m.x+dx)] !== m.id) tuilesManquantes++;
+  for (const c of u.convoyeurs)
+    for (const t of c.chemin)
+      if (u.grille[t.y*u.largeur+t.x] !== c.id) tuilesManquantes++;
+  ok("Grille cohérente", tuilesOrphelines === 0 && tuilesManquantes === 0,
+      tuilesOrphelines + " tuiles orphelines, " + tuilesManquantes + " tuiles manquantes");
+
+  /* --- 2. Aucun nombre aberrant --- */
+  const nombres = [];
+  const scruter = (o, chemin, prof) => {
+    if (prof > 6 || o == null) return;
+    for (const k in o){
+      const v = o[k];
+      if (typeof v === "number"){ if (!isFinite(v)) nombres.push(chemin + "." + k); }
+      else if (typeof v === "object" && !(v instanceof Uint16Array)) scruter(v, chemin + "." + k, prof+1);
+    }
+  };
+  scruter(etat.finances, "finances", 0);
+  scruter(u.stocks, "stocks", 0);
+  for (const m of u.machines){ scruter(m.entree, "entree", 0); scruter(m.sortie, "sortie", 0); }
+  ok("Aucun nombre aberrant", nombres.length === 0, nombres.slice(0,4).join(", "));
+
+  /* --- 3. Convoyeurs bien raccordés --- */
+  let convFaux = 0;
+  for (const c of u.convoyeurs){
+    const bouts = noeudParId(c.source) && noeudParId(c.destination);
+    if (!bouts && c.etat !== "non_relie") convFaux++;
+    if (c.source === c.id || c.destination === c.id) convFaux++;
+  }
+  ok("Convoyeurs raccordés", convFaux === 0, convFaux + " incohérences");
+
+  /* --- 4. Ouvriers cohérents --- */
+  let ouvFaux = 0;
+  for (const o of u.ouvriers){
+    if (o.id == null || o.id === 0) ouvFaux++;
+    if (o.x < -1 || o.y < -1 || o.x > u.largeur+1 || o.y > u.hauteur+1) ouvFaux++;
+    if (o.tache && o.tache.type === "opere" && !noeudParId(o.tache.machineId)) ouvFaux++;
+    if (o.tache && o.tache.type === "porte" &&
+        (!noeudParId(o.tache.sourceId) || !noeudParId(o.tache.cibleId))) ouvFaux++;
+  }
+  ok("Équipe cohérente", ouvFaux === 0, ouvFaux + " ouvriers en vrac");
+
+  /* --- 5. Les recettes se tiennent --- */
+  const mauvaises = [];
+  for (const id in RECETTES){
+    const rc = RECETTES[id];
+    if (!MACHINES[rc.machine]) mauvaises.push(id + " : machine inconnue");
+    if (!ITEMS[rc.sortie.id]) mauvaises.push(id + " : sortie inconnue");
+    for (const e of rc.entrees) if (!ITEMS[e.id]) mauvaises.push(id + " : entrée " + e.id);
+    if (!(rc.duree >= CONFIG.minutesParTick))
+      mauvaises.push(id + " : durée sous un tick, du débit serait perdu");
+  }
+  for (const k in MACHINES)
+    for (const rid of MACHINES[k].recettes)
+      if (!RECETTES[rid]) mauvaises.push(k + " : recette " + rid + " absente");
+  for (const k in ITEMS)
+    if (ITEMS[k].rate && !ITEMS[ITEMS[k].rate]) mauvaises.push(k + " : variante ratée absente");
+  ok("Recettes valides", mauvaises.length === 0, mauvaises.slice(0,3).join(" · "));
+
+  /* --- 6. Chaque produit fini doit rapporter plus que sa matière --- */
+  const perdants = [];
+  for (const k in ITEMS){
+    if (!ITEMS[k].vente || k === "rebut") continue;
+    const pr = prixDeRevient(k);
+    const vente = ITEMS[k].vente * pr.base;
+    if (vente <= pr.total) perdants.push(k + " (" + eurosPrecis(pr.total) + " > " + eurosPrecis(vente) + ")");
+  }
+  ok("Recettes rentables", perdants.length === 0, perdants.join(", "));
+
+  /* --- 7. Tous les objectifs d'âge sont gérés --- */
+  const typesConnus = ["vendus","produitsSemaine","argent","compteur"];
+  const objFaux = AGES.filter(a => a.debloque.length && !typesConnus.includes(a.objectif.type))
+                      .map(a => a.nom);
+  ok("Objectifs gérés", objFaux.length === 0, objFaux.join(", "));
+
+  /* --- 8. Aller-retour de sauvegarde --- */
+  let rt = "";
+  try {
+    const avant = serialiser();
+    const copie = JSON.parse(avant);
+    for (const us of copie.usines) us.grille = Uint16Array.from(us.grille);
+    const memoire = etat;
+    etat = copie;
+    const apres = serialiser();
+    etat = memoire;
+    reindexer();
+    if (avant !== apres) rt = "la partie relue diffère de l'originale";
+  } catch (e){ rt = e.message; }
+  ok("Sauvegarde fidèle", rt === "", rt);
+
+  return r;
+}
+
+/* -------------------------------------------------------- Le panneau F2 */
+function basculerDev(){
+  const d = $("#panneauDev");
+  if (d.classList.contains("visible")) d.classList.remove("visible");
+  else { majPanneauDev(); d.classList.add("visible"); }
+}
+
+function majPanneauDev(){
+  const d = $("#panneauDev");
+  d.innerHTML = '<div class="devEntete"><b>Outils de développement</b>' +
+                '<button class="devFermer" title="Fermer (F2)">✕</button></div>' +
+                '<div class="devCorps"></div>';
+  d.querySelector(".devFermer").onclick = basculerDev;
+  const z = d.querySelector(".devCorps");
+
+  const groupe = (titre) => {
+    const g = document.createElement("div");
+    g.className = "devGroupe";
+    g.innerHTML = '<div class="devTitre">'+titre+'</div><div class="devBoutons"></div>';
+    z.appendChild(g);
+    return g.querySelector(".devBoutons");
+  };
+  const bt = (parent, texte, fn) => {
+    const b = document.createElement("button");
+    b.className = "devBt"; b.textContent = texte;
+    b.onclick = () => { fn(); majPanneauDev(); };
+    parent.appendChild(b);
+  };
+
+  const gAge = groupe("Aller à un âge — l'atelier s'agrandit, tout se débloque");
+  for (const a of AGES)
+    bt(gAge, a.n + ". " + a.nom + (etat.meta.age === a.n ? " ✓" : ""), () => sauterAge(a.n));
+
+  const gMode = groupe("Mode de partie — actuellement : " + mode().nom);
+  for (const k in MODES)
+    bt(gMode, MODES[k].nom + (etat.meta.mode === k ? " ✓" : ""), () => {
+      etat.meta.mode = k; majBarreConstruction(); majBandeau(); majPanneau();
+      notif("Mode", MODES[k].nom + " — " + MODES[k].resume, "");
+    });
+
+  const gArgent = groupe("Argent et matière");
+  bt(gArgent, "+10 000 €", () => { encaisser(10000, "dev"); });
+  bt(gArgent, "+100 000 €", () => { encaisser(100000, "dev"); });
+  bt(gArgent, "Caisse à zéro", () => { etat.finances.solde = 0; });
+  bt(gArgent, "Remplir le quai", remplirStocks);
+  bt(gArgent, "Vider le quai", () => { U().stocks = {}; });
+
+  const gEquipe = groupe("Équipe");
+  bt(gEquipe, "Embaucher 3 personnes", () => { for (let i=0;i<3;i++) embaucher(creerCandidat()); });
+  bt(gEquipe, "Tout le monde au top", () => {
+    for (const o of U().ouvriers){
+      o.moral = 1; o.fatigue = 0;
+      for (const c in o.competences) o.competences[c] = 0.95;
+    }
+  });
+
+  const gMachines = groupe("Machines");
+  bt(gMachines, "Tout réviser", () => { for (const m of U().machines){ m.usure = 0.05; m.enPanne = false; m.fraicheurHuile = m.fraicheurHuile !== undefined ? 1 : undefined; } });
+  bt(gMachines, "Tout user (0,8)", () => { for (const m of U().machines) m.usure = 0.8; });
+  bt(gMachines, "Huile morte", () => { for (const m of U().machines) if (m.fraicheurHuile !== undefined) m.fraicheurHuile = 0; });
+  bt(gMachines, "Casser une machine", () => {
+    const m = U().machines.find(x => !x.enPanne && MACHINES[x.type].usureParJour > 0);
+    if (m) declencherPanne(m);
+  });
+
+  const gTemps = groupe("Temps");
+  bt(gTemps, "Avancer d'un jour", () => avancerTemps(1));
+  bt(gTemps, "Avancer d'une semaine", () => avancerTemps(5));
+  bt(gTemps, "Forcer le vendredi soir", () => finSemaine());
+  bt(gTemps, "Atteindre l'objectif", () => {
+    const o = AGES[etat.meta.age-1].objectif;
+    if (o.type === "vendus") etat.progression.vendus[o.produit] = o.cible;
+    else if (o.type === "produitsSemaine") etat.progression.produitsSemaine[o.produit] = o.cible;
+    else if (o.type === "compteur") etat.progression.compteurs[o.cle] = o.cible;
+    else etat.finances.solde = o.cible;
+    verifierObjectif();
+  });
+
+  const gTests = groupe("Vérifications");
+  const bTest = document.createElement("button");
+  bTest.className = "devBt devBtLarge";
+  bTest.textContent = "Vérifier la partie";
+  bTest.onclick = () => {
+    const res = verifierPartie();
+    const rap = d.querySelector(".devRapport");
+    rap.innerHTML = "";
+    for (const t of res){
+      const l = document.createElement("div");
+      l.className = "devTest " + (t.ok ? "ok" : "ko");
+      l.innerHTML = '<span class="devPuce">' + (t.ok ? "✓" : "✕") + '</span><span></span>';
+      l.querySelector("span:last-child").textContent = t.nom + (t.detail && !t.ok ? " — " + t.detail : "");
+      rap.appendChild(l);
+    }
+    const rates = res.filter(t => !t.ok).length;
+    const bilan = document.createElement("div");
+    bilan.className = "devBilan " + (rates ? "ko" : "ok");
+    bilan.textContent = rates ? (rates + " vérification" + (rates>1?"s":"") + " en échec")
+                              : (res.length + " vérifications, tout est bon");
+    rap.appendChild(bilan);
+  };
+  gTests.appendChild(bTest);
+  const rap = document.createElement("div");
+  rap.className = "devRapport";
+  z.appendChild(rap);
+}
+
+/* ============================================================================
+   UI — écran des statistiques
+   ----------------------------------------------------------------------------
+   Écart assumé au §3.4 (« le seul écran plein est le vendredi soir ») : des
+   courbes sur douze semaines ne se lisent pas dans une colonne de 300 px. Cet
+   écran ne sert jamais à piloter l'usine — c'est de la lecture, comme le menu.
+
+   Palette des séries : six teintes validées (bande de clarté, plancher de
+   chroma, séparation daltonienne et contraste sur le fond #14171b). La
+   polarité du résultat n'est pas portée par la couleur seule : le sens par
+   rapport à la ligne du zéro la donne déjà.
+   ========================================================================== */
+
+const COUL_VIZ = {
+  bon:"#5cba6b", mauvais:"#e0574a",
+  serie:["#3987e5","#d95926","#199e70","#c98500","#d55181","#008300"],
+  grille:"rgba(255,255,255,.09)",
+  zero:"rgba(255,255,255,.28)",
+  encre:"#e6e8ea", doux:"#9aa2ac", faible:"#6b737d",
+  fond:"#14171b"
+};
+
+const POSTES_DEPENSE = [
+  { cle:"salaires", nom:"Salaires" },
+  { cle:"matiere",  nom:"Matière" },
+  { cle:"loyer",    nom:"Loyer et électricité" },
+  { cle:"machines", nom:"Machines et entretien" },
+  { cle:"emprunts", nom:"Emprunts" },
+  { cle:"ennuis",   nom:"Pénalités et réclamations" }
+];
+
+/** Le rebut est gris foncé dans l'usine : illisible sur un fond sombre. */
+function couleurSerie(itemId){
+  return itemId === "rebut" ? COUL_VIZ.doux : (ITEMS[itemId] ? ITEMS[itemId].couleur : COUL_VIZ.serie[0]);
+}
+
+function prepCanvas(cv, w, h){
+  const d = Math.min(window.devicePixelRatio || 1, 2);
+  cv.width = Math.round(w*d); cv.height = Math.round(h*d);
+  cv.style.width = w+"px"; cv.style.height = h+"px";
+  const g = cv.getContext("2d");
+  g.setTransform(d,0,0,d,0,0);
+  g.clearRect(0,0,w,h);
+  return g;
+}
+
+/** Survol : on met en avant une semaine et on écrit sa valeur en clair.
+ *  La couleur ne porte jamais l'information toute seule. */
+function attacherSurvol(cv, n, lire, redessiner){
+  const sortie = cv.nextElementSibling;
+  cv.onmousemove = ev => {
+    const r = cv.getBoundingClientRect();
+    const i = clamp(Math.floor((ev.clientX - r.left) / r.width * n), 0, n-1);
+    if (cv._survol === i) return;
+    cv._survol = i; redessiner();
+    if (sortie) sortie.textContent = lire(i);
+  };
+  cv.onmouseleave = () => {
+    cv._survol = -1; redessiner();
+    if (sortie) sortie.textContent = lire(-1);
+  };
+}
+
+/* ------------------------------------------- Barres divergentes (résultat) */
+function largeurUtile(parent, defaut){
+  const w = parent ? parent.clientWidth : 0;
+  return w > 80 ? w : (defaut || 640);
+}
+
+function vizResultat(cv, semaines){
+  const w = largeurUtile(cv.parentElement, 640), h = 150, bas = 20, hautMarge = 12;
+  const vals = semaines.map(s => s.ca - s.depenses);
+  const maxi = Math.max(1, ...vals.map(Math.abs));
+  const n = vals.length;
+
+  const dessine = () => {
+    const g = prepCanvas(cv, w, h);
+    const zero = hautMarge + (h - bas - hautMarge)/2;
+    const demi = (h - bas - hautMarge)/2 - 4;
+    const lb = w/n;
+
+    g.strokeStyle = COUL_VIZ.zero; g.lineWidth = 1;
+    g.beginPath(); g.moveTo(0, zero+0.5); g.lineTo(w, zero+0.5); g.stroke();
+
+    for (let i=0;i<n;i++){
+      const v = vals[i];
+      const hh = Math.max(2, Math.abs(v)/maxi * demi);
+      const x = i*lb + 2, lg = Math.max(3, lb - 4);       // 2 px de fond entre deux barres
+      const y = v >= 0 ? zero - hh : zero;
+      g.fillStyle = v >= 0 ? COUL_VIZ.bon : COUL_VIZ.mauvais;
+      g.globalAlpha = (cv._survol >= 0 && cv._survol !== i) ? 0.35 : 1;
+      coinsArrondisG(g, x, y, lg, hh, Math.min(4, lg/2), v >= 0 ? "haut" : "bas");
+      g.fill();
+      g.globalAlpha = 1;
+    }
+    g.fillStyle = COUL_VIZ.faible;
+    g.font = "10px Segoe UI, sans-serif";
+    g.fillText("S"+(semaines[0].semaine+1), 2, h-6);
+    g.textAlign = "right";
+    g.fillText("S"+(semaines[n-1].semaine+1), w-2, h-6);
+    g.textAlign = "left";
+  };
+  dessine();
+  attacherSurvol(cv, n, i => i < 0
+    ? "Résultat hebdomadaire — survolez une barre"
+    : "Semaine " + (semaines[i].semaine+1) + " · " + eurosSigne(vals[i]) +
+      " (" + euros(semaines[i].ca) + " rentrés, " + euros(semaines[i].depenses) + " sortis)", dessine);
+}
+
+/** Coins arrondis d'un seul côté : l'extrémité de la donnée, jamais la base. */
+function coinsArrondisG(g, x, y, w, h, r, cote){
+  r = Math.max(0, Math.min(r, h));
+  g.beginPath();
+  if (cote === "haut"){
+    g.moveTo(x, y+h); g.lineTo(x, y+r); g.quadraticCurveTo(x, y, x+r, y);
+    g.lineTo(x+w-r, y); g.quadraticCurveTo(x+w, y, x+w, y+r); g.lineTo(x+w, y+h);
+  } else {
+    g.moveTo(x, y); g.lineTo(x, y+h-r); g.quadraticCurveTo(x, y+h, x+r, y+h);
+    g.lineTo(x+w-r, y+h); g.quadraticCurveTo(x+w, y+h, x+w, y+h-r); g.lineTo(x+w, y);
+  }
+  g.closePath();
+}
+
+/* ------------------------------------------------- Courbe simple (une série) */
+function vizCourbe(cv, semaines, valeurDe, couleur, formate, largeur){
+  const w = largeur || largeurUtile(cv.parentElement, 300), h = 92, bas = 16, marge = 8;
+  const vals = semaines.map(valeurDe);
+  const maxi = Math.max(1, ...vals);
+  const n = vals.length;
+  const px = i => n === 1 ? w/2 : marge + i/(n-1)*(w-2*marge);
+  const py = v => (h - bas) - (v/maxi)*(h - bas - marge);
+
+  const dessine = () => {
+    const g = prepCanvas(cv, w, h);
+    // grille discrète : trois repères, rien de plus
+    g.strokeStyle = COUL_VIZ.grille; g.lineWidth = 1;
+    for (let k=0;k<=2;k++){
+      const y = Math.round(py(maxi*k/2)) + 0.5;
+      g.beginPath(); g.moveTo(0,y); g.lineTo(w,y); g.stroke();
+    }
+    // aire très légère sous la courbe, pour la lisibilité du volume
+    g.beginPath();
+    g.moveTo(px(0), h-bas);
+    for (let i=0;i<n;i++) g.lineTo(px(i), py(vals[i]));
+    g.lineTo(px(n-1), h-bas); g.closePath();
+    g.fillStyle = couleur + "22"; g.fill();
+
+    g.beginPath();
+    for (let i=0;i<n;i++){ const x=px(i), y=py(vals[i]); i ? g.lineTo(x,y) : g.moveTo(x,y); }
+    g.strokeStyle = couleur; g.lineWidth = 2; g.lineJoin = "round"; g.lineCap = "round";
+    g.stroke();
+
+    if (cv._survol >= 0 && cv._survol < n){
+      const x = px(cv._survol), y = py(vals[cv._survol]);
+      g.strokeStyle = COUL_VIZ.zero; g.lineWidth = 1;
+      g.beginPath(); g.moveTo(x+0.5, marge); g.lineTo(x+0.5, h-bas); g.stroke();
+      g.fillStyle = COUL_VIZ.fond; g.beginPath(); g.arc(x,y,5,0,7); g.fill();
+      g.fillStyle = couleur; g.beginPath(); g.arc(x,y,3.5,0,7); g.fill();
+    }
+    g.fillStyle = COUL_VIZ.faible; g.font = "10px Segoe UI, sans-serif";
+    g.fillText(formate(maxi), 2, marge+2);
+  };
+  dessine();
+  attacherSurvol(cv, n, i => i < 0 ? "" :
+    "Semaine " + (semaines[i].semaine+1) + " · " + formate(vals[i]), dessine);
+}
+
+/* ------------------------------------- Barre empilée horizontale (dépenses) */
+function vizDepenses(z, semaines){
+  const total = {};
+  let somme = 0;
+  for (const s of semaines)
+    for (const p of POSTES_DEPENSE){
+      const v = (s.depensesParMotif||{})[p.cle] || 0;
+      total[p.cle] = (total[p.cle]||0) + v; somme += v;
+    }
+  if (somme <= 0){ z.appendChild(elem('<div class="vide">Rien de dépensé pour le moment.</div>')); return; }
+
+  const cv = document.createElement("canvas");
+  z.appendChild(cv);
+  const w = largeurUtile(z, 640), h = 30;
+  const g = prepCanvas(cv, w, h);
+  let x = 0;
+  POSTES_DEPENSE.forEach((p, i) => {
+    const part = (total[p.cle]||0)/somme;
+    const lg = part * w;
+    if (lg <= 0) return;
+    g.fillStyle = COUL_VIZ.serie[i];
+    g.fillRect(x, 0, Math.max(0, lg-2), h);          // 2 px de fond entre deux segments
+    x += lg;
+  });
+
+  // Légende : identité par la pastille, valeur écrite — jamais la couleur seule.
+  const lg = document.createElement("div");
+  lg.className = "vizLegende";
+  POSTES_DEPENSE.forEach((p, i) => {
+    const v = total[p.cle]||0;
+    if (v <= 0) return;
+    const e = document.createElement("div");
+    e.className = "vizLegItem";
+    e.innerHTML = '<span class="vizPuce"></span><span class="vizNom"></span><span class="vizVal"></span>';
+    e.querySelector(".vizPuce").style.background = COUL_VIZ.serie[i];
+    e.querySelector(".vizNom").textContent = p.nom;
+    e.querySelector(".vizVal").textContent = euros(v) + " · " + Math.round(v/somme*100) + " %";
+    lg.appendChild(e);
+  });
+  z.appendChild(lg);
+}
+
+/* ============================================================ L'écran entier */
+function ouvrirStats(){
+  const h = etat.stats.historiqueSemaines;
+  const z = $("#ecranStats");
+  z.innerHTML = `
+    <div class="feuille">
+      <div class="enteteFeuille">
+        <h1>Statistiques</h1>
+        <div class="sous">${etat.meta.nomEntreprise} · ${mode().nom}</div>
+        <div style="flex:1"></div>
+        <button class="bt" id="btFermerStats">Retour à l'usine</button>
+      </div>
+      <div id="statsCorps"></div>
+    </div>`;
+  $("#btFermerStats").onclick = () => fermer("#ecranStats");
+  ouvrir("#ecranStats");
+  const c = $("#statsCorps");
+
+  if (!h.length){
+    c.appendChild(elem('<div class="volet"><div class="vide">Aucune semaine terminée. Revenez vendredi soir.</div></div>'));
+    return;
+  }
+  const douze = h.slice(-12);
+  const derniere = h[h.length-1];
+  const avant = h.length > 1 ? h[h.length-2] : null;
+  const res = s => s.ca - s.depenses;
+
+  /* --- Les quatre chiffres qu'on lit en premier --- */
+  const kpi = document.createElement("div");
+  kpi.className = "kpiRang";
+  const tuile = (lab, val, sous, classe) => {
+    const d = document.createElement("div");
+    d.className = "kpi";
+    d.innerHTML = '<div class="kLab"></div><div class="kVal '+(classe||"")+'"></div><div class="kSous"></div>';
+    d.querySelector(".kLab").textContent = lab;
+    d.querySelector(".kVal").textContent = val;
+    d.querySelector(".kSous").textContent = sous || "";
+    kpi.appendChild(d);
+  };
+  const delta = avant ? res(derniere) - res(avant) : 0;
+  tuile("Résultat de la semaine " + (derniere.semaine+1), eurosSigne(res(derniere)),
+        avant ? (delta >= 0 ? "en hausse de " : "en baisse de ") + euros(Math.abs(delta)) : "première semaine",
+        res(derniere) >= 0 ? "pos" : "neg");
+  const meilleure = h.reduce((a,b) => res(b) > res(a) ? b : a);
+  tuile("Meilleure semaine", eurosSigne(res(meilleure)), "semaine " + (meilleure.semaine+1));
+  tuile("Chiffre d'affaires total", euros(etat.finances.totalVentes),
+        h.length + " " + pluriel(h.length,"semaine") + " de production");
+  tuile("Réputation", Math.round(etat.reputation) + " / 100", motReputation(etat.reputation));
+  c.appendChild(kpi);
+
+  /* --- Résultat semaine par semaine --- */
+  const v1 = volet("Résultat, semaine par semaine");
+  const cv1 = document.createElement("canvas");
+  v1.appendChild(cv1);
+  v1.appendChild(elem('<div class="vizLecture">Résultat hebdomadaire — survolez une barre</div>'));
+  c.appendChild(v1);            // dans la page d'abord : on mesure ensuite
+  vizResultat(cv1, douze);
+
+  /* --- Production : un petit graphique par produit, chacun son échelle --- */
+  const produits = Object.keys(ITEMS).filter(k =>
+    ITEMS[k].vente && douze.some(s => (s.produits[k]||0) > 0));
+  if (produits.length){
+    const v2 = volet("Ce qui est sorti de l'atelier");
+    c.appendChild(v2);
+    const gr = document.createElement("div");
+    gr.className = "petitsMultiples";
+    v2.appendChild(gr);
+    for (const p of produits){
+      const bloc = document.createElement("div");
+      bloc.className = "pm";
+      bloc.innerHTML = '<div class="pmTitre"></div>';
+      bloc.querySelector(".pmTitre").textContent = ITEMS[p].nom;
+      const cv = document.createElement("canvas");
+      bloc.appendChild(cv);
+      bloc.appendChild(elem('<div class="vizLecture"></div>'));
+      gr.appendChild(bloc);
+      vizCourbe(cv, douze, s => s.produits[p]||0, couleurSerie(p), v => mesure(p, v), 300);
+    }
+    v2.appendChild(gr);
+  }
+
+  /* --- Rebut : seulement quand ça existe --- */
+  if (etat.meta.age >= 3 && douze.some(s => (s.rebuts||0) > 0)){
+    const v3 = volet("Part partie au rebut");
+    const cv3 = document.createElement("canvas");
+    v3.appendChild(cv3);
+    v3.appendChild(elem('<div class="vizLecture"></div>'));
+    c.appendChild(v3);
+    vizCourbe(cv3, douze, s => {
+      const bon = Object.keys(s.produits).filter(k=>ITEMS[k]&&ITEMS[k].cat==="produit")
+                        .reduce((t,k)=>t+s.produits[k],0);
+      const tot = bon + (s.rebuts||0);
+      return tot > 0 ? (s.rebuts||0)/tot*100 : 0;
+    }, COUL_VIZ.mauvais, v => v.toFixed(1) + " %");
+  }
+
+  /* --- Où part l'argent --- */
+  const v4 = volet("Où part l'argent, sur ces " + douze.length + " " + pluriel(douze.length,"semaine"));
+  c.appendChild(v4);
+  vizDepenses(v4, douze);
+
+  /* --- Les clients : au-delà de quelques lignes, un tableau vaut mieux --- */
+  const cls = Object.keys(etat.stats.clients||{});
+  if (cls.length){
+    const v5 = volet("Les clients");
+    const t = document.createElement("table");
+    t.className = "tab";
+    t.innerHTML = "<tr><th>Client</th><th style='text-align:right'>Chiffre d'affaires</th>"+
+                  "<th style='text-align:right'>Commandes</th><th style='text-align:right'>Réclamations</th></tr>";
+    cls.sort((a,b) => etat.stats.clients[b].ca - etat.stats.clients[a].ca);
+    for (const nom of cls){
+      const f = etat.stats.clients[nom];
+      const tr = document.createElement("tr");
+      tr.innerHTML = "<td></td><td style='text-align:right'></td><td style='text-align:right'></td><td style='text-align:right'></td>";
+      const td = tr.querySelectorAll("td");
+      td[0].textContent = nom;
+      td[1].textContent = euros(f.ca);
+      td[2].textContent = f.commandes;
+      td[3].textContent = f.reclamations || "—";
+      if (f.reclamations) td[3].style.color = "var(--rouge)";
+      t.appendChild(tr);
+    }
+    v5.appendChild(t);
+    c.appendChild(v5);
+  }
+
+}
+
+function volet(titre){
+  const d = document.createElement("div");
+  d.className = "volet";
+  d.style.marginBottom = "16px";
+  const h = document.createElement("h2");
+  h.textContent = titre;
+  d.appendChild(h);
+  return d;
+}
+
+function motReputation(r){
+  if (r >= 85) return "on nous connaît";
+  if (r >= 65) return "bonne réputation";
+  if (r >= 45) return "correcte";
+  if (r >= 25) return "ça s'abîme";
+  return "on part de loin";
+}
+
+/* ============================================================================
    AUDIO — tout est synthétisé à la volée, aucun fichier (§13)
    ========================================================================== */
 
@@ -5856,6 +6674,10 @@ function appliquer(o){
   etat.reappro = etat.reappro || {};
   etat.finances.creances = etat.finances.creances || [];
   etat.progression.compteurs = etat.progression.compteurs || {};
+  etat.stats.clients = etat.stats.clients || {};
+  etat.meta.mode = etat.meta.mode || "normal";
+  for (const s of etat.stats.historiqueSemaines) s.depensesParMotif = s.depensesParMotif || {};
+  etat.stats.semaineCourante.depensesParMotif = etat.stats.semaineCourante.depensesParMotif || {};
   if (etat.venteAuto === undefined) etat.venteAuto = true;
   etat.tuto = etat.tuto || { etape:TUTO.length, fait:[] };
   etat.stats.semaineCourante = etat.stats.semaineCourante || semaineVierge();
@@ -5991,8 +6813,11 @@ function initClavier(){
   window.addEventListener("keydown", e => {
     if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
 
+    if (e.code === "F2"){ e.preventDefault(); basculerDev(); return; }
     if (e.code === "Escape"){
-      if (unEcranOuvert() && $("#ecranMenu").classList.contains("visible")) fermer("#ecranMenu");
+      if ($("#panneauDev").classList.contains("visible")) return basculerDev();
+      if (unEcranOuvert() && $("#ecranStats").classList.contains("visible")) fermer("#ecranStats");
+      else if (unEcranOuvert() && $("#ecranMenu").classList.contains("visible")) fermer("#ecranMenu");
       else if (vue.outil) annulerOutil();
       else if (vue.selection){ vue.selection = null; majPanneau(); }
       return;
@@ -6011,6 +6836,9 @@ function initClavier(){
       case "Digit2": reglerVitesse(2); break;
       case "Digit3": reglerVitesse(4); break;
       case "KeyM": basculerSon(); break;
+      case "F2": e.preventDefault(); basculerDev(); break;
+      case "KeyS": if (!e.ctrlKey && !e.metaKey) ouvrirStats(); break;
+      case "Digit4": reglerVitesse(8); break;
       case "ArrowLeft":  vue.camX -= 1.2; bornerCamera(); break;
       case "ArrowRight": vue.camX += 1.2; bornerCamera(); break;
       case "ArrowUp":    vue.camY -= 1.2; bornerCamera(); break;
@@ -6067,6 +6895,7 @@ function init(){
     vue.ongletActif = b.dataset.o; majOnglets(); majPanneau();
   });
   $("#btMenu").onclick = () => { if (etat) ouvrirMenu(); };
+  $("#btStats").onclick = () => { if (etat) ouvrirStats(); };
   $("#btSon").onclick = () => { initAudio(); basculerSon(); };
   $("#btAide").onclick = ouvrirAide;
   $("#portrait").onclick = () => { initAudio(); conseil(); };
