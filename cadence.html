@@ -921,6 +921,7 @@ function reindexer(){
   // n'importe quel autre nœud.
   idx.quai = noeudQuai(U());
   idx.parId.set(1, idx.quai);
+  relierConvoyeurs();
 }
 function noeudParId(id){ return idx.parId.get(id) || null; }
 
@@ -945,9 +946,29 @@ function recetteDe(m){ return m.recetteId ? RECETTES[m.recetteId] : null; }
 function defDe(m){ return MACHINES[m.type]; }
 
 /** Items qu'un noeud accepte en entrée (pour l'aiguillage automatique). */
-function itemsAcceptes(n){
+function estConvoyeur(n){ return !!n && n.type === "convoyeur"; }
+
+/** Le nom d'un nœud tel qu'on le dit au joueur. */
+function nomNoeud(n){
+  if (!n) return "rien";
+  if (estQuai(n)) return "le quai";
+  if (estConvoyeur(n)) return "un autre convoyeur";
+  return MACHINES[n.type] ? MACHINES[n.type].nom : "?";
+}
+
+/** Ce qu'un nœud accepte en entrée.
+ *  Un convoyeur, lui, n'accepte que ce que son aval finira par consommer :
+ *  sans quoi une bande se remplirait de marchandise qui n'a nulle part où
+ *  aller. On suit donc la chaîne jusqu'aux vrais consommateurs. */
+function itemsAcceptes(n, vus){
   if (!n) return [];
   if (estQuai(n)) return Object.keys(ITEMS);
+  if (estConvoyeur(n)){
+    vus = vus || new Set();
+    if (vus.has(n.id) || vus.size > 24) return [];      // boucle de bandes
+    vus.add(n.id);
+    return itemsAcceptes(noeudParId(n.destination), vus);
+  }
   const d = MACHINES[n.type];
   if (d && d.stockage) return Object.keys(ITEMS);
   const r = recetteDe(n);
@@ -987,6 +1008,10 @@ function contenuTotal(o){ let s=0; for (const k in o) s += o[k]; return s; }
 function placeEntree(n, item){
   if (!n) return 0;
   if (estQuai(n)) return 1e9;
+  if (estConvoyeur(n)){
+    if (!itemsAcceptes(n).includes(item)) return 0;     // cul-de-sac : on n'engage rien
+    return Math.max(0, capaciteConvoyeur(n, item) - chargeConvoyeur(n));
+  }
   const d = MACHINES[n.type];
   if (d.stockage) return Math.max(0, d.capacite - contenuTotal(n.sortie));
   const r = recetteDe(n);
@@ -995,6 +1020,7 @@ function placeEntree(n, item){
 }
 function livrer(n, item, q){
   if (estQuai(n)){ ajouterStock(item, q); return; }
+  if (estConvoyeur(n)){ chargerConvoyeur(n, item, q); return; }
   const d = MACHINES[n.type];
   if (d.stockage) n.sortie[item] = (n.sortie[item]||0) + q;
   else n.entree[item] = (n.entree[item]||0) + q;
@@ -1162,6 +1188,27 @@ const CONV = {
   vitesse: 0.5        // tuiles par minute de jeu
 };
 
+/** Ce qui tient sur la bande : proportionnel à sa longueur. */
+function chargeConvoyeur(c){
+  let s = 0;
+  for (let i=0;i<c.transit.length;i++) s += c.transit[i].qte;
+  return s;
+}
+function capaciteConvoyeur(c, item){
+  return c.chemin.length * capaciteItem(item, CONFIG.capaciteSortie) / 8;
+}
+
+/** Dépose de la marchandise en tête de bande. Fusionne avec le dernier colis
+ *  si l'écart de position est négligeable, pour ne pas multiplier les objets. */
+function chargerConvoyeur(c, item, q){
+  const dernier = c.transit[c.transit.length-1];
+  if (dernier && dernier.item === item && c.latence - dernier.t < CONFIG.minutesParTick*0.5)
+    dernier.qte += q;
+  else
+    c.transit.push({ item, qte:q, t:c.latence });
+  c.recuTick = (c.recuTick||0) + q;
+}
+
 function creerConvoyeur(chemin, source, destination){
   return {
     id: nouvelId(), type:"convoyeur",
@@ -1198,47 +1245,96 @@ function simConvoyeur(c, dt){
   }
 
   // 3. Chargement en tête de bande.
+  const recu = c.recuTick || 0;
+  c.recuTick = 0;
   c.debitActuel = 0;
   if (!src || !dst){ c.etat = "non_relie"; return; }
 
-  const souhaites = itemsAcceptes(dst);
-  let budget = c.debitMax * dt;
+  // Une bande alimentée par une autre bande ne tire rien : elle est poussée
+  // par l'amont, à l'étape 2 de la simulation de celui-ci.
   let charge = 0;
+  if (!estConvoyeur(src)){
+    let budget = c.debitMax * dt;
 
-  // Le quai et les caisses fournissent ce dont l'aval a besoin ; une machine
-  // pousse simplement ce qu'elle a produit.
-  let candidats;
-  if (estQuai(src) || MACHINES[src.type]?.stockage){
-    candidats = souhaites.filter(it => sortieDispo(src, it) > 1e-6 && placeEntree(dst, it) > 1e-6);
-    // on sert d'abord ce qui manque le plus à l'aval
-    candidats.sort((a,b) => manqueRelatif(dst,a) - manqueRelatif(dst,b));
-  } else {
-    candidats = Object.keys(src.sortie).filter(it => src.sortie[it] > 1e-6);
+    // Le quai et les caisses fournissent ce dont l'aval a besoin ; une machine
+    // pousse simplement ce qu'elle a produit.
+    let candidats;
+    if (estQuai(src) || MACHINES[src.type]?.stockage){
+      candidats = itemsAcceptes(dst).filter(it => sortieDispo(src, it) > 1e-6 && placeEntree(dst, it) > 1e-6);
+      candidats.sort((a,b) => manqueRelatif(dst,a) - manqueRelatif(dst,b));
+    } else {
+      candidats = Object.keys(src.sortie).filter(it => src.sortie[it] > 1e-6);
+    }
+
+    for (const it of candidats){
+      if (budget <= 1e-6) break;
+      const place = placeEntree(dst, it);
+      if (place <= 1e-6) continue;
+      const q = Math.min(budget, sortieDispo(src, it), place + 40);   // on tolère un peu de file
+      if (q <= 1e-6) continue;
+      retirerSortie(src, it, q);
+      chargerConvoyeur(c, it, q);
+      c.recuTick = 0;                       // ce chargement-ci n'est pas une réception
+      budget -= q;
+      charge += q;
+    }
   }
 
-  for (const it of candidats){
-    if (budget <= 1e-6) break;
-    const place = placeEntree(dst, it);
-    if (place <= 1e-6) continue;
-    const q = Math.min(budget, sortieDispo(src, it), place + 40); // on tolère un peu de file
-    if (q <= 1e-6) continue;
-    retirerSortie(src, it, q);
-    // fusion avec le dernier colis si l'écart de position est négligeable
-    const dernier = c.transit[c.transit.length-1];
-    if (dernier && dernier.item === it && c.latence - dernier.t < dt*0.5) dernier.qte += q;
-    else c.transit.push({ item:it, qte:q, t:c.latence });
-    budget -= q;
-    charge += q;
-  }
+  const passe = charge + recu;
+  c.debitActuel = (passe / dt) * CONFIG.minutesParJour;   // par jour, pour l'affichage
+  c.etat = (c.transit.length && c.transit[0].t <= 0) ? "sortie_pleine"
+         : (passe > 0 ? "produit" : "attente_matiere");
+}
 
-  c.debitActuel = (charge / dt) * CONFIG.minutesParJour;   // par jour, pour l'affichage
-  c.etat = c.transit.length && c.transit[0].t <= 0 ? "sortie_pleine"
-         : (charge > 0 ? "produit" : "attente_matiere");
+/** Cherche une machine, une caisse, le quai ou une autre bande au contact
+ *  d'une tuile. Une machine prime toujours sur un convoyeur. */
+function voisinNoeud(t, exclure, exclureId){
+  const u = U();
+  const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+  let bande = null;
+  for (const [dx,dy] of dirs){
+    const x = t.x+dx, y = t.y+dy;
+    if (exclure && x === exclure.x && y === exclure.y) continue;
+    const o = occupant(u,x,y);
+    if (o === 1) return idx.quai;
+    if (o > 1){
+      const n = noeudParId(o);
+      if (!n || n.id === exclureId) continue;
+      if (n.type !== "convoyeur") return n;
+      if (!bande) bande = n;
+    }
+  }
+  return bande;
+}
+
+/** Raccorde tout bout de bande qui pend dans le vide. C'est ce qui permet de
+ *  poser les convoyeurs par tronçons et de les brancher les uns aux autres :
+ *  plusieurs bandes peuvent converger vers la même. */
+function relierConvoyeurs(){
+  const u = etat.usines[etat.usineActive];
+  if (!u) return;
+  for (const c of u.convoyeurs){
+    if (!c.chemin.length) continue;
+    const a = c.chemin[0], b = c.chemin[c.chemin.length-1];
+    const apres = c.chemin.length > 1 ? c.chemin[1] : null;
+    const avant = c.chemin.length > 1 ? c.chemin[c.chemin.length-2] : null;
+    if (!noeudParId(c.source)){
+      const n = voisinNoeud(a, apres, c.id);
+      c.source = n ? n.id : 0;
+    }
+    if (!noeudParId(c.destination)){
+      const n = voisinNoeud(b, avant, c.id);
+      c.destination = n ? n.id : 0;
+    }
+    if (!noeudParId(c.source) || !noeudParId(c.destination)) c.etat = "non_relie";
+    else if (c.etat === "non_relie") c.etat = "attente_matiere";
+  }
 }
 
 /** 0 = vide, 1 = plein : sert à choisir quoi envoyer en priorité. */
 function manqueRelatif(n, item){
   if (estQuai(n)) return 1;
+  if (estConvoyeur(n)) return chargeConvoyeur(n) / Math.max(1, capaciteConvoyeur(n, item));
   const d = MACHINES[n.type];
   if (d.stockage) return contenuTotal(n.sortie) / d.capacite;
   return (n.entree[item]||0) / capaciteItem(item, CONFIG.capaciteEntree);
@@ -2572,6 +2668,26 @@ function dessinerConvoyeur(c){
   ctx.lineWidth = 0.06;
   ctx.stroke();
 
+  // Chevrons : dans un réseau, savoir dans quel sens ça circule n'est pas
+  // un détail. On les fait défiler le long du chemin.
+  if (!orphelin && vue.zoom > CONFIG.seuilSchema){
+    const n = ch.length;
+    const glisse = (vue.temps * 0.55) % 1;
+    ctx.strokeStyle = "rgba(255,255,255,.22)";
+    ctx.lineWidth = 0.07;
+    ctx.lineCap = "round";
+    for (let i = 0; i < n-1; i++){
+      const a = ch[i], b = ch[i+1];
+      const dx = b.x-a.x, dy = b.y-a.y;
+      const px = a.x+0.5 + dx*glisse, py = a.y+0.5 + dy*glisse;
+      ctx.beginPath();
+      ctx.moveTo(px - dx*0.16 - dy*0.16, py - dy*0.16 - dx*0.16);
+      ctx.lineTo(px + dx*0.1, py + dy*0.1);
+      ctx.lineTo(px - dx*0.16 + dy*0.16, py - dy*0.16 + dx*0.16);
+      ctx.stroke();
+    }
+  }
+
   if (orphelin){
     const p = pointSurChemin(c, 0.5);
     dessinerAlerte(p.x, p.y, "!", "#e0574a");
@@ -3734,37 +3850,18 @@ function validerTrace(){
   const cout = tuiles.length * CONV.coutParTuile;
   if (etat.finances.solde - cout < CONFIG.faillite){ notif("Trop cher", "Pas assez en caisse.", "ko"); return; }
 
-  const src = voisinNoeud(tuiles[0], tuiles[1]);
-  const dst = voisinNoeud(tuiles[tuiles.length-1], tuiles[tuiles.length-2]);
-
-  const c = creerConvoyeur(tuiles, src ? src.id : 0, dst ? dst.id : 0);
-  if (!src || !dst) c.etat = "non_relie";
+  // Les deux bouts sont raccordés par le moteur : machine, caisse, quai — ou
+  // un autre convoyeur, ce qui permet de bâtir un réseau par tronçons.
+  const c = creerConvoyeur(tuiles, 0, 0);
   u.convoyeurs.push(c);
   for (const t of tuiles) u.grille[t.y*u.largeur+t.x] = c.id;
   depenser(cout, "investissement");
   reindexer();
   son("pose");
-  if (!src || !dst)
-    notif("Convoyeur posé", "Il ne relie rien pour l'instant : il faut une machine ou le quai à chaque bout.", "att");
+  if (c.etat === "non_relie")
+    notif("Convoyeur posé", "Il ne relie rien pour l'instant : il lui faut une machine, le quai ou un autre convoyeur à chaque bout.", "att");
   tutoEvenement("pose_convoyeur");
   majPanneau();
-}
-
-/** Cherche une machine, une caisse ou le quai au contact d'une tuile. */
-function voisinNoeud(t, exclure){
-  const u = U();
-  const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
-  for (const [dx,dy] of dirs){
-    const x = t.x+dx, y = t.y+dy;
-    if (exclure && x === exclure.x && y === exclure.y) continue;
-    const o = occupant(u,x,y);
-    if (o === 1) return noeudQuai(u);
-    if (o > 1){
-      const n = noeudParId(o);
-      if (n && n.type !== "convoyeur") return n;
-    }
-  }
-  return null;
 }
 
 /* ============================================================================
@@ -3932,13 +4029,16 @@ function detailConvoyeur(z, c){
   z.appendChild(elem('<p class="sousTitre">'+c.chemin.length+' tuiles</p>'));
   const b = blocTitre("Ce qui passe");
   const src = noeudParId(c.source), dst = noeudParId(c.destination);
-  b.appendChild(ligne("Départ", src ? (estQuai(src)?"Quai":MACHINES[src.type].nom) : "rien"));
-  b.appendChild(ligne("Arrivée", dst ? (estQuai(dst)?"Quai":MACHINES[dst.type].nom) : "rien"));
-  b.appendChild(ligne("Passage", Math.round(c.debitActuel) + " pièces par jour"));
+  b.appendChild(ligne("Départ", nomNoeud(src)));
+  b.appendChild(ligne("Arrivée", nomNoeud(dst)));
+  b.appendChild(ligne("Passage", Math.round(c.debitActuel) + " par jour"));
+  const dessus = c.transit.map(p => quantiteItem(p.item, p.qte, true));
+  if (dessus.length) b.appendChild(ligne("Sur la bande", dessus.slice(0,3).join(", ")));
   const p = elem('<div style="margin-top:6px"><span class="pastille"></span></div>');
   const pas = p.querySelector(".pastille");
   if (c.etat === "non_relie"){ pas.textContent = "Ne relie rien"; pas.className = "pastille ko"; }
   else if (c.etat === "sortie_pleine"){ pas.textContent = "Bouchon au bout"; pas.className = "pastille att"; }
+  else if (c.etat === "attente_matiere"){ pas.textContent = "Rien ne passe"; pas.className = "pastille"; }
   else { pas.textContent = "Fonctionne"; pas.className = "pastille ok"; }
   b.appendChild(p);
   z.appendChild(b);
@@ -5110,7 +5210,14 @@ function SECTIONS_GUIDE(){
 
   { titre:"Les convoyeurs", corps:
     "<p>Un convoyeur se trace en maintenant le clic, du <b>départ</b> vers l'<b>arrivée</b>. Il lui faut une "+
-    "machine, un bac ou le quai <b>à chaque bout</b> — sinon il apparaît en rouge et ne sert à rien.</p>"+
+    "machine, un bac, le quai <b>ou un autre convoyeur</b> à chaque bout — sinon il apparaît en rouge et ne "+
+    "sert à rien.</p>"+
+    "<p>Les bandes <b>se branchent entre elles</b> : on peut bâtir un long trajet par tronçons, contourner un "+
+    "obstacle, et faire <b>converger plusieurs bandes vers une seule</b> pour rassembler deux lignes sur un "+
+    "même poste. Les chevrons montrent le sens de circulation.</p>"+
+    "<p>Une bande ne prend que ce que son aval finira par consommer : inutile de craindre qu'elle se remplisse "+
+    "de marchandise qui n'irait nulle part. En revanche une bande ne se <b>divise pas</b> : pour desservir "+
+    "deux postes, il faut deux bandes au départ.</p>"+
     "<p>Une machine pousse ce qu'elle fabrique. Un convoyeur qui part du <b>quai</b> ou d'un <b>bac</b> "+
     "apporte au contraire ce que la machine d'arrivée réclame.</p>"+
     "<p>Attention : un convoyeur qui amène un ingrédient ne dispense pas d'apporter les autres. Une machine "+
