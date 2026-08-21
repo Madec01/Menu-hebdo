@@ -382,6 +382,20 @@ table.tab tr:hover td{background:rgba(255,255,255,.028)}
 .rechOpt.actif{background:var(--or);border-color:var(--or);color:#241b03;font-weight:600}
 .rechOpt.connu:not(.actif){border-color:#5b6b52}
 .rechOpt.connu::after{content:" ·";color:var(--vert);font-weight:700}
+.rechFermes{margin-top:12px;border-top:1px solid var(--bord);padding-top:9px}
+.rechFermes summary{
+  font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--texte-faible);
+  cursor:pointer;list-style:none;padding:3px 0;
+}
+.rechFermes summary::before{content:"▸ ";color:var(--or)}
+.rechFermes[open] summary::before{content:"▾ "}
+.rechFermes summary:hover{color:var(--texte-doux)}
+.rechFerme{
+  display:flex;justify-content:space-between;gap:10px;align-items:baseline;
+  padding:3px 0 3px 12px;font-size:11.5px;border-bottom:1px solid rgba(255,255,255,.04);
+}
+.rechFerme .rfNom{color:var(--texte-doux);opacity:.6;white-space:nowrap}
+.rechFerme .rfCond{color:var(--texte-faible);font-size:10.5px;text-align:right}
 .rechInfo{margin-top:12px;padding-top:10px;border-top:1px solid var(--bord)}
 .rechEntete{display:flex;align-items:center;gap:11px;margin-bottom:10px}
 .rechPuce{width:14px;height:38px;border-radius:4px;flex:0 0 14px}
@@ -591,7 +605,7 @@ const CONFIG = {
   arretChangementHuile: 45,    // minutes de jeu, friteuse à l'arrêt
   rebutMax: 0.5,
   sauvegarde: "cadence_save_v1",
-  version: 2
+  version: 3
 };
 
 // minutes de jeu écoulées par tick de simulation
@@ -892,49 +906,149 @@ const BANQUES = [
    modes du moment, `cout` renchérit la matière, `duree` ralentit l'ensachage,
    `etude` renchérit le développement.
    ======================================================================== */
+/* ----------------------------------------------------------------- Le labo
+   Sept axes, et beaucoup de monde sur chaque. Presque tout est verrouillé au
+   départ : un ingrédient s'ouvre parce que la maison s'est fait un nom, parce
+   qu'elle a osé une recette, ou parce qu'elle en a déjà sorti une bonne.
+
+   `debloc` dit à quelle condition l'option s'ouvre — rien = disponible tout de
+   suite. Une seule condition par option, pour qu'elle s'explique en une phrase :
+     age        l'âge de l'usine
+     notoriete  ce que le public connaît de la maison, sur 100
+     recettes   le nombre de recettes déjà sorties
+     tag / n    n recettes portant ce tag
+     note       une recette au moins a atteint cette note
+     apres      un ingrédient déjà utilisé au moins une fois
+
+   `attrait` est le socle, mais ce n'est pas là que se joue la partie : les
+   ingrédients farfelus notent bas tout seuls et très haut bien mariés. C'est
+   le pari. */
 const AXES_RECETTE = [
   { cle:"gout", nom:"Le goût", options:[
-    { id:"nature",       nom:"Nature",            attrait:0.54, cout:0.3, etude:0,    tags:["classique"] },
-    { id:"paprika",      nom:"Paprika",           attrait:0.68, cout:1.0, etude:600,  tags:["piquant","classique"] },
-    { id:"oignon_creme", nom:"Oignon et crème",   attrait:0.72, cout:1.2, etude:900,  tags:["doux","classique"] },
-    { id:"vinaigre",     nom:"Sel et vinaigre",   attrait:0.63, cout:0.9, etude:700,  tags:["acide","terroir"] },
-    { id:"fromage",      nom:"Fromage affiné",    attrait:0.66, cout:1.5, etude:1200, tags:["gras","doux"] },
-    { id:"barbecue",     nom:"Barbecue",          attrait:0.70, cout:1.3, etude:1000, tags:["fume","piquant"] },
-    { id:"piment",       nom:"Piment d'Espelette",attrait:0.61, cout:1.9, etude:1600, tags:["piquant","terroir"] },
-    { id:"truffe",       nom:"Truffe",            attrait:0.75, cout:4.2, etude:3200, tags:["chic","terroir"] }
+    { id:"nature",       nom:"Nature",              attrait:0.54, cout:0.3, etude:0,    couleur:"#e8c86a", tags:["classique"] },
+    { id:"paprika",      nom:"Paprika",             attrait:0.68, cout:1.0, etude:600,  couleur:"#d4552e", tags:["piquant","classique"] },
+    { id:"oignon_creme", nom:"Oignon et crème",     attrait:0.72, cout:1.2, etude:900,  couleur:"#e0d3a8", tags:["doux","classique"] },
+    { id:"vinaigre",     nom:"Sel et vinaigre",     attrait:0.63, cout:0.9, etude:700,  couleur:"#8fbf6a", tags:["acide","terroir"] },
+    { id:"fromage",      nom:"Fromage affiné",      attrait:0.66, cout:1.5, etude:1200, couleur:"#e8a83c", tags:["gras","doux"] },
+    { id:"barbecue",     nom:"Barbecue",            attrait:0.70, cout:1.3, etude:1000, couleur:"#a8492a", tags:["fume","piquant"] },
+    { id:"poulet_roti",  nom:"Poulet rôti",         attrait:0.69, cout:1.4, etude:1100, couleur:"#c98b45", tags:["doux","classique"] },
+    { id:"oignon_frit",  nom:"Oignon frit",         attrait:0.67, cout:1.1, etude:800,  couleur:"#b7853f", tags:["gras","classique"] },
+    { id:"moutarde",     nom:"Moutarde à l'ancienne",attrait:0.60,cout:1.2, etude:1000, couleur:"#d9c04a", tags:["piquant","terroir"], debloc:{ recettes:1 } },
+    { id:"ketchup",      nom:"Ketchup",             attrait:0.64, cout:1.0, etude:900,  couleur:"#c8362b", tags:["doux","enfance"], debloc:{ recettes:1 } },
+    { id:"pizza",        nom:"Pizza",               attrait:0.66, cout:1.3, etude:1200, couleur:"#cf6a33", tags:["enfance","monde"], debloc:{ recettes:2 } },
+    { id:"piment",       nom:"Piment d'Espelette",  attrait:0.61, cout:1.9, etude:1600, couleur:"#c22f2f", tags:["piquant","terroir"], debloc:{ recettes:2 } },
+    { id:"curry",        nom:"Curry de Madras",     attrait:0.66, cout:1.6, etude:1500, couleur:"#d99a2b", tags:["monde","piquant"], debloc:{ tag:"piquant", n:1 } },
+    { id:"ail_ours",     nom:"Ail des ours",        attrait:0.58, cout:1.4, etude:1400, couleur:"#7ba648", tags:["terroir","sain"], debloc:{ tag:"terroir", n:1 } },
+    { id:"tandoori",     nom:"Tandoori",            attrait:0.67, cout:1.8, etude:1900, couleur:"#c2502a", tags:["monde","piquant"], debloc:{ apres:"curry" } },
+    { id:"sriracha_mayo",nom:"Sriracha-mayonnaise", attrait:0.70, cout:1.7, etude:1800, couleur:"#e0603a", tags:["monde","piquant","gras"], debloc:{ tag:"monde", n:1 } },
+    { id:"kimchi",       nom:"Kimchi",              attrait:0.62, cout:2.0, etude:2100, couleur:"#c0452f", tags:["monde","piquant","fermente"], debloc:{ tag:"monde", n:2 } },
+    { id:"wasabi_yuzu",  nom:"Wasabi et yuzu",      attrait:0.64, cout:2.6, etude:2400, couleur:"#9fd158", tags:["monde","piquant","chic"], debloc:{ apres:"kimchi" } },
+    { id:"algue_nori",   nom:"Algue nori",          attrait:0.58, cout:2.2, etude:2000, couleur:"#3f5f4e", tags:["monde","sain","marin"], debloc:{ tag:"sain", n:1 } },
+    { id:"chevre_miel",  nom:"Chèvre et miel",      attrait:0.71, cout:2.3, etude:2200, couleur:"#e6d089", tags:["chic","doux","terroir"], debloc:{ notoriete:15 } },
+    { id:"raclette",     nom:"Raclette",            attrait:0.70, cout:2.1, etude:2000, couleur:"#e3b95c", tags:["terroir","gras","hiver"], debloc:{ tag:"gras", n:1 } },
+    { id:"tartiflette",  nom:"Tartiflette",         attrait:0.68, cout:2.4, etude:2300, couleur:"#d8a95e", tags:["terroir","gras","hiver","farfelu"], debloc:{ apres:"raclette" } },
+    { id:"cassoulet",    nom:"Cassoulet",           attrait:0.52, cout:2.2, etude:2400, couleur:"#a8763c", tags:["terroir","farfelu"], debloc:{ tag:"farfelu", n:1 } },
+    { id:"poivre_timut", nom:"Poivre de Timut",     attrait:0.63, cout:3.0, etude:2800, couleur:"#8d7a5c", tags:["chic","piquant","monde"], debloc:{ notoriete:25 } },
+    { id:"truffe",       nom:"Truffe noire",        attrait:0.75, cout:4.2, etude:3200, couleur:"#5a4a63", tags:["chic","terroir"], debloc:{ notoriete:30 } },
+    { id:"miel_lavande", nom:"Miel de lavande",     attrait:0.57, cout:2.7, etude:2600, couleur:"#c9a7d8", tags:["chic","doux","sucre","farfelu"], debloc:{ notoriete:35 } },
+    { id:"foie_gras",    nom:"Foie gras",           attrait:0.72, cout:5.4, etude:4200, couleur:"#d8b98a", tags:["chic","gras","fete"], debloc:{ notoriete:45 } },
+    { id:"huitre_citron",nom:"Huître et citron",    attrait:0.46, cout:3.4, etude:3000, couleur:"#9fb8ae", tags:["marin","farfelu","chic"], debloc:{ tag:"marin", n:1 } },
+    { id:"sardine",      nom:"Sardine grillée",     attrait:0.43, cout:2.0, etude:2200, couleur:"#8fa0a8", tags:["marin","farfelu"], debloc:{ tag:"marin", n:1 } },
+    { id:"banane_plantain",nom:"Banane plantain",   attrait:0.53, cout:1.8, etude:2000, couleur:"#e3c85f", tags:["monde","sucre","farfelu"], debloc:{ tag:"monde", n:2 } },
+    { id:"chocolat_piment",nom:"Chocolat et piment",attrait:0.51, cout:2.9, etude:2900, couleur:"#6b4230", tags:["sucre","piquant","farfelu"], debloc:{ tag:"sucre", n:1 } },
+    { id:"tarte_citron", nom:"Tarte au citron",     attrait:0.48, cout:2.4, etude:2600, couleur:"#eddf7a", tags:["sucre","acide","farfelu"], debloc:{ tag:"sucre", n:1 } },
+    { id:"barbe_papa",   nom:"Barbe à papa",        attrait:0.40, cout:1.6, etude:2100, couleur:"#f0a8c8", tags:["sucre","enfance","farfelu"], debloc:{ tag:"enfance", n:1 } },
+    { id:"reglisse",     nom:"Réglisse",            attrait:0.42, cout:1.9, etude:2300, couleur:"#3a3436", tags:["sucre","farfelu"], debloc:{ tag:"farfelu", n:2 } },
+    { id:"cafe_torrefie",nom:"Café torréfié",       attrait:0.49, cout:2.5, etude:2700, couleur:"#4e352a", tags:["chic","farfelu","amer"], debloc:{ tag:"farfelu", n:2 } },
+    { id:"spiruline",    nom:"Spiruline",           attrait:0.44, cout:2.8, etude:2800, couleur:"#2f6b52", tags:["sain","farfelu"], debloc:{ tag:"sain", n:2 } },
+    { id:"charbon_bambou",nom:"Charbon de bambou",  attrait:0.46, cout:2.6, etude:3000, couleur:"#26282c", tags:["sain","farfelu","chic"], debloc:{ apres:"spiruline" } },
+    { id:"grillon_curry",nom:"Grillon au curry",    attrait:0.41, cout:3.6, etude:3600, couleur:"#7a6038", tags:["insecte","sain","farfelu","monde"], debloc:{ tag:"farfelu", n:3 } },
+    { id:"fourmi_citron",nom:"Fourmi citronnée",    attrait:0.38, cout:4.4, etude:4000, couleur:"#5c4a2e", tags:["insecte","farfelu","chic"], debloc:{ apres:"grillon_curry" } },
+    { id:"caviar",       nom:"Caviar",              attrait:0.66, cout:8.5, etude:6000, couleur:"#2b2f38", tags:["chic","marin","fete"], debloc:{ notoriete:70 } },
+    { id:"or_comestible",nom:"Or et champagne",     attrait:0.60, cout:11.0,etude:7500, couleur:"#d8b34a", tags:["chic","fete","farfelu"], debloc:{ note:85 } }
   ]},
+
   { cle:"coupe", nom:"La coupe", options:[
-    { id:"fine",      nom:"Fine",        attrait:0.63, cout:1.0, duree:0.9,  etude:0,    tags:["leger"] },
-    { id:"epaisse",   nom:"Épaisse",     attrait:0.66, cout:1.0, duree:1.15, etude:500,  tags:["rustique"] },
-    { id:"ondulee",   nom:"Ondulée",     attrait:0.72, cout:1.05,duree:1.05, etude:900,  tags:["classique","rustique"] },
-    { id:"gaufrette", nom:"Gaufrette",   attrait:0.69, cout:1.15,duree:1.3,  etude:1500, tags:["chic"] },
-    { id:"allumette", nom:"Allumette",   attrait:0.50, cout:0.95,duree:0.85, etude:400,  tags:["leger","nomade"] }
+    { id:"fine",      nom:"Fine",            attrait:0.63, cout:1.0, duree:0.9,  etude:0,    tags:["leger"] },
+    { id:"epaisse",   nom:"Épaisse",         attrait:0.66, cout:1.0, duree:1.15, etude:500,  tags:["rustique"] },
+    { id:"ondulee",   nom:"Ondulée",         attrait:0.72, cout:1.05,duree:1.05, etude:900,  tags:["classique","rustique"] },
+    { id:"allumette", nom:"Allumette",       attrait:0.50, cout:0.95,duree:0.85, etude:400,  tags:["leger","nomade"] },
+    { id:"gaufrette", nom:"Gaufrette",       attrait:0.69, cout:1.15,duree:1.3,  etude:1500, tags:["chic"], debloc:{ recettes:1 } },
+    { id:"brisures",  nom:"Brisures",        attrait:0.47, cout:0.7, duree:0.8,  etude:300,  tags:["rustique","enfance"], debloc:{ recettes:1 } },
+    { id:"tuile",     nom:"En tuile",        attrait:0.68, cout:1.2, duree:1.2,  etude:1600, tags:["chic","classique"], debloc:{ recettes:2 } },
+    { id:"cube",      nom:"En dés",          attrait:0.52, cout:1.1, duree:1.1,  etude:1400, tags:["farfelu","nomade"], debloc:{ recettes:3 } },
+    { id:"torsade",   nom:"Torsadée",        attrait:0.65, cout:1.3, duree:1.35, etude:2000, tags:["enfance","farfelu"], debloc:{ tag:"enfance", n:1 } },
+    { id:"spirale",   nom:"Spirale entière", attrait:0.71, cout:1.45,duree:1.5,  etude:2600, tags:["farfelu","chic"], debloc:{ notoriete:20 } },
+    { id:"dentelle",  nom:"Dentelle",        attrait:0.70, cout:1.6, duree:1.55, etude:3000, tags:["chic"], debloc:{ notoriete:40 } },
+    { id:"geante",    nom:"Géante",          attrait:0.58, cout:1.5, duree:1.6,  etude:2800, tags:["farfelu","rustique"], debloc:{ tag:"farfelu", n:2 } }
   ]},
+
   { cle:"cuisson", nom:"La cuisson", options:[
     { id:"friture",     nom:"Friture classique",  attrait:0.60, cout:1.0, duree:1.0,  etude:0,    tags:["classique"] },
-    { id:"chaudron",    nom:"Au chaudron",        attrait:0.75, cout:1.35,duree:1.4,  etude:2200, tags:["rustique","terroir"] },
-    { id:"huile_olive", nom:"À l'huile d'olive",  attrait:0.70, cout:1.7, duree:1.1,  etude:1800, tags:["chic","sain"] },
-    { id:"four",        nom:"Au four",            attrait:0.57, cout:1.1, duree:1.2,  etude:1400, tags:["sain","leger"] }
+    { id:"four",        nom:"Au four",            attrait:0.57, cout:1.1, duree:1.2,  etude:1400, tags:["sain","leger"] },
+    { id:"huile_olive", nom:"À l'huile d'olive",  attrait:0.70, cout:1.7, duree:1.1,  etude:1800, tags:["chic","sain"], debloc:{ recettes:1 } },
+    { id:"chaudron",    nom:"Au chaudron",        attrait:0.75, cout:1.35,duree:1.4,  etude:2200, tags:["rustique","terroir"], debloc:{ recettes:2 } },
+    { id:"air_chaud",   nom:"À l'air chaud",      attrait:0.55, cout:1.15,duree:1.25, etude:1700, tags:["sain","leger"], debloc:{ tag:"sain", n:1 } },
+    { id:"feu_bois",    nom:"Au feu de bois",     attrait:0.72, cout:1.9, duree:1.6,  etude:3000, tags:["terroir","fume","rustique"], debloc:{ tag:"terroir", n:2 } },
+    { id:"graisse_canard",nom:"À la graisse de canard",attrait:0.73,cout:2.4,duree:1.3,etude:3400, tags:["terroir","gras","chic"], debloc:{ notoriete:30 } },
+    { id:"basse_temp",  nom:"Basse température",  attrait:0.68, cout:1.6, duree:2.0,  etude:3200, tags:["chic","sain"], debloc:{ notoriete:40 } },
+    { id:"azote",       nom:"Choc à l'azote",     attrait:0.59, cout:3.2, duree:1.7,  etude:5000, tags:["farfelu","chic"], debloc:{ tag:"farfelu", n:3 } }
   ]},
+
+  { cle:"texture", nom:"La texture", options:[
+    { id:"standard",   nom:"Ordinaire",        attrait:0.62, cout:1.0, duree:1.0,  etude:0,    tags:["classique"] },
+    { id:"craquante",  nom:"Extra-craquante",  attrait:0.71, cout:1.15,duree:1.2,  etude:1600, tags:["rustique"], debloc:{ recettes:1 } },
+    { id:"soufflee",   nom:"Soufflée",         attrait:0.66, cout:1.25,duree:1.3,  etude:2000, tags:["leger","enfance"], debloc:{ recettes:2 } },
+    { id:"fondante",   nom:"Fondante",         attrait:0.64, cout:1.3, duree:1.35, etude:2400, tags:["doux","chic"], debloc:{ tag:"doux", n:1 } },
+    { id:"double",     nom:"Double cuisson",   attrait:0.74, cout:1.5, duree:1.7,  etude:3200, tags:["chic","rustique"], debloc:{ notoriete:25 } },
+    { id:"aeree",      nom:"Aérée comme un nuage", attrait:0.60, cout:1.6, duree:1.5, etude:3600, tags:["farfelu","leger"], debloc:{ tag:"farfelu", n:2 } }
+  ]},
+
   { cle:"sel", nom:"Le sel", options:[
-    { id:"peu",    nom:"Peu salé",  attrait:0.55, cout:0.9, etude:0, tags:["sain"] },
-    { id:"normal", nom:"Normal",    attrait:0.69, cout:1.0, etude:0, tags:["classique"] },
-    { id:"bien",   nom:"Bien salé", attrait:0.60, cout:1.1, etude:0, tags:["rustique"] }
+    { id:"peu",     nom:"Peu salé",       attrait:0.55, cout:0.9, etude:0, tags:["sain"] },
+    { id:"normal",  nom:"Normal",         attrait:0.69, cout:1.0, etude:0, tags:["classique"] },
+    { id:"bien",    nom:"Bien salé",      attrait:0.60, cout:1.1, etude:0, tags:["rustique"] },
+    { id:"sans",    nom:"Sans sel ajouté",attrait:0.44, cout:0.8, etude:600,  tags:["sain"], debloc:{ tag:"sain", n:1 } },
+    { id:"fleur",   nom:"Fleur de sel",   attrait:0.73, cout:1.6, etude:1400, tags:["chic","terroir"], debloc:{ recettes:2 } },
+    { id:"fume",    nom:"Sel fumé",       attrait:0.67, cout:1.5, etude:1600, tags:["fume","rustique"], debloc:{ tag:"fume", n:1 } },
+    { id:"celeri",  nom:"Sel au céleri",  attrait:0.58, cout:1.3, etude:1200, tags:["terroir","farfelu"], debloc:{ recettes:3 } },
+    { id:"noir",    nom:"Sel noir volcanique", attrait:0.62, cout:2.2, etude:2400, tags:["chic","monde","farfelu"], debloc:{ notoriete:35 } }
   ]},
+
+  { cle:"touche", nom:"La touche en plus", options:[
+    { id:"aucune",   nom:"Aucune",                   attrait:0.63, cout:0,   etude:0,    tags:["classique"] },
+    { id:"poivre",   nom:"Poivre concassé",          attrait:0.66, cout:0.4, etude:500,  tags:["classique","piquant"] },
+    { id:"sesame",   nom:"Graines de sésame",        attrait:0.64, cout:0.6, etude:800,  tags:["monde","sain"], debloc:{ recettes:1 } },
+    { id:"herbes",   nom:"Herbes de Provence",       attrait:0.67, cout:0.5, etude:900,  tags:["terroir","sain"], debloc:{ recettes:1 } },
+    { id:"cristaux", nom:"Cristaux de vinaigre",     attrait:0.65, cout:0.9, etude:1400, tags:["acide","farfelu"], debloc:{ tag:"acide", n:1 } },
+    { id:"bacon",    nom:"Éclats de bacon",          attrait:0.70, cout:1.4, etude:1800, tags:["fume","gras"], debloc:{ tag:"fume", n:1 } },
+    { id:"parmesan", nom:"Parmesan lyophilisé",      attrait:0.72, cout:1.8, etude:2200, tags:["chic","gras"], debloc:{ tag:"gras", n:1 } },
+    { id:"yuzu",     nom:"Poudre de yuzu",           attrait:0.66, cout:2.2, etude:2600, tags:["monde","chic","acide"], debloc:{ tag:"monde", n:2 } },
+    { id:"petillante",nom:"Poudre pétillante",       attrait:0.51, cout:1.2, etude:2000, tags:["enfance","farfelu","sucre"], debloc:{ tag:"enfance", n:1 } },
+    { id:"fleurs",   nom:"Fleurs séchées",           attrait:0.55, cout:1.9, etude:2400, tags:["chic","farfelu"], debloc:{ notoriete:25 } },
+    { id:"fantome",  nom:"Piment fantôme",           attrait:0.49, cout:2.6, etude:3000, tags:["piquant","farfelu"], debloc:{ tag:"piquant", n:3 } },
+    { id:"or",       nom:"Paillettes d'or",          attrait:0.53, cout:6.5, etude:5000, tags:["chic","fete","farfelu"], debloc:{ notoriete:60 } },
+    { id:"insecte",  nom:"Poudre d'insecte",         attrait:0.39, cout:3.0, etude:3400, tags:["insecte","sain","farfelu"], debloc:{ tag:"insecte", n:1 } }
+  ]},
+
   { cle:"format", nom:"Le sachet", options:[
-    { id:"individuel", nom:"Individuel, 30 g", attrait:0.65, grammage:30,  film:1.7, etude:800,  tags:["nomade"] },
-    { id:"familial",   nom:"Familial, 150 g",  attrait:0.71, grammage:150, film:0.9, etude:0,    tags:["classique"] },
-    { id:"maxi",       nom:"Maxi, 300 g",      attrait:0.60, grammage:300, film:0.7, etude:400,  tags:["rustique"] }
+    { id:"familial",   nom:"Familial, 150 g",   attrait:0.71, grammage:150, film:0.9, etude:0,    tags:["classique"] },
+    { id:"individuel", nom:"Individuel, 30 g",  attrait:0.65, grammage:30,  film:1.7, etude:800,  tags:["nomade"] },
+    { id:"maxi",       nom:"Maxi, 300 g",       attrait:0.60, grammage:300, film:0.7, etude:400,  tags:["rustique"] },
+    { id:"mini",       nom:"Mini, 15 g",        attrait:0.56, grammage:15,  film:2.4, etude:1200, tags:["nomade","enfance"], debloc:{ recettes:1 } },
+    { id:"tube",       nom:"Tube rigide, 120 g",attrait:0.69, grammage:120, film:1.5, etude:2000, tags:["nomade","chic"], debloc:{ recettes:2 } },
+    { id:"boite",      nom:"Boîte métal, 200 g",attrait:0.72, grammage:200, film:2.2, etude:3000, tags:["chic","fete"], debloc:{ notoriete:30 } },
+    { id:"seau",       nom:"Seau à partager, 600 g", attrait:0.58, grammage:600, film:0.6, etude:1600, tags:["rustique","fete"], debloc:{ tag:"fete", n:1 } },
+    { id:"recharge",   nom:"Éco-recharge, 400 g",attrait:0.61, grammage:400, film:0.4, etude:2200, tags:["sain","rustique"], debloc:{ tag:"sain", n:2 } }
   ]}
 ];
 
 /* Ce qui va bien ensemble, et ce qui ne va pas. C'est là que se joue le jeu :
-   le joueur ne les découvre qu'en essayant, et le contremaître les retient. */
+   le joueur ne les découvre qu'en essayant, et le contremaître les retient.
+   Les ingrédients farfelus vivent ici : seuls ils ne valent rien, bien mariés
+   ils font les meilleures notes de la partie. */
 const ACCORDS = [
-  { a:"truffe",   b:"gaufrette",   delta: 0.10, dit:"La gaufrette retient l'arôme de truffe, c'est très réussi." },
-  { a:"truffe",   b:"huile_olive", delta: 0.08, dit:"La truffe et l'huile d'olive, c'est la bonne idée." },
-  { a:"truffe",   b:"allumette",   delta:-0.13, dit:"De la truffe sur une allumette, c'est du gâchis." },
-  { a:"truffe",   b:"maxi",        delta:-0.08, dit:"De la truffe en sac de 300 grammes ? Ça ne va pas ensemble." },
+  /* --- les valeurs sûres --- */
   { a:"vinaigre", b:"ondulee",     delta: 0.09, dit:"L'ondulée et le vinaigre, ça a toujours marché." },
   { a:"chaudron", b:"epaisse",     delta: 0.11, dit:"Épaisse et cuite au chaudron, là on croque vraiment." },
   { a:"chaudron", b:"fine",        delta:-0.09, dit:"Le chaudron sur une coupe fine, ça brûle avant de cuire." },
@@ -946,8 +1060,108 @@ const ACCORDS = [
   { a:"fine",     b:"individuel",  delta: 0.06, dit:"Le petit format et la coupe fine vont bien ensemble." },
   { a:"allumette",b:"barbecue",    delta:-0.07, dit:"Sur l'allumette, l'assaisonnement tombe au fond du sachet." },
   { a:"allumette",b:"paprika",     delta:-0.05, dit:"Sur l'allumette, l'assaisonnement tombe au fond du sachet." },
-  { a:"oignon_creme", b:"ondulee", delta: 0.07, dit:"L'oignon-crème sur de l'ondulé, c'est une valeur sûre." }
-];
+  { a:"oignon_creme", b:"ondulee", delta: 0.07, dit:"L'oignon-crème sur de l'ondulé, c'est une valeur sûre." },
+  { a:"poulet_roti", b:"herbes",   delta: 0.08, dit:"Poulet et herbes de Provence : on croirait un dimanche midi." },
+  { a:"oignon_frit", b:"craquante",delta: 0.07, dit:"L'oignon frit sur une chips qui craque, c'est très bon." },
+  { a:"ketchup",  b:"soufflee",    delta: 0.07, dit:"Soufflées au ketchup : les enfants vident le sachet." },
+  { a:"ketchup",  b:"fleur",       delta:-0.08, dit:"De la fleur de sel sur du ketchup, quel intérêt ?" },
+  { a:"moutarde", b:"epaisse",     delta: 0.07, dit:"La moutarde à l'ancienne demande de la matière sous la dent." },
+
+  /* --- le terroir --- */
+  { a:"feu_bois", b:"epaisse",     delta: 0.09, dit:"Le feu de bois sur une épaisse, on sent la fumée sans qu'elle écrase." },
+  { a:"feu_bois", b:"fume",        delta:-0.09, dit:"Fumées au bois puis salées au sel fumé : c'est trop, on ne sent que ça." },
+  { a:"graisse_canard", b:"fleur", delta: 0.10, dit:"Graisse de canard et fleur de sel, c'est du sud-ouest dans un sachet." },
+  { a:"graisse_canard", b:"sans",  delta:-0.10, dit:"De la graisse de canard sans une pincée de sel, c'est du gras et rien d'autre." },
+  { a:"raclette", b:"hiver",       delta: 0.00, dit:"" },
+  { a:"raclette", b:"fondante",    delta: 0.10, dit:"La raclette fondante, on dirait vraiment le plat." },
+  { a:"tartiflette", b:"geante",   delta: 0.09, dit:"Une tartiflette en chips géante : c'est absurde et c'est délicieux." },
+  { a:"cassoulet", b:"seau",       delta: 0.11, dit:"Le cassoulet en seau à partager, on ne sait pas pourquoi ça marche, mais ça marche." },
+  { a:"cassoulet", b:"mini",       delta:-0.12, dit:"Du cassoulet en sachet de 15 grammes ? C'est une blague." },
+  { a:"ail_ours", b:"huile_olive", delta: 0.08, dit:"L'ail des ours et l'huile d'olive, c'est le printemps." },
+
+  /* --- le monde --- */
+  { a:"curry",    b:"tandoori",    delta: 0.00, dit:"" },
+  { a:"tandoori", b:"fondante",    delta: 0.08, dit:"Le tandoori sur une chips fondante, c'est du naan en plus léger." },
+  { a:"kimchi",   b:"fermente",    delta: 0.00, dit:"" },
+  { a:"kimchi",   b:"double",      delta: 0.09, dit:"La double cuisson tient tête au kimchi, rien ne ramollit." },
+  { a:"wasabi_yuzu", b:"yuzu",     delta: 0.09, dit:"Le yuzu en poudre par-dessus le wasabi-yuzu : là, on y est." },
+  { a:"wasabi_yuzu", b:"bien",     delta:-0.10, dit:"Le wasabi et le sel se battent, on ne sent plus rien." },
+  { a:"algue_nori", b:"sesame",    delta: 0.11, dit:"Nori et sésame, c'est un maki qui croustille." },
+  { a:"algue_nori", b:"fromage",   delta:-0.11, dit:"L'algue et le fromage, non. Vraiment non." },
+  { a:"sriracha_mayo", b:"soufflee",delta: 0.08, dit:"Soufflée et sriracha : ça mousse, ça pique, on en reprend." },
+  { a:"banane_plantain", b:"epaisse",delta: 0.09, dit:"La banane plantain veut de l'épaisseur, sinon ça se casse." },
+  { a:"banane_plantain", b:"fine", delta:-0.09, dit:"La banane plantain en coupe fine, ça part en poussière." },
+
+  /* --- le chic --- */
+  { a:"truffe",   b:"gaufrette",   delta: 0.10, dit:"La gaufrette retient l'arôme de truffe, c'est très réussi." },
+  { a:"truffe",   b:"huile_olive", delta: 0.08, dit:"La truffe et l'huile d'olive, c'est la bonne idée." },
+  { a:"truffe",   b:"allumette",   delta:-0.13, dit:"De la truffe sur une allumette, c'est du gâchis." },
+  { a:"truffe",   b:"maxi",        delta:-0.08, dit:"De la truffe en sac de 300 grammes ? Ça ne va pas ensemble." },
+  { a:"truffe",   b:"basse_temp",  delta: 0.09, dit:"Cuite doucement, la truffe garde tout son nez." },
+  { a:"foie_gras",b:"boite",       delta: 0.11, dit:"Le foie gras en boîte métal, ça fait vraiment cadeau de fin d'année." },
+  { a:"foie_gras",b:"brisures",    delta:-0.14, dit:"Du foie gras sur des brisures : personne ne comprend l'intention." },
+  { a:"foie_gras",b:"fleur",       delta: 0.08, dit:"Foie gras, fleur de sel : rien à ajouter." },
+  { a:"caviar",   b:"dentelle",    delta: 0.12, dit:"Le caviar sur une dentelle, c'est de la haute cuisine en sachet." },
+  { a:"caviar",   b:"seau",        delta:-0.16, dit:"Du caviar au seau. Il fallait oser." },
+  { a:"poivre_timut", b:"tuile",   delta: 0.08, dit:"Le poivre de Timut sur une tuile fine, l'agrume ressort." },
+  { a:"chevre_miel", b:"fleurs",   delta: 0.10, dit:"Chèvre, miel et fleurs séchées : c'est joli et c'est bon." },
+  { a:"miel_lavande", b:"fleurs",  delta: 0.09, dit:"Le miel de lavande et les fleurs, on est en Provence." },
+  { a:"miel_lavande", b:"bien",    delta:-0.11, dit:"Du miel et du sel à la pelle, le palais ne suit pas." },
+  { a:"or_comestible", b:"boite",  delta: 0.13, dit:"L'or en boîte métal : c'est ridicule, et pourtant tout le monde en veut." },
+  { a:"or_comestible", b:"recharge",delta:-0.15,dit:"De l'or en éco-recharge. On ne sait plus ce qu'on vend." },
+
+  /* --- la mer --- */
+  { a:"huitre_citron", b:"fleur",  delta: 0.12, dit:"L'huître et la fleur de sel, on est au bord de l'eau." },
+  { a:"huitre_citron", b:"cristaux",delta: 0.10,dit:"Les cristaux de vinaigre sur l'huître, c'est exactement le geste qu'il fallait." },
+  { a:"huitre_citron", b:"soufflee",delta:-0.11,dit:"L'huître sur une chips soufflée, la texture ne va pas du tout." },
+  { a:"sardine",  b:"feu_bois",    delta: 0.13, dit:"La sardine au feu de bois, on est sur le port. C'est bluffant." },
+  { a:"sardine",  b:"mini",        delta: 0.07, dit:"En mini-sachet, la sardine se supporte très bien." },
+  { a:"sardine",  b:"seau",        delta:-0.13, dit:"Un seau de chips à la sardine. La pièce sent encore." },
+
+  /* --- le sucré, l'enfance, le n'importe quoi --- */
+  { a:"chocolat_piment", b:"fondante", delta: 0.11, dit:"Chocolat-piment et texture fondante : c'est un dessert, et c'est très bon." },
+  { a:"chocolat_piment", b:"bien",  delta:-0.12, dit:"Du chocolat bien salé, on repose le sachet." },
+  { a:"tarte_citron", b:"petillante", delta: 0.12, dit:"La poudre pétillante sur la tarte au citron : les gamins adorent." },
+  { a:"tarte_citron", b:"fume",     delta:-0.12, dit:"Une tarte au citron au sel fumé. Non." },
+  { a:"barbe_papa", b:"petillante", delta: 0.11, dit:"Barbe à papa et poudre qui pétille, c'est la fête foraine." },
+  { a:"barbe_papa", b:"bien",       delta:-0.14, dit:"De la barbe à papa bien salée, c'est une punition." },
+  { a:"barbe_papa", b:"mini",       delta: 0.08, dit:"En tout petit format, la barbe à papa passe très bien." },
+  { a:"reglisse", b:"noir",         delta: 0.12, dit:"Réglisse et sel noir : c'est noir, c'est étrange, c'est bon." },
+  { a:"reglisse", b:"familial",     delta:-0.09, dit:"La réglisse en grand sachet, on se lasse au bout de trois." },
+  { a:"cafe_torrefie", b:"chocolat_piment", delta: 0.10, dit:"Café et chocolat, forcément, ça fonctionne." },
+  { a:"cafe_torrefie", b:"basse_temp", delta: 0.09, dit:"Cuites doucement, on sent la torréfaction et pas le brûlé." },
+  { a:"cafe_torrefie", b:"enfance", delta: 0.00, dit:"" },
+  { a:"petillante", b:"chic",       delta: 0.00, dit:"" },
+
+  /* --- le sain, les insectes --- */
+  { a:"spiruline", b:"air_chaud",   delta: 0.09, dit:"Spiruline et cuisson à l'air chaud, c'est cohérent de bout en bout." },
+  { a:"spiruline", b:"graisse_canard", delta:-0.14, dit:"De la spiruline frite à la graisse de canard. Il faut choisir son camp." },
+  { a:"charbon_bambou", b:"dentelle", delta: 0.10, dit:"La dentelle noire au charbon, c'est superbe à regarder." },
+  { a:"charbon_bambou", b:"or",     delta: 0.12, dit:"Noir charbon et paillettes d'or : on n'a jamais vu un sachet pareil." },
+  { a:"charbon_bambou", b:"ketchup",delta:-0.10, dit:"Le charbon et le ketchup, ça fait juste sale." },
+  { a:"grillon_curry", b:"curry",   delta: 0.09, dit:"Le grillon au curry avec du curry : au moins c'est franc." },
+  { a:"grillon_curry", b:"recharge",delta: 0.09, dit:"Insecte et éco-recharge, le discours se tient jusqu'au bout." },
+  { a:"grillon_curry", b:"foie_gras",delta:-0.15,dit:"Grillon et foie gras dans le même sachet. Le public ne suit pas." },
+  { a:"fourmi_citron", b:"dentelle",delta: 0.13, dit:"Les fourmis citronnées sur une dentelle : c'est un plat de grand restaurant." },
+  { a:"fourmi_citron", b:"maxi",    delta:-0.14, dit:"Trois cents grammes de fourmis. On préfère ne pas y penser." },
+  { a:"insecte", b:"sain",          delta: 0.00, dit:"" },
+  { a:"insecte", b:"barbe_papa",    delta:-0.13, dit:"De la poudre d'insecte sur de la barbe à papa. Pourquoi ?" },
+
+  /* --- format et texture --- */
+  { a:"tube",     b:"tuile",        delta: 0.10, dit:"Les tuiles empilées dans le tube arrivent entières, c'est appréciable." },
+  { a:"tube",     b:"brisures",     delta:-0.12, dit:"Des brisures dans un tube rigide, l'emballage ne sert à rien." },
+  { a:"seau",     b:"geante",       delta: 0.08, dit:"Des chips géantes au seau, c'est fait pour la tablée." },
+  { a:"spirale",  b:"double",       delta: 0.09, dit:"La spirale en double cuisson tient debout jusqu'au bout du sachet." },
+  { a:"aeree",    b:"maxi",         delta:-0.08, dit:"Un grand sachet d'air, le client compte les chips." },
+  { a:"aeree",    b:"mini",         delta: 0.07, dit:"En mini format, la texture aérée fait son petit effet." },
+  { a:"recharge", b:"chic",         delta: 0.00, dit:"" },
+  { a:"boite",    b:"brisures",     delta:-0.11, dit:"Des brisures en boîte métal, l'emballage vaut plus cher que ce qu'il y a dedans." },
+  { a:"parmesan", b:"pizza",        delta: 0.10, dit:"Parmesan sur goût pizza : évidemment que ça marche." },
+  { a:"bacon",    b:"barbecue",     delta: 0.09, dit:"Bacon et barbecue, c'est redondant mais on aime ça." },
+  { a:"fantome",  b:"piment",       delta: 0.08, dit:"Le piment fantôme par-dessus l'Espelette, pour ceux qui n'ont peur de rien." },
+  { a:"fantome",  b:"fondante",     delta:-0.09, dit:"Une chips fondante au piment fantôme, la douceur trompe et ça brûle." },
+  { a:"fantome",  b:"sans",         delta:-0.08, dit:"Piment fantôme sans sel : il n'y a plus que le feu." }
+].filter(a => a.dit);
 
 /* Ce que le public cherche en ce moment. Change de temps en temps. */
 const TENDANCES = [
@@ -1217,6 +1431,7 @@ function nouvellePartie(nomEntreprise, modeChoisi){
 
   initMarche();
   nettoyerRecettesJoueur();
+  verifierDeblocages(false);      // on note ce qui est ouvert, sans l'annoncer
   reindexer();
   return etat;
 }
@@ -1873,19 +2088,20 @@ function simConvoyeur(c, dt){
 
 /** Cherche une machine, une caisse, le quai ou une autre bande au contact
  *  d'une tuile. Une machine prime toujours sur un convoyeur. */
-function voisinNoeud(t, exclure, exclureId){
+function voisinNoeud(t, exclure, exclureId, exclureAussi){
   const u = U();
   const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+  const rejete = id => id === exclureId || (exclureAussi && id === exclureAussi);
   let bande = null;
   for (const [dx,dy] of dirs){
     const x = t.x+dx, y = t.y+dy;
     if (exclure && x === exclure.x && y === exclure.y) continue;
     const o = occupant(u,x,y);
-    if (o === 1) return idx.quai;
-    if (o === 2) return idx.quaiSortie;
+    if (o === 1){ if (!rejete(1)) return idx.quai; continue; }
+    if (o === 2){ if (!rejete(2)) return idx.quaiSortie; continue; }
     if (o > 1){
       const n = noeudParId(o);
-      if (!n || n.id === exclureId) continue;
+      if (!n || rejete(n.id)) continue;
       if (n.type !== "convoyeur") return n;
       if (!bande) bande = n;
     }
@@ -1921,7 +2137,9 @@ function relierConvoyeurs(){
       c.source = n ? n.id : 0;
     }
     if (!noeudParId(c.destination)){
-      const n = voisinNoeud(b, avant, c.id);
+      // Une bande d'une seule tuile a ses deux bouts au même endroit : le nœud
+      // qui l'alimente ne peut pas être aussi celui qu'elle sert.
+      const n = voisinNoeud(b, avant, c.id, c.chemin.length === 1 ? c.source : 0);
       c.destination = n ? n.id : 0;
     }
     if (!noeudParId(c.source) || !noeudParId(c.destination)) c.etat = "non_relie";
@@ -2477,6 +2695,7 @@ function finJournee(){
   avancerFormations();
   avancerRecherche();
   majTendance();
+  verifierDeblocages(true);       // la notoriété monte aussi toute seule
 
   // 9. Objectif
   verifierObjectif();
@@ -3220,6 +3439,101 @@ function accordsDe(traits){
   return ACCORDS.filter(a => v.includes(a.a) && v.includes(a.b));
 }
 
+/* ------------------------------------------------- Ce qui est débloqué
+   Presque tout le garde-manger est fermé au départ. Un ingrédient s'ouvre
+   parce que la maison s'est fait un nom, parce qu'elle a osé quelque chose, ou
+   parce qu'elle a déjà réussi. Une condition, une phrase : le joueur doit
+   toujours savoir quoi faire pour l'obtenir. */
+const MOT_TAG = {
+  piquant:["qui pique","qui piquent"],        sain:["légère","légères"],
+  terroir:["de terroir","de terroir"],        chic:["chic","chic"],
+  nomade:["à emporter","à emporter"],         classique:["classique","classiques"],
+  doux:["douce","douces"],                    monde:["venue d'ailleurs","venues d'ailleurs"],
+  farfelu:["farfelue","farfelues"],           gras:["bien grasse","bien grasses"],
+  sucre:["sucrée","sucrées"],                 enfance:["pour les enfants","pour les enfants"],
+  marin:["iodée","iodées"],                   fume:["fumée","fumées"],
+  acide:["acidulée","acidulées"],             fete:["de fête","de fête"],
+  insecte:["aux insectes","aux insectes"],    fermente:["fermentée","fermentées"],
+  hiver:["d'hiver","d'hiver"],                amer:["amère","amères"],
+  leger:["légère","légères"],                 rustique:["rustique","rustiques"]
+};
+
+function recettesSorties(){ return (etat.recherche && etat.recherche.recettes) || []; }
+function recettesAvecTag(tag){
+  return recettesSorties().filter(r => tagsDe(r.traits).has(tag)).length;
+}
+
+function optionDisponible(o){
+  if (mode().toutDebloque || (etat.recherche && etat.recherche.tout)) return true;
+  const d = o.debloc;
+  if (!d) return true;
+  if (d.age != null)       return etat.meta.age >= d.age;
+  if (d.notoriete != null) return etat.recherche.notoriete >= d.notoriete;
+  if (d.recettes != null)  return recettesSorties().length >= d.recettes;
+  if (d.note != null)      return recettesSorties().some(r => r.note >= d.note);
+  if (d.apres != null)     return recettesSorties().some(r => Object.values(r.traits).includes(d.apres));
+  if (d.tag != null)       return recettesAvecTag(d.tag) >= (d.n || 1);
+  return true;
+}
+
+/** Ce qu'il faut faire pour l'obtenir, en une phrase et avec l'état actuel. */
+function motDeblocage(o){
+  const d = o.debloc;
+  if (!d) return "";
+  if (d.age != null) return "à l'âge " + d.age;
+  if (d.notoriete != null)
+    return "quand la maison sera connue à " + d.notoriete + " sur 100 (" +
+           Math.round(etat.recherche.notoriete) + " aujourd'hui)";
+  if (d.recettes != null){
+    const f = recettesSorties().length;
+    return "après " + d.recettes + " " + pluriel(d.recettes,"recette") + " sortie" +
+           (d.recettes > 1 ? "s" : "") + " (" + f + " pour l'instant)";
+  }
+  if (d.note != null) return "quand une recette aura atteint " + d.note + " sur 100";
+  if (d.apres != null){
+    const a = optionRecette("gout", d.apres) || toutesOptions().find(x => x.id === d.apres);
+    return "après avoir essayé « " + (a ? a.nom : d.apres) + " »";
+  }
+  if (d.tag != null){
+    const n = d.n || 1, f = recettesAvecTag(d.tag);
+    const m = MOT_TAG[d.tag] || [d.tag, d.tag];
+    return "après " + n + " " + pluriel(n,"recette") + " " + (n > 1 ? m[1] : m[0]) +
+           " (" + f + " pour l'instant)";
+  }
+  return "";
+}
+
+function toutesOptions(){
+  const out = [];
+  for (const a of AXES_RECETTE) for (const o of a.options) out.push(o);
+  return out;
+}
+function optionsOuvertes(axe){ return axe.options.filter(optionDisponible); }
+function compteDebloque(){
+  const t = toutesOptions();
+  return { ouverts: t.filter(optionDisponible).length, total: t.length };
+}
+
+/** Compare le garde-manger d'avant et celui de maintenant, et annonce ce qui
+ *  vient de s'ouvrir. Appelé après chaque recette et chaque fin de semaine. */
+function verifierDeblocages(annoncer){
+  const R = etat.recherche;
+  if (!R) return [];
+  const dispo = toutesOptions().filter(optionDisponible);
+  const connus = R.connus || [];
+  const neufs = dispo.filter(o => !connus.includes(o.id));
+  R.connus = dispo.map(o => o.id);
+  if (annoncer && neufs.length){
+    const noms = neufs.slice(0,3).map(o => o.nom).join(", ") +
+                 (neufs.length > 3 ? " et " + (neufs.length-3) + " autres" : "");
+    notif("Le garde-manger s'agrandit",
+          neufs.length + " " + pluriel(neufs.length,"nouvel ingrédient","nouveaux ingrédients") +
+          " au labo : " + noms + ".", "ok");
+    son("valide");
+  }
+  return neufs;
+}
+
 function tendanceCourante(){
   return TENDANCES[(etat.recherche.tendance || 0) % TENDANCES.length];
 }
@@ -3245,10 +3559,11 @@ function rebutMoyenUsine(){
   return m.reduce((s,x) => s + (x.tauxRebut||0), 0) / m.length;
 }
 
-const COULEUR_GOUT = {
-  nature:"#e8c86a", paprika:"#d4552e", oignon_creme:"#e0d3a8", vinaigre:"#8fbf6a",
-  fromage:"#e8a83c", barbecue:"#a8492a", piment:"#c22f2f", truffe:"#5a4a63"
-};
+/** La couleur du sachet suit le goût : elle est déclarée avec l'ingrédient. */
+function couleurGout(id){
+  const o = optionRecette("gout", id);
+  return (o && o.couleur) || "#c9502e";
+}
 
 function grammageDe(traits){ return optionRecette("format", traits.format).grammage; }
 
@@ -3276,6 +3591,11 @@ function lancerEtude(nom, traits){
   if (bureauxDisponibles() < 1){
     notif("Pas de bureau", "Une recette se met au point dans un bureau d'études. Il faut en bâtir un.", "ko");
     parle("On ne va pas inventer une recette au milieu des friteuses, patron. Il nous faut un bureau.", 10000);
+    return false;
+  }
+  const ferme = optionsDe(traits).find(o => !optionDisponible(o));
+  if (ferme){
+    notif("Pas encore au garde-manger", "« " + ferme.nom + " » s'ouvre " + motDeblocage(ferme) + ".", "ko");
     return false;
   }
   const cout = coutEtude(traits);
@@ -3325,6 +3645,7 @@ function finaliserRecette(){
   reindexer();
 
   if (n.note >= 75) compter(etat.progression.compteurs, "recetteReussie", 1);
+  verifierDeblocages(true);
 
   notif("« " + r.nom + " » est prête", motNote(r.note) + " — " + euros(r.prixUnite) +
         " le sachet. Réglez une ensacheuse dessus pour la produire.", n.note >= 65 ? "ok" : "att");
@@ -3406,7 +3727,7 @@ function injecterRecettesJoueur(){
     const coutCuisson = optionRecette("cuisson", r.traits.cuisson).cout;
     const dureeCoupe = optionRecette("coupe", r.traits.coupe).duree || 1;
     const dureeCuisson = optionRecette("cuisson", r.traits.cuisson).duree || 1;
-    const coul = COULEUR_GOUT[r.traits.gout] || "#c9502e";
+    const coul = couleurGout(r.traits.gout);
 
     ITEMS[r.id] = {
       nom: r.nom, nomP: r.nom, court: r.nom, courtP: r.nom,
@@ -4011,7 +4332,10 @@ function ancreNoeud(n, depuis){
     }
     return best ? { x:best.x+0.5, y:best.y+0.5 } : null;
   }
-  return { x: n.x + (n.l||1)/2, y: n.y + (n.h||1)/2 };
+  // Le point du nœud le plus proche de la bande, pas son centre : un quai haut
+  // a son centre très loin du bout de bande, et le raccord partait de travers.
+  return { x: clamp(depuis.x + 0.5, n.x, n.x + (n.l||1)),
+           y: clamp(depuis.y + 0.5, n.y, n.y + (n.h||1)) };
 }
 
 /** Le chemin dessiné déborde d'une demi-tuile à chaque bout, vers ce à quoi la
@@ -4998,7 +5322,7 @@ function dessinerApercu(){
   }
   else if (vue.outil.type === "convoyeur"){
     const trace = vue.traceConvoyeur;
-    if (trace && trace.length > 1){
+    if (trace && trace.length >= 1){
       // La bande fantôme, dessinée comme la vraie : on voit tout de suite le
       // trajet qu'elle prendra pour contourner ce qui encombre.
       const bon = trace.every(t => occupant(u,t.x,t.y) === 0);
@@ -5795,10 +6119,7 @@ function validerTrace(){
   // On tolère un tracé construit par programme : on enlève les doublons.
   let tuiles = vue.traceConvoyeur;
   if (tuiles) tuiles = tuiles.filter((t,i) => i === 0 || t.x !== tuiles[i-1].x || t.y !== tuiles[i-1].y);
-  if (!tuiles || tuiles.length < 2){
-    if (tuiles) notif("Trop court", "Un convoyeur fait deux tuiles au minimum.", "att");
-    return false;
-  }
+  if (!tuiles || !tuiles.length) return false;
   const u = U();
   if (tuiles.some(t => occupant(u,t.x,t.y) !== 0)){
     notif("Chemin bouché", "Quelque chose s'est mis en travers.", "ko"); son("refus"); return false;
@@ -5811,7 +6132,11 @@ function validerTrace(){
 
   // Les deux bouts sont raccordés par le moteur : machine, caisse, quai — ou
   // un autre convoyeur, ce qui permet de bâtir un réseau par tronçons.
-  const c = creerConvoyeur(tuiles, 0, 0);
+  // On respecte ce que le joueur a désigné : le départ alimente, l'arrivée est
+  // servie. Un raccord qui ne tient pas est de toute façon défait juste après.
+  const c = creerConvoyeur(tuiles,
+    (vue.convDepart && vue.convDepart.noeud) ? vue.convDepart.noeud.id : 0,
+    (vue.convArrivee && vue.convArrivee.noeud) ? vue.convArrivee.noeud.id : 0);
   u.convoyeurs.push(c);
   for (const t of tuiles) u.grille[indexCase(u,t.x,t.y)] = c.id;
   depenser(mode().constructionGratuite ? 0 : cout, "investissement");
@@ -7561,7 +7886,25 @@ function SECTIONS_GUIDE(){
     "<p>Quand on pousse le mur, la cour recule devant lui : les bâtiments de ce côté-là suivent, ils ne "+
     "sont jamais avalés.</p>" },
 
+  { titre:"Le laboratoire", corps:
+    "<p>Une recette se compose sur <b>sept axes</b> : le goût, la coupe, la cuisson, la texture, le sel, "+
+    "la touche en plus et le sachet. Le garde-manger compte près de cent ingrédients, et presque tout "+
+    "est fermé au départ.</p>"+
+    "<p>Un ingrédient s'ouvre pour une raison, et le labo la dit toujours : parce que la maison s'est "+
+    "fait un nom, parce qu'elle a déjà sorti tant de recettes, parce qu'elle en a osé une d'un certain "+
+    "genre, ou parce qu'elle en a réussi une. Dépliez <b>Le garde-manger</b>, en bas de l'onglet Labo : "+
+    "tout ce qui reste à débloquer y est listé avec sa condition et où vous en êtes.</p>"+
+    "<p>Le plus important : <b>un ingrédient farfelu ne vaut rien tout seul</b>. La sardine, la barbe à "+
+    "papa, la fourmi citronnée notent bas si on les pose au hasard — et très haut si on les marie bien. "+
+    "La sardine au feu de bois, la tarte au citron avec de la poudre pétillante, le cassoulet en seau à "+
+    "partager : ce sont les meilleures notes de la partie, et il n'y a qu'en essayant qu'on les trouve.</p>"+
+    "<p>Le contremaître retient tous les accords déjà rencontrés : un ingrédient marqué d'un point vert "+
+    "va bien avec ce qui est déjà choisi. Les avis des clients pointent chacun une décision précise, et "+
+    "les pistes d'amélioration disent quoi changer la prochaine fois.</p>" },
+
   { titre:"Les convoyeurs", corps:
+    "<p>Une bande peut ne faire qu'<b>une seule tuile</b> : une case libre entre deux machines suffit "+
+    "à les relier, et le sens suit ce que vous avez cliqué — le départ alimente, l'arrivée est servie.</p>"+
     "<p>Un <b>premier clic</b> pose le départ — directement sur une machine, un bac, un quai ou une autre "+
     "bande pour s'y ancrer. On relâche, on promène la souris : le tracé se faufile tout seul entre ce qui "+
     "encombre le passage, et son prix s'affiche. Un <b>second clic</b> pose. L'outil reste actif pour "+
@@ -7862,6 +8205,10 @@ function majPanneauDev(){
   bt(gArgent, "Caisse à zéro", () => { etat.finances.solde = 0; });
   bt(gArgent, "Remplir le quai", remplirStocks);
   bt(gArgent, "Vider le quai", () => { U().stocks = {}; });
+  bt(gArgent, "Ouvrir le garde-manger", () => {
+    etat.recherche.tout = true; verifierDeblocages(false);
+    notif("Labo ouvert", "Tous les ingrédients sont accessibles.", "ok"); majPanneau();
+  });
 
   const gEquipe = groupe("Équipe");
   bt(gEquipe, "Embaucher 3 personnes", () => { for (let i=0;i<3;i++) embaucher(creerCandidat()); });
@@ -8299,8 +8646,18 @@ let brouillon = null;   // la recette en cours de composition, jamais sauvegard�
 
 function brouillonParDefaut(){
   const t = {};
-  for (const a of AXES_RECETTE) t[a.cle] = a.options[0].id;
+  for (const a of AXES_RECETTE) t[a.cle] = (optionsOuvertes(a)[0] || a.options[0]).id;
   return { nom:"", traits:t };
+}
+
+/** Une composition ne doit jamais garder un ingrédient qui s'est refermé
+ *  (chargement d'une vieille partie, changement de mode). */
+function assainirBrouillon(){
+  for (const a of AXES_RECETTE){
+    const o = optionRecette(a.cle, brouillon.traits[a.cle]);
+    if (!o || !optionDisponible(o))
+      brouillon.traits[a.cle] = (optionsOuvertes(a)[0] || a.options[0]).id;
+  }
 }
 
 /** L'onglet Labo : on compose en haut, on lit les retours en dessous. */
@@ -8378,13 +8735,18 @@ function majComposer(){
   champ.oninput = () => { brouillon.nom = champ.value; };
   v.appendChild(champ);
 
+  assainirBrouillon();
+  const fermes = [];
   for (const axe of AXES_RECETTE){
     const bloc = document.createElement("div");
     bloc.className = "rechAxe";
     bloc.innerHTML = '<div class="rechAxeNom"></div><div class="rechOpts"></div>';
-    bloc.querySelector(".rechAxeNom").textContent = axe.nom;
+    const ouvertes = optionsOuvertes(axe);
+    const nFermes = axe.options.length - ouvertes.length;
+    bloc.querySelector(".rechAxeNom").textContent =
+      axe.nom + (nFermes ? "   ·   " + nFermes + " à découvrir" : "");
     const zo = bloc.querySelector(".rechOpts");
-    for (const o of axe.options){
+    for (const o of ouvertes){
       const b = document.createElement("button");
       b.className = "rechOpt" + (brouillon.traits[axe.cle] === o.id ? " actif" : "");
       b.innerHTML = '<span class="roNom"></span>';
@@ -8394,6 +8756,7 @@ function majComposer(){
       b.onclick = () => { brouillon.traits[axe.cle] = o.id; majComposer(); };
       zo.appendChild(b);
     }
+    for (const o of axe.options) if (!optionDisponible(o)) fermes.push({ axe, o });
     v.appendChild(bloc);
   }
 
@@ -8410,6 +8773,28 @@ function majComposer(){
   // L'avis du contremaître : ce qu'il sait, pas la note.
   const flair = avisContremaitreRecette(brouillon.traits);
   if (flair) v.appendChild(elem('<div class="cAvis" style="margin-top:10px"></div>')).textContent = "« " + flair + " »";
+
+  // Le garde-manger fermé : ce qui existe, et ce qu'il faut faire pour l'avoir.
+  if (fermes.length){
+    const det = document.createElement("details");
+    det.className = "rechFermes";
+    det.open = !!vue.labFermesOuvert;
+    det.ontoggle = () => { vue.labFermesOuvert = det.open; };
+    const som = document.createElement("summary");
+    const c2 = compteDebloque();
+    som.textContent = "Le garde-manger — " + c2.ouverts + " ingrédients sur " + c2.total +
+                      ", " + fermes.length + " à débloquer";
+    det.appendChild(som);
+    for (const f of fermes){
+      const li = document.createElement("div");
+      li.className = "rechFerme";
+      li.innerHTML = '<span class="rfNom"></span><span class="rfCond"></span>';
+      li.querySelector(".rfNom").textContent = f.o.nom;
+      li.querySelector(".rfCond").textContent = motDeblocage(f.o);
+      det.appendChild(li);
+    }
+    v.appendChild(det);
+  }
 
   const b = bouton("Lancer l'étude — " + euros(cout), () => {
     if (lancerEtude(brouillon.nom.trim() || nomParDefaut(brouillon.traits), brouillon.traits)){
@@ -8779,6 +9164,19 @@ function migrer(o){
     }
     o.version = 2;
   }
+  if (o.version < 3){
+    // Version 3 : le labo passe de cinq axes à sept. Une recette d'avant n'a
+    // ni texture ni touche : on lui met les valeurs d'origine, celles qui ne
+    // changent rien à ce qu'elle était.
+    const r = o.recherche;
+    if (r){
+      const combler = t => { for (const a of AXES_RECETTE) if (!t[a.cle]) t[a.cle] = a.options[0].id; };
+      for (const x of (r.recettes || [])) if (x && x.traits) combler(x.traits);
+      if (r.enCours && r.enCours.traits) combler(r.enCours.traits);
+      r.connus = null;             // recalculé au chargement
+    }
+    o.version = 3;
+  }
   return o;
 }
 
@@ -8816,6 +9214,7 @@ function appliquer(o){
   etat.recherche = Object.assign({ recettes:[], enCours:null, notoriete:0,
                                    tendance:0, tendanceSemaine:0, prochain:1 }, etat.recherche || {});
   if (!Array.isArray(etat.recherche.recettes)) etat.recherche.recettes = [];
+  if (!Array.isArray(etat.recherche.connus)) verifierDeblocages(false);
   injecterRecettesJoueur();      // les recettes maison ne vivent pas dans les tables constantes
   etat.meta.mode = etat.meta.mode || "normal";
   for (const s of etat.stats.historiqueSemaines) s.depensesParMotif = s.depensesParMotif || {};

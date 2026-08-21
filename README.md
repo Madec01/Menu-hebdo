@@ -65,7 +65,7 @@ sachets se comptent à l'unité.
   première marchandise reçue, ou à la main.
 - **Filtre de convoyeur** : quand un poste sort deux choses — la friteuse et son
   rebut — on dit à chaque bande ce qu'elle emporte.
-- Convoyeurs en **réseau** : les bandes se branchent les unes aux autres, on
+- Convoyeurs en **réseau**, d'**une seule tuile ou de cinquante** : les bandes se branchent les unes aux autres, on
   bâtit un trajet par tronçons et plusieurs bandes peuvent converger vers un
   même poste. Elles se dessinent jointives — une bande touche sa voisine et la
   machine qu'elle alimente, la marchandise circule sans rupture. Latence,
@@ -113,6 +113,17 @@ sachets se comptent à l'unité.
 - **Des outils de développement** (<kbd>F2</kbd>) : sauter à n'importe quel âge,
   changer de mode, remplir le quai, user ou réviser le matériel, avancer d'une
   semaine, et lancer les **auto-vérifications** de la partie.
+- **Un garde-manger de 97 ingrédients** répartis sur **sept axes** (le goût, la
+  coupe, la cuisson, la texture, le sel, la touche en plus, le sachet) et **91
+  accords** entre eux. Presque tout est fermé au départ : un ingrédient s'ouvre
+  parce que la maison s'est fait un nom, parce qu'elle a sorti tant de recettes,
+  parce qu'elle en a osé une d'un certain genre, ou parce qu'elle en a réussi
+  une. Le labo liste en permanence ce qui reste à débloquer, avec la condition
+  et où on en est — jamais de verrou muet. Et le farfelu n'est pas une
+  décoration : la sardine, la barbe à papa ou la fourmi citronnée notent bas
+  posées au hasard et très haut bien mariées (la sardine au feu de bois, la
+  tarte au citron avec de la poudre pétillante, le cassoulet en seau à
+  partager). C'est un pari, et on ne le gagne qu'en essayant.
 - **La recherche** (âge 4), dans l'onglet **Labo** : on compose une recette maison en mélangeant cinq
   axes (le goût, la coupe, la cuisson, le sel, le format du sachet). L'étude
   coûte et prend des jours. À la sortie, le public tranche : une note, des avis
@@ -205,11 +216,12 @@ réelles** à la vitesse ×1.
 
 ## Tests
 
-`node tests/suite.mjs` pilote le jeu dans un vrai navigateur : seize cas qui
+`node tests/suite.mjs` pilote le jeu dans un vrai navigateur : dix-huit cas qui
 couvrent le didacticiel, la chaîne, la conservation de la matière, le réseau de
 convoyeurs, la qualité, les modes, les cinq âges, les auto-vérifications, la
 sauvegarde, le rythme, la performance, la recherche, le raccord entre bandes,
-les quais et rangements, les bâtiments d'équipe, et la cour. Voir [`tests/README.md`](tests/README.md).
+les quais et rangements, les bâtiments d'équipe, la cour, le garde-manger du
+labo et les raccords courts. Voir [`tests/README.md`](tests/README.md).
 
 ## Organisation du code
 

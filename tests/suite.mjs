@@ -371,14 +371,20 @@ cas("recherche-age4", async (nav) => {
   const { page, jeu, sim, erreurs } = await contexte(nav);
   const v = verif();
   await jeu("sauterAge(4); etat.finances.solde = 200000; remplirStocks();");
-  const sansBureau = await jeu(`lancerEtude("Essai sans bureau", { gout:'nature', coupe:'ondulee', cuisson:'chaudron', sel:'normal', format:'familial' })`);
+  const sansBureau = await jeu(`lancerEtude("Essai sans bureau", { gout:'nature', coupe:'ondulee', cuisson:'friture', sel:'normal', texture:'standard', touche:'aucune', format:'familial' })`);
   v("sans bureau, aucune étude ne démarre", sansBureau === false, String(sansBureau));
   await jeu("poserMachine('bureau',-4,2,0);");   // dans la cour, à l'ouest
+  // Un ingrédient encore fermé se refuse, même avec un bureau et de l'argent.
+  const verrou = await jeu(`lancerEtude("Trop tôt", { gout:'truffe', coupe:'ondulee', cuisson:'friture', sel:'normal', texture:'standard', touche:'aucune', format:'familial' })`);
+  v("un ingrédient verrouillé bloque l'étude", verrou === false, String(verrou));
+  await jeu("etat.recherche.tout = true; verifierDeblocages(false);");
 
   // La note doit dépendre de la composition, pas du hasard seul.
   const notes = await jeu(`(() => {
-    const bonne = { gout:'truffe', coupe:'gaufrette', cuisson:'huile_olive', sel:'normal', format:'familial' };
-    const mauvaise = { gout:'truffe', coupe:'allumette', cuisson:'four', sel:'bien', format:'maxi' };
+    const bonne = { gout:'truffe', coupe:'gaufrette', cuisson:'huile_olive', sel:'normal',
+                    texture:'double', touche:'aucune', format:'familial' };
+    const mauvaise = { gout:'truffe', coupe:'allumette', cuisson:'four', sel:'bien',
+                       texture:'standard', touche:'petillante', format:'maxi' };
     return { bonne: noteRecette(bonne,0).note, mauvaise: noteRecette(mauvaise,0).note,
              accordsB: accordsDe(bonne).length, accordsM: accordsDe(mauvaise).filter(a=>a.delta<0).length };
   })()`);
@@ -389,7 +395,8 @@ cas("recherche-age4", async (nav) => {
 
   // Une étude coûte, prend du temps, puis sort.
   const etude = await jeu(`(() => {
-    const t = { gout:'oignon_creme', coupe:'ondulee', cuisson:'chaudron', sel:'normal', format:'familial' };
+    const t = { gout:'oignon_creme', coupe:'ondulee', cuisson:'chaudron', sel:'normal',
+                texture:'craquante', touche:'herbes', format:'familial' };
     const avant = etat.finances.solde;
     lancerEtude("Ondulée du Bassin", t);
     return { cout: avant - etat.finances.solde, jours: etat.recherche.enCours.jours };
@@ -770,6 +777,165 @@ cas("cour-et-murs", async (nav) => {
   for (const t of inv) v("invariant : " + t.nom, t.ok, t.detail);
   await page.close();
   return { echecs: v.echecs.concat(erreurs), note: "cour, portes, murs mobiles" };
+});
+
+cas("garde-manger", async (nav) => {
+  const { page, jeu, erreurs } = await contexte(nav);
+  const v = verif();
+
+  // La table elle-même doit tenir debout : c'est de la donnée, elle se vérifie.
+  const t = await jeu(`(() => {
+    const tous = toutesOptions();
+    const ids = tous.map(o => o.id);
+    const doublons = ids.filter((x,i) => ids.indexOf(x) !== i);
+    const parAxe = AXES_RECETTE.map(a => ({ nom:a.nom, n:a.options.length,
+      premiereOuverte: !a.options[0].debloc }));
+    const accordsFaux = ACCORDS.filter(a => !ids.includes(a.a) && !TAGS.has(a.a) ||
+                                            !ids.includes(a.b) && !TAGS.has(a.b))
+                               .map(a => a.a + "+" + a.b);
+    const sansCouleur = AXES_RECETTE[0].options.filter(o => !o.couleur).map(o => o.id);
+    const apresInconnu = tous.filter(o => o.debloc && o.debloc.apres && !ids.includes(o.debloc.apres))
+                             .map(o => o.id);
+    const tagInconnu = tous.filter(o => o.debloc && o.debloc.tag &&
+                                        !tous.some(x => (x.tags||[]).includes(o.debloc.tag)))
+                           .map(o => o.id);
+    const sansMot = tous.filter(o => o.debloc && !motDeblocage(o)).map(o => o.id);
+    return { total: tous.length, doublons, parAxe, accords: ACCORDS.length, accordsFaux,
+             sansCouleur, apresInconnu, tagInconnu, sansMot };
+  })()`.replace("TAGS.has", "new Set(toutesOptions().flatMap(o=>o.tags||[])).has"));
+  v.aumoins("le garde-manger est vaste", t.total, 80);
+  v.egal("aucun identifiant en double", t.doublons.length, 0, t.doublons.join(", "));
+  v.aumoins("sept axes de composition", t.parAxe.length, 7);
+  v("chaque axe a une option ouverte d'entrée de jeu",
+    t.parAxe.every(a => a.premiereOuverte), JSON.stringify(t.parAxe.filter(a=>!a.premiereOuverte)));
+  v.aumoins("beaucoup d'accords", t.accords, 80);
+  v.egal("tous les accords portent sur des ingrédients réels", t.accordsFaux.length, 0, t.accordsFaux.join(", "));
+  v.egal("chaque goût a sa couleur de sachet", t.sansCouleur.length, 0, t.sansCouleur.join(", "));
+  v.egal("les conditions « après » visent un ingrédient réel", t.apresInconnu.length, 0, t.apresInconnu.join(", "));
+  v.egal("les conditions par tag visent un tag réel", t.tagInconnu.length, 0, t.tagInconnu.join(", "));
+  v.egal("chaque verrou sait dire comment l'ouvrir", t.sansMot.length, 0, t.sansMot.join(", "));
+
+  // Au départ, très peu est ouvert.
+  const d0 = await jeu("compteDebloque()");
+  v("on commence avec une petite poignée", d0.ouverts < d0.total * 0.35,
+    d0.ouverts + " sur " + d0.total);
+
+  // Chaque condition s'ouvre pour la bonne raison.
+  const c = await jeu(`(() => {
+    sauterAge(4); etat.finances.solde = 400000;
+    const R = etat.recherche;
+    const dispo = id => optionDisponible(toutesOptions().find(o => o.id === id));
+    const faux = { truffe: dispo('truffe'), fleur: dispo('fleur'), curry: dispo('curry'),
+                   tandoori: dispo('tandoori'), or: dispo('or_comestible') };
+    // deux recettes sorties, dont une qui pique
+    R.recettes.push({ note:60, traits:{ gout:'paprika', coupe:'fine', cuisson:'friture',
+                                        sel:'normal', texture:'standard', touche:'aucune', format:'familial' } });
+    const apres1 = { fleur: dispo('fleur'), curry: dispo('curry') };
+    R.recettes.push({ note:60, traits:{ gout:'curry', coupe:'fine', cuisson:'friture',
+                                        sel:'normal', texture:'standard', touche:'aucune', format:'familial' } });
+    const apres2 = { fleur: dispo('fleur'), tandoori: dispo('tandoori') };
+    R.notoriete = 35;
+    const apresNotoriete = { truffe: dispo('truffe'), or: dispo('or_comestible') };
+    R.recettes.push({ note:88, traits:{ gout:'truffe', coupe:'fine', cuisson:'friture',
+                                        sel:'normal', texture:'standard', touche:'aucune', format:'familial' } });
+    const apresNote = { or: dispo('or_comestible') };
+    return { faux, apres1, apres2, apresNotoriete, apresNote };
+  })()`);
+  v("rien de tout ça n'est ouvert au départ",
+    !c.faux.truffe && !c.faux.fleur && !c.faux.curry && !c.faux.tandoori && !c.faux.or);
+  v("une recette qui pique ouvre le curry", c.apres1.curry);
+  v("mais pas encore la fleur de sel, qui en demande deux", !c.apres1.fleur);
+  v("la deuxième recette ouvre la fleur de sel", c.apres2.fleur);
+  v("avoir essayé le curry ouvre le tandoori", c.apres2.tandoori);
+  v("la notoriété ouvre la truffe", c.apresNotoriete.truffe);
+  v("mais l'or attend une recette à 85", !c.apresNotoriete.or && c.apresNote.or);
+
+  // Ce qui vient de s'ouvrir est annoncé, et une seule fois.
+  const n = await jeu(`(() => {
+    verifierDeblocages(false);
+    const rien = verifierDeblocages(false).length;
+    etat.recherche.notoriete = 75;
+    const neufs = verifierDeblocages(false).map(o => o.id);
+    const encore = verifierDeblocages(false).length;
+    return { rien, neufs, encore };
+  })()`);
+  v.egal("rien de neuf quand rien ne change", n.rien, 0);
+  v("un palier de notoriété ouvre des ingrédients", n.neufs.length > 0, n.neufs.join(", "));
+  v.egal("on ne l'annonce pas deux fois", n.encore, 0);
+
+  // Le bac à sable ouvre tout, et une composition reste toujours valide.
+  const bac = await jeu(`(() => {
+    etat.meta.mode = 'bacASable'; etat.recherche.tout = false;
+    const c = compteDebloque();
+    brouillon = brouillonParDefaut();
+    for (const a of AXES_RECETTE) brouillon.traits[a.cle] = a.options[a.options.length-1].id;
+    etat.meta.mode = 'normal'; etat.recherche.tout = false; etat.recherche.notoriete = 0;
+    etat.recherche.recettes = [];
+    assainirBrouillon();
+    const reste = optionsDe(brouillon.traits).filter(o => !optionDisponible(o)).length;
+    return { tout: c.ouverts === c.total, reste, complet: optionsDe(brouillon.traits).length };
+  })()`);
+  v("le bac à sable ouvre tout le garde-manger", bac.tout);
+  v.egal("un ingrédient refermé est remplacé, pas laissé en place", bac.reste, 0);
+  v.egal("la composition reste complète", bac.complet, 7);
+
+  await page.close();
+  return { echecs: v.echecs.concat(erreurs), note: d0.total + " ingrédients, " + t.accords + " accords" };
+});
+
+cas("bande-courte-et-quai", async (nav) => {
+  const { page, jeu, erreurs } = await contexte(nav);
+  const v = verif();
+
+  // Le tracé dessiné doit toucher le quai, pas partir de travers : un quai haut
+  // a son centre loin du bout de bande, et c'est là que ça se voyait.
+  const q = await jeu(`(() => {
+    sauterAge(2); etat.finances.solde = 300000; remplirStocks();
+    poserMachine('laveuse',5,3,0);
+    const seg = (x1,y1,x2,y2)=>{const p=[];const dx=Math.sign(x2-x1),dy=Math.sign(y2-y1);
+      let x=x1,y=y1;p.push({x,y});while(x!==x2||y!==y2){if(x!==x2)x+=dx;else y+=dy;p.push({x,y});}return p;};
+    vue.traceConvoyeur = seg(2,4,4,4); validerTrace(); vue.traceConvoyeur = null;
+    const c = U().convoyeurs[0], u = U(), r = cheminRendu(c);
+    return { bordQuai: u.quaiEntree.x + u.quaiEntree.l, debut: r[0], fin: r[r.length-1],
+             hautQuai: u.quaiEntree.h, source: c.source, dest: !!noeudParId(c.destination) };
+  })()`);
+  v.egal("la bande part bien du quai", q.source, 1);
+  v("elle touche le bord du quai", Math.abs(q.debut.x - q.bordQuai) < 0.06,
+    "x = " + q.debut.x.toFixed(2) + " pour un mur à " + q.bordQuai);
+  v("et elle reste sur sa ligne", Math.abs(q.debut.y - 4.5) < 0.06, "y = " + q.debut.y.toFixed(2));
+  v("elle touche la machine à l'autre bout", Math.abs(q.fin.x - 5) < 0.06, "x = " + q.fin.x.toFixed(2));
+
+  // Une seule tuile entre deux machines : ça doit passer, et dans le bon sens.
+  const c1 = await jeu(`(() => {
+    poserMachine('trancheuse',8,3,0);
+    const u = U();
+    const lav = u.machines.find(m=>m.type==='laveuse'), tra = u.machines.find(m=>m.type==='trancheuse');
+    vue.convDepart = { x:7, y:4, noeud: lav };
+    vue.convArrivee = { x:7, y:4, noeud: tra };
+    vue.traceConvoyeur = [{x:7,y:4}];
+    const pose = validerTrace();
+    vue.traceConvoyeur = null; vue.convDepart = null; vue.convArrivee = null;
+    const c = u.convoyeurs[u.convoyeurs.length-1];
+    return { pose, tuiles: c.chemin.length, etat: c.etat,
+             src: nomNoeud(noeudParId(c.source)), dst: nomNoeud(noeudParId(c.destination)),
+             rendu: cheminRendu(c).length };
+  })()`);
+  v("une bande d'une seule tuile se pose", c1.pose === true && c1.tuiles === 1);
+  v.egal("elle prend à la laveuse", c1.src, "Laveuse-éplucheuse");
+  v.egal("et donne à la trancheuse", c1.dst, "Trancheuse");
+  v("elle est reliée des deux côtés", c1.etat !== "non_relie", c1.etat);
+  v.aumoins("elle se dessine bien jusqu'aux deux machines", c1.rendu, 3);
+
+  // Et la matière passe vraiment par ce raccord court.
+  await jeu("acheter('pdt_brutes',2000); for(let i=0;i<3;i++) embaucher(creerCandidat());");
+  await jeu("for (let t=0;t<CONFIG.ticksParJour*4;t++) simTick(); document.querySelector('#ecranVendredi')?.classList.remove('visible');");
+  const prod = await jeu("Math.round(etat.progression.produits.rondelles||0)");
+  v.aumoins("la matière traverse la bande courte", prod, 100);
+
+  const inv = await jeu("verifierPartie()");
+  for (const t of inv) v("invariant : " + t.nom, t.ok, t.detail);
+  await page.close();
+  return { echecs: v.echecs.concat(erreurs), note: prod + " kg via une bande d'une tuile" };
 });
 
 /* ============================================================== Exécution ==*/

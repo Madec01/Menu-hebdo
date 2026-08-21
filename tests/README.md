@@ -31,6 +31,8 @@ La suite sort en code 1 si un cas échoue.
 | `quais-et-rangement` | deux quais, chaque marchandise dans le bon, bac dédié et filtres de bande |
 | `batiments-et-equipe` | la salle de pause remet debout, la formation forme, la prime remonte le moral |
 | `cour-et-murs` | machines dedans, bâtiments dehors, sortie par les portes, mur qui pousse la cour |
+| `garde-manger` | la table du labo se tient, et chaque verrou s'ouvre pour la bonne raison |
+| `bande-courte-et-quai` | une bande touche le quai, et une seule tuile suffit à relier deux machines |
 
 ## Les invariants, aussi dans le jeu
 
