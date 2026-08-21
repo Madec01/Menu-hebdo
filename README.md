@@ -123,8 +123,12 @@ sachets se comptent à l'unité.
   les découvre en essayant, et le contremaître s'en souvient. Une **mode du
   marché** tourne toutes les six semaines.
 - **Une cour tout autour de l'atelier** : le terrain déborde les murs d'une
-  bande de cinq tuiles — enrobé, places de stationnement, voie camion vers
-  chaque quai, herbe et clôture. Les machines et les convoyeurs restent à
+  bande de cinq tuiles, et c'est de la nature — pelouse tondue, arbres vus du
+  dessus, haie le long de la clôture, allée de gravier au pied des murs. Le
+  seul enrobé est celui qui sert : le parvis de chaque quai et la voie que
+  prennent les camions jusqu'au portail. Le décor est tiré d'un bruit
+  déterministe, calculé une fois dans une image, et refait seulement quand la
+  cour change — rien n'est dessiné par image. Les machines et les convoyeurs restent à
   l'intérieur ; **les bâtiments se posent dehors, et seulement dehors**. Le mur
   est la frontière, et le jeu explique son refus au lieu de le subir. L'atelier
   a **quatre portes**, une par façade : les ouvriers ne traversent pas les

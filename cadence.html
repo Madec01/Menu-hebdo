@@ -3535,67 +3535,176 @@ function majCacheSol(){
   }
 }
 
-/** La cour : le bitume, les places de parking, la pelouse des coins et la
- *  clôture. Rien n'y bouge, donc tout tient dans une image calculée une fois. */
+/** La cour : de l'herbe, des arbres, une haie le long de la clôture, et juste
+ *  ce qu'il faut d'enrobé — la voie des camions et le parvis des quais. Rien
+ *  n'y bouge : tout tient dans une image, refaite seulement quand la cour
+ *  change. Le décor est tiré de bruit(), donc identique d'une fois sur l'autre. */
 let cacheCour = null, cacheCourCle = "";
 function majCacheCour(){
   const u = U(), c = profondeurCour(u), T = CONFIG.tuile;
   const L = u.largeur + 2*c, H = u.hauteur + 2*c;
-  const cle = L + "x" + H + ":" + u.quaiEntree.y + "," + u.quaiEntree.h + ":" + u.quaiSortie.y;
+  const bats = u.machines.filter(m => (MACHINES[m.type]||{}).batiment);
+  const cle = L + "x" + H + ":" + u.quaiEntree.y + "," + u.quaiEntree.h + ":" + u.quaiSortie.y +
+              ":" + bats.map(m => m.x + "," + m.y + "," + m.l + "," + m.h).join(";");
   if (cacheCour && cle === cacheCourCle) return;
   cacheCourCle = cle;
   if (!cacheCour) cacheCour = document.createElement("canvas");
   cacheCour.width = L*T; cacheCour.height = H*T;
   const g = cacheCour.getContext("2d");
-  g.clearRect(0,0,cacheCour.width,cacheCour.height);
+  // repère : (0,0) du monde tombe en (c*T, c*T) dans l'image
+  const px = v => (v + c)*T, py = v => (v + c)*T;
 
-  // herbe rase sur les bords du terrain
-  g.fillStyle = "#343a2d";
+  /* --- la pelouse ------------------------------------------------------- */
+  g.fillStyle = "#3c4a30";
   g.fillRect(0,0,cacheCour.width,cacheCour.height);
-  for (let i=0;i<Math.round(L*H*0.6);i++){
-    const x = Math.random()*cacheCour.width, y = Math.random()*cacheCour.height;
-    g.fillStyle = Math.random() < 0.5 ? "rgba(104,120,78,.28)" : "rgba(0,0,0,.18)";
+  for (let i=0;i<Math.round(L*H*1.1);i++){
+    const a = bruit(i*2.1), b2 = bruit(i*3.7+11);
+    const gx = a*cacheCour.width, gy = b2*cacheCour.height;
+    g.fillStyle = bruit(i*5.3) < 0.5 ? "rgba(118,142,80,.22)" : "rgba(24,34,18,.22)";
     g.beginPath();
-    g.ellipse(x, y, 3+Math.random()*14, 2+Math.random()*7, Math.random()*3, 0, 7);
+    g.ellipse(gx, gy, 4+bruit(i*7.9)*16, 3+bruit(i*11.3)*8, bruit(i*13.1)*3, 0, 7);
     g.fill();
   }
-  // l'enrobé : toute la cour sauf une bande d'herbe le long de la clôture
-  const b = c - 0.8;
-  g.fillStyle = "#494d54";
-  g.fillRect((c-b)*T, (c-b)*T, (u.largeur+2*b)*T, (u.hauteur+2*b)*T);
-  for (let i=0;i<Math.round(L*H*0.45);i++){
-    const x = ((c-b) + Math.random()*(u.largeur+2*b))*T, y = ((c-b) + Math.random()*(u.hauteur+2*b))*T;
-    g.fillStyle = Math.random() < 0.6 ? "rgba(0,0,0,.055)" : "rgba(255,255,255,.03)";
-    g.beginPath(); g.ellipse(x,y, 3+Math.random()*13, 2+Math.random()*5, Math.random()*3, 0, 7); g.fill();
+  // bandes de tonte, très légères
+  g.fillStyle = "rgba(255,255,255,.016)";
+  for (let y=0; y<H; y+=2) g.fillRect(0, y*T, cacheCour.width, T);
+
+  /* --- l'enrobé : le parvis de chaque quai et sa voie jusqu'au portail --- */
+  const voie = (qx, qy, qh, versOuest) => {
+    const cy2 = qy + qh/2, prof = 2.0, larg = 2.4;
+    const bx = versOuest ? -prof : u.largeur;
+    g.fillStyle = "#41454c";
+    g.fillRect(px(bx), py(qy-0.4), prof*T, (qh+0.8)*T);              // le parvis
+    g.fillRect(versOuest ? px(-c) : px(u.largeur+prof), py(cy2-larg/2),
+               (c-prof)*T, larg*T);                                   // la voie
+    // le grain de l'enrobé, sinon la dalle a l'air d'un aplat oublié
+    for (let i=0;i<Math.round((prof*qh + (c-prof)*larg)*10);i++){
+      const nn = i + (versOuest ? 0 : 500);
+      const sx = bruit(nn*1.7) < 0.62
+        ? px(bx + bruit(nn*2.3)*prof)
+        : (versOuest ? px(-c + bruit(nn*2.3)*(c-prof)) : px(u.largeur+prof + bruit(nn*2.3)*(c-prof)));
+      const sy2 = bruit(nn*1.7) < 0.62
+        ? py(qy-0.4 + bruit(nn*3.1)*(qh+0.8))
+        : py(cy2-larg/2 + bruit(nn*3.1)*larg);
+      g.fillStyle = bruit(nn*5.3) < 0.55 ? "rgba(0,0,0,.10)" : "rgba(255,255,255,.035)";
+      g.beginPath();
+      g.ellipse(sx, sy2, 2+bruit(nn*6.1)*9, 1.5+bruit(nn*7.7)*4, bruit(nn*8.3)*3, 0, 7);
+      g.fill();
+    }
+    // bordure claire : on voit où finit l'enrobé
+    g.strokeStyle = "rgba(210,214,220,.13)"; g.lineWidth = 2;
+    g.strokeRect(px(bx)+1, py(qy-0.4)+1, prof*T-2, (qh+0.8)*T-2);
+    g.strokeStyle = "rgba(226,182,44,.32)"; g.lineWidth = 2.5;
+    g.setLineDash([13,11]);
+    g.beginPath();
+    g.moveTo(px(versOuest ? -c+0.3 : u.largeur+0.3), py(cy2));
+    g.lineTo(px(versOuest ? -0.3 : u.largeur+c-0.3), py(cy2));
+    g.stroke();
+    g.setLineDash([]);
+  };
+  voie(0, u.quaiEntree.y, u.quaiEntree.h, true);
+  voie(u.largeur, u.quaiSortie.y, u.quaiSortie.h, false);
+
+  /* --- l'allée de gravier qui fait le tour des murs --------------------- */
+  const al = 1.15;
+  g.fillStyle = "#6d6a5e";
+  g.fillRect(px(-al), py(-al), (u.largeur+2*al)*T, (u.hauteur+2*al)*T);
+  g.clearRect(px(0), py(0), u.largeur*T, u.hauteur*T);
+  g.fillStyle = "#3c4a30";
+  g.fillRect(px(0), py(0), u.largeur*T, u.hauteur*T);   // sous la dalle, peu importe
+  for (let i=0;i<Math.round((u.largeur+u.hauteur)*7);i++){
+    const t2 = bruit(i*1.7), bord = Math.floor(bruit(i*2.9)*4);
+    const gx = bord < 2 ? px(-al + t2*(u.largeur+2*al)) : (bord === 2 ? px(-al*bruit(i*3.3)) : px(u.largeur + al*bruit(i*3.3)));
+    const gy = bord < 2 ? (bord ? py(u.hauteur + al*bruit(i*4.1)) : py(-al*bruit(i*4.1))) : py(-al + t2*(u.hauteur+2*al));
+    g.fillStyle = bruit(i*5.9) < 0.5 ? "rgba(255,255,255,.05)" : "rgba(0,0,0,.07)";
+    g.beginPath(); g.ellipse(gx, gy, 2+bruit(i*6.7)*4, 1.5+bruit(i*7.3)*3, 0, 0, 7); g.fill();
   }
-  // le pied des murs, plus sombre : l'atelier pose son ombre sur la cour
-  const om = g.createLinearGradient(0, (c-1.4)*T, 0, c*T);
-  om.addColorStop(0,"rgba(0,0,0,0)"); om.addColorStop(1,"rgba(0,0,0,.30)");
-  g.fillStyle = om; g.fillRect((c-1.4)*T, (c-1.4)*T, (u.largeur+2.8)*T, 1.4*T);
-  g.fillStyle = "rgba(0,0,0,.16)";
-  g.fillRect((c-1.4)*T, (c+u.hauteur)*T, (u.largeur+2.8)*T, 1.4*T);
-  g.fillRect((c-1.4)*T, (c-1.4)*T, 1.4*T, (u.hauteur+2.8)*T);
-  g.fillRect((c+u.largeur)*T, (c-1.4)*T, 1.4*T, (u.hauteur+2.8)*T);
-  // places de stationnement au nord-ouest, et la voie des camions vers le quai
-  g.strokeStyle = "rgba(226,226,226,.22)"; g.lineWidth = 2;
-  for (let k=0; k<6; k++){
-    const x = (c + 1 + k*2.2)*T;
-    g.beginPath(); g.moveTo(x, (c-b+0.4)*T); g.lineTo(x, (c-b+2.3)*T); g.stroke();
+
+  /* --- ce qui est déjà occupé : on n'y plante rien ---------------------- */
+  const pris = (x,y,r) => {
+    if (x > -al-0.5 && x < u.largeur+al+0.5 && y > -al-0.5 && y < u.hauteur+al+0.5) return true;
+    for (const b of bats)
+      if (x > b.x-r-0.4 && x < b.x+b.l+r+0.4 && y > b.y-r-0.4 && y < b.y+b.h+r+0.4) return true;
+    const dansVoie = (qy,qh,ouest) => y > qy-1.6 && y < qy+qh+1.6 && (ouest ? x < 0 : x > u.largeur);
+    if (dansVoie(u.quaiEntree.y, u.quaiEntree.h, true)) return true;
+    if (dansVoie(u.quaiSortie.y, u.quaiSortie.h, false)) return true;
+    return false;
+  };
+
+  /* --- la haie, le long de la clôture ----------------------------------- */
+  const haie = (x,y,i) => {
+    for (let k=0;k<3;k++){
+      const rr = (0.30 + bruit(i*3.1+k)*0.16)*T;
+      g.fillStyle = k === 0 ? "rgba(0,0,0,.28)" : (k === 1 ? "#2f4326" : "#3d5730");
+      g.beginPath();
+      g.ellipse(px(x)+(k?0:2), py(y)+(k?0:3), rr, rr*0.82, 0, 0, 7); g.fill();
+    }
+  };
+  let ih = 0;
+  for (let x=-c+0.6; x<u.largeur+c-0.4; x+=0.62){
+    if (!pris(x, -c+0.6, 0.4)) haie(x, -c+0.62 + bruit(ih*1.3)*0.12, ih); ih++;
+    if (!pris(x, u.hauteur+c-0.7, 0.4)) haie(x, u.hauteur+c-0.72 - bruit(ih*1.7)*0.12, ih); ih++;
   }
-  g.beginPath();
-  g.moveTo((c+1)*T, (c-b+2.3)*T); g.lineTo((c+1+5*2.2)*T, (c-b+2.3)*T); g.stroke();
-  // la voie camion : deux traits qui mènent du bord du terrain au quai d'entrée
-  const qy = c + u.quaiEntree.y + u.quaiEntree.h/2;
-  g.strokeStyle = "rgba(226,182,44,.28)"; g.lineWidth = 2.5;
-  g.setLineDash([14,10]);
-  g.beginPath(); g.moveTo(0.6*T, qy*T); g.lineTo(c*T, qy*T); g.stroke();
-  const sy = c + u.quaiSortie.y + u.quaiSortie.h/2;
-  g.beginPath(); g.moveTo((c+u.largeur)*T, sy*T); g.lineTo((L-0.6)*T, sy*T); g.stroke();
-  g.setLineDash([]);
-  // la clôture, sur le pourtour du terrain
-  g.strokeStyle = "rgba(126,136,148,.55)"; g.lineWidth = 2.5;
+  for (let y=-c+1.2; y<u.hauteur+c-1; y+=0.62){
+    if (!pris(-c+0.6, y, 0.4)) haie(-c+0.62 + bruit(ih*1.9)*0.12, y, ih); ih++;
+    if (!pris(u.largeur+c-0.7, y, 0.4)) haie(u.largeur+c-0.72 - bruit(ih*2.3)*0.12, y, ih); ih++;
+  }
+
+  /* --- les arbres, vus du dessus ---------------------------------------- */
+  const arbre = (x,y,r,i) => {
+    g.fillStyle = "rgba(0,0,0,.32)";
+    g.beginPath(); g.ellipse(px(x)+r*T*0.28, py(y)+r*T*0.34, r*T, r*T*0.9, 0, 0, 7); g.fill();
+    const tons = ["#33491f","#3e5726","#4a672d"];
+    for (let k=0;k<3;k++){
+      g.fillStyle = tons[k];
+      const rr = r*T*(1 - k*0.19);
+      g.beginPath();
+      g.ellipse(px(x) - k*r*T*0.10, py(y) - k*r*T*0.13, rr, rr*0.94, 0, 0, 7); g.fill();
+    }
+    // quelques touffes pour casser le rond parfait
+    g.fillStyle = "rgba(122,158,74,.55)";
+    for (let k=0;k<5;k++){
+      const a = bruit(i*9.1+k)*6.28, d2 = r*T*(0.30 + bruit(i*4.3+k)*0.42);
+      g.beginPath();
+      g.ellipse(px(x)+Math.cos(a)*d2 - r*T*0.14, py(y)+Math.sin(a)*d2 - r*T*0.18,
+                r*T*0.20, r*T*0.16, 0, 0, 7); g.fill();
+    }
+  };
+  let ia = 0;
+  for (let y=-c+1.5; y<u.hauteur+c-1.4; y+=1.35)
+    for (let x=-c+1.5; x<u.largeur+c-1.4; x+=1.35){
+      ia++;
+      const jx = x + (bruit(ia*1.9)-0.5)*0.9, jy = y + (bruit(ia*2.7)-0.5)*0.9;
+      const d2 = bruit(ia*5.1);
+      if (d2 > 0.34 || pris(jx, jy, 0.85)) continue;
+      arbre(jx, jy, 0.55 + bruit(ia*6.3)*0.42, ia);
+    }
+  // des buissons dans les creux
+  let ib = 0;
+  for (let y=-c+0.9; y<u.hauteur+c-0.8; y+=0.9)
+    for (let x=-c+0.9; x<u.largeur+c-0.8; x+=0.9){
+      ib++;
+      if (bruit(ib*8.7) > 0.16) continue;
+      const jx = x + (bruit(ib*3.3)-0.5)*0.5, jy = y + (bruit(ib*4.9)-0.5)*0.5;
+      if (pris(jx, jy, 0.35)) continue;
+      g.fillStyle = "rgba(0,0,0,.24)";
+      g.beginPath(); g.ellipse(px(jx)+2, py(jy)+3, 0.26*T, 0.20*T, 0, 0, 7); g.fill();
+      g.fillStyle = bruit(ib*2.1) < 0.3 ? "#55703a" : "#3f5a2c";
+      g.beginPath(); g.ellipse(px(jx), py(jy), 0.25*T, 0.19*T, 0, 0, 7); g.fill();
+    }
+
+  /* --- l'ombre des murs sur l'allée, et la clôture ---------------------- */
+  const om = g.createLinearGradient(0, py(-1.3), 0, py(0));
+  om.addColorStop(0,"rgba(0,0,0,0)"); om.addColorStop(1,"rgba(0,0,0,.34)");
+  g.fillStyle = om; g.fillRect(px(-1.3), py(-1.3), (u.largeur+2.6)*T, 1.3*T);
+  g.fillStyle = "rgba(0,0,0,.15)";
+  g.fillRect(px(-1.3), py(-1.3), 1.3*T, (u.hauteur+2.6)*T);
+  g.fillRect(px(u.largeur), py(-1.3), 1.3*T, (u.hauteur+2.6)*T);
+  g.fillRect(px(-1.3), py(u.hauteur), (u.largeur+2.6)*T, 1.3*T);
+
+  g.strokeStyle = "rgba(120,132,110,.5)"; g.lineWidth = 2.5;
   g.strokeRect(7, 7, cacheCour.width-14, cacheCour.height-14);
-  g.fillStyle = "rgba(126,136,148,.55)";
+  g.fillStyle = "rgba(120,132,110,.5)";
   for (let x=0; x<L; x+=1.2){ g.fillRect(x*T+5, 3, 3, 9); g.fillRect(x*T+5, cacheCour.height-12, 3, 9); }
   for (let y=0; y<H; y+=1.2){ g.fillRect(3, y*T+5, 9, 3); g.fillRect(cacheCour.width-12, y*T+5, 9, 3); }
 }
@@ -4028,6 +4137,7 @@ function dessinerConvoyeur(c){
 /* ------------------------------------------------------------ Machines */
 function dessinerMachine(m){
   const d = MACHINES[m.type];
+  if (d.batiment){ dessinerBatiment(m, d); return; }
   const x = m.x, y = m.y, l = m.l, h = m.h;
   const produit = m.etat === "produit";
 
@@ -4087,6 +4197,203 @@ function dessinerMachine(m){
     ctx.fillStyle = d.accent;
     ctx.fillRect(x+0.2, y+h-0.19, (l-0.4)*clamp(m.progression,0,1), 0.08);
   }
+}
+
+/* ------------------------------------------------------------ Bâtiments
+   Un bâtiment n'est pas une machine : pas de châssis d'acier, pas de bandeau
+   de fonction. C'est une petite construction vue de dessus — un toit avec ses
+   pentes, une gouttière, des fenêtres, une porte tournée vers l'atelier. */
+function dessinerBatiment(m, d){
+  const x = m.x, y = m.y, l = m.l, h = m.h;
+  const u = U();
+  ctx.save();
+
+  // Ombre longue sur l'herbe, du côté opposé au soleil du matin
+  ctx.fillStyle = "rgba(0,0,0,.38)";
+  coinsArrondis(x+0.24, y+0.30, l-0.1, h-0.05, 0.1); ctx.fill();
+
+  // Murs : on les voit dépasser du toit, c'est ce qui donne l'épaisseur
+  ctx.fillStyle = "#8b8378";
+  coinsArrondis(x+0.06, y+0.10, l-0.12, h-0.16, 0.07); ctx.fill();
+  ctx.fillStyle = "rgba(0,0,0,.22)";
+  ctx.fillRect(x+0.06, y+h-0.24, l-0.12, 0.18);
+
+  // Le toit, en deux pans qui se rejoignent sur une ligne de faîtage
+  const mx = x + l/2, fy0 = y+0.20, fy1 = y+h-0.30;
+  // Le dégradé est défini à l'origine : on se déplace, on peint, on revient.
+  ctx.save();
+  ctx.translate(0, fy0);
+  const r1 = fy1 - fy0;
+  ctx.fillStyle = gradientToit(r1, 0, m.type);
+  ctx.beginPath();
+  ctx.moveTo(x+0.02, -0.06); ctx.lineTo(mx, 0.02);
+  ctx.lineTo(mx, r1-0.02); ctx.lineTo(x+0.02, r1+0.06);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = gradientToit(r1, 1, m.type);
+  ctx.beginPath();
+  ctx.moveTo(x+l-0.02, -0.06); ctx.lineTo(mx, 0.02);
+  ctx.lineTo(mx, r1-0.02); ctx.lineTo(x+l-0.02, r1+0.06);
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+  // faîtage et gouttières
+  ctx.strokeStyle = "rgba(255,255,255,.16)"; ctx.lineWidth = 0.05;
+  ctx.beginPath(); ctx.moveTo(mx, fy0+0.02); ctx.lineTo(mx, fy1-0.02); ctx.stroke();
+  ctx.strokeStyle = "rgba(0,0,0,.35)"; ctx.lineWidth = 0.06;
+  ctx.beginPath();
+  ctx.moveTo(x+0.02, fy0-0.06); ctx.lineTo(x+0.02, fy1+0.06);
+  ctx.moveTo(x+l-0.02, fy0-0.06); ctx.lineTo(x+l-0.02, fy1+0.06);
+  ctx.stroke();
+  // rangs de tuiles
+  ctx.strokeStyle = "rgba(0,0,0,.12)"; ctx.lineWidth = 0.022;
+  ctx.beginPath();
+  for (let t2=fy0+0.18; t2<fy1-0.05; t2+=0.19){ ctx.moveTo(x+0.05, t2); ctx.lineTo(x+l-0.05, t2); }
+  ctx.stroke();
+
+  // Bandeau de couleur, discret : une frise sous la gouttière
+  ctx.fillStyle = d.couleur;
+  ctx.globalAlpha = 0.85;
+  ctx.fillRect(x+0.06, y+h-0.24, l-0.12, 0.06);
+  ctx.globalAlpha = 1;
+
+  // La porte, tournée vers l'atelier
+  const versX = clamp(u.largeur/2, x-4, x+l+4), versY = clamp(u.hauteur/2, y-4, y+h+4);
+  const horiz = Math.abs(versX - mx) > Math.abs(versY - (y+h/2));
+  const px2 = horiz ? (versX > mx ? x+l-0.16 : x+0.06) : mx-0.19;
+  const py2 = horiz ? y+h/2-0.19 : (versY > y+h/2 ? y+h-0.26 : y+0.10);
+  ctx.fillStyle = "#4a3a2a";
+  ctx.fillRect(px2, py2, horiz ? 0.10 : 0.38, horiz ? 0.38 : 0.16);
+  ctx.fillStyle = "#c9a25e";
+  ctx.fillRect(horiz ? px2+0.03 : px2+0.30, horiz ? py2+0.28 : py2+0.05, 0.045, 0.045);
+
+  // Détails propres à chaque bâtiment
+  if (vue.zoom > CONFIG.seuilSchema) detailBatiment(m, d, x, y, l, h, mx);
+
+  ctx.restore();
+  dessinerEtatMachine(m);
+}
+
+/** Ce qu'on voit sur le toit et autour : c'est ce qui distingue une salle de
+ *  pause d'un bureau, bien plus qu'une couleur. */
+function detailBatiment(m, d, x, y, l, h, mx){
+  const nuit = minuteDuJour()/CONFIG.minutesParJour;
+  const eclaire = nuit < 0.30 || nuit > 0.72;
+
+  // Fenêtres de toit, alignées de part et d'autre du faîtage
+  const fenetre = (fx, fy, fl, fh, vif) => {
+    ctx.fillStyle = "#2b323a";
+    coinsArrondis(fx-0.02, fy-0.02, fl+0.04, fh+0.04, 0.02); ctx.fill();
+    ctx.fillStyle = vif ? d.accent : (eclaire ? "#f2d79a" : "#9fb3c4");
+    ctx.globalAlpha = vif ? 0.9 : (eclaire ? 0.85 : 0.55);
+    ctx.fillRect(fx, fy, fl, fh);
+    ctx.globalAlpha = 1;
+  };
+
+  switch (m.type){
+    case "salle_pause": {
+      const occupe = U().ouvriers.some(o => o.tache && o.tache.type === "repos" && o.tache.salleId === m.id);
+      fenetre(x+0.28, y+0.42, 0.42, 0.22, occupe);
+      fenetre(x+l-0.70, y+0.42, 0.42, 0.22, occupe);
+      // la terrasse : une table et deux bancs, sur le pignon
+      const tx = x + l + 0.30, ty = y + h/2;
+      ctx.fillStyle = "rgba(0,0,0,.28)";
+      ctx.beginPath(); ctx.ellipse(tx+0.04, ty+0.08, 0.30, 0.24, 0, 0, 7); ctx.fill();
+      ctx.fillStyle = "#b98a52";
+      ctx.beginPath(); ctx.ellipse(tx, ty, 0.26, 0.21, 0, 0, 7); ctx.fill();
+      ctx.fillStyle = "#8d6a3f";
+      ctx.fillRect(tx-0.34, ty-0.06, 0.12, 0.12);
+      ctx.fillRect(tx+0.22, ty-0.06, 0.12, 0.12);
+      // le parasol, ouvert quand quelqu'un est là
+      if (occupe){
+        ctx.fillStyle = "rgba(0,0,0,.22)";
+        ctx.beginPath(); ctx.ellipse(tx+0.05, ty+0.06, 0.34, 0.28, 0, 0, 7); ctx.fill();
+        for (let k=0;k<6;k++){
+          ctx.fillStyle = k%2 ? "#e2b62c" : "#f0f2f4";
+          ctx.beginPath();
+          ctx.moveTo(tx, ty);
+          ctx.arc(tx, ty, 0.32, k/6*6.283, (k+1)/6*6.283);
+          ctx.closePath(); ctx.fill();
+        }
+      }
+      // la fumée du café
+      if (occupe && Math.random() < 0.05) particule(x+l/2, y+0.3, "vapeur");
+      break;
+    }
+
+    case "salle_formation": {
+      const active = (etat.formations||[]).length > 0;
+      fenetre(x+0.26, y+0.46, 0.30, 0.26, active);
+      fenetre(x+0.26, y+h-0.86, 0.30, 0.26, active);
+      fenetre(x+l-0.58, y+0.46, 0.30, 0.26, active);
+      fenetre(x+l-0.58, y+h-0.86, 0.30, 0.26, active);
+      // le panneau d'affichage, planté devant l'entrée
+      const sx = x + l/2, sy = y + h + 0.26;
+      ctx.fillStyle = "rgba(0,0,0,.3)";
+      ctx.fillRect(sx-0.24, sy-0.04, 0.5, 0.28);
+      ctx.fillStyle = "#5b4a34"; ctx.fillRect(sx-0.03, sy+0.16, 0.06, 0.18);
+      ctx.fillStyle = "#e8e4d8"; ctx.fillRect(sx-0.26, sy-0.08, 0.52, 0.26);
+      ctx.strokeStyle = "#8d8578"; ctx.lineWidth = 0.024;
+      ctx.beginPath();
+      for (let k=0;k<3;k++){ ctx.moveTo(sx-0.20, sy-0.01+k*0.07); ctx.lineTo(sx+0.20-k*0.06, sy-0.01+k*0.07); }
+      ctx.stroke();
+      if (active){
+        ctx.fillStyle = "rgba(196,158,240,.10)";
+        coinsArrondis(x+0.06, y+0.10, l-0.12, h-0.16, 0.07); ctx.fill();
+      }
+      break;
+    }
+
+    case "bureau": {
+      const cherche = !!(etat.recherche && etat.recherche.enCours);
+      const i = cherche ? 0.5 + 0.5*Math.sin(vue.temps*2.2 + m.id) : 0;
+      for (let r2=0; r2<2; r2++)
+        for (let k=0;k<2;k++)
+          fenetre(x+0.24+k*(l-0.72), y+0.44+r2*(h-1.02), 0.46, 0.24,
+                  cherche && ((k+r2+Math.floor(vue.temps*0.7+m.id))%2 === 0));
+      // le bloc de climatisation sur le toit
+      ctx.fillStyle = "#6f7782";
+      coinsArrondis(x+l/2-0.22, y+h/2-0.16, 0.44, 0.32, 0.04); ctx.fill();
+      ctx.strokeStyle = "rgba(0,0,0,.35)"; ctx.lineWidth = 0.03;
+      ctx.beginPath();
+      for (let k=0;k<3;k++){ ctx.moveTo(x+l/2-0.17, y+h/2-0.09+k*0.08); ctx.lineTo(x+l/2+0.17, y+h/2-0.09+k*0.08); }
+      ctx.stroke();
+      // le mât et son fanion, qui claque quand une étude tourne
+      const hx = x + 0.16, hy = y + h + 0.18;
+      ctx.strokeStyle = "#b9bfc7"; ctx.lineWidth = 0.045;
+      ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(hx, hy-0.62); ctx.stroke();
+      ctx.fillStyle = d.accent;
+      ctx.beginPath();
+      ctx.moveTo(hx, hy-0.62);
+      ctx.lineTo(hx+0.30+Math.sin(vue.temps*2.6)*0.04, hy-0.52);
+      ctx.lineTo(hx, hy-0.42);
+      ctx.closePath(); ctx.fill();
+      if (cherche){
+        ctx.fillStyle = "rgba(143,228,236," + (0.05+i*0.07).toFixed(2) + ")";
+        coinsArrondis(x+0.06, y+0.10, l-0.12, h-0.16, 0.07); ctx.fill();
+      }
+      break;
+    }
+  }
+}
+
+/* Les deux pans du toit. Comme le corps des machines, le dégradé ne dépend que
+   de la hauteur : on le garde en mémoire pour ne rien allouer par image (§16). */
+const cacheGradToit = new Map();
+const TOITS = {
+  salle_pause:     [["#6f7a5c","#57614a"], ["#7d8968","#616c52"]],
+  salle_formation: [["#6c6079","#544a60"], ["#7a6d88","#5e536c"]],
+  bureau:          [["#566f78","#42565e"], ["#617d87","#4a606a"]]
+};
+function gradientToit(hauteur, pan, type){
+  const cle = Math.round(hauteur*100) + ":" + pan + ":" + type;
+  let g = cacheGradToit.get(cle);
+  if (!g){
+    const c = (TOITS[type] || [["#5d6470","#464c56"], ["#6c7480","#525966"]])[pan];
+    g = ctx.createLinearGradient(0, 0, 0, hauteur);
+    g.addColorStop(0, c[0]);
+    g.addColorStop(1, c[1]);
+    cacheGradToit.set(cle, g);
+  }
+  return g;
 }
 
 const cacheGradCorps = new Map();
@@ -4281,78 +4588,6 @@ function detailMachine(m, d, x, y, l, h, produit){
         const it = m.entree["chips_ratees"] ? "chips_ratees" : "sachet_rate";
         for (let i=0;i<3;i++)
           dessinerItem(x+0.55+bruit(i*7+m.id)*(l-1.3), y+0.62+bruit(i*3+m.id)*(h-1.1), 0.3, it);
-      }
-      break;
-    }
-
-    case "salle_pause": {
-      // sol clair, une table ronde, des tabourets, une machine à café
-      ctx.fillStyle = "#5a6152";
-      coinsArrondis(x+0.18, y+0.34, l-0.36, h-0.6, 0.08); ctx.fill();
-      ctx.fillStyle = "#8a9478";
-      ctx.beginPath(); ctx.arc(cx, cy+0.1, 0.34, 0, 7); ctx.fill();
-      ctx.fillStyle = "#4a5244";
-      for (let i=0;i<4;i++){
-        const a2 = i/4*Math.PI*2 + 0.6;
-        ctx.beginPath(); ctx.arc(cx+Math.cos(a2)*0.62, cy+0.1+Math.sin(a2)*0.5, 0.13, 0, 7); ctx.fill();
-      }
-      ctx.fillStyle = "#c8cdd2";
-      ctx.fillRect(x+l-0.62, y+0.46, 0.3, 0.38);
-      ctx.fillStyle = "#6b4a2a";
-      ctx.fillRect(x+l-0.56, y+0.7, 0.18, 0.1);
-      // une tasse fume quand quelqu'un est là
-      if (U().ouvriers.some(o => o.tache && o.tache.type === "repos" && o.tache.salleId === m.id)
-          && Math.random() < 0.05)
-        particule(x+l-0.47, y+0.5, "vapeur");
-      break;
-    }
-
-    case "salle_formation": {
-      ctx.fillStyle = "#3e3548";
-      coinsArrondis(x+0.18, y+0.34, l-0.36, h-0.6, 0.08); ctx.fill();
-      // le tableau
-      ctx.fillStyle = "#2a3a2e";
-      ctx.fillRect(x+0.4, y+0.46, l-0.8, 0.42);
-      ctx.strokeStyle = "#c4b088"; ctx.lineWidth = 0.04;
-      ctx.beginPath();
-      ctx.moveTo(x+0.55, y+0.72); ctx.lineTo(x+0.95, y+0.58); ctx.lineTo(x+1.35, y+0.66);
-      ctx.stroke();
-      // deux rangs de sièges
-      ctx.fillStyle = "#6b5f7a";
-      for (let r2=0; r2<2; r2++)
-        for (let i=0;i<3;i++)
-          ctx.fillRect(x+0.5+i*(l-1.1)/2.4, y+1.15+r2*0.5, 0.26, 0.26);
-      if (produit && (etat.formations||[]).length){
-        ctx.fillStyle = "rgba(196,158,240,.12)";
-        coinsArrondis(x+0.18, y+0.34, l-0.36, h-0.6, 0.08); ctx.fill();
-      }
-      break;
-    }
-
-    case "bureau": {
-      // plateau clair, des tables, des écrans, un plan punaisé
-      ctx.fillStyle = "#2f4448";
-      coinsArrondis(x+0.18, y+0.32, l-0.36, h-0.58, 0.08); ctx.fill();
-      ctx.fillStyle = "#4d6e73";
-      for (let i=0;i<2;i++)
-        for (let j2=0;j2<2;j2++)
-          ctx.fillRect(x+0.42+i*(l-1.1)/1.35, y+0.5+j2*(h-1.15)/1.2, (l-1.1)/2.1, 0.34);
-      ctx.fillStyle = "#9fe0e8";
-      for (let i=0;i<2;i++)
-        for (let j2=0;j2<2;j2++)
-          ctx.fillRect(x+0.5+i*(l-1.1)/1.35, y+0.54+j2*(h-1.15)/1.2, 0.22, 0.16);
-      // le plan au mur
-      ctx.fillStyle = "#dfe6ea";
-      ctx.fillRect(x+l-0.72, y+0.38, 0.44, 0.3);
-      ctx.strokeStyle = "#7f9aa2"; ctx.lineWidth = 0.025;
-      ctx.beginPath();
-      ctx.moveTo(x+l-0.66, y+0.5); ctx.lineTo(x+l-0.4, y+0.5);
-      ctx.moveTo(x+l-0.66, y+0.58); ctx.lineTo(x+l-0.48, y+0.58);
-      ctx.stroke();
-      if (etat.recherche && etat.recherche.enCours){
-        const i = 0.5 + 0.5*Math.sin(vue.temps*2.4);
-        ctx.fillStyle = "rgba(143,228,236," + (0.06+i*0.08).toFixed(2) + ")";
-        coinsArrondis(x+0.18, y+0.32, l-0.36, h-0.58, 0.08); ctx.fill();
       }
       break;
     }
@@ -7308,7 +7543,9 @@ function SECTIONS_GUIDE(){
     "L'augmentation, elle, coûte tous les jours : c'est l'arbitrage.</p>" },
 
   { titre:"La cour et les bâtiments", corps:
-    "<p>L'atelier n'est pas tout le terrain. Autour des murs il y a une <b>cour</b> : c'est là, et seulement "+
+    "<p>L'atelier n'est pas tout le terrain. Autour des murs il y a une <b>cour</b> — de la pelouse, des "+
+    "arbres, une haie le long de la clôture, une allée de gravier au pied des murs, et l'enrobé du "+
+    "parvis des quais. C'est là, et seulement "+
     "là, que se posent les <b>bâtiments</b>. Les machines et les convoyeurs, eux, restent à l'intérieur. "+
     "Le mur est la frontière, et le jeu refuse tout seul ce qui n'est pas du bon côté.</p>"+
     "<p>L'atelier a <b>quatre portes</b>, une par façade. Les ouvriers ne traversent pas les murs : ils "+
