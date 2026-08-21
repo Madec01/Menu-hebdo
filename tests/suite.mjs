@@ -114,7 +114,8 @@ cas("conservation-matiere", async (nav) => {
   const r = await jeu(`(() => {
     const t = {};
     const add = (k,x) => { if (x > 1e-6) t[k] = (t[k]||0) + x; };
-    for (const k in U().stocks) add(k, U().stocks[k]);
+    const tout = tousStocks();
+    for (const k in tout) add(k, tout[k]);
     for (const m of U().machines){
       for (const k in m.entree) add(k, m.entree[k]);
       for (const k in m.sortie) add(k, m.sortie[k]);
@@ -444,6 +445,147 @@ cas("recherche-age4", async (nav) => {
   for (const t of inv) v("invariant : " + t.nom, t.ok, t.detail);
   await page.close();
   return { echecs: v.echecs.concat(erreurs), note: r ? ("« " + r.nom + " » notée " + r.note) : "—" };
+});
+
+cas("raccord-sans-coupure", async (nav) => {
+  const { page, jeu, erreurs } = await contexte(nav);
+  const v = verif();
+  // Une bande chargée de sachets ne doit pas empêcher deux kilos de sel de
+  // passer : les unités ne se mélangent pas dans le calcul d'encombrement.
+  const vol = await jeu(`({
+    kilo: volumeItem('sel'), sachet: volumeItem('sachet'),
+    capa: (() => { sauterAge(3); etat.finances.solde = 200000;
+      poserMachine('tambour',14,6,0);
+      const seg = ${JSON.stringify(SEG)};
+      return 0; })()
+  })`);
+  v("un sachet tient moins de place qu'un kilo", vol.sachet < vol.kilo,
+    vol.sachet + " contre " + vol.kilo);
+
+  const r = await jeu(`(() => {
+    const seg = ${SEG};
+    const conv = p => { vue.traceConvoyeur = p; validerTrace(); vue.traceConvoyeur = null;
+                        return U().convoyeurs[U().convoyeurs.length-1]; };
+    const A = conv(seg(2,6,7,6));      // quai -> ...
+    const B = conv(seg(8,6,13,6));     // ...  -> tambour
+    // on encombre volontairement la bande d'aval avec des sachets
+    B.transit.push({ item:'sachet', qte:600, t:B.latence*0.5 });
+    // puis on présente un colis de deux kilos de sel au raccord
+    A.transit.push({ item:'sel', qte:2, t:0 });
+    const placeAvant = placeEntree(B, 'sel');
+    for (let t=0;t<4;t++) simTick();
+    const surA = A.transit.filter(p => p.item === 'sel').reduce((s,p)=>s+p.qte,0);
+    const surB = B.transit.filter(p => p.item === 'sel').reduce((s,p)=>s+p.qte,0);
+    return { placeAvant, surA, surB, liensOk: A.destination === B.id && B.source === A.id };
+  })()`);
+  v("les deux tronçons sont bien chaînés", r.liensOk);
+  v("la bande d'aval a de la place malgré ses sachets", r.placeAvant > 2,
+    "place pour " + Math.round(r.placeAvant) + " kg de sel");
+  v("le sel n'est pas coupé en deux au raccord", !(r.surA > 0.01 && r.surB > 0.01),
+    r.surA.toFixed(2) + " kg restés en amont, " + r.surB.toFixed(2) + " kg passés");
+  v("le sel a bien traversé", r.surB > 1.9 || r.surA < 0.01,
+    "amont " + r.surA.toFixed(2) + " · aval " + r.surB.toFixed(2));
+  await page.close();
+  return { echecs: v.echecs.concat(erreurs), note: "2 kg passés d'un bloc" };
+});
+
+cas("quais-et-rangement", async (nav) => {
+  const { page, jeu, erreurs } = await contexte(nav);
+  const v = verif();
+
+  // Deux quais dès le départ, chacun son compartiment.
+  const q0 = await jeu(`(() => {
+    ajouterStock('pdt_brutes', 200); ajouterStock('chips_vrac', 50);
+    const u = U();
+    return { entree:{x:u.quaiEntree.x,h:u.quaiEntree.h}, sortie:{x:u.quaiSortie.x,h:u.quaiSortie.h},
+             largeur:u.largeur,
+             patatesEntree: Math.round(u.stocks.pdt_brutes||0),
+             patatesSortie: Math.round(u.stocksSortie.pdt_brutes||0),
+             chipsEntree: Math.round(u.stocks.chips_vrac||0),
+             chipsSortie: Math.round(u.stocksSortie.chips_vrac||0),
+             idE: occupant(u, u.quaiEntree.x, u.quaiEntree.y),
+             idS: occupant(u, u.quaiSortie.x, u.quaiSortie.y) };
+  })()`);
+  v.egal("le quai d'entrée est contre le mur de gauche", q0.entree.x, 0);
+  v.egal("le quai de sortie est contre celui de droite", q0.sortie.x, q0.largeur - 2);
+  v.egal("ils portent des identifiants distincts", q0.idE + "/" + q0.idS, "1/2");
+  v.egal("les patates se rangent à l'entrée", q0.patatesEntree, 200);
+  v.egal("et pas à la sortie", q0.patatesSortie, 0);
+  v.egal("les chips se rangent à la sortie", q0.chipsSortie, 50);
+  v.egal("et pas à l'entrée", q0.chipsEntree, 0);
+
+  // Le quai d'entrée ne bouge pas quand l'atelier grandit : ce qui y est
+  // raccordé doit le rester.
+  const bouge = await jeu(`(() => {
+    const seg = ${JSON.stringify(SEG)};
+    return 0; })()`);
+  const g = await jeu(`(() => {
+    const u = U();
+    const avant = { x:u.quaiEntree.x, y:u.quaiEntree.y };
+    poserMachine('laveuse',3,u.quaiEntree.y+1,0);
+    const seg = ${SEG};
+    vue.traceConvoyeur = seg(2, u.quaiEntree.y+1, 2, u.quaiEntree.y+1)
+                          .concat([{x:2,y:u.quaiEntree.y+2}]);
+    validerTrace(); vue.traceConvoyeur = null;
+    const c = U().convoyeurs[0];
+    const relieAvant = c && noeudParId(c.source) && estQuai(noeudParId(c.source));
+    sauterAge(3);
+    return { avant, apres:{ x:U().quaiEntree.x, y:U().quaiEntree.y },
+             relieAvant: !!relieAvant,
+             relieApres: !!(c && noeudParId(c.source) && estQuai(noeudParId(c.source))),
+             hauteur: U().quaiEntree.h };
+  })()`);
+  v.egal("le quai d'entrée n'a pas bougé", g.apres.x + "," + g.apres.y, g.avant.x + "," + g.avant.y);
+  v("il a grandi avec l'atelier", g.hauteur >= 4, g.hauteur + " tuiles");
+  v("le convoyeur qui y était raccordé l'est toujours", !g.relieAvant || g.relieApres);
+
+  // Bac dédié : il se règle seul, puis ne prend plus que ça.
+  const bac = await jeu(`(() => {
+    etat.finances.solde = 200000;
+    poserMachine('caisse_dediee',14,6,0);
+    const b = U().machines.find(m => m.type === 'caisse_dediee');
+    const videAccepteTout = placeEntree(b,'rondelles') > 0 && placeEntree(b,'sel') > 0;
+    livrer(b, 'rondelles', 100);
+    return { videAccepteTout, filtre:b.filtre,
+             refuse: placeEntree(b,'sel'), accepte: placeEntree(b,'rondelles'),
+             capa: MACHINES.caisse_dediee.capacite, capaOrdinaire: MACHINES.caisse.capacite };
+  })()`);
+  v("un bac dédié vierge accepte tout", bac.videAccepteTout);
+  v.egal("il se règle sur la première marchandise reçue", bac.filtre, "rondelles");
+  v.egal("puis refuse le reste", bac.refuse, 0);
+  v("mais accepte encore la sienne", bac.accepte > 100, bac.accepte + " kg");
+  v("il tient plus qu'un bac ordinaire", bac.capa > bac.capaOrdinaire,
+    bac.capa + " contre " + bac.capaOrdinaire);
+
+  // Filtre de convoyeur : une bande n'emporte que ce qu'on lui dit.
+  const f = await jeu(`(() => {
+    sauterAge(4);
+    poserMachine('friteuse',20,6,0); poserMachine('caisse',24,6,0);
+    const seg = ${SEG};
+    vue.traceConvoyeur = seg(23,7,23,7).concat([{x:23,y:6}]);
+    validerTrace(); vue.traceConvoyeur = null;
+    const c = U().convoyeurs[U().convoyeurs.length-1];
+    const sans = itemsAcceptes(c).length;
+    c.filtre = 'chips_ratees';
+    const avec = itemsAcceptes(c);
+    return { sans, avec, source: !!noeudParId(c.source), dest: !!noeudParId(c.destination) };
+  })()`);
+  v("la bande est raccordée aux deux bouts", f.source && f.dest);
+  v("sans filtre elle prend plusieurs marchandises", f.sans > 1, f.sans + " acceptées");
+  v.egal("avec un filtre, une seule", f.avec.length, 1);
+  v.egal("et c'est la bonne", f.avec[0], "chips_ratees");
+
+  // Agrandir un quai à la demande.
+  const ag = await jeu(`(() => {
+    const h0 = U().quaiSortie.h; agrandirQuai(true);
+    return { h0, h1: U().quaiSortie.h };
+  })()`);
+  v("le quai s'agrandit contre espèces", ag.h1 === ag.h0 + 2, ag.h0 + " → " + ag.h1);
+
+  const inv = await jeu("verifierPartie()");
+  for (const t of inv) v("invariant : " + t.nom, t.ok, t.detail);
+  await page.close();
+  return { echecs: v.echecs.concat(erreurs), note: "2 quais, 3 rangements, filtres" };
 });
 
 /* ============================================================== Exécution ==*/

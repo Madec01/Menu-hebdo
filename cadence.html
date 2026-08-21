@@ -762,7 +762,23 @@ const MACHINES = {
     couleur:"#7d6850", accent:"#b09068",
     recettes:[], auto:true, usureParJour:0, ageMin:2, cat:"stockage",
     stockage:true, capacite:1200,
-    resume:"Met la marchandise de côté entre deux postes.",
+    resume:"Met la marchandise de côté entre deux postes. Accepte tout, en vrac.",
+    besoinOperateur:"—"
+  },
+  caisse_dediee: {
+    id:"caisse_dediee", nom:"Bac dédié", cout:900, l:2, h:2,
+    couleur:"#8a7a52", accent:"#c4b072",
+    recettes:[], auto:true, usureParJour:0, ageMin:3, cat:"stockage",
+    stockage:true, capacite:3000, dedie:true,
+    resume:"Une seule marchandise, mais deux fois et demie plus qu'un bac ordinaire. Rangé, donc plus dense.",
+    besoinOperateur:"—"
+  },
+  silo: {
+    id:"silo", nom:"Silo", cout:3400, l:3, h:3,
+    couleur:"#9aa2ac", accent:"#c8d0d8",
+    recettes:[], auto:true, usureParJour:0, ageMin:4, cat:"stockage",
+    stockage:true, capacite:12000, dedie:true,
+    resume:"De quoi tenir une saison entière sur une seule marchandise.",
     besoinOperateur:"—"
   }
 };
@@ -784,13 +800,13 @@ const AGES = [
   { n:3, nom:"La PME", largeur:32, hauteur:24,
     objectif:{ texte:"Honorer une grosse commande sans une seule réclamation",
                type:"compteur", cle:"grosseCommande", cible:1 },
-    debloque:["tri","qualite","grosClients"],
+    debloque:["tri","qualite","grosClients","caisse_dediee"],
     intro:"Les clients deviennent regardants. Un sachet mal cuit qui part chez eux, et ça se sait." },
 
   { n:4, nom:"L'industrie", largeur:48, hauteur:36,
     objectif:{ texte:"Sortir une recette maison dont le public redemande",
                type:"compteur", cle:"recetteReussie", cible:1 },
-    debloque:["recherche"],
+    debloque:["recherche","silo"],
     intro:"On ne se contente plus de fabriquer ce que les autres ont inventé. On crée nos recettes, et le public tranche." },
 
   { n:5, nom:"Le groupe", largeur:48, hauteur:36,
@@ -1123,7 +1139,7 @@ function nouvellePartie(nomEntreprise, modeChoisi){
       tempsJeu: 0,
       vitesse: 0,
       age: 1,
-      prochainId: 1,
+      prochainId: 2,          // 1 et 2 sont réservés aux deux quais
       dernierJourTraite: -1,
       dernierAutoSave: -1,
       mode: modeChoisi || "normal"
@@ -1156,8 +1172,8 @@ function nouvellePartie(nomEntreprise, modeChoisi){
   const o = creerOuvrier("Marcel","Boivin",
     { lavage:0.65, decoupe:0.6, friture:0.7, assaisonnement:0.45, emballage:0.4 }, 120, "ancien");
   o.id = nouvelId();                       // jamais 0 : un id nul passerait pour « personne »
-  o.x = U().quai.x + U().quai.l + 0.5;     // sur le sol, pas sur le quai
-  o.y = U().quai.y + 1.5;
+  o.x = U().quaiEntree.x + U().quaiEntree.l + 0.5;   // sur le sol, pas sur le quai
+  o.y = U().quaiEntree.y + 1.5;
   U().ouvriers.push(o);
 
   initMarche();
@@ -1175,15 +1191,29 @@ function creerUsine(nom, largeur, hauteur){
     id: 0, nom, largeur, hauteur,
     grille: new Uint16Array(largeur*hauteur),
     machines: [], convoyeurs: [], ouvriers: [],
-    stocks: {},
+    stocks: {},          // ce qui entre : matières et pièces
+    stocksSortie: {},    // ce qui part : produits finis et rebut
     salete: 0,
-    quai: { x:0, y:Math.floor(hauteur/2)-1, l:2, h:3 }
+    quaiEntree: { x:0, y:Math.floor(hauteur/2)-2, l:2, h:4 },
+    quaiSortie: { x:largeur-2, y:Math.floor(hauteur/2)-2, l:2, h:4 }
   };
-  // Le quai est un obstacle physique : on l'inscrit dans la grille sous l'id 1.
-  for (let dy=0; dy<u.quai.h; dy++)
-    for (let dx=0; dx<u.quai.l; dx++)
-      u.grille[(u.quai.y+dy)*largeur + (u.quai.x+dx)] = 1;
+  placerQuais(u);
   return u;
+}
+
+/** Les quais sont des obstacles physiques : ids réservés 1 (entrée) et
+ *  2 (sortie). On les réinscrit dans la grille après tout déplacement. */
+function placerQuais(u){
+  for (let i=0;i<u.grille.length;i++) if (u.grille[i] === 1 || u.grille[i] === 2) u.grille[i] = 0;
+  const poser = (q, id) => {
+    q.y = clamp(q.y, 0, u.hauteur - q.h);
+    q.x = clamp(q.x, 0, u.largeur - q.l);
+    for (let dy=0; dy<q.h; dy++)
+      for (let dx=0; dx<q.l; dx++)
+        u.grille[(q.y+dy)*u.largeur + (q.x+dx)] = id;
+  };
+  poser(u.quaiEntree, 1);
+  poser(u.quaiSortie, 2);
 }
 
 function creerOuvrier(prenom, nom, competences, salaire, traitId){
@@ -1236,27 +1266,42 @@ function reindexer(){
   // Le quai n'est pas un objet posé : on lui donne un pseudo-nœud stable,
   // hors état de jeu, pour que convoyeurs et ouvriers le traitent comme
   // n'importe quel autre nœud.
-  idx.quai = noeudQuai(U());
+  idx.quai = noeudQuai(U(), false);
+  idx.quaiSortie = noeudQuai(U(), true);
   idx.parId.set(1, idx.quai);
+  idx.parId.set(2, idx.quaiSortie);
   relierConvoyeurs();
 }
 function noeudParId(id){ return idx.parId.get(id) || null; }
 
-/** Le quai n'est pas un objet posé : on le représente par un pseudo-noeud. */
-function noeudQuai(u){
-  return { id:1, type:"quai", quai:true, x:u.quai.x, y:u.quai.y, l:u.quai.l, h:u.quai.h, etat:"produit" };
+/** Les quais ne sont pas des objets posés : on les représente par des
+ *  pseudo-nœuds, pour que convoyeurs et ouvriers les traitent comme le reste. */
+function noeudQuai(u, sortie){
+  const q = sortie ? u.quaiSortie : u.quaiEntree;
+  return { id: sortie ? 2 : 1, type:"quai", quai:true, sortie: !!sortie,
+           x:q.x, y:q.y, l:q.l, h:q.h, etat:"produit" };
 }
-function estQuai(n){ return n && n.id === 1; }
+function estQuai(n){ return !!n && (n.id === 1 || n.id === 2); }
+function estQuaiSortie(n){ return !!n && n.id === 2; }
 
 function nouvelId(){ return ++etat.meta.prochainId; }
 
 /* ------------------------------------------------------------------ Stocks */
-function stockDe(item){ return U().stocks[item] || 0; }
-function ajouterStock(item, qte){
-  const u = U();
-  u.stocks[item] = (u.stocks[item]||0) + qte;
-  if (u.stocks[item] < 1e-6) delete u.stocks[item];
+/** Où se range une matière : ce qui se vend part au quai de sortie, le reste
+ *  reste au quai d'entrée. Le joueur n'a rien à trier lui-même — les deux
+ *  quais sont deux portes du même magasin, mais deux compartiments distincts. */
+function poolDe(item){
+  const c = ITEMS[item] && ITEMS[item].cat;
+  return (c === "produit" || c === "rebut") ? U().stocksSortie : U().stocks;
 }
+function stockDe(item){ return poolDe(item)[item] || 0; }
+function ajouterStock(item, qte){
+  const p = poolDe(item);
+  p[item] = (p[item]||0) + qte;
+  if (p[item] < 1e-6) delete p[item];
+}
+/** Tout ce qui est au quai, les deux compartiments confondus. */
+function tousStocks(){ return Object.assign({}, U().stocks, U().stocksSortie); }
 
 /* ---------------------------------------------------------------- Recettes */
 function recetteDe(m){ return m.recetteId ? RECETTES[m.recetteId] : null; }
@@ -1284,9 +1329,14 @@ function itemsAcceptes(n, vus){
     vus = vus || new Set();
     if (vus.has(n.id) || vus.size > 24) return [];      // boucle de bandes
     vus.add(n.id);
-    return itemsAcceptes(noeudParId(n.destination), vus);
+    const aval = itemsAcceptes(noeudParId(n.destination), vus);
+    // Un filtre posé sur la bande restreint encore : elle ne prendra que ça.
+    return n.filtre ? aval.filter(x => x === n.filtre) : aval;
   }
   const d = MACHINES[n.type];
+  // Un bac dédié ne prend qu'une marchandise. Tant qu'il est vide et sans
+  // réglage, il accepte la première qui se présente et s'y tient ensuite.
+  if (d && d.dedie) return n.filtre ? [n.filtre] : Object.keys(ITEMS);
   if (d && d.stockage) return Object.keys(ITEMS);
   const r = recetteDe(n);
   return r ? r.entrees.map(e => e.id) : [];
@@ -1311,7 +1361,7 @@ function capaciteItem(id, defaut){ return (ITEMS[id] && ITEMS[id].capacite) || d
 
 function sortieDispo(n, item){
   if (!n) return 0;
-  if (estQuai(n)) return U().stocks[item] || 0;
+  if (estQuai(n)) return stockDe(item);
   return n.sortie[item] || 0;
 }
 function retirerSortie(n, item, q){
@@ -1327,9 +1377,11 @@ function placeEntree(n, item){
   if (estQuai(n)) return 1e9;
   if (estConvoyeur(n)){
     if (!itemsAcceptes(n).includes(item)) return 0;     // cul-de-sac : on n'engage rien
-    return Math.max(0, capaciteConvoyeur(n, item) - chargeConvoyeur(n));
+    return placeConvoyeur(n, item);
   }
   const d = MACHINES[n.type];
+  // Un bac dédié ne prend que sa marchandise, une fois qu'il s'est réglé.
+  if (d.dedie && n.filtre && n.filtre !== item) return 0;
   if (d.stockage) return Math.max(0, d.capacite - contenuTotal(n.sortie));
   const r = recetteDe(n);
   if (!r || !r.entrees.some(e => e.id === item)) return 0;
@@ -1339,9 +1391,25 @@ function livrer(n, item, q){
   if (estQuai(n)){ ajouterStock(item, q); return; }
   if (estConvoyeur(n)){ chargerConvoyeur(n, item, q); return; }
   const d = MACHINES[n.type];
+  // Un bac dédié encore vierge se règle sur la première marchandise reçue.
+  if (d.dedie && !n.filtre) n.filtre = item;
   if (d.stockage) n.sortie[item] = (n.sortie[item]||0) + q;
   else n.entree[item] = (n.entree[item]||0) + q;
 }
+/** Tout ce que ce nœud pourrait accepter s'il était vide : sert à savoir si un
+ *  colis est trop gros en soi, ou s'il faut simplement le laisser attendre. */
+function placeTotale(n, item){
+  if (!n) return 0;
+  if (estQuai(n)) return 1e9;
+  if (estConvoyeur(n)) return capaciteConvoyeur(n) / volumeItem(item);
+  const d = MACHINES[n.type];
+  if (d.dedie && n.filtre && n.filtre !== item) return 0;
+  if (d.stockage) return d.capacite;
+  const r = recetteDe(n);
+  if (!r || !r.entrees.some(e => e.id === item)) return 0;
+  return capaciteItem(item, CONFIG.capaciteEntree);
+}
+
 /** Reste-t-il de la place en sortie pour un cycle complet ? */
 function placeSortie(n, item, q){
   const d = MACHINES[n.type];
@@ -1378,6 +1446,7 @@ function creerMachine(type, x, y, rotation){
     entree: {}, sortie: {},
     usure: 0, enPanne: false,
     operateurId: null,
+    filtre: null,               // bacs dédiés : la marchandise rangée dedans
     debitReel: 0,
     produitAujourdhui: 0,
     fraicheurHuile: d.bainHuile ? 1 : undefined,
@@ -1582,14 +1651,29 @@ const CONV = {
   vitesse: 0.5        // tuiles par minute de jeu
 };
 
-/** Ce qui tient sur la bande : proportionnel à sa longueur. */
+/** La place qu'occupe UNE unité d'une matière sur une bande.
+ *  Un kilo de rondelles et un sachet de 150 g ne tiennent pas la même place :
+ *  sans cette conversion, une bande chargée de sachets se croit pleine et
+ *  refuse deux kilos de sel — qui se retrouvent coupés en deux au raccord. */
+function volumeItem(id){
+  return CONFIG.capaciteSortie / capaciteItem(id, CONFIG.capaciteSortie);
+}
+
+/** Ce qui est déjà sur la bande, exprimé dans une unité commune. */
 function chargeConvoyeur(c){
   let s = 0;
-  for (let i=0;i<c.transit.length;i++) s += c.transit[i].qte;
+  for (let i=0;i<c.transit.length;i++) s += c.transit[i].qte * volumeItem(c.transit[i].item);
   return s;
 }
-function capaciteConvoyeur(c, item){
-  return c.chemin.length * capaciteItem(item, CONFIG.capaciteSortie) / 8;
+
+/** Ce que la bande peut porter, dans la même unité commune. */
+function capaciteConvoyeur(c){
+  return c.chemin.length * CONFIG.capaciteSortie / 8;
+}
+
+/** Combien d'unités de cette matière-là tiennent encore dessus. */
+function placeConvoyeur(c, item){
+  return Math.max(0, (capaciteConvoyeur(c) - chargeConvoyeur(c)) / volumeItem(item));
 }
 
 /** Dépose de la marchandise en tête de bande. Fusionne avec le dernier colis
@@ -1608,6 +1692,7 @@ function creerConvoyeur(chemin, source, destination){
     id: nouvelId(), type:"convoyeur",
     chemin: chemin.map(p => ({x:p.x, y:p.y})),
     source, destination,
+    filtre: null,               // null = la bande prend ce que l'aval réclame
     debitMax: CONV.debitMax,
     debitActuel: 0,
     latence: Math.max(0.5, chemin.length / CONV.vitesse),
@@ -1631,6 +1716,10 @@ function simConvoyeur(c, dt){
     const p = c.transit[0];
     const place = dst ? placeEntree(dst, p.item) : 0;
     if (place <= 1e-6) break;                 // bouchon : ça s'entasse au bout
+    // Un colis passe entier ou il attend : le couper en deux au raccord
+    // donnerait deux moitiés posées de part et d'autre de la jonction.
+    // Seule exception : un colis à lui seul plus gros que tout l'aval.
+    if (place < p.qte - 1e-6 && p.qte <= placeTotale(dst, p.item) + 1e-6) break;
     const q = Math.min(p.qte, place);
     livrer(dst, p.item, q);
     p.qte -= q;
@@ -1659,6 +1748,8 @@ function simConvoyeur(c, dt){
     } else {
       candidats = Object.keys(src.sortie).filter(it => src.sortie[it] > 1e-6);
     }
+    // Un filtre posé sur la bande a le dernier mot.
+    if (c.filtre) candidats = candidats.filter(it => it === c.filtre);
 
     for (const it of candidats){
       if (budget <= 1e-6) break;
@@ -1691,6 +1782,7 @@ function voisinNoeud(t, exclure, exclureId){
     if (exclure && x === exclure.x && y === exclure.y) continue;
     const o = occupant(u,x,y);
     if (o === 1) return idx.quai;
+    if (o === 2) return idx.quaiSortie;
     if (o > 1){
       const n = noeudParId(o);
       if (!n || n.id === exclureId) continue;
@@ -1704,6 +1796,16 @@ function voisinNoeud(t, exclure, exclureId){
 /** Raccorde tout bout de bande qui pend dans le vide. C'est ce qui permet de
  *  poser les convoyeurs par tronçons et de les brancher les uns aux autres :
  *  plusieurs bandes peuvent converger vers la même. */
+/** Le nœud est-il vraiment au contact de cette tuile ? Un quai qui se déplace
+ *  ou une machine démolie laisserait sinon un raccord fantôme. */
+function auContact(t, id){
+  const u = U();
+  if (!id) return false;
+  const d = [[1,0],[-1,0],[0,1],[0,-1]];
+  for (const [dx,dy] of d) if (occupant(u, t.x+dx, t.y+dy) === id) return true;
+  return false;
+}
+
 function relierConvoyeurs(){
   const u = etat.usines[etat.usineActive];
   if (!u) return;
@@ -1712,6 +1814,8 @@ function relierConvoyeurs(){
     const a = c.chemin[0], b = c.chemin[c.chemin.length-1];
     const apres = c.chemin.length > 1 ? c.chemin[1] : null;
     const avant = c.chemin.length > 1 ? c.chemin[c.chemin.length-2] : null;
+    if (c.source && !auContact(a, c.source)) c.source = 0;
+    if (c.destination && !auContact(b, c.destination)) c.destination = 0;
     if (!noeudParId(c.source)){
       const n = voisinNoeud(a, apres, c.id);
       c.source = n ? n.id : 0;
@@ -1728,7 +1832,7 @@ function relierConvoyeurs(){
 /** 0 = vide, 1 = plein : sert à choisir quoi envoyer en priorité. */
 function manqueRelatif(n, item){
   if (estQuai(n)) return 1;
-  if (estConvoyeur(n)) return chargeConvoyeur(n) / Math.max(1, capaciteConvoyeur(n, item));
+  if (estConvoyeur(n)) return chargeConvoyeur(n) / Math.max(1, capaciteConvoyeur(n));
   const d = MACHINES[n.type];
   if (d.stockage) return contenuTotal(n.sortie) / d.capacite;
   return (n.entree[item]||0) / capaciteItem(item, CONFIG.capaciteEntree);
@@ -1929,16 +2033,20 @@ function meilleurTransport(o){
     for (const it in m.sortie){
       const q = m.sortie[it];
       if (q < 1) continue;
-      const estProduit = ITEMS[it].cat === "produit";
+      const estProduit = ITEMS[it].cat === "produit" || ITEMS[it].cat === "rebut";
       const remplissage = q / capaciteItem(it, CONFIG.capaciteSortie);
       if (!estProduit && remplissage < 0.45) continue;
       // destination : le quai pour un produit fini, sinon une caisse qui a de la place
       let dest = null;
-      if (estProduit) dest = noeudParId(1);
-      else {
+      // Un poste qui consomme cette matière passe avant tout : c'est ainsi que
+      // le rebut trouve la table de tri sans qu'on ait rien à câbler.
+      for (const c of u.machines)
+        if (!MACHINES[c.type].stockage && c.id !== m.id && placeEntree(c, it) > 2){ dest = c; break; }
+      if (!dest && estProduit) dest = noeudParId(2);          // au quai de sortie
+      if (!dest){
         for (const c of u.machines)
           if (MACHINES[c.type].stockage && placeEntree(c, it) > 2){ dest = c; break; }
-        if (!dest && remplissage > 0.9) dest = noeudParId(1);
+        if (!dest && remplissage > 0.9) dest = noeudParId(estProduit ? 2 : 1);
       }
       if (!dest || res.has(dest.id + ":" + it)) continue;
       const acces = tuileAcces(u, m, o.x, o.y);
@@ -2075,7 +2183,7 @@ function tachePorte(o, dt){
 
 function deposerAuQuai(o){
   if (!o.charge) return;
-  ajouterStock(o.charge.item, o.charge.qte);
+  ajouterStock(o.charge.item, o.charge.qte);   // le compartiment se choisit tout seul
   o.charge = null;
 }
 
@@ -2384,7 +2492,7 @@ function acheter(id, qte){
   depenser(prix, "achat");
   ajouterStock(id, qte);
   son("argent");
-  flottant(U().quai.x+1, U().quai.y+1, "−" + Math.round(prix) + " €", "#e0574a");
+  flottant(U().quaiEntree.x+1, U().quaiEntree.y+1, "−" + Math.round(prix) + " €", "#e0574a");
   notif("Livraison", quantiteItem(id, qte, true) + " pour " + euros(prix) + ".", "");
   tutoEvenement("achat");
   return true;
@@ -2410,7 +2518,7 @@ function vendreComptant(id, qte){
   compter(etat.progression.vendus, id, qte);
   compter(etat.stats.semaineCourante.livres, id, qte);
   son("argent");
-  flottant(U().quai.x+1, U().quai.y+1, "+" + Math.round(prix) + " €", "#5cba6b");
+  flottant(U().quaiSortie.x+1, U().quaiSortie.y+1, "+" + Math.round(prix) + " €", "#5cba6b");
   notif("Vendu", quantiteItem(id, qte, true) + " au comptant : " + euros(prix) + ".", "ok");
 }
 
@@ -2528,7 +2636,7 @@ function livrerContrats(){
             " · " + euros(montant) + " payés dans " + c.paiement + " jours.", "");
     } else {
       encaisser(montant, "vente");
-      flottant(U().quai.x+1, U().quai.y+1, "+" + Math.round(montant) + " €", "#5cba6b");
+      flottant(U().quaiSortie.x+1, U().quaiSortie.y+1, "+" + Math.round(montant) + " €", "#5cba6b");
       son("argent");
       notif("Expédition", quantiteItem(c.produitId, q, true) + " partis chez " + c.client + " : " + euros(montant) + ".", "ok");
     }
@@ -2597,7 +2705,7 @@ function vendreSurplus(){
     detail.push(quantiteItem(id, surplus, true));
   }
   if (total > 0){
-    flottant(U().quai.x+1, U().quai.y+1, "+" + Math.round(total) + " €", "#5cba6b");
+    flottant(U().quaiSortie.x+1, U().quaiSortie.y+1, "+" + Math.round(total) + " €", "#5cba6b");
     son("argent");
     notif("Commerces du coin", detail.join(", ") + " partis pour " + euros(total) + ".", "ok");
   }
@@ -2682,6 +2790,61 @@ function agrandirUsine(l, h){
     for (let x=0; x<u.largeur; x++)
       g[y*l+x] = u.grille[y*u.largeur+x];
   u.grille = g; u.largeur = l; u.hauteur = h;
+
+  // Les quais grandissent, mais le quai d'entrée ne bouge pas d'un pouce : ce
+  // qui y est raccordé doit le rester. Seul le quai de sortie suit le mur, qui
+  // vient de reculer — les bandes concernées se rebranchent d'elles-mêmes.
+  const taille = clamp(4 + Math.floor((etat.meta.age-1)*1.5), 4, Math.max(4, h-2));
+  u.quaiEntree.x = 0;
+  u.quaiEntree.h = taille;
+  u.quaiEntree.y = clamp(u.quaiEntree.y, 0, h - taille);
+  u.quaiSortie.h = taille;
+  u.quaiSortie.y = clamp(u.quaiSortie.y, 0, h - taille);
+  const ancienX = u.quaiSortie.x;
+  u.quaiSortie.x = l - u.quaiSortie.l;
+  libererPourQuai(u, u.quaiSortie);
+  placerQuais(u);
+  reindexer();
+  if (ancienX !== u.quaiSortie.x)
+    notif("Le quai de sortie a suivi le mur", "Vérifiez les convoyeurs qui y arrivaient.", "att");
+}
+
+/** Un quai qui se déplace ne doit rien écraser : ce qui gêne est démoli et
+ *  remboursé, et le joueur est prévenu. En pratique le mur neuf est vierge. */
+function libererPourQuai(u, q){
+  const gene = new Set();
+  for (let dy=0; dy<q.h; dy++)
+    for (let dx=0; dx<q.l; dx++){
+      const x = q.x+dx, y = q.y+dy;
+      if (x<0||y<0||x>=u.largeur||y>=u.hauteur) continue;
+      const o = u.grille[y*u.largeur+x];
+      if (o > 2) gene.add(o);
+    }
+  for (const id of gene){
+    const n = noeudParId(id);
+    if (n){ demolir(n); notif("Place au quai", "Il a fallu déplacer ce qui gênait.", "att"); }
+  }
+}
+
+/** Agrandir un quai à la demande : deux tuiles de plus, contre espèces. */
+function agrandirQuai(sortie){
+  const u = U();
+  const q = sortie ? u.quaiSortie : u.quaiEntree;
+  if (q.h + 2 > u.hauteur){ notif("Impossible", "Le mur ne suit pas.", "ko"); return; }
+  const cout = 900 + q.h * 150;
+  if (!mode().constructionGratuite && !mode().argentInfini &&
+      etat.finances.solde - cout < CONFIG.faillite){
+    notif("Trop cher", "Il faut " + euros(cout) + ".", "ko"); return;
+  }
+  const avant = { x:q.x, y:q.y, h:q.h };
+  q.h += 2; q.y = clamp(q.y - 1, 0, u.hauteur - q.h);
+  libererPourQuai(u, q);
+  placerQuais(u);
+  depenser(mode().constructionGratuite ? 0 : cout, "investissement");
+  reindexer();
+  son("pose");
+  notif("Quai agrandi", (sortie ? "Le quai de sortie" : "Le quai d'entrée") +
+        " fait maintenant " + q.h + " tuiles de haut.", "ok");
 }
 
 function finDePartie(){
@@ -2757,7 +2920,7 @@ function creerCandidat(){
 function embaucher(c){
   const u = U();
   c.id = nouvelId();
-  const q = u.quai;
+  const q = u.quaiEntree;
   c.x = q.x + q.l + 0.5; c.y = q.y + 1.5;
   c.moral = 0.75;
   u.ouvriers.push(c);
@@ -3333,19 +3496,24 @@ function dessinerSol(){
   ctx.strokeRect(0,0,u.largeur,u.hauteur);
 }
 
-/* -------------------------------------------------------------- Le quai */
-function dessinerQuai(){
-  const u = U(), q = u.quai;
+/* ------------------------------------------------------------- Les quais */
+function dessinerQuais(){
+  const u = U();
+  dessinerUnQuai(u.quaiEntree, u.stocks, "ENTRÉE", "#e2b62c");
+  dessinerUnQuai(u.quaiSortie, u.stocksSortie, "SORTIE", "#5cba6b");
+}
+
+function dessinerUnQuai(q, stock, titre, teinte){
   ctx.save();
-  // dalle du quai
   ctx.fillStyle = "#3c4045";
   ctx.fillRect(q.x, q.y, q.l, q.h);
   ctx.fillStyle = "#33373c";
   ctx.fillRect(q.x, q.y+q.h-0.22, q.l, 0.22);
-  // bandes d'avertissement
+
+  // bandes d'avertissement, teintées selon le sens du quai
   ctx.save();
   ctx.beginPath(); ctx.rect(q.x,q.y,q.l,q.h); ctx.clip();
-  ctx.strokeStyle = "rgba(226,182,44,.75)";
+  ctx.strokeStyle = teinte === "#5cba6b" ? "rgba(92,186,107,.72)" : "rgba(226,182,44,.75)";
   ctx.lineWidth = 0.16;
   for (let i=-q.h; i<q.l+q.h; i+=0.5){
     ctx.beginPath(); ctx.moveTo(q.x+i, q.y); ctx.lineTo(q.x+i+q.h, q.y+q.h); ctx.stroke();
@@ -3354,13 +3522,12 @@ function dessinerQuai(){
   ctx.fillStyle = "rgba(20,22,25,.55)";
   ctx.fillRect(q.x+0.15, q.y+0.15, q.l-0.3, q.h-0.3);
 
-  // ce qui attend sur le quai, en vrac
-  const items = Object.keys(u.stocks).filter(k => u.stocks[k] > 0.5);
   if (vue.zoom > CONFIG.seuilDetail){
+    const items = Object.keys(stock).filter(k => ITEMS[k] && stock[k] > 0.5);
     let i = 0;
     for (const it of items){
-      const n = Math.min(4, Math.ceil(u.stocks[it]/8));
-      for (let k=0;k<n && i<18;k++,i++){
+      const n = Math.min(4, Math.ceil(stock[it]/8));
+      for (let k=0;k<n && i<22;k++,i++){
         const bx = q.x + 0.32 + bruit(i*3+1)*(q.l-0.64);
         const by = q.y + 0.32 + bruit(i*7+5)*(q.h-0.64);
         dessinerItem(bx, by, 0.42, it, 0.95);
@@ -3373,8 +3540,8 @@ function dessinerQuai(){
     const e = mondeVersEcran(q.x+q.l/2, q.y-0.15);
     ecranSeul();
     ctx.font = "600 " + Math.round(10*Math.min(1.4,vue.zoom)) + "px Segoe UI, sans-serif";
-    ctx.textAlign = "center"; ctx.fillStyle = "rgba(226,196,120,.85)";
-    ctx.fillText("QUAI", e.x, e.y);
+    ctx.textAlign = "center"; ctx.fillStyle = teinte === "#5cba6b" ? "rgba(140,215,155,.9)" : "rgba(226,196,120,.85)";
+    ctx.fillText(titre, e.x, e.y);
     appliquerCamera();
   }
 }
@@ -3779,8 +3946,36 @@ function detailMachine(m, d, x, y, l, h, produit){
       break;
     }
 
+    case "silo": {
+      // cylindre vu du dessus, avec sa jauge de remplissage
+      const cap = MACHINES.silo.capacite;
+      const ray = Math.min(l,h)/2 - 0.2;
+      ctx.fillStyle = "#6e7780";
+      ctx.beginPath(); ctx.arc(cx, cy, ray, 0, 7); ctx.fill();
+      ctx.strokeStyle = "#4a525a"; ctx.lineWidth = 0.08;
+      ctx.beginPath(); ctx.arc(cx, cy, ray, 0, 7); ctx.stroke();
+      const rempli = clamp(contenuTotal(m.sortie)/cap, 0, 1);
+      if (rempli > 0.01){
+        const it = m.filtre || Object.keys(m.sortie)[0];
+        ctx.fillStyle = (ITEMS[it] && ITEMS[it].couleur) || "#c8b07a";
+        ctx.globalAlpha = 0.8;
+        ctx.beginPath(); ctx.arc(cx, cy, (ray-0.08)*Math.sqrt(rempli), 0, 7); ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+      ctx.strokeStyle = "rgba(255,255,255,.14)"; ctx.lineWidth = 0.05;
+      for (let i=0;i<4;i++){
+        const a2 = i/4*Math.PI*2 + 0.4;
+        ctx.beginPath();
+        ctx.moveTo(cx+Math.cos(a2)*ray*0.45, cy+Math.sin(a2)*ray*0.45);
+        ctx.lineTo(cx+Math.cos(a2)*ray*0.94, cy+Math.sin(a2)*ray*0.94);
+        ctx.stroke();
+      }
+      break;
+    }
+
+    case "caisse_dediee":
     case "caisse": {
-      ctx.fillStyle = "#8a6b45";
+      ctx.fillStyle = m.type === "caisse_dediee" ? "#9a8752" : "#8a6b45";
       coinsArrondis(x+0.12, y+0.12, l-0.24, h-0.24, 0.05); ctx.fill();
       ctx.strokeStyle = "#5f4930"; ctx.lineWidth = 0.07;
       coinsArrondis(x+0.12, y+0.12, l-0.24, h-0.24, 0.05); ctx.stroke();
@@ -3788,6 +3983,11 @@ function detailMachine(m, d, x, y, l, h, produit){
       ctx.moveTo(x+0.12,y+h/2); ctx.lineTo(x+l-0.12,y+h/2);
       ctx.moveTo(x+l/2,y+0.12); ctx.lineTo(x+l/2,y+h-0.12);
       ctx.stroke();
+      if (m.type === "caisse_dediee" && m.filtre){
+        // une étiquette : on voit d'un coup d'œil à quoi le bac est réservé
+        ctx.fillStyle = (ITEMS[m.filtre] && ITEMS[m.filtre].couleur) || "#c8b07a";
+        ctx.fillRect(x+0.3, y+0.22, l-0.6, 0.15);
+      }
       const items = Object.keys(m.sortie).filter(k=>m.sortie[k]>0.5);
       if (items.length){
         const total = contenuTotal(m.sortie);
@@ -4187,9 +4387,11 @@ function dessinerSelection(){
 function dessinerLumiere(){
   const t = minuteDuJour() / CONFIG.minutesParJour;
   // matin chaud, journée neutre, fin d'après-midi bleutée
+  // Une lumière, pas un voile : au-delà, le béton vire au beige et on ne
+  // distingue plus rien sur les grands ateliers.
   let r,g,b,a;
-  if (t < 0.18){ const k = t/0.18; r=255;g=190;b=120; a=0.22*(1-k); }
-  else if (t > 0.78){ const k=(t-0.78)/0.22; r=70;g=95;b=160; a=0.3*k; }
+  if (t < 0.25){ const k = t/0.25; r=255;g=196;b=132; a=0.12*(1-k); }
+  else if (t > 0.74){ const k=(t-0.74)/0.26; r=70;g=95;b=160; a=0.18*k; }
   else { r=255;g=255;b=255; a=0; }
 
   ecranSeul();
@@ -4211,7 +4413,9 @@ function dessinerLumiere(){
 function dessinerLampes(){
   const u = U();
   const t = minuteDuJour()/CONFIG.minutesParJour;
-  const force = clamp((t-0.65)/0.35, 0, 1)*0.5 + 0.12;
+  // Les halos s'additionnent : sur un grand atelier il y en a des dizaines,
+  // et il ne faut pas que la somme délave le sol.
+  const force = clamp((t-0.65)/0.35, 0, 1)*0.4 + 0.08;
   ctx.save();
   ctx.globalCompositeOperation = "lighter";
   ctx.globalAlpha = 0.13*force;
@@ -4253,9 +4457,10 @@ function dessinerSchema(){
       ctx.strokeRect(m.x+0.1, m.y+0.1, m.l-0.2, m.h-0.2);
     }
   }
-  const q = u.quai;
   ctx.fillStyle = "#e2b62c";
-  ctx.fillRect(q.x+0.1,q.y+0.1,q.l-0.2,q.h-0.2);
+  ctx.fillRect(u.quaiEntree.x+0.1, u.quaiEntree.y+0.1, u.quaiEntree.l-0.2, u.quaiEntree.h-0.2);
+  ctx.fillStyle = "#5cba6b";
+  ctx.fillRect(u.quaiSortie.x+0.1, u.quaiSortie.y+0.1, u.quaiSortie.l-0.2, u.quaiSortie.h-0.2);
 }
 
 /* ============================================================ Boucle dessin */
@@ -4276,7 +4481,7 @@ function dessiner(){
 
   dessinerSol();
   dessinerLampes();
-  dessinerQuai();
+  dessinerQuais();
 
   for (const c of u.convoyeurs) dessinerConvoyeur(c);
 
@@ -4329,10 +4534,11 @@ function majBandeau(){
   if (age >= 2){
     const u = U();
     // On montre le produit fini le plus abondant, avec sa vraie unité.
-    const finis = Object.keys(u.stocks).filter(k => ITEMS[k].cat === "produit" && u.stocks[k] >= 1)
-                        .sort((a,b) => u.stocks[b]-u.stocks[a]);
+    const S = u.stocksSortie;
+    const finis = Object.keys(S).filter(k => ITEMS[k] && ITEMS[k].cat === "produit" && S[k] >= 1)
+                        .sort((a,b) => S[b]-S[a]);
     $("#indStock .val").textContent = finis.length
-      ? quantiteItem(finis[0], u.stocks[finis[0]], true) : "rien de prêt";
+      ? quantiteItem(finis[0], S[finis[0]], true) : "rien de prêt";
     $("#indReput .val").textContent = Math.round(etat.reputation) + " / 100";
     $("#indPerso .val").textContent = u.ouvriers.length + " " + pluriel(u.ouvriers.length,"personne");
   }
@@ -4591,11 +4797,19 @@ function majInfobulle(){
 
   let t = "", d = "", e = "";
   if (estQuai(n)){
-    t = "Quai";
-    d = "Les matières arrivent ici, les vélos en repartent.";
-    const finis = Object.keys(U().stocks).filter(k=>ITEMS[k].cat==="produit" && U().stocks[k]>=1)
-                        .sort((a,b)=>U().stocks[b]-U().stocks[a]);
-    e = finis.length ? quantiteItem(finis[0], U().stocks[finis[0]], true) + " prêts à partir" : "rien de prêt à partir";
+    const S = U().stocksSortie;
+    t = estQuaiSortie(n) ? "Quai de sortie" : "Quai d'entrée";
+    d = estQuaiSortie(n) ? "C'est d'ici que part la marchandise vendue."
+                         : "C'est ici qu'arrivent les pommes de terre et le reste.";
+    if (estQuaiSortie(n)){
+      const finis = Object.keys(S).filter(k=>ITEMS[k] && ITEMS[k].cat==="produit" && S[k]>=1)
+                          .sort((a,b)=>S[b]-S[a]);
+      e = finis.length ? quantiteItem(finis[0], S[finis[0]], true) + " prêts à partir" : "rien de prêt à partir";
+    } else {
+      const m = Object.keys(U().stocks).filter(k=>ITEMS[k] && U().stocks[k]>=1)
+                      .sort((a,b)=>U().stocks[b]-U().stocks[a]);
+      e = m.length ? quantiteItem(m[0], U().stocks[m[0]], true) + " en réserve" : "vide";
+    }
   } else if (n.type === "convoyeur"){
     t = "Convoyeur";
     d = n.chemin.length + " tuiles";
@@ -4859,7 +5073,7 @@ function blocTitre(titre){
 function panneauDetail(z){
   const n = vue.selection ? noeudParId(vue.selection) : null;
   if (!n){ detailUsine(z); return; }
-  if (estQuai(n)){ detailQuai(z); return; }
+  if (estQuai(n)){ detailQuai(z, n); return; }
   if (n.type === "convoyeur"){ detailConvoyeur(z, n); return; }
   detailMachinePanneau(z, n);
 }
@@ -4881,11 +5095,15 @@ function detailUsine(z){
   z.appendChild(b);
 
   const b2 = blocTitre("Aujourd'hui");
-  let produits = 0, idProduit = null;
+  // Ce qui compte, c'est le produit vendable dominant — pas le rebut trié.
+  const parProduit = {};
   for (const m of u.machines){
     const s = recetteDe(m)?.sortie.id;
-    if (ITEMS[s]?.cat === "produit"){ produits += m.produitAujourdhui; idProduit = s; }
+    if (ITEMS[s]?.cat === "produit" && s !== "rebut")
+      parProduit[s] = (parProduit[s]||0) + m.produitAujourdhui;
   }
+  let produits = 0, idProduit = null;
+  for (const k in parProduit) if (parProduit[k] >= produits){ produits = parProduit[k]; idProduit = k; }
   b2.appendChild(ligne("Sorti aujourd'hui", idProduit ? quantiteItem(idProduit, produits, true) : "rien"));
   b2.appendChild(ligne("Machines", u.machines.length));
   b2.appendChild(ligne("Équipe", u.ouvriers.length + " " + pluriel(u.ouvriers.length,"personne")));
@@ -4936,43 +5154,62 @@ function detailUsine(z){
 
 function centrerSur(n){ vue.camX = n.x + n.l/2; vue.camY = n.y + n.h/2; }
 
-function detailQuai(z){
+function detailQuai(z, n){
   const u = U();
-  z.appendChild(elem('<h2 class="titrePan">Quai</h2>'));
-  z.appendChild(elem('<p class="sousTitre">Les matières arrivent ici, les produits en repartent.</p>'));
-  const bv = blocTitre("Écoulement");
-  const lab = document.createElement("label");
-  lab.style.cssText = "display:flex;align-items:flex-start;gap:8px;font-size:12.5px;cursor:pointer";
-  const cb = document.createElement("input");
-  cb.type = "checkbox"; cb.checked = !!etat.venteAuto;
-  cb.onchange = () => { etat.venteAuto = cb.checked; majPanneau(); };
-  lab.appendChild(cb);
-  lab.appendChild(elem('<span>Les commerces du coin passent chaque soir prendre ce qui n\'est promis à personne, à 12 % en dessous du prix. Une commande signée rapporte davantage.</span>'));
-  bv.appendChild(lab);
-  z.appendChild(bv);
+  const sortie = estQuaiSortie(n);
+  const q = sortie ? u.quaiSortie : u.quaiEntree;
+  z.appendChild(elem('<h2 class="titrePan"></h2>')).textContent = sortie ? "Quai de sortie" : "Quai d'entrée";
+  z.appendChild(elem('<p class="sousTitre"></p>')).textContent = sortie
+    ? "La marchandise vendue part d'ici. Amenez-y ce qui est fini."
+    : "Les matières livrées arrivent ici.";
 
-  const b = blocTitre("Prêt à partir");
-  const finis = Object.keys(u.stocks).filter(k => ITEMS[k].cat === "produit" && u.stocks[k] >= 1);
-  if (!finis.length) b.appendChild(elem('<div class="vide">Rien de fini pour le moment.</div>'));
-  for (const it of finis){
-    const l = document.createElement("div");
-    l.className = "item";
-    l.innerHTML = '<span class="puce"></span><span class="nom"></span><span class="qte"></span>';
-    l.querySelector(".puce").style.background = ITEMS[it].couleur;
-    l.querySelector(".nom").textContent = ITEMS[it].nom;
-    l.querySelector(".qte").textContent = mesure(it, u.stocks[it]);
-    b.appendChild(l);
-    const lot = ITEMS[it].unite === "kg" ? 25 : 200;
-    const r = document.createElement("div");
-    r.className = "btRang";
-    r.appendChild(bouton("Vendre " + mesure(it, lot), () => { vendreComptant(it, lot); majPanneau(); }));
-    r.appendChild(bouton("Tout vendre", () => { vendreComptant(it, Math.floor(u.stocks[it])); majPanneau(); }));
-    b.appendChild(r);
-    const par = ITEMS[it].unite === "kg" ? "le kg" : "pièce";
-    b.appendChild(elem('<div style="font-size:11px;color:var(--texte-faible);margin-top:4px">'+
-      'Au comptant : '+euros(ITEMS[it].vente*0.88)+' '+par+', contre '+euros(ITEMS[it].vente)+' sur commande.</div>'));
+  const bq = blocTitre("Le quai");
+  bq.appendChild(ligne("Taille", q.l + " sur " + q.h + " tuiles"));
+  const cout = 900 + q.h * 150;
+  bq.appendChild(bouton("Agrandir de deux tuiles (" + euros(cout) + ")",
+    () => { agrandirQuai(sortie); majPanneau(); }, "large"));
+  z.appendChild(bq);
+
+  if (sortie){
+    const b = blocTitre("Prêt à partir");
+    const finis = Object.keys(u.stocksSortie).filter(k => ITEMS[k] && u.stocksSortie[k] >= 1);
+    if (!finis.length) b.appendChild(elem('<div class="vide">Rien de fini pour le moment.</div>'));
+    for (const it of finis){
+      const l = document.createElement("div");
+      l.className = "item";
+      l.innerHTML = '<span class="puce"></span><span class="nom"></span><span class="qte"></span>';
+      l.querySelector(".puce").style.background = ITEMS[it].couleur;
+      l.querySelector(".nom").textContent = ITEMS[it].nom;
+      l.querySelector(".qte").textContent = mesure(it, u.stocksSortie[it]);
+      b.appendChild(l);
+      if (!ITEMS[it].vente) continue;
+      const lot = ITEMS[it].unite === "kg" ? 25 : 200;
+      const r = document.createElement("div");
+      r.className = "btRang";
+      r.appendChild(bouton("Vendre " + mesure(it, lot), () => { vendreComptant(it, lot); majPanneau(); }));
+      r.appendChild(bouton("Tout vendre", () => { vendreComptant(it, Math.floor(u.stocksSortie[it])); majPanneau(); }));
+      b.appendChild(r);
+    }
+    z.appendChild(b);
+
+    const bv = blocTitre("Écoulement");
+    const lab = document.createElement("label");
+    lab.style.cssText = "display:flex;align-items:flex-start;gap:8px;font-size:12.5px;cursor:pointer";
+    const cb = document.createElement("input");
+    cb.type = "checkbox"; cb.checked = !!etat.venteAuto;
+    cb.onchange = () => { etat.venteAuto = cb.checked; majPanneau(); };
+    lab.appendChild(cb);
+    lab.appendChild(elem('<span>Les commerces du coin passent chaque soir prendre ce qui n\'est promis à personne, à 12 % en dessous du prix. Une commande signée rapporte davantage.</span>'));
+    bv.appendChild(lab);
+    z.appendChild(bv);
+  } else {
+    const b = blocTitre("En réserve");
+    const mats = Object.keys(u.stocks).filter(k => ITEMS[k] && u.stocks[k] >= 1);
+    if (!mats.length) b.appendChild(elem('<div class="vide">Le quai est vide.</div>'));
+    for (const it of mats) b.appendChild(ligne(ITEMS[it].nom, mesure(it, u.stocks[it])));
+    b.appendChild(bouton("Aller aux achats", () => { vue.ongletActif = "stocks"; majOnglets(); majPanneau(); }, "large"));
+    z.appendChild(b);
   }
-  z.appendChild(b);
 }
 
 function detailConvoyeur(z, c){
@@ -4993,6 +5230,19 @@ function detailConvoyeur(z, c){
   else { pas.textContent = "Fonctionne"; pas.className = "pastille ok"; }
   b.appendChild(p);
   z.appendChild(b);
+  // Filtre : utile quand un poste sort deux choses, comme la friteuse et son
+  // rebut, et qu'on veut que chaque bande n'en emporte qu'une.
+  const bf = blocTitre("Ce que la bande emporte");
+  const possibles = (src && dst) ? itemsPortes(src, dst) : [];
+  bf.appendChild(elem('<div style="font-size:12.5px;color:var(--texte-doux)"></div>')).textContent =
+    c.filtre ? "Uniquement : " + (ITEMS[c.filtre] ? ITEMS[c.filtre].nom : c.filtre)
+             : "Tout ce que l'aval réclame" +
+               (possibles.length > 1 ? " — soit " + possibles.length + " marchandises." : ".");
+  if (possibles.length > 1)
+    bf.appendChild(selecteurMatiere(c.filtre, possibles, "Tout ce que l'aval réclame",
+      v => { c.filtre = v; majPanneau(); }));
+  z.appendChild(bf);
+
   z.appendChild(bouton("Démolir (rendu " + euros(CONV.coutParTuile*c.chemin.length*0.6) + ")",
     () => { demolir(c); majPanneau(); }, "large danger"));
 }
@@ -5102,7 +5352,25 @@ function detailMachinePanneau(z, m){
     if (!items.length) bc.appendChild(elem('<div class="vide">Vide.</div>'));
     for (const it of items) bc.appendChild(ligne(ITEMS[it].nom, mesure(it, m.sortie[it])));
     bc.appendChild(ligne("Place restante", Math.floor(d.capacite - contenuTotal(m.sortie))));
+    const j = elem('<div class="jauge bleu"><i></i></div>');
+    j.querySelector("i").style.width = Math.round(contenuTotal(m.sortie)/d.capacite*100)+"%";
+    bc.appendChild(j);
     z.appendChild(bc);
+
+    if (d.dedie){
+      const bd = blocTitre("Marchandise rangée ici");
+      bd.appendChild(elem('<div style="font-size:12.5px;color:var(--texte-doux)"></div>')).textContent =
+        m.filtre ? ITEMS[m.filtre].nom + " — et rien d'autre."
+                 : "Pas encore réglé : le bac prendra la première marchandise qu'on lui apporte.";
+      const dispo = Object.keys(ITEMS).filter(k => (ITEMS[k].ageMin||1) <= etat.meta.age);
+      bd.appendChild(selecteurMatiere(m.filtre, dispo, "Au choix (la première reçue)", v => {
+        if (v && contenuTotal(m.sortie) > 0.5 && !m.sortie[v])
+          notif("Videz-le d'abord", "Ce bac contient encore autre chose.", "ko");
+        else m.filtre = v;
+        majPanneau();
+      }));
+      z.appendChild(bd);
+    }
   }
 
   // Le bain d'huile
@@ -5178,6 +5446,25 @@ function causeRebut(m, op){
   causes.sort((a,b) => b[0]-a[0]);
   if (causes[0][0] < 0.04) return "Rien à redire.";
   return "Surtout parce que " + causes[0][1] + ".";
+}
+
+/** Choisir une marchandise dans une liste, avec une option « au choix ». */
+function selecteurMatiere(valeur, choixPossibles, libelleVide, surChoix){
+  const sel = document.createElement("select");
+  sel.className = "champTexte";
+  sel.style.cssText = "text-align:left;margin:6px 0 0";
+  const o0 = document.createElement("option");
+  o0.value = ""; o0.textContent = libelleVide;
+  sel.appendChild(o0);
+  for (const id of choixPossibles){
+    if (!ITEMS[id]) continue;
+    const o = document.createElement("option");
+    o.value = id; o.textContent = ITEMS[id].nom;
+    if (valeur === id) o.selected = true;
+    sel.appendChild(o);
+  }
+  sel.onchange = () => surChoix(sel.value || null);
+  return sel;
 }
 
 function usureTexte(u){
@@ -5268,9 +5555,10 @@ function panneauStocks(z){
   z.appendChild(bm);
 
   const bp = blocTitre("Pièces en circulation");
-  const pieces = Object.keys(u.stocks).filter(k => u.stocks[k] >= 1 && ITEMS[k].cat !== "matiere");
+  const tout = tousStocks();
+  const pieces = Object.keys(tout).filter(k => ITEMS[k] && tout[k] >= 1 && ITEMS[k].cat !== "matiere");
   if (!pieces.length) bp.appendChild(elem('<div class="vide">Rien au quai.</div>'));
-  for (const it of pieces) bp.appendChild(ligne(ITEMS[it].nom, mesure(it, u.stocks[it])));
+  for (const it of pieces) bp.appendChild(ligne(ITEMS[it].nom, mesure(it, tout[it])));
   z.appendChild(bp);
 }
 
@@ -6328,6 +6616,9 @@ function SECTIONS_GUIDE(){
     "<p>Une bande ne prend que ce que son aval finira par consommer : inutile de craindre qu'elle se remplisse "+
     "de marchandise qui n'irait nulle part. En revanche une bande ne se <b>divise pas</b> : pour desservir "+
     "deux postes, il faut deux bandes au départ.</p>"+
+    "<p>Quand un poste sort deux choses — la friteuse et son rebut, par exemple — on pose un <b>filtre</b> sur "+
+    "une bande depuis sa fiche : elle n'emportera plus que cette marchandise-là, et l'autre trouvera son "+
+    "chemin ailleurs.</p>"+
     "<p>Une machine pousse ce qu'elle fabrique. Un convoyeur qui part du <b>quai</b> ou d'un <b>bac</b> "+
     "apporte au contraire ce que la machine d'arrivée réclame.</p>"+
     "<p>Attention : un convoyeur qui amène un ingrédient ne dispense pas d'apporter les autres. Une machine "+
@@ -6352,6 +6643,20 @@ function SECTIONS_GUIDE(){
     "<p>La marchandise ratée <b>ne se vend pas</b>. Si on la laisse traîner sur le quai, elle part mélangée "+
     "aux livraisons, et le client réclame : geste commercial, réputation en baisse. La <b>table de tri</b> "+
     "l'écarte et en tire un peu d'argent en alimentation animale.</p>" },
+
+  { titre:"Ranger la marchandise", corps:
+    "<p>Le <b>quai d'entrée</b>, à gauche, reçoit ce qu'on achète. Le <b>quai de sortie</b>, à droite, est d'où "+
+    "part ce qu'on vend. Chaque marchandise sait où elle va : il n'y a rien à trier. Les deux s'agrandissent "+
+    "contre espèces depuis leur fiche, et le quai d'entrée ne bouge jamais — ce qui y est raccordé le reste.</p>"+
+    "<p>Entre les postes, trois rangements :</p>"+
+    "<ul>"+
+    "<li>le <b>bac de stockage</b> prend tout, en vrac ;</li>"+
+    "<li>le <b>bac dédié</b> ne prend qu'une marchandise mais en tient bien davantage — il se règle sur la "+
+    "première qu'on lui apporte, ou à la main depuis sa fiche ;</li>"+
+    "<li>le <b>silo</b> tient une saison entière sur une seule marchandise.</li>"+
+    "</ul>"+
+    "<p>Un rangement dédié n'est pas qu'une affaire de place : il empêche deux marchandises de se gêner sur "+
+    "le même tampon.</p>" },
 
   { titre:"L'entretien", corps:
     "<p>Une machine s'use en tournant. Elle <b>ralentit</b> d'abord, puis se met à grincer, à vibrer et à "+
@@ -6469,6 +6774,7 @@ function verifierPartie(){
   };
   scruter(etat.finances, "finances", 0);
   scruter(u.stocks, "stocks", 0);
+  scruter(u.stocksSortie, "stocksSortie", 0);
   for (const m of u.machines){ scruter(m.entree, "entree", 0); scruter(m.sortie, "sortie", 0); }
   ok("Aucun nombre aberrant", nombres.length === 0, nombres.slice(0,4).join(", "));
 

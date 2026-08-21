@@ -55,6 +55,16 @@ sachets se comptent à l'unité.
 - Moteur de flux à pas fixe (4 Hz), rendu interpolé à 60 fps
 - Trois postes de départ (laveuse-éplucheuse, trancheuse, friteuse), puis
   tambour d'assaisonnement, ensacheuse et bacs de stockage
+- **Deux quais dès le départ** : l'entrée à gauche pour ce qu'on achète, la
+  sortie à droite pour ce qu'on vend. Chaque marchandise sait où elle va. Les
+  deux s'agrandissent contre espèces, et le quai d'entrée ne bouge jamais quand
+  l'atelier grandit — ce qui y est raccordé le reste.
+- **Trois rangements** : le bac de stockage prend tout en vrac, le **bac dédié**
+  (âge 3) ne prend qu'une marchandise mais en tient deux fois et demie plus, et
+  le **silo** (âge 4) tient une saison entière. Un bac dédié se règle sur la
+  première marchandise reçue, ou à la main.
+- **Filtre de convoyeur** : quand un poste sort deux choses — la friteuse et son
+  rebut — on dit à chaque bande ce qu'elle emporte.
 - Convoyeurs en **réseau** : les bandes se branchent les unes aux autres, on
   bâtit un trajet par tronçons et plusieurs bandes peuvent converger vers un
   même poste. Elles se dessinent jointives — une bande touche sa voisine et la
