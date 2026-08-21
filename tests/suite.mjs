@@ -262,7 +262,7 @@ cas("saut-de-niveau", async (nav) => {
   await page.close();
   return { echecs: v.echecs.concat(erreurs), note: "5 âges" };
 });
-const AGES_ATTENDUS = ["12x10","20x16","32x24","48x36","48x36"];
+const AGES_ATTENDUS = ["15x12","20x16","32x24","48x36","48x36"];
 
 cas("auto-verifications", async (nav) => {
   const { page, jeu, sim, erreurs } = await contexte(nav);

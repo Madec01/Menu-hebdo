@@ -562,6 +562,8 @@ const CONFIG = {
   decouvertMax: -5000,
   faillite: -15000,
   remboursementCasse: 0.6,     // remboursement à la démolition
+  prixTuileAtelier: 46,        // coût de base d'une tuile de surface gagnée
+  atelierMax: { l:64, h:48 },
   particulesMax: 300,
   itemsConvoyeurMax: 40,
   argentDepart: 8000,
@@ -785,7 +787,7 @@ const MACHINES = {
 
 /* ----------------------------------------------------------------- Les âges */
 const AGES = [
-  { n:1, nom:"La friterie", largeur:12, hauteur:10,
+  { n:1, nom:"La friterie", largeur:15, hauteur:12,
     objectif:{ texte:"Livrer 1 500 kg de chips", type:"vendus", produit:"chips_vrac",
                cible:1500, secours:{type:"argent", cible:25000} },
     debloque:[],
@@ -1014,6 +1016,8 @@ const vue = {
   selection:null,        // id du noeud sélectionné
   ongletActif:"detail",
   traceConvoyeur:null,   // [{x,y}] pendant le tracé
+  convDepart:null,       // ancrage du premier clic
+  convArrivee:null,
   particules:[],
   flottants:[],          // textes qui montent (€, +1 vélo)
   temps:0,               // secondes réelles écoulées, pour les animations
@@ -2772,7 +2776,7 @@ function passerAgeSuivant(){
   }
   etat.meta.age++;
   const nouv = AGES[etat.meta.age-1];
-  agrandirUsine(nouv.largeur, nouv.hauteur);
+  agrandirUsine(Math.max(nouv.largeur, U().largeur), Math.max(nouv.hauteur, U().hauteur));
   U().nom = nouv.nom;
   etat.meta.vitesse = 0;
   son("age");
@@ -2783,18 +2787,21 @@ function passerAgeSuivant(){
   ouvrirAnnonceAge(nouv);
 }
 
-function agrandirUsine(l, h){
+/** Change la taille de l'atelier sans jamais rétrécir : on recopie la grille,
+ *  on replace les quais, et on prévient si le quai de sortie a dû suivre le mur.
+ *  Le quai d'entrée, lui, ne bouge jamais — ce qui y est raccordé doit le rester. */
+function redimensionnerUsine(l, h, tailleQuai){
   const u = U();
+  l = Math.max(l, u.largeur); h = Math.max(h, u.hauteur);
+  if (l === u.largeur && h === u.hauteur && !tailleQuai) return false;
+
   const g = new Uint16Array(l*h);
   for (let y=0; y<u.hauteur; y++)
     for (let x=0; x<u.largeur; x++)
       g[y*l+x] = u.grille[y*u.largeur+x];
   u.grille = g; u.largeur = l; u.hauteur = h;
 
-  // Les quais grandissent, mais le quai d'entrée ne bouge pas d'un pouce : ce
-  // qui y est raccordé doit le rester. Seul le quai de sortie suit le mur, qui
-  // vient de reculer — les bandes concernées se rebranchent d'elles-mêmes.
-  const taille = clamp(4 + Math.floor((etat.meta.age-1)*1.5), 4, Math.max(4, h-2));
+  const taille = clamp(tailleQuai || u.quaiEntree.h, 4, Math.max(4, h-2));
   u.quaiEntree.x = 0;
   u.quaiEntree.h = taille;
   u.quaiEntree.y = clamp(u.quaiEntree.y, 0, h - taille);
@@ -2807,6 +2814,40 @@ function agrandirUsine(l, h){
   reindexer();
   if (ancienX !== u.quaiSortie.x)
     notif("Le quai de sortie a suivi le mur", "Vérifiez les convoyeurs qui y arrivaient.", "att");
+  return true;
+}
+
+/** Agrandissement offert au passage d'un âge. */
+function agrandirUsine(l, h){
+  redimensionnerUsine(l, h, 4 + Math.floor((etat.meta.age-1)*1.5));
+}
+
+/** Le prix d'une tuile de surface : plus l'atelier est grand, plus pousser
+ *  le mur coûte cher. */
+function prixTuileAtelier(){
+  const u = U();
+  return CONFIG.prixTuileAtelier + Math.round(u.largeur*u.hauteur / 45);
+}
+
+/** Agrandissement acheté par le joueur : deux tuiles de large ou de haut. */
+function agrandirAtelier(dl, dh){
+  const u = U();
+  const max = CONFIG.atelierMax;
+  if (u.largeur + dl > max.l || u.hauteur + dh > max.h){
+    notif("Impossible", "L'atelier a atteint sa taille maximale.", "ko"); return;
+  }
+  const tuiles = (u.largeur+dl)*(u.hauteur+dh) - u.largeur*u.hauteur;
+  const prix = tuiles * prixTuileAtelier();
+  if (!mode().constructionGratuite && !mode().argentInfini &&
+      etat.finances.solde - prix < CONFIG.faillite){
+    notif("Trop cher", "Pousser le mur coûterait " + euros(prix) + ".", "ko"); return;
+  }
+  redimensionnerUsine(u.largeur+dl, u.hauteur+dh);
+  depenser(mode().constructionGratuite ? 0 : prix, "investissement");
+  son("pose");
+  for (let i=0;i<10;i++) particule(hasard(0,u.largeur), hasard(0,u.hauteur), "poussiere");
+  notif("Atelier agrandi", u.largeur + " sur " + u.hauteur + " tuiles, pour " + euros(prix) + ".", "ok");
+  majBandeau(); majPanneau();
 }
 
 /** Un quai qui se déplace ne doit rien écraser : ce qui gêne est démoli et
@@ -4336,16 +4377,50 @@ function dessinerApercu(){
   }
   else if (vue.outil.type === "convoyeur"){
     const trace = vue.traceConvoyeur;
-    if (trace && trace.length){
-      for (const t of trace){
-        const libre = occupant(u,t.x,t.y) === 0;
-        ctx.fillStyle = libre ? "rgba(92,186,107,.4)" : "rgba(224,87,74,.4)";
-        ctx.fillRect(t.x,t.y,1,1);
+    if (trace && trace.length > 1){
+      // La bande fantôme, dessinée comme la vraie : on voit tout de suite le
+      // trajet qu'elle prendra pour contourner ce qui encombre.
+      const bon = trace.every(t => occupant(u,t.x,t.y) === 0);
+      ctx.lineJoin = "round"; ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(trace[0].x+0.5, trace[0].y+0.5);
+      for (let i=1;i<trace.length;i++) ctx.lineTo(trace[i].x+0.5, trace[i].y+0.5);
+      ctx.strokeStyle = bon ? "rgba(92,186,107,.30)" : "rgba(224,87,74,.32)";
+      ctx.lineWidth = 0.82; ctx.stroke();
+      ctx.strokeStyle = bon ? "#5cba6b" : "#e0574a";
+      ctx.lineWidth = 0.1; ctx.setLineDash([0.3,0.22]);
+      ctx.lineDashOffset = -vue.temps*1.6;
+      ctx.stroke();
+      ctx.setLineDash([]); ctx.lineDashOffset = 0;
+
+      // Les deux ancrages
+      for (const [p, n] of [[trace[0], vue.convDepart], [trace[trace.length-1], vue.convArrivee]]){
+        ctx.fillStyle = (n && n.noeud) ? "rgba(92,186,107,.9)" : "rgba(240,180,41,.85)";
+        ctx.beginPath(); ctx.arc(p.x+0.5, p.y+0.5, 0.17, 0, 7); ctx.fill();
       }
+
+      // Ce que ça coûtera, au bout du curseur
+      const e = mondeVersEcran(trace[trace.length-1].x+0.5, trace[trace.length-1].y-0.35);
+      ecranSeul();
+      ctx.font = "600 12px Segoe UI, sans-serif";
+      ctx.textAlign = "center";
+      const txt = trace.length + " tuiles · " + euros(trace.length*CONV.coutParTuile);
+      const w = ctx.measureText(txt).width;
+      ctx.fillStyle = "rgba(18,20,24,.88)";
+      ctx.fillRect(e.x-w/2-7, e.y-14, w+14, 20);
+      ctx.fillStyle = bon ? "#8fe09c" : "#f0a094";
+      ctx.fillText(txt, e.x, e.y);
+      ctx.textAlign = "left";
+      appliquerCamera();
     } else {
       const libre = dansGrille(u,tx,ty) && occupant(u,tx,ty) === 0;
-      ctx.fillStyle = libre ? "rgba(92,186,107,.35)" : "rgba(224,87,74,.35)";
+      const surNoeud = !!noeudSous(tx,ty);
+      ctx.fillStyle = (libre || surNoeud) ? "rgba(92,186,107,.35)" : "rgba(224,87,74,.35)";
       ctx.fillRect(tx,ty,1,1);
+      if (!vue.convDepart && surNoeud){
+        ctx.strokeStyle = "rgba(92,186,107,.8)"; ctx.lineWidth = 0.07;
+        ctx.strokeRect(tx+0.06, ty+0.06, 0.88, 0.88);
+      }
     }
   }
   else if (vue.outil.type === "pioche"){
@@ -4776,11 +4851,12 @@ function choisirOutil(type, id){
   if (vue.outil && vue.outil.type === type && vue.outil.id === id){ annulerOutil(); return; }
   vue.outil = { type, id };
   vue.rotation = 0;
-  vue.traceConvoyeur = null;
+  annulerTrace();
   majOutilActif();
 }
 function annulerOutil(){
-  vue.outil = null; vue.traceConvoyeur = null;
+  vue.outil = null;
+  annulerTrace();
   majOutilActif();
 }
 function majOutilActif(){
@@ -4884,8 +4960,8 @@ function initSouris(){
       vue.glisse.bouge = true;
       return;
     }
-    if (vue.glisse && vue.glisse.type === "conv"){
-      etendreTrace(vue.souris.tx, vue.souris.ty);
+    if (vue.convDepart){
+      majApercuConvoyeur(vue.souris.tx, vue.souris.ty);
       return;
     }
     if (vue.glisse && vue.glisse.type === "poseSerie" && vue.outil?.type === "machine"){
@@ -4924,8 +5000,20 @@ function initSouris(){
           majPanneau();
         } else son("refus");
       } else if (vue.outil.type === "convoyeur"){
-        vue.glisse = { type:"conv" };
-        vue.traceConvoyeur = [{x:tx,y:ty}];
+        if (!vue.convDepart){
+          // Premier clic : on plante le départ. On peut relâcher ensuite.
+          const d = ancrageConvoyeur(tx, ty, { x:tx, y:ty });
+          if (!d){ notif("Impossible", "Rien ne peut partir d'ici.", "ko"); son("refus"); }
+          else {
+            vue.convDepart = d;
+            vue.glisse = { type:"conv", depart:{ x:tx, y:ty } };
+            majApercuConvoyeur(tx, ty);
+          }
+        } else {
+          // Second clic : on pose. L'outil reste actif pour enchaîner.
+          majApercuConvoyeur(tx, ty);
+          if (validerTrace()) annulerTrace(); else son("refus");
+        }
       } else if (vue.outil.type === "pioche"){
         const n = noeudSous(tx,ty);
         if (n && !estQuai(n)){ demolir(n); majBarreConstruction(); majPanneau(); }
@@ -4948,11 +5036,17 @@ function initSouris(){
 
   window.addEventListener("mouseup", ev => {
     if (vue.glisse && vue.glisse.type === "conv"){
-      validerTrace();
-      vue.traceConvoyeur = null;
+      // Relâcher loin du départ vaut pose : le glisser-déposer marche aussi.
+      const d = vue.glisse.depart;
+      if (d && (vue.souris.tx !== d.x || vue.souris.ty !== d.y)){
+        majApercuConvoyeur(vue.souris.tx, vue.souris.ty);
+        if (validerTrace()) annulerTrace();
+      }
+      // Relâcher sur place : on garde le départ et on attend le second clic.
     }
     if (vue.glisse && vue.glisse.type === "cam" && !vue.glisse.bouge){
-      // clic droit sans déplacement : on démolit
+      // clic droit sans déplacement : on annule le tracé, sinon on démolit
+      if (vue.convDepart){ annulerTrace(); vue.glisse = null; c.classList.remove("deplace"); return; }
       const n = noeudSous(vue.souris.tx, vue.souris.ty);
       if (n && !estQuai(n)){ demolir(n); majBarreConstruction(); majPanneau(); }
       else if (vue.outil) annulerOutil();
@@ -4974,45 +5068,136 @@ function initSouris(){
   }, { passive:false });
 }
 
-/* ------------------------------------------------- Tracé d'un convoyeur */
-function etendreTrace(tx, ty){
-  const tr = vue.traceConvoyeur;
-  if (!tr || !tr.length) return;
-  let d = tr[tr.length-1];
-  let garde = 0;
-  while ((d.x !== tx || d.y !== ty) && garde++ < 200){
-    const nx = d.x + Math.sign(tx-d.x);
-    const ny = d.y + Math.sign(ty-d.y);
-    // on avance d'abord en x, puis en y : tracé en L, comme une vraie ligne
-    const suiv = (d.x !== tx) ? { x:nx, y:d.y } : { x:d.x, y:ny };
-    if (tr.some(p => p.x === suiv.x && p.y === suiv.y)) break;
-    tr.push(suiv);
-    d = suiv;
+/* ================================================= Tracé d'un convoyeur
+   Un clic pose le départ, on lâche, on promène la souris, un second clic pose
+   l'arrivée. Cliquer directement sur une machine, un quai ou une autre bande
+   ancre le convoyeur dessus. Entre les deux, le tracé se faufile tout seul
+   entre ce qui encombre le passage.
+   ====================================================================== */
+
+/** Les tuiles libres au contact d'un nœud, les plus proches d'un point donné. */
+function abordsLibres(n, vers){
+  const u = U(), out = [];
+  for (let dy=-1; dy<=n.h; dy++)
+    for (let dx=-1; dx<=n.l; dx++){
+      const bordX = dx === -1 || dx === n.l, bordY = dy === -1 || dy === n.h;
+      if (bordX === bordY) continue;                       // pas les diagonales
+      const x = n.x+dx, y = n.y+dy;
+      if (!dansGrille(u,x,y) || occupant(u,x,y) !== 0) continue;
+      out.push({ x, y });
+    }
+  if (n.type === "convoyeur"){
+    out.length = 0;
+    for (const t of n.chemin)
+      for (const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+        const x = t.x+dx, y = t.y+dy;
+        if (dansGrille(u,x,y) && occupant(u,x,y) === 0) out.push({ x, y });
+      }
   }
+  out.sort((a,b) => (a.x-vers.x)**2 + (a.y-vers.y)**2 - ((b.x-vers.x)**2 + (b.y-vers.y)**2));
+  return out;
+}
+
+/** Le point de départ ou d'arrivée réel d'un clic : la tuile elle-même si elle
+ *  est libre, sinon le meilleur abord du nœud sur lequel on a cliqué. */
+function ancrageConvoyeur(tx, ty, vers){
+  const u = U();
+  if (!dansGrille(u,tx,ty)) return null;
+  const o = occupant(u,tx,ty);
+  if (o === 0) return { x:tx, y:ty, noeud:null };
+  const n = noeudSous(tx,ty);
+  if (!n) return null;
+  const abords = abordsLibres(n, vers || { x:tx, y:ty });
+  if (!abords.length) return null;
+  return { x:abords[0].x, y:abords[0].y, noeud:n };
+}
+
+/** A* sur les tuiles libres, avec une petite pénalité de virage : à longueur
+ *  égale, un tracé droit est préféré, et le résultat a l'air voulu. */
+function routerConvoyeur(a, b){
+  const u = U();
+  if (!a || !b) return null;
+  if (a.x === b.x && a.y === b.y) return [{ x:a.x, y:a.y }];
+  const L = u.largeur;
+  const cle = (x,y,d) => (y*L+x)*5 + d;
+  const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+  const dep = cle(a.x, a.y, 4);
+  const ouvert = [{ x:a.x, y:a.y, d:4, g:0, f:0 }];
+  const vientDe = new Map(), meilleur = new Map([[dep, 0]]);
+  let garde = 0;
+
+  while (ouvert.length && garde++ < 20000){
+    let bi = 0;
+    for (let i=1;i<ouvert.length;i++) if (ouvert[i].f < ouvert[bi].f) bi = i;
+    const c = ouvert.splice(bi,1)[0];
+    if (c.x === b.x && c.y === b.y){
+      const chemin = [];
+      let k = cle(c.x,c.y,c.d), n = c;
+      while (n){ chemin.push({ x:n.x, y:n.y }); n = vientDe.get(cle(n.x,n.y,n.d)); }
+      chemin.reverse();
+      return chemin;
+    }
+    for (let d=0; d<4; d++){
+      const nx = c.x+dirs[d][0], ny = c.y+dirs[d][1];
+      if (!dansGrille(u,nx,ny)) continue;
+      const libre = occupant(u,nx,ny) === 0;
+      if (!libre && !(nx === b.x && ny === b.y)) continue;
+      const g = c.g + 1 + (c.d !== 4 && c.d !== d ? 0.45 : 0);
+      const k2 = cle(nx,ny,d);
+      if (g >= (meilleur.get(k2) ?? 1e9)) continue;
+      meilleur.set(k2, g);
+      vientDe.set(k2, c);
+      ouvert.push({ x:nx, y:ny, d, g, f: g + Math.abs(b.x-nx) + Math.abs(b.y-ny) });
+    }
+  }
+  return null;
+}
+
+/** Recalcule l'aperçu depuis le départ mémorisé jusqu'à la tuile survolée. */
+function majApercuConvoyeur(tx, ty){
+  const d = vue.convDepart;
+  if (!d){ vue.traceConvoyeur = null; return; }
+  const fin = ancrageConvoyeur(tx, ty, d);
+  if (!fin){ vue.traceConvoyeur = null; vue.convArrivee = null; return; }
+  vue.convArrivee = fin;
+  vue.traceConvoyeur = routerConvoyeur(d, fin);
+}
+
+function annulerTrace(){
+  vue.convDepart = null; vue.convArrivee = null; vue.traceConvoyeur = null;
 }
 
 function validerTrace(){
-  const tr = vue.traceConvoyeur;
-  if (!tr || tr.length < 2){ return; }
+  // On tolère un tracé construit par programme : on enlève les doublons.
+  let tuiles = vue.traceConvoyeur;
+  if (tuiles) tuiles = tuiles.filter((t,i) => i === 0 || t.x !== tuiles[i-1].x || t.y !== tuiles[i-1].y);
+  if (!tuiles || tuiles.length < 2){
+    if (tuiles) notif("Trop court", "Un convoyeur fait deux tuiles au minimum.", "att");
+    return false;
+  }
   const u = U();
-  const tuiles = tr.filter(t => dansGrille(u,t.x,t.y) && occupant(u,t.x,t.y) === 0);
-  if (tuiles.length < 2){ notif("Impossible", "Il faut deux tuiles libres au moins.", "ko"); son("refus"); return; }
-
+  if (tuiles.some(t => occupant(u,t.x,t.y) !== 0)){
+    notif("Chemin bouché", "Quelque chose s'est mis en travers.", "ko"); son("refus"); return false;
+  }
   const cout = tuiles.length * CONV.coutParTuile;
-  if (etat.finances.solde - cout < CONFIG.faillite){ notif("Trop cher", "Pas assez en caisse.", "ko"); return; }
+  if (!mode().constructionGratuite && !mode().argentInfini &&
+      etat.finances.solde - cout < CONFIG.faillite){
+    notif("Trop cher", "Ce convoyeur coûterait " + euros(cout) + ".", "ko"); return false;
+  }
 
   // Les deux bouts sont raccordés par le moteur : machine, caisse, quai — ou
   // un autre convoyeur, ce qui permet de bâtir un réseau par tronçons.
   const c = creerConvoyeur(tuiles, 0, 0);
   u.convoyeurs.push(c);
   for (const t of tuiles) u.grille[t.y*u.largeur+t.x] = c.id;
-  depenser(cout, "investissement");
+  depenser(mode().constructionGratuite ? 0 : cout, "investissement");
   reindexer();
   son("pose");
   if (c.etat === "non_relie")
-    notif("Convoyeur posé", "Il ne relie rien pour l'instant : il lui faut une machine, le quai ou un autre convoyeur à chaque bout.", "att");
+    notif("Convoyeur posé", "Il ne relie rien pour l'instant : il lui faut une machine, un quai ou un autre convoyeur à chaque bout.", "att");
   tutoEvenement("pose_convoyeur");
   majPanneau();
+  return true;
 }
 
 /* ============================================================================
@@ -5118,6 +5303,18 @@ function detailUsine(z){
     }, "large"));
   }
   z.appendChild(b2);
+
+  const ba = blocTitre("L'atelier");
+  ba.appendChild(ligne("Surface", u.largeur + " sur " + u.hauteur + " tuiles"));
+  ba.appendChild(ligne("Pousser le mur", euros(prixTuileAtelier()) + " la tuile"));
+  const ra = document.createElement("div");
+  ra.className = "btRang";
+  const prixL = 2*(u.hauteur) * prixTuileAtelier();
+  const prixH = 2*(u.largeur) * prixTuileAtelier();
+  ra.appendChild(bouton("Élargir · " + euros(prixL), () => { agrandirAtelier(2,0); majPanneau(); }));
+  ra.appendChild(bouton("Allonger · " + euros(prixH), () => { agrandirAtelier(0,2); majPanneau(); }));
+  ba.appendChild(ra);
+  z.appendChild(ba);
 
   const b3 = blocTitre("Ce qui cloche");
   if (u.salete > 0.45){
@@ -6159,7 +6356,10 @@ function ouvrirAnnonceAge(age){
     reappro:"Le réapprovisionnement automatique",
     tri:"La table de tri, qui écarte la marchandise ratée",
     qualite:"La qualité : ce qui sort mal cuit ne se vend plus",
-    grosClients:"Les centrales d'achat — gros volumes, paiement à 30 jours"
+    grosClients:"Les centrales d'achat — gros volumes, paiement à 30 jours",
+    caisse_dediee:"Les bacs dédiés, qui ne mélangent plus les marchandises",
+    silo:"Le silo, de quoi tenir une saison sur une seule marchandise",
+    recherche:"La recherche : on invente enfin ses propres chips (touche R)"
   };
   for (const d of age.debloque)
     if (noms[d]) l.appendChild(elem('<div class="ligne"><span class="k">'+noms[d]+'</span></div>'));
@@ -6607,9 +6807,12 @@ function SECTIONS_GUIDE(){
     "par y être bien meilleur.</p>" },
 
   { titre:"Les convoyeurs", corps:
-    "<p>Un convoyeur se trace en maintenant le clic, du <b>départ</b> vers l'<b>arrivée</b>. Il lui faut une "+
-    "machine, un bac, le quai <b>ou un autre convoyeur</b> à chaque bout — sinon il apparaît en rouge et ne "+
-    "sert à rien.</p>"+
+    "<p>Un <b>premier clic</b> pose le départ — directement sur une machine, un bac, un quai ou une autre "+
+    "bande pour s'y ancrer. On relâche, on promène la souris : le tracé se faufile tout seul entre ce qui "+
+    "encombre le passage, et son prix s'affiche. Un <b>second clic</b> pose. L'outil reste actif pour "+
+    "enchaîner ; <kbd>Échap</kbd> ou le clic droit annulent. Le glisser-déposer marche aussi.</p>"+
+    "<p>Il faut une machine, un bac, un quai <b>ou un autre convoyeur</b> à chaque bout — sinon la bande "+
+    "apparaît en rouge et ne sert à rien.</p>"+
     "<p>Les bandes <b>se branchent entre elles</b> : on peut bâtir un long trajet par tronçons, contourner un "+
     "obstacle, et faire <b>converger plusieurs bandes vers une seule</b> pour rassembler deux lignes sur un "+
     "même poste. Les chevrons montrent le sens de circulation.</p>"+
@@ -6687,6 +6890,7 @@ function SECTIONS_GUIDE(){
     "<ul>"+
     "<li><kbd>Espace</kbd> pause et reprise · <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> les vitesses</li>"+
     "<li><kbd>R</kbd> tourner une machine avant de la poser</li>"+
+    "<li>Convoyeur : un clic pour le départ, un clic pour l'arrivée</li>"+
     "<li><kbd>Échap</kbd> annuler l'outil ou la sélection</li>"+
     "<li><kbd>Suppr</kbd> démolir ce qui est sélectionné</li>"+
     "<li>Clic droit glissé pour se déplacer · clic droit sec pour démolir</li>"+
@@ -6711,7 +6915,7 @@ function sauterAge(n){
   etat.progression.objectifsCompletes = [];
   for (let i=1;i<n;i++) etat.progression.objectifsCompletes.push(i);
   const a = AGES[n-1];
-  if (U().largeur < a.largeur || U().hauteur < a.hauteur) agrandirUsine(a.largeur, a.hauteur);
+  agrandirUsine(Math.max(a.largeur, U().largeur), Math.max(a.hauteur, U().hauteur));
   U().nom = a.nom;
   reindexer();
   majBarreConstruction(); majBandeau(); majPanneau();
@@ -7952,6 +8156,7 @@ function initClavier(){
     if (e.code === "F2"){ e.preventDefault(); basculerDev(); return; }
     if (e.code === "Escape"){
       if ($("#panneauDev").classList.contains("visible")) return basculerDev();
+      if (vue.convDepart){ annulerTrace(); return; }
       if (unEcranOuvert() && $("#ecranStats").classList.contains("visible")) fermer("#ecranStats");
       else if (unEcranOuvert() && $("#ecranRecherche").classList.contains("visible")) fermer("#ecranRecherche");
       else if (unEcranOuvert() && $("#ecranMenu").classList.contains("visible")) fermer("#ecranMenu");
