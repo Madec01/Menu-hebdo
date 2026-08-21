@@ -84,6 +84,7 @@ __El.prototype.select = function(){}; __El.prototype.scrollIntoView = function()
 __El.prototype.setAttribute = function(k, v){ this[k] = v; };
 __El.prototype.getAttribute = function(k){ return this[k]; };
 __El.prototype.click = function(){ this.dispatch('click'); };
+__El.prototype.setPointerCapture = function(){}; __El.prototype.releasePointerCapture = function(){};
 __El.prototype.getContext = function(){
   if (!this._ctx){ this._ctx = new CanvasRenderingContext2D(); this._ctx.canvas = this; }
   return this._ctx;

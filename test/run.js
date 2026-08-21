@@ -42,6 +42,7 @@ const source = [
 ].join('\n');
 
 const sandbox = { console, setTimeout, clearTimeout, setInterval, clearInterval, process, Math, JSON };
+sandbox.__HTML = html;                 // le balisage brut, pour les tests de structure
 sandbox.globalThis = sandbox;
 vm.createContext(sandbox);
 

@@ -371,7 +371,7 @@ table.tt tr.tt-fail td:first-child::before{content:'✗ ';color:var(--red)}
   <button class="icon-btn" id="btn-saves" title="Mes montages (enregistrer / charger)">
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
   </button>
-  <button class="icon-btn" id="btn-guide" title="Guide des portes logiques">
+  <button class="icon-btn" id="btn-guide" title="Guide des composants et des outils">
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg>
   </button>
 </header>
@@ -460,10 +460,13 @@ table.tt tr.tt-fail td:first-child::before{content:'✗ ';color:var(--red)}
 </div>
 
 <!-- ======= MODALE ANALYSEUR ======= -->
-<div id="analyze-modal" class="modal"><div class="modal-content glass">
-  <div class="modal-head"><h2>🔬 Analyse du circuit</h2><button class="modal-close" data-close="analyze-modal">✕</button></div>
-  <div id="analyze-body" style="max-height:60vh;overflow-y:auto"></div>
-</div></div>
+<div id="analyze-modal" class="modal-overlay">
+  <div class="modal-content glass">
+    <h2>🔬 Analyse du circuit</h2>
+    <div id="analyze-body" style="max-height:60vh;overflow-y:auto;text-align:left"></div>
+    <div class="m-actions" style="margin-top:12px"><button class="btn btn-sol" id="btn-close-analyze">Fermer</button></div>
+  </div>
+</div>
 
 <!-- ======= INSPECTEUR ======= -->
 <div id="inspector" class="glass hidden">
@@ -483,7 +486,7 @@ table.tt tr.tt-fail td:first-child::before{content:'✗ ';color:var(--red)}
 <!-- ======= MODALE GUIDE ======= -->
 <div id="guide-modal" class="modal-overlay">
   <div class="modal-content glass">
-    <h2>📘 Guide des portes logiques</h2>
+    <h2>📘 Guide des composants</h2>
     <div id="guide-body"></div>
     <div class="g-tip">
       <span class="kbd">Glisser le fond</span> déplacer la vue &nbsp;·&nbsp; <span class="kbd">Molette</span> zoom &nbsp;·&nbsp;
@@ -534,7 +537,7 @@ const PAL = {
   bgDot:'rgba(120,160,220,.10)',
   body:'#0e1729', bodyTop:'rgba(255,255,255,.05)',
   pinOff:'#5b6b8c', pinOffFill:'#141d33', pinOn:'#3dff9e',
-  wireOff:'#39496a', wireOn:'#3dff9e',
+  wireOff:'#39496a', wireOn:'#3dff9e', wireBus:'#ffc23d',
   text:'#e9f2ff', dim:'#8698ba',
   locked:'#ffc23d',
   segOn:'#3dff9e', segOff:'#122033',
@@ -709,6 +712,8 @@ let selRect = null;              // rectangle élastique (coords monde)
 let clipboard = null;            // groupe copié
 let hoveredWire = null;          // fil survolé (poignées visibles)
 let draggedWp = null;            // {wire, idx} : poignée en cours de déplacement
+let touchHoldT = 0;              // minuterie d'appui long (tactile)
+let longPressed = false;         // l'appui long a agi : le relâchement ne doit rien faire
 let simulating = false;          // vérification en cours → pas d'audio buzzer
 let confetti = [];
 let uid = 1;
@@ -748,6 +753,11 @@ class Pin {
       c.beginPath(); c.arc(this.x, this.y, r + 4, 0, 7);
       c.strokeStyle = 'rgba(56,225,255,.35)'; c.lineWidth = 1; c.stroke();
     }
+    if (this.busWarn){          // un bus arrive ici : sa valeur est ramenée à 1
+      c.beginPath(); c.arc(this.x, this.y, r + 4.5, 0, 7);
+      c.strokeStyle = PAL.wireBus; c.lineWidth = 1.6; c.setLineDash([2, 3]);
+      c.stroke(); c.setLineDash([]);
+    }
   }
 }
 
@@ -760,7 +770,12 @@ class Wire {
   update(){
     this.state = this.outPin.state;
     // Les fils transportent la VALEUR (0/1 pour la logique, 0-15 pour un bus GROUPER)
-    if (this.state) this.inPin.state = Math.max(this.inPin.state, this.state);
+    if (this.state){
+      this.inPin.state = Math.max(this.inPin.state, this.state);
+      // Un bus (valeur > 1) branché ailleurs que sur DÉGROUPER sera ramené à 1 :
+      // on marque le pin pour le dire visuellement plutôt que de le taire.
+      if (this.state > 1 && busNormalized(this.inPin)) this.inPin.busWarn = 1;
+    }
   }
   /* Liste des segments : [pin de sortie, ...waypoints, pin d'entrée] */
   points(){
@@ -811,6 +826,21 @@ class Wire {
     }
     return out;
   }
+  /* Pastille « valeur » au milieu d'un fil de bus */
+  drawBusValue(c){
+    const P = this.points(), i = Math.max(0, Math.floor((P.length - 2) / 2));
+    const mx = (P[i].x + P[i+1].x) / 2, my = (P[i].y + P[i+1].y) / 2;
+    const txt = String(this.state);
+    c.save();
+    c.font = "600 10px 'IBM Plex Mono', monospace";
+    const w = c.measureText(txt).width + 12;
+    c.beginPath(); c.roundRect(mx - w/2, my - 8, w, 16, 8);
+    c.fillStyle = 'rgba(20,29,51,.92)'; c.fill();
+    c.lineWidth = 1.2; c.strokeStyle = PAL.wireBus; c.stroke();
+    c.fillStyle = PAL.wireBus; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText(txt, mx, my + .5);
+    c.restore();
+  }
   /* Point du fil le plus proche (ou null si > tol) */
   nearest(wx, wy, tol){
     let best = null, bd = tol * tol;
@@ -823,15 +853,18 @@ class Wire {
   draw(c, t){
     const edit = (this === hoveredWire) || (draggedWp && draggedWp.wire === this);
     c.beginPath(); this.buildPath(c);
-    c.lineWidth = edit ? 4.2 : 3.4; c.lineCap = 'round';
+    const bus = this.state > 1;                       // fil de bus : il transporte une valeur
+    const col = bus ? PAL.wireBus : PAL.wireOn;
+    c.lineWidth = (edit ? 4.2 : 3.4) + (bus ? 1.4 : 0); c.lineCap = 'round';
     if (this.state){
-      c.strokeStyle = PAL.wireOn; c.shadowBlur = edit ? 14 : 9; c.shadowColor = PAL.wireOn; c.stroke();
+      c.strokeStyle = col; c.shadowBlur = edit ? 14 : 9; c.shadowColor = col; c.stroke();
       c.shadowBlur = 0;
       // flux animé
       c.beginPath(); this.buildPath(c);
       c.strokeStyle = 'rgba(255,255,255,.65)'; c.lineWidth = 1.6;
       c.setLineDash([3, 14]); c.lineDashOffset = -t * .05;
       c.stroke(); c.setLineDash([]);
+      if (bus) this.drawBusValue(c);
     } else {
       c.strokeStyle = edit ? 'rgba(120,160,220,.85)' : PAL.wireOff; c.stroke();
     }
@@ -850,6 +883,12 @@ class Wire {
       });
     }
   }
+}
+/* Une valeur de bus arrivant sur ce pin sera-t-elle ramenée à 0/1 ? */
+function busNormalized(pin){
+  const c = pin.comp;
+  if (c.type === 'UNGROUP') return false;      // seul consommateur légitime d'un bus
+  return LOGIC_TYPES.includes(c.type);
 }
 /* Écarte en éventail les fils partant d'un même pin de sortie */
 function recalcFan(){
@@ -2197,7 +2236,9 @@ document.getElementById('btn-analyze').addEventListener('click', () => {
     h += '</div>';
     if (r.table){
       h += '<div style="margin-top:10px;font-size:11px;color:var(--dim)">Table de vérité mesurée sur ton circuit :</div>';
-      h += '<table id="truth-table" style="margin-top:6px"><thead><tr>';
+      // classe .tt pour hériter du style des tables de vérité ; pas d'id : celui du
+      // panneau de mission existe déjà (un id doit rester unique dans la page).
+      h += '<table class="tt" style="margin-top:6px"><thead><tr>';
       r.vars.forEach(v => h += '<th>' + v + '</th>');
       r.leds.forEach((l, i) => h += '<th class="out' + (i === 0 ? ' sep' : '') + '">' + l + '</th>');
       h += '</tr></thead><tbody>';
@@ -2402,11 +2443,19 @@ function openInspector(c){
   }
   txt('lbl', 'Étiquette (badge au-dessus)', c.customLabel || '', 14);
   document.getElementById('insp-body').innerHTML = B.join('');
-  // Position : à côté du composant, clampée à l'écran
-  const sx = (c.x + c.w) * cam.z + cam.x + 16, sy = c.y * cam.z + cam.y - 8;
+  // Position : à côté du composant, à gauche s'il n'y a pas la place à droite,
+  // puis clampée à l'écran d'après la taille RÉELLE du panneau (mobile compris).
   el.classList.remove('hidden');
-  el.style.left = Math.max(8, Math.min(innerWidth - 268, sx)) + 'px';
-  el.style.top  = Math.max(60, Math.min(innerHeight - 320, sy)) + 'px';
+  el.style.left = '-9999px'; el.style.top = '0px';
+  const r = el.getBoundingClientRect();
+  const pw = Math.max(180, Math.round(r.width)  || 250);
+  const ph = Math.max(120, Math.round(r.height) || 300);
+  const right = (c.x + c.w) * cam.z + cam.x + 16;
+  const left  = c.x * cam.z + cam.x - pw - 16;
+  const sx = (right + pw + 8 <= innerWidth) ? right : (left >= 8 ? left : right);
+  const sy = c.y * cam.z + cam.y - 8;
+  el.style.left = Math.round(Math.max(8, Math.min(innerWidth  - pw - 8,  sx))) + 'px';
+  el.style.top  = Math.round(Math.max(60, Math.min(innerHeight - ph - 12, sy))) + 'px';
   el.querySelectorAll('input,select').forEach(inp => {
     inp.addEventListener(inp.type === 'checkbox' || inp.tagName === 'SELECT' ? 'change' : 'input',
       () => applyInspector(c, inp));
@@ -2489,7 +2538,7 @@ function connectWire(outPin, inPin){
 }
 function simulate(passes){
   for (let p = 0; p < passes; p++){
-    components.forEach(c => c.inPins.forEach(pin => pin.state = 0));
+    components.forEach(c => c.inPins.forEach(pin => { pin.state = 0; pin.busWarn = 0; }));
     wires.forEach(w => w.update());
     components.forEach(c => c.evaluate());
   }
@@ -2518,7 +2567,7 @@ function overTrash(sx, sy){
 
 canvas.addEventListener('pointerdown', e => {
   closeInspector();
-  canvas.setPointerCapture(e.pointerId);
+  try { canvas.setPointerCapture(e.pointerId); } catch(err){}   // pointeur déjà relâché / synthétique
   mouseS = {x:e.clientX, y:e.clientY};
   mouseW = s2w(e.clientX, e.clientY);
   downScreen = {...mouseS}; moved = false;
@@ -2550,6 +2599,18 @@ canvas.addEventListener('pointerdown', e => {
       return;
     }
     pressComp = comp;
+    longPressed = false;
+    // Tactile : pas de double-clic sur un écran — un appui long ouvre l'inspecteur.
+    if (e.pointerType === 'touch' && !comp.locked && comp.type !== 'BLACKBOX'){
+      clearTimeout(touchHoldT);
+      touchHoldT = setTimeout(() => {
+        if (pressComp !== comp || moved || dragged) return;
+        longPressed = true;
+        if (comp.type === 'BUTTON'){ comp.state = 0; }
+        AudioSys.click();
+        openInspector(comp);
+      }, 550);
+    }
     if (comp.type === 'BUTTON'){ comp.state = 1; AudioSys.toggleOn(); }
     if (!comp.locked){
       dragOff = {x: mouseW.x - comp.x, y: mouseW.y - comp.y};
@@ -2571,7 +2632,7 @@ canvas.addEventListener('pointermove', e => {
   mouseS = {x:e.clientX, y:e.clientY};
   mouseW = s2w(e.clientX, e.clientY);
   const dist = Math.hypot(mouseS.x - downScreen.x, mouseS.y - downScreen.y);
-  if (dist > 5) moved = true;
+  if (dist > 5){ moved = true; clearTimeout(touchHoldT); }
 
   if (draggedWp){
     let nx = mouseW.x, ny = mouseW.y;
@@ -2616,6 +2677,7 @@ canvas.addEventListener('pointermove', e => {
 canvas.addEventListener('pointerup', e => {
   mouseS = {x:e.clientX, y:e.clientY};
   mouseW = s2w(e.clientX, e.clientY);
+  clearTimeout(touchHoldT);
 
   if (wiring){
     const pin = pickPin(mouseW.x, mouseW.y);
@@ -2625,7 +2687,7 @@ canvas.addEventListener('pointerup', e => {
     }
     wiring = null;
   }
-  if (pressComp && !moved){
+  if (pressComp && !moved && !longPressed){
     const c = pressComp;
     if (c.type === 'SWITCH'){
       c.state = c.state ? 0 : 1;
@@ -2634,7 +2696,7 @@ canvas.addEventListener('pointerup', e => {
     }
     else if (c.type === 'CLOCK'){
       c.clockIdx = (c.clockIdx + 1) % CLOCK_SPEEDS.length;
-      c.opt.freq = null;                   // le clic revient aux presets
+      delete c.opt.freq;                   // le clic revient aux presets
       AudioSys.click(); markDirty();
     }
     else if (c.type === 'RANDOM'){
@@ -2654,11 +2716,12 @@ canvas.addEventListener('pointerup', e => {
     else if (c.type === 'SEQ'){
       const k = c.seqCellAt(mouseW.x, mouseW.y);
       if (k >= 0){ c.bits[k] ^= 1; c.bits[k] ? AudioSys.toggleOn() : AudioSys.toggleOff(); }
-      else { c.clockIdx = (c.clockIdx + 1) % SEQ_SPEEDS.length; c.opt.hz = null; AudioSys.click(); }
+      else { c.clockIdx = (c.clockIdx + 1) % SEQ_SPEEDS.length; delete c.opt.hz; AudioSys.click(); }
       markDirty();
     }
     else if (c.type === 'NOISE'){
       c.clockIdx = (c.clockIdx + 1) % CLOCK_SPEEDS.length;
+      delete c.opt.freq;                   // idem horloge : le clic reprend la main sur l'inspecteur
       AudioSys.click(); markDirty();
     }
   }
@@ -2686,7 +2749,7 @@ canvas.addEventListener('pointerup', e => {
     else markDirty();
   }
   if (draggedWp){ draggedWp = null; markDirty(); }
-  dragged = null; pressComp = null; panning = false;
+  dragged = null; pressComp = null; panning = false; longPressed = false;
   document.getElementById('trash-zone').classList.remove('active','hot');
   canvas.style.cursor = 'default';
 });
@@ -2717,7 +2780,10 @@ canvas.addEventListener('contextmenu', e => e.preventDefault());
 
 addEventListener('keydown', e => {
   if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName || '')) return;
-  if (e.key === 'Escape'){ wiring = null; selRect = null; selection.clear(); updateSelHud(); closeInspector(); }
+  if (e.key === 'Escape'){
+    wiring = null; selRect = null; selection.clear(); updateSelHud(); closeInspector();
+    document.querySelectorAll('.modal-overlay.show').forEach(m => m.classList.remove('show'));
+  }
   if (e.key === 'Delete' || e.key === 'Backspace'){
     if (selection.size){ const n = deleteSelection(); if (n) toast(n + ' composant(s) supprimé(s).', 'info', 1800); }
     else if (hoveredComp && !hoveredComp.locked){ deleteComponent(hoveredComp); hoveredComp = null; }
@@ -3356,11 +3422,11 @@ const missions = [
 },
 /* ---- Le grand œuvre ---- */
 { id:"m49", ch:"Chapitre 10 · Le temps qui passe", title:"La bascule D",
-  desc:"Voici ta récompense du verrou SR : la BASCULE D, le registre 1 bit des vrais processeurs. Au front montant de ▷ (l'instant où l'horloge passe de 0 à 1), elle photographie D et le garde sur Q. Découvre-la avec l'oscilloscope : c'est une mission libre, clique VÉRIFIER quand tu as observé le phénomène.",
+  desc:"Voici la BASCULE D, le registre 1 bit des vrais processeurs. Au front montant de ▷ (l'instant où l'horloge passe de 0 à 1), elle photographie D et le garde sur Q. Découvre-la avec l'oscilloscope : c'est une mission libre, clique VÉRIFIER quand tu as observé le phénomène.",
   inputs:0, outputs:0, tt:[], par:0, grant:['DFF'],
   sol:{
     plan:["INTERRUPTEUR ─▶ D (bascule)", "HORLOGE ─▶ ▷ (bascule)", "D ─▶ CH1 (oscillo) · Q ─▶ CH2", "Q ─▶ AMPOULE"],
-    steps:["Pose une BASCULE D (onglet Mémoire & puces — elle vient d'être débloquée !), un INTERRUPTEUR, une HORLOGE lente (1 Hz), une AMPOULE et un OSCILLOSCOPE.",
+    steps:["Pose une BASCULE D (onglet Mémoire & puces), un INTERRUPTEUR, une HORLOGE lente (1 Hz), une AMPOULE et un OSCILLOSCOPE.",
       "Câble : interrupteur → D, horloge → ▷ (le petit triangle), Q → ampoule.",
       "Branche aussi l'interrupteur sur CH1 de l'oscillo et Q sur CH2, pour comparer l'entrée et la sortie.",
       "Joue avec l'interrupteur : bascule-le PENDANT que l'horloge est haute, puis pendant qu'elle est basse. Observe sur l'oscillo : Q ne copie D qu'aux fronts montants, jamais entre deux.",
@@ -4211,16 +4277,9 @@ function createChip(name){
   const outsIdx = leds.slice().sort((a,b) => a.y - b.y).map(c => components.indexOf(c));
   const def = {
     name, ins: sws.length, outs: leds.length, insIdx, outsIdx,
-    src: {
-      comps: components.map(c => ({ t:c.type, x:c.x, y:c.y,
-        s: c.type === 'NIBBLE' ? c.value : c.state, ci:c.clockIdx,
-        bits: c.type === 'SEQ' ? c.bits : undefined,
-        key:  c.type === 'KEY' ? c.key : undefined,
-        chip: c.type === 'CHIP' ? c.chipName : undefined })),
-      wires: wires.map(w => [
-        components.indexOf(w.outPin.comp), w.outPin.index,
-        components.indexOf(w.inPin.comp),  w.inPin.index ])
-    }
+    // serializeGroup() conserve opt : sans lui, une ROM programmée ou une horloge
+    // réglée redevenaient vierges une fois encapsulées dans la puce.
+    src: serializeGroup(components)
   };
   CHIPS.push(def); saveChips();
   return { def };
@@ -4637,15 +4696,14 @@ function openExamples(){
 }
 document.getElementById('btn-photo').addEventListener('click', () => {
   AudioSys.click();
-  canvas.toBlob(b => {
-    if (!b){ toast('📷 Export impossible.', 'error'); return; }
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(b);
-    a.download = 'architecte-logique.png';
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-    toast('📷 Capture téléchargée ! (astuce : recadre la vue avant d\u2019exporter)', 'info', 3200);
-  }, 'image/png');
+  const snap = snapshotPNG();
+  if (!snap.url){ toast('📷 Export impossible.', 'error'); AudioSys.error(); return; }
+  const a = document.createElement('a');
+  a.href = snap.url;
+  a.download = 'architecte-logique.png';
+  a.click();
+  toast(snap.fitted ? '📷 Capture téléchargée : l\u2019image est recadrée automatiquement sur ton circuit.'
+                    : '📷 Capture téléchargée (plan de travail vide : c\u2019est la vue actuelle).', 'info', 3600);
 });
 document.getElementById('btn-route').addEventListener('click', () => {
   AudioSys.click();
@@ -4759,6 +4817,8 @@ document.getElementById('btn-guide').addEventListener('click', () => {
 });
 document.getElementById('btn-close-guide').addEventListener('click', () =>
   document.getElementById('guide-modal').classList.remove('show'));
+document.getElementById('btn-close-analyze').addEventListener('click', () =>
+  document.getElementById('analyze-modal').classList.remove('show'));
 document.querySelectorAll('.modal-overlay').forEach(mo =>
   mo.addEventListener('click', e => { if (e.target === mo) mo.classList.remove('show'); }));
 
@@ -4773,18 +4833,9 @@ function markDirty(){
 }
 function saveSandbox(){
   if (currentIdx !== -1) return;
-  const data = {
-    v: 2,
-    comps: components.map(c => ({ t:c.type, x:c.x, y:c.y,
-      s: c.type === 'NIBBLE' ? c.value : c.state, ci:c.clockIdx,
-      bits: c.type === 'SEQ' ? c.bits : undefined,
-      key:  c.type === 'KEY' ? c.key : undefined,
-      chip: c.type === 'CHIP' ? c.chipName : undefined })),
-    wires: wires.map(w => [
-      components.indexOf(w.outPin.comp), w.outPin.index,
-      components.indexOf(w.inPin.comp),  w.inPin.index,
-      w.wp.length ? w.wp.map(p => ({x:p.x, y:p.y})) : undefined ])
-  };
+  // serializeGroup() embarque aussi opt (réglages d'inspecteur), les étiquettes
+  // et les poignées de câble : le bac à sable les perdait à chaque rechargement.
+  const data = Object.assign({ v: 3 }, serializeGroup(components));
   try { localStorage.setItem('al2_sandbox', JSON.stringify(data)); } catch(e){}
 }
 function restoreSandbox(){
@@ -4856,7 +4907,7 @@ function buildGuide(){
   // [type, nom, fonctionnement, exemple à essayer (ou null), anecdote réelle (ou null), types couverts]
   const SECTIONS = [
   { t:'L’atelier — les outils qui t’aident', p:
-    '<b>🔧 L’inspecteur.</b> <code>Double-clic</code> sur n’importe quel composant non verrouillé ouvre son panneau de réglages : ' +
+    '<b>🔧 L’inspecteur.</b> <code>Double-clic</code> — ou <code>appui long</code> sur écran tactile — sur n’importe quel composant non verrouillé ouvre son panneau de réglages : ' +
     'fréquence exacte et rapport cyclique d’une <b>horloge</b>, nombre de cycles d’un <b>retard</b>, vitesse / longueur / motif d’un ' +
     '<b>séquenceur</b>, probabilité du <b>bruit</b>, valeur d’un <b>clavier 4 bits</b>, contenu d’une <b>ROM</b>, octave et volume d’une ' +
     '<b>note</b>, hauteur du <b>buzzer</b>, touche du clavier, nom d’une <b>puce</b> et de ses pins… et, pour tous, une ' +
@@ -5056,9 +5107,23 @@ function updateStats(force){
 
 /* ---------- Boucle de rendu ---------- */
 let buzzActive = false;
-function render(t){
+/* Dessine la scène complète (grille, câbles, composants, sélection, confetti).
+   Séparée de render() pour pouvoir produire une image hors boucle (export PNG). */
+function drawScene(t, opaque){
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.clearRect(0, 0, W, H);
+  if (opaque){
+    // Le fond du canvas vient normalement du CSS : pour une image exportée,
+    // on le repeint ici, sinon le PNG serait transparent.
+    ctx.fillStyle = '#05070d'; ctx.fillRect(0, 0, W, H);
+    const R = Math.max(W, H);
+    const g1 = ctx.createRadialGradient(W*.3, -H*.1, 0, W*.3, -H*.1, R*.9);
+    g1.addColorStop(0, 'rgba(13,23,48,1)'); g1.addColorStop(1, 'rgba(13,23,48,0)');
+    ctx.fillStyle = g1; ctx.fillRect(0, 0, W, H);
+    const g2 = ctx.createRadialGradient(W*.9, H*1.1, 0, W*.9, H*1.1, R*.8);
+    g2.addColorStop(0, 'rgba(16,26,51,1)'); g2.addColorStop(1, 'rgba(16,26,51,0)');
+    ctx.fillStyle = g2; ctx.fillRect(0, 0, W, H);
+  }
 
   // Grille de points (espace monde)
   const step = cam.z < .6 ? 64 : 32;
@@ -5071,14 +5136,6 @@ function render(t){
       ctx.fillRect(sx - 1, sy - 1, 2, 2);
     }
   }
-
-  // Simulation temps réel
-  if (!simulating) simulate(5);   // nombre IMPAIR : les boucles instables oscillent visiblement
-
-  // Audio buzzer
-  const bz = components.find(c => c.type === 'BUZZER' && c.inPins[0].state);
-  const anyBuzz = !!bz;
-  if (anyBuzz !== buzzActive && !simulating){ buzzActive = anyBuzz; AudioSys.buzz(anyBuzz, bz && bz.opt.bfreq); }
 
   // Monde
   ctx.setTransform(DPR * cam.z, 0, 0, DPR * cam.z, DPR * cam.x, DPR * cam.y);
@@ -5119,10 +5176,74 @@ function render(t){
   // Écran (confetti)
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   if (confetti.length) drawConfetti(ctx, t);
+}
+function render(t){
+  // Simulation temps réel
+  if (!simulating) simulate(5);   // nombre IMPAIR : les boucles instables oscillent visiblement
 
+  // Audio buzzer
+  const bz = components.find(c => c.type === 'BUZZER' && c.inPins[0].state);
+  const anyBuzz = !!bz;
+  if (anyBuzz !== buzzActive && !simulating){ buzzActive = anyBuzz; AudioSys.buzz(anyBuzz, bz && bz.opt.bfreq); }
+
+  drawScene(t);
   updateTruthHighlight();
   updateStats();
   requestAnimationFrame(render);
+}
+/* Boîte englobante du montage (coords monde), câbles et étiquettes compris */
+function boardBBox(){
+  if (!components.length) return null;
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  components.forEach(c => {
+    x0 = Math.min(x0, c.x); y0 = Math.min(y0, c.y - 26);          // badge d'étiquette
+    x1 = Math.max(x1, c.x + c.w); y1 = Math.max(y1, c.y + c.h + 18); // nom sous le boîtier
+  });
+  wires.forEach(w => w.wp.forEach(p => {
+    x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y);
+    x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y);
+  }));
+  return { x0, y0, x1, y1, w: x1 - x0, h: y1 - y0 };
+}
+/* Recadre la caméra sur une boîte englobante (utilisé par l'export PNG) */
+function camFitTo(bb, pad){
+  if (!bb) return false;
+  pad = pad == null ? 48 : pad;
+  const z = Math.min(2.5, Math.max(.35,
+    Math.min((W - pad * 2) / Math.max(1, bb.w), (H - pad * 2) / Math.max(1, bb.h))));
+  cam.z = z;
+  cam.x = W / 2 - (bb.x0 + bb.w / 2) * z;
+  cam.y = H / 2 - (bb.y0 + bb.h / 2) * z;
+  return true;
+}
+/* Image PNG du montage, recadrée sur le circuit (la caméra est restaurée ensuite) */
+function snapshotPNG(){
+  const saved = { x: cam.x, y: cam.y, z: cam.z };
+  const bb = boardBBox();
+  const fitted = camFitTo(bb);
+  const wiringSaved = wiring, selSaved = selRect;
+  wiring = null; selRect = null;                 // pas d'ébauche de câble dans l'image
+  drawScene(Date.now(), true);
+  let url = null;
+  try {
+    if (bb){                                     // découpe serrée autour du circuit
+      const pad = 26;
+      const x = Math.max(0, Math.round((bb.x0 * cam.z + cam.x - pad) * DPR));
+      const y = Math.max(0, Math.round((bb.y0 * cam.z + cam.y - pad) * DPR));
+      const w = Math.min(canvas.width  - x, Math.round((bb.w * cam.z + pad * 2) * DPR));
+      const h = Math.min(canvas.height - y, Math.round((bb.h * cam.z + pad * 2) * DPR));
+      const off = document.createElement('canvas');
+      off.width = Math.max(1, w); off.height = Math.max(1, h);
+      off.getContext('2d').drawImage(canvas, x, y, w, h, 0, 0, w, h);
+      url = off.toDataURL('image/png');
+    } else {
+      url = canvas.toDataURL('image/png');
+    }
+  } catch(e){ url = null; }
+  wiring = wiringSaved; selRect = selSaved;
+  cam.x = saved.x; cam.y = saved.y; cam.z = saved.z;
+  drawScene(Date.now());
+  return { url, fitted };
 }
 
 /* ---------- Boot ---------- */

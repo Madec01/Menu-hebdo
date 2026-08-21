@@ -766,10 +766,207 @@ T('T48 en mission, coller ne duplique pas les entrées fournies', () => {
   loadMission(-1);
 });
 
+T('T64 bac à sable : les réglages d’inspecteur survivent au rechargement', () => {
+  board();
+  const rom = mk('ROM', 100, 100), clk = mk('CLOCK', 400, 100), led = mk('LED', 700, 100);
+  rom.opt.rom[3] = [1, 1];
+  clk.opt.freq = 7.5; clk.opt.duty = 20;
+  clk.customLabel = 'TEMPO';
+  const w = link(clk, 0, led, 0);
+  w.wp = [{ x: 560, y: 40 }];
+  saveSandbox();
+  const raw = JSON.parse(localStorage.getItem('al2_sandbox'));
+  ok(raw && raw.comps.some(c => c.opt), 'les réglages sont bien écrits sur le disque');
+  components = []; wires = [];
+  restoreSandbox();
+  eq(components.length, 3, 'composants restaurés');
+  const rom2 = components.find(c => c.type === 'ROM');
+  const clk2 = components.find(c => c.type === 'CLOCK');
+  deq(rom2.opt.rom[3], [1,1], 'table de la ROM conservée');
+  eq(clk2.opt.freq, 7.5, 'fréquence conservée');
+  eq(clk2.opt.duty, 20, 'rapport cyclique conservé');
+  eq(clk2.customLabel, 'TEMPO', 'étiquette conservée');
+  eq(wires[0].wp.length, 1, 'poignée de câble conservée');
+  localStorage.removeItem('al2_sandbox');
+});
+
+T('T65 puce : une ROM programmée garde sa table une fois encapsulée', () => {
+  board();
+  CHIPS = CHIPS.filter(c => c.name !== 'TEST-ROM');
+  const sw = [0,1,2].map(i => mk('SWITCH', 0, i * 100));
+  const rom = mk('ROM', 300, 0), l = mk('LED', 600, 0);
+  const table = [[0,0],[1,0],[1,1],[0,1],[1,0],[0,0],[1,1],[1,0]];
+  rom.opt.rom = table.map(r => r.slice());
+  sw.forEach((s, i) => link(s, 0, rom, i));
+  link(rom, 0, l, 0);
+  const r = createChip('TEST-ROM');
+  ok(r.def, 'puce créée : ' + (r.err || ''));
+  board();
+  const chip = spawnChip('TEST-ROM');
+  const s2 = [0,1,2].map(i => mk('SWITCH', 0, i * 100)), out = mk('LED', 600, 0);
+  s2.forEach((s, i) => link(s, 0, chip, i));
+  link(chip, 0, out, 0);
+  deq(measure(s2, [out]).map(v => v[0]), table.map(r2 => r2[0]),
+    'la ROM encapsulée répond comme la table programmée');
+  CHIPS = CHIPS.filter(c => c.name !== 'TEST-ROM'); saveChips();
+});
+
+/* ===================== 7. Interface & export ===================== */
+console.log('— Interface & export —');
+
+T('T52 bus normalisé : le pin concerné est marqué (anneau d’avertissement)', () => {
+  board();
+  const sw = [0,1,2,3].map(i => mk('SWITCH', 0, i * 80));
+  const gp = mk('GROUP', 300, 0), and = mk('AND', 600, 0), ug = mk('UNGROUP', 600, 400);
+  sw.forEach((s, i) => link(s, 0, gp, i));
+  link(gp, 0, and, 0); link(gp, 0, ug, 0);
+  drive(sw, [0,1,0,0]);                       // bus = 4
+  eq(and.inPins[0].busWarn, 1, 'porte classique : bus signalé');
+  ok(!ug.inPins[0].busWarn, 'DÉGROUPER : consommateur légitime, aucun avertissement');
+  drive(sw, [0,0,0,1]);                       // bus = 1 : plus un bus
+  ok(!and.inPins[0].busWarn, 'valeur 1 : rien à signaler');
+  drive(sw, [0,0,0,0]);
+  ok(!and.inPins[0].busWarn, 'bus nul : rien à signaler');
+});
+
+T('T53 export PNG : recadrage automatique sur le circuit', () => {
+  board();
+  mk('AND', 1000, 800); mk('OR', -400, -200);
+  const bb = boardBBox();
+  ok(bb, 'boîte englobante calculée');
+  ok(bb.x0 <= -400 && bb.x1 >= 1000, 'elle couvre tout le montage');
+  const saved = { x:cam.x, y:cam.y, z:cam.z };
+  const snap = snapshotPNG();
+  ok(/^data:image\/png/.test(snap.url), 'image produite');
+  ok(snap.fitted, 'recadrage effectué');
+  deq({ x:cam.x, y:cam.y, z:cam.z }, saved, 'caméra restaurée après l’export');
+  camFitTo(bb);
+  eq(Math.round((bb.x0 + bb.w / 2) * cam.z + cam.x), Math.round(W / 2), 'circuit centré en x');
+  eq(Math.round((bb.y0 + bb.h / 2) * cam.z + cam.y), Math.round(H / 2), 'circuit centré en y');
+  ok(cam.z >= .35 && cam.z <= 2.5, 'zoom dans les bornes');
+  resetCam();
+  board();
+  eq(boardBBox(), null, 'plateau vide : pas de boîte englobante');
+  eq(snapshotPNG().fitted, false, 'on retombe sur la vue actuelle');
+});
+
+T('T54 inspecteur : placement à droite, bascule à gauche près du bord', () => {
+  board();
+  const c1 = mk('CLOCK', 100, 200);
+  openInspector(c1);
+  const el = __el('inspector');
+  ok(!el.classList.contains('hidden'), 'panneau ouvert');
+  eq(el.style.left, (100 + c1.w + 16) + 'px', 'placé à droite du composant');
+  closeInspector();
+  ok(el.classList.contains('hidden'), 'panneau refermé');
+  const c2 = mk('CLOCK', 1300, 200);
+  openInspector(c2);
+  eq(el.style.left, (1300 - 250 - 16) + 'px', 'basculé à gauche faute de place à droite');
+  closeInspector();
+  const c3 = mk('CLOCK', 100, -500);
+  openInspector(c3);
+  eq(el.style.top, '60px', 'jamais sous la barre du haut');
+  closeInspector();
+});
+
+T('T55 inspecteur : verrouillé et boîte noire restent inaccessibles', () => {
+  board();
+  const c = mk('AND', 100, 100);
+  c.locked = true;
+  openInspector(c);
+  ok(__el('inspector').classList.contains('hidden'), 'composant verrouillé : pas d’inspecteur');
+  const bb = mk('BLACKBOX', 300, 100);
+  openInspector(bb);
+  ok(__el('inspector').classList.contains('hidden'), 'boîte noire : pas d’inspecteur');
+});
+
+T('T56 tactile : l’appui long ouvre l’inspecteur sans déclencher le clic', () => {
+  board();
+  const clk = mk('CLOCK', 100, 100);
+  const idx0 = clk.clockIdx;
+  const pending = [];
+  const realST = globalThis.setTimeout;
+  globalThis.setTimeout = (fn, ms) => { pending.push({ fn, ms }); return pending.length; };
+  try {
+    const pt = { clientX: 130, clientY: 130, pointerType:'touch', pointerId: 7 };
+    canvas.dispatch('pointerdown', pt);
+    const hold = pending.filter(x => x.ms === 550).pop();
+    ok(hold, 'minuterie d’appui long armée');
+    hold.fn();
+    ok(!__el('inspector').classList.contains('hidden'), 'inspecteur ouvert par l’appui long');
+    canvas.dispatch('pointerup', pt);
+    eq(clk.clockIdx, idx0, 'le relâchement ne change pas le preset');
+    // appui court : comportement habituel (cycle des presets)
+    closeInspector();
+    canvas.dispatch('pointerdown', pt);
+    canvas.dispatch('pointerup', pt);
+    eq(clk.clockIdx, (idx0 + 1) % CLOCK_SPEEDS.length, 'appui court = presets');
+    ok(__el('inspector').classList.contains('hidden'), 'et pas d’inspecteur');
+  } finally { globalThis.setTimeout = realST; }
+});
+
+T('T60 raccourcis clavier : Ctrl+Z/Y/D et Suppr', () => {
+  board();
+  __advance(500); const a = mk('AND', 100, 100); markDirty();
+  __advance(500); mk('OR', 300, 100); markDirty();
+  __fireWin('keydown', { key:'z', ctrlKey:true });
+  eq(components.length, 1, 'Ctrl+Z annule');
+  __fireWin('keydown', { key:'y', ctrlKey:true });
+  eq(components.length, 2, 'Ctrl+Y refait');
+  selection.clear(); selection.add(components[0]);
+  __fireWin('keydown', { key:'d', ctrlKey:true });
+  eq(components.length, 3, 'Ctrl+D duplique');
+  __fireWin('keydown', { key:'Delete' });
+  eq(components.length, 2, 'Suppr efface la sélection');
+  __fireWin('keydown', { key:'Escape' });
+  eq(selection.size, 0, 'Échap désélectionne');
+});
+
+T('T61 balisage : toutes les modales sont des .modal-overlay refermables', () => {
+  const modals = [...__HTML.matchAll(/<div id="([\w-]+-modal)" class="([^"]+)"/g)];
+  ok(modals.length >= 6, 'modales trouvées : ' + modals.length);
+  modals.forEach(([, id, cls]) => {
+    ok(/\bmodal-overlay\b/.test(cls),
+      id + ' doit porter la classe modal-overlay (sinon elle reste affichée en permanence)');
+  });
+  ok(!/class="modal"/.test(__HTML), 'aucune classe « modal » orpheline');
+  ok(!/data-close=/.test(__HTML), 'aucun bouton ✕ sans gestionnaire (data-close)');
+});
+
+T('T62 balisage : chaque getElementById du script vise un id existant', () => {
+  const dyn = new Set(['btn-make-chip','btn-manage-chips']);   // créés par buildToolbar()
+  const ids = new Set([...__HTML.matchAll(/getElementById\('([\w-]+)'\)/g)].map(m => m[1]));
+  const present = new Set([...__HTML.matchAll(/id="([\w-]+)"/g)].map(m => m[1]));
+  const missing = [...ids].filter(i => !present.has(i) && !dyn.has(i));
+  eq(missing.join(','), '', 'ids introuvables dans le HTML : ' + missing.join(', '));
+});
+
+T('T63 la modale de l’analyseur s’ouvre et se referme', () => {
+  board();
+  const a = mk('SWITCH', 0, 0), b = mk('SWITCH', 0, 200);
+  const g = mk('XOR', 300, 100), l = mk('LED', 600, 100);
+  link(a, 0, g, 0); link(b, 0, g, 1); link(g, 0, l, 0);
+  __el('analyze-modal').classList.remove('show');
+  __fire('btn-analyze', 'click');
+  ok(__el('analyze-modal').classList.contains('show'), 'modale ouverte');
+  const body = __el('analyze-body').innerHTML;
+  ok(/⊕/.test(body), 'équation du XOR rendue');
+  ok(/<table class="tt"/.test(body), 'table de vérité stylée comme celle du panneau');
+  ok(!/id="truth-table"/.test(body), 'pas d’id dupliqué dans la page');
+  __fire('btn-close-analyze', 'click');
+  ok(!__el('analyze-modal').classList.contains('show'), 'refermée par le bouton');
+  // en mission boîte noire, l'analyse est brouillée
+  loadMission(missions.findIndex(m => m.id === 'm79'));
+  __fire('btn-analyze', 'click');
+  ok(/brouill/i.test(__el('analyze-body').innerHTML), 'analyse brouillée sur une boîte noire');
+  __fire('btn-close-analyze', 'click');
+  loadMission(-1);
+});
+
 /* ===================== 7. Guide ===================== */
 console.log('— Guide —');
 
-T('T49 le guide couvre tous les composants de la barre d’outils', () => {
+T('T57 le guide couvre tous les composants de la barre d’outils', () => {
   buildGuide();
   const html = __el('guide-body').innerHTML;
   ok(html.length > 4000, 'guide rendu');
@@ -782,14 +979,14 @@ T('T49 le guide couvre tous les composants de la barre d’outils', () => {
   covered.forEach(t => ok(FR_NAME[t], 'type inconnu déclaré dans le guide : ' + t));
 });
 
-T('T50 le guide documente les nouveautés v5 (inspecteur, analyseur, bus…)', () => {
+T('T58 le guide documente les nouveautés v5 (inspecteur, analyseur, bus…)', () => {
   const html = __el('guide-body').innerHTML;
   [['double-clic', 'inspecteur'], ['🔬', 'analyseur'], ['ROM', 'ROM'],
    ['bus', 'bus'], ['SONDE|Sonde|sonde', 'sonde'], ['octet', 'octet']]
     .forEach(([re, what]) => ok(new RegExp(re, 'i').test(html), 'le guide parle de ' + what));
 });
 
-T('T51 le guide ne mentionne plus les anciens déblocages de mission', () => {
+T('T59 le guide ne mentionne plus les anciens déblocages de mission', () => {
   const html = __el('guide-body').innerHTML;
   ok(!/récompense (de la )?mission/i.test(html), 'plus de « récompense mission » (déblocage total en v5)');
   ok(!/pour débloquer/i.test(html), 'plus de mention de déblocage');
