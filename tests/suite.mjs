@@ -366,6 +366,86 @@ cas("performance", async (nav) => {
                  cout.tick.toFixed(2) + " ms · image " + cout.rendu.toFixed(1) + " ms" };
 });
 
+cas("recherche-age4", async (nav) => {
+  const { page, jeu, sim, erreurs } = await contexte(nav);
+  const v = verif();
+  await jeu("sauterAge(4); etat.finances.solde = 200000; remplirStocks();");
+
+  // La note doit dépendre de la composition, pas du hasard seul.
+  const notes = await jeu(`(() => {
+    const bonne = { gout:'truffe', coupe:'gaufrette', cuisson:'huile_olive', sel:'normal', format:'familial' };
+    const mauvaise = { gout:'truffe', coupe:'allumette', cuisson:'four', sel:'bien', format:'maxi' };
+    return { bonne: noteRecette(bonne,0).note, mauvaise: noteRecette(mauvaise,0).note,
+             accordsB: accordsDe(bonne).length, accordsM: accordsDe(mauvaise).filter(a=>a.delta<0).length };
+  })()`);
+  v("une recette bien accordée note mieux qu'une recette bancale",
+    notes.bonne > notes.mauvaise + 15, notes.bonne + " contre " + notes.mauvaise);
+  v.aumoins("les bons accords se déclenchent", notes.accordsB, 2);
+  v.aumoins("les mauvais accords aussi", notes.accordsM, 2);
+
+  // Une étude coûte, prend du temps, puis sort.
+  const etude = await jeu(`(() => {
+    const t = { gout:'oignon_creme', coupe:'ondulee', cuisson:'chaudron', sel:'normal', format:'familial' };
+    const avant = etat.finances.solde;
+    lancerEtude("Ondulée du Bassin", t);
+    return { cout: avant - etat.finances.solde, jours: etat.recherche.enCours.jours };
+  })()`);
+  v.aumoins("l'étude est payée", etude.cout, 3000);
+  v.aumoins("elle prend du temps", etude.jours, 4);
+  await sim(etude.jours + 1);
+  const r = await jeu(`(() => {
+    const r = etat.recherche.recettes[0];
+    return r ? { id:r.id, nom:r.nom, note:r.note, prix:r.prixUnite,
+                 avis:(r.avis||[]).length, pistes:(r.pistes||[]).length,
+                 item: !!ITEMS[r.id], recette: !!RECETTES['ensacher_'+r.id],
+                 surEnsacheuse: MACHINES.ensacheuse.recettes.includes('ensacher_'+r.id),
+                 rate: !!ITEMS[r.id+'_rate'] } : null;
+  })()`);
+  v("la recette est sortie", r !== null);
+  if (r){
+    v("elle a une note", r.note > 0 && r.note <= 100, String(r.note));
+    v("elle a un prix", r.prix > 0, r.prix + " €");
+    v.aumoins("le public donne des avis", r.avis, 2);
+    v.aumoins("des pistes d'amélioration sont proposées", r.pistes, 1);
+    v("elle devient une vraie matière", r.item);
+    v("avec sa variante ratée", r.rate);
+    v("et une vraie recette d'ensachage", r.recette);
+    v("réglable sur l'ensacheuse", r.surEnsacheuse);
+  }
+
+  // Elle se produit et se vend pour de bon.
+  const prod = await jeu(`(() => {
+    const rid = etat.recherche.recettes[0].id;
+    poserMachine('ensacheuse',6,6,0);
+    const e = U().machines.find(m => m.type === 'ensacheuse');
+    e.recetteId = 'ensacher_' + rid;
+    ajouterStock('chips_assaisonnees', 400);
+    for (let i=0;i<3;i++) embaucher(creerCandidat());
+    for (let t=0;t<CONFIG.ticksParJour*3;t++) simTick();
+    document.querySelector('#ecranVendredi')?.classList.remove('visible');
+    return { faits: Math.round(etat.progression.produits[rid]||0), vendus: Math.round(etat.progression.vendus[rid]||0) };
+  })()`);
+  v.aumoins("des sachets maison sortent", prod.faits, 100);
+  v.aumoins("et se vendent", prod.vendus, 50);
+
+  // La sauvegarde doit reconstruire la recette au chargement.
+  const rt = await jeu(`(() => {
+    const rid = etat.recherche.recettes[0].id;
+    const brut = serialiser();
+    nettoyerRecettesJoueur();
+    const disparu = !ITEMS[rid];
+    appliquer(JSON.parse(brut));
+    return { disparu, revenu: !!ITEMS[rid] && !!RECETTES['ensacher_'+rid] };
+  })()`);
+  v("la recette n'est pas dans les tables constantes", rt.disparu);
+  v("elle est reconstruite au chargement", rt.revenu);
+
+  const inv = await jeu("verifierPartie()");
+  for (const t of inv) v("invariant : " + t.nom, t.ok, t.detail);
+  await page.close();
+  return { echecs: v.echecs.concat(erreurs), note: r ? ("« " + r.nom + " » notée " + r.note) : "—" };
+});
+
 /* ============================================================== Exécution ==*/
 const filtre = process.argv.slice(2);
 const choisis = filtre.length ? CAS.filter(c => filtre.some(f => c.nom.includes(f))) : CAS;

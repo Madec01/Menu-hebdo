@@ -338,6 +338,38 @@ table.tab tr:hover td{background:rgba(255,255,255,.028)}
   border-radius:4px;padding:1px 5px;font-size:11px;font-family:inherit;color:var(--texte);
 }
 
+/* ---------- Recherche ---------- */
+.rechGrille{display:grid;grid-template-columns:minmax(380px,1fr) minmax(380px,1fr);gap:16px;align-items:start}
+.rechTendance{font-size:14px;color:#f0d493;font-style:italic;line-height:1.5}
+.rechAxe{margin-bottom:11px}
+.rechAxeNom{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--texte-faible);margin-bottom:5px}
+.rechOpts{display:flex;flex-wrap:wrap;gap:5px}
+.rechOpt{
+  padding:6px 11px;border-radius:6px;background:var(--fond3);border:1px solid var(--bord);
+  font-size:12.5px;color:var(--texte-doux);transition:background .12s,border-color .12s,color .12s;
+}
+.rechOpt:hover{background:#333941;color:var(--texte)}
+.rechOpt.actif{background:var(--or);border-color:var(--or);color:#241b03;font-weight:600}
+.rechOpt.connu:not(.actif){border-color:#5b6b52}
+.rechOpt.connu::after{content:" ·";color:var(--vert);font-weight:700}
+.rechInfo{margin-top:12px;padding-top:10px;border-top:1px solid var(--bord)}
+.rechEntete{display:flex;align-items:center;gap:11px;margin-bottom:10px}
+.rechPuce{width:14px;height:38px;border-radius:4px;flex:0 0 14px}
+.rechNom{font-size:16px;font-weight:600}
+.rechTraits{font-size:11.5px;color:var(--texte-faible);line-height:1.35}
+.rechNote{text-align:right;flex:0 0 auto}
+.rnVal{font-size:26px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1}
+.rnVal.bon{color:var(--vert)}.rnVal.moyen{color:var(--or)}.rnVal.mauvais{color:var(--rouge)}
+.rnMot{font-size:10.5px;color:var(--texte-faible);margin-top:2px}
+.rechSousTitre{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--texte-faible);margin:13px 0 6px}
+.rechAvis{display:flex;gap:8px;padding:4px 0;font-size:12.5px;line-height:1.45}
+.raQui{flex:0 0 auto;color:var(--or);font-weight:600}
+.raDit{color:var(--texte-doux);font-style:italic}
+.rechPiste{
+  font-size:12.5px;line-height:1.5;color:var(--texte-doux);padding:7px 10px;margin-bottom:5px;
+  background:rgba(240,180,41,.07);border-left:2px solid var(--or);border-radius:0 5px 5px 0;
+}
+
 /* ---------- Panneau de développement (F2) ---------- */
 #panneauDev{
   position:fixed;top:60px;left:14px;z-index:70;width:330px;max-height:82vh;display:none;
@@ -419,7 +451,8 @@ table.tab tr:hover td{background:rgba(255,255,255,.028)}
       <button data-v="2" title="Vitesse double">×2</button>
       <button data-v="4" title="Vitesse quadruple">×4</button>
     </div>
-    <button class="btIcone" id="btStats" title="Statistiques">▤</button>
+    <button class="btIcone hidden" id="btRech" title="Recherche (R)">✦</button>
+    <button class="btIcone" id="btStats" title="Statistiques (S)">▤</button>
     <button class="btIcone" id="btSon" title="Couper le son">♪</button>
     <button class="btIcone" id="btMenu" title="Menu et sauvegarde">☰</button>
   </header>
@@ -463,6 +496,7 @@ table.tab tr:hover td{background:rgba(255,255,255,.028)}
 <div class="overlay" id="ecranMenu"></div>
 <div class="overlay" id="ecranFin"></div>
 <div class="overlay" id="ecranStats"></div>
+<div class="overlay" id="ecranRecherche"></div>
 <div id="panneauDev"></div>
 
 <script>
@@ -725,8 +759,10 @@ const AGES = [
     intro:"Les clients deviennent regardants. Un sachet mal cuit qui part chez eux, et ça se sait." },
 
   { n:4, nom:"L'industrie", largeur:48, hauteur:36,
-    objectif:{ texte:"Tenir la saison avec ses propres silos", type:"aVenir", cible:1 },
-    debloque:[], intro:"" },
+    objectif:{ texte:"Sortir une recette maison dont le public redemande",
+               type:"compteur", cle:"recetteReussie", cible:1 },
+    debloque:["recherche"],
+    intro:"On ne se contente plus de fabriquer ce que les autres ont inventé. On crée nos recettes, et le public tranche." },
 
   { n:5, nom:"Le groupe", largeur:48, hauteur:36,
     objectif:{ texte:"Ouvrir un deuxième site", type:"aVenir", cible:1 },
@@ -766,6 +802,106 @@ const BANQUES = [
   { nom:"Banque Régionale",  montant:20000, taux:0.085, jours:150, texte:"Plus gros, plus cher." },
   { nom:"Fonds Méridien",    montant:35000, taux:0.135, jours:180, texte:"Beaucoup d'argent, tout de suite. Et des intérêts salés." }
 ];
+
+/* ========================================================================
+   RECHERCHE — de quoi est faite une recette maison (âge 4)
+   ------------------------------------------------------------------------
+   Cinq axes, quelques options par axe. Le joueur compose ; le public tranche.
+   `attrait` est la note de base de l'option, `tags` sert aux accords et aux
+   modes du moment, `cout` renchérit la matière, `duree` ralentit l'ensachage,
+   `etude` renchérit le développement.
+   ======================================================================== */
+const AXES_RECETTE = [
+  { cle:"gout", nom:"Le goût", options:[
+    { id:"nature",       nom:"Nature",            attrait:0.54, cout:0.3, etude:0,    tags:["classique"] },
+    { id:"paprika",      nom:"Paprika",           attrait:0.68, cout:1.0, etude:600,  tags:["piquant","classique"] },
+    { id:"oignon_creme", nom:"Oignon et crème",   attrait:0.72, cout:1.2, etude:900,  tags:["doux","classique"] },
+    { id:"vinaigre",     nom:"Sel et vinaigre",   attrait:0.63, cout:0.9, etude:700,  tags:["acide","terroir"] },
+    { id:"fromage",      nom:"Fromage affiné",    attrait:0.66, cout:1.5, etude:1200, tags:["gras","doux"] },
+    { id:"barbecue",     nom:"Barbecue",          attrait:0.70, cout:1.3, etude:1000, tags:["fume","piquant"] },
+    { id:"piment",       nom:"Piment d'Espelette",attrait:0.61, cout:1.9, etude:1600, tags:["piquant","terroir"] },
+    { id:"truffe",       nom:"Truffe",            attrait:0.75, cout:4.2, etude:3200, tags:["chic","terroir"] }
+  ]},
+  { cle:"coupe", nom:"La coupe", options:[
+    { id:"fine",      nom:"Fine",        attrait:0.63, cout:1.0, duree:0.9,  etude:0,    tags:["leger"] },
+    { id:"epaisse",   nom:"Épaisse",     attrait:0.66, cout:1.0, duree:1.15, etude:500,  tags:["rustique"] },
+    { id:"ondulee",   nom:"Ondulée",     attrait:0.72, cout:1.05,duree:1.05, etude:900,  tags:["classique","rustique"] },
+    { id:"gaufrette", nom:"Gaufrette",   attrait:0.69, cout:1.15,duree:1.3,  etude:1500, tags:["chic"] },
+    { id:"allumette", nom:"Allumette",   attrait:0.50, cout:0.95,duree:0.85, etude:400,  tags:["leger","nomade"] }
+  ]},
+  { cle:"cuisson", nom:"La cuisson", options:[
+    { id:"friture",     nom:"Friture classique",  attrait:0.60, cout:1.0, duree:1.0,  etude:0,    tags:["classique"] },
+    { id:"chaudron",    nom:"Au chaudron",        attrait:0.75, cout:1.35,duree:1.4,  etude:2200, tags:["rustique","terroir"] },
+    { id:"huile_olive", nom:"À l'huile d'olive",  attrait:0.70, cout:1.7, duree:1.1,  etude:1800, tags:["chic","sain"] },
+    { id:"four",        nom:"Au four",            attrait:0.57, cout:1.1, duree:1.2,  etude:1400, tags:["sain","leger"] }
+  ]},
+  { cle:"sel", nom:"Le sel", options:[
+    { id:"peu",    nom:"Peu salé",  attrait:0.55, cout:0.9, etude:0, tags:["sain"] },
+    { id:"normal", nom:"Normal",    attrait:0.69, cout:1.0, etude:0, tags:["classique"] },
+    { id:"bien",   nom:"Bien salé", attrait:0.60, cout:1.1, etude:0, tags:["rustique"] }
+  ]},
+  { cle:"format", nom:"Le sachet", options:[
+    { id:"individuel", nom:"Individuel, 30 g", attrait:0.65, grammage:30,  film:1.7, etude:800,  tags:["nomade"] },
+    { id:"familial",   nom:"Familial, 150 g",  attrait:0.71, grammage:150, film:0.9, etude:0,    tags:["classique"] },
+    { id:"maxi",       nom:"Maxi, 300 g",      attrait:0.60, grammage:300, film:0.7, etude:400,  tags:["rustique"] }
+  ]}
+];
+
+/* Ce qui va bien ensemble, et ce qui ne va pas. C'est là que se joue le jeu :
+   le joueur ne les découvre qu'en essayant, et le contremaître les retient. */
+const ACCORDS = [
+  { a:"truffe",   b:"gaufrette",   delta: 0.10, dit:"La gaufrette retient l'arôme de truffe, c'est très réussi." },
+  { a:"truffe",   b:"huile_olive", delta: 0.08, dit:"La truffe et l'huile d'olive, c'est la bonne idée." },
+  { a:"truffe",   b:"allumette",   delta:-0.13, dit:"De la truffe sur une allumette, c'est du gâchis." },
+  { a:"truffe",   b:"maxi",        delta:-0.08, dit:"De la truffe en sac de 300 grammes ? Ça ne va pas ensemble." },
+  { a:"vinaigre", b:"ondulee",     delta: 0.09, dit:"L'ondulée et le vinaigre, ça a toujours marché." },
+  { a:"chaudron", b:"epaisse",     delta: 0.11, dit:"Épaisse et cuite au chaudron, là on croque vraiment." },
+  { a:"chaudron", b:"fine",        delta:-0.09, dit:"Le chaudron sur une coupe fine, ça brûle avant de cuire." },
+  { a:"four",     b:"peu",         delta: 0.08, dit:"Cuites au four et peu salées : enfin des chips qu'on mange sans culpabiliser." },
+  { a:"four",     b:"bien",        delta:-0.11, dit:"Cuites au four mais salées comme la mer — on ne comprend pas." },
+  { a:"fromage",  b:"bien",        delta:-0.07, dit:"Le fromage est déjà salé, alors en rajouter…" },
+  { a:"piment",   b:"peu",         delta:-0.06, dit:"Du piment sans sel, le goût tombe à plat." },
+  { a:"barbecue", b:"epaisse",     delta: 0.08, dit:"Le barbecue tient bien sur une chips épaisse." },
+  { a:"fine",     b:"individuel",  delta: 0.06, dit:"Le petit format et la coupe fine vont bien ensemble." },
+  { a:"allumette",b:"barbecue",    delta:-0.07, dit:"Sur l'allumette, l'assaisonnement tombe au fond du sachet." },
+  { a:"allumette",b:"paprika",     delta:-0.05, dit:"Sur l'allumette, l'assaisonnement tombe au fond du sachet." },
+  { a:"oignon_creme", b:"ondulee", delta: 0.07, dit:"L'oignon-crème sur de l'ondulé, c'est une valeur sûre." }
+];
+
+/* Ce que le public cherche en ce moment. Change de temps en temps. */
+const TENDANCES = [
+  { tag:"piquant",   texte:"Les gens cherchent du relevé en ce moment." },
+  { tag:"sain",      texte:"La mode est aux chips moins grasses." },
+  { tag:"terroir",   texte:"Le terroir a la cote : on veut du produit d'ici." },
+  { tag:"chic",      texte:"Les épiceries fines tirent le marché." },
+  { tag:"nomade",    texte:"On grignote en marchant : les petits formats partent tout seuls." },
+  { tag:"classique", texte:"Retour aux valeurs sûres : le public ne veut pas être surpris." },
+  { tag:"doux",      texte:"On recherche des goûts ronds, pas agressifs." }
+];
+
+/* Ce que disent les gens. Un commentaire doit apprendre quelque chose. */
+const AVIS = [
+  { si:r => r.note >= 82, dit:["Je n'achète plus que celles-là.",
+                              "On en a repris trois paquets dans la semaine.",
+                              "Enfin une chips qui a du caractère."] },
+  { si:r => r.note >= 65 && r.note < 82, dit:["Bonnes, franchement.",
+                                              "Ça se laisse manger sans qu'on s'en rende compte."] },
+  { si:r => r.note >= 48 && r.note < 65, dit:["Correctes, sans plus.",
+                                              "Ni bonnes ni mauvaises, on oublie en sortant du magasin."] },
+  { si:r => r.note < 48, dit:["J'ai fini le paquet par politesse.",
+                              "Je ne rachèterai pas.",
+                              "Il manque quelque chose."] },
+  { si:r => r.traits.sel === "bien", dit:["Bon goût, mais on boit un litre d'eau après."] },
+  { si:r => r.traits.sel === "peu" && r.traits.gout === "nature", dit:["On ne sent rien du tout."] },
+  { si:r => r.traits.cuisson === "four", dit:["Moins grasses, c'est agréable."] },
+  { si:r => r.traits.cuisson === "chaudron", dit:["On sent que c'est cuit en petite quantité."] },
+  { si:r => r.prixUnite > 3.2, dit:["Très bonnes. Mais à ce prix-là, c'est pour les grandes occasions."] },
+  { si:r => r.traits.format === "individuel", dit:["Parfait pour le sac à dos."] },
+  { si:r => r.traits.format === "maxi", dit:["Le grand format, c'est ce qu'il fallait pour l'apéritif."] }
+];
+
+const PRENOMS_CLIENTS = ["Sophie","Marc","Yasmine","Gérard","Émilie","Ahmed","Colette","Julien",
+                         "Nadège","Thomas","Farida","Bernard","Alice","Momo","Jean-Pierre"];
 
 /* ------------------------------------------------------------- Modes de jeu
    Un mode ne change jamais la chaîne de production : il change ce qui pardonne
@@ -977,7 +1113,7 @@ function nouvellePartie(nomEntreprise, modeChoisi){
     contrats: { proposes:[], acceptes:[], termines:[] },
     marche: { prix:{}, tendances:{}, dernierJour:-1 },
     reputation: CONFIG.reputationDepart,
-    recherche: { terminees:[], enCours:null },
+    recherche: { recettes:[], enCours:null, notoriete:0, tendance:0, tendanceSemaine:0, prochain:1 },
     progression: { age:1, objectifsCompletes:[], jaugeObjectif:0, vendus:{}, produits:{}, produitsSemaine:{}, compteurs:{} },
     stats: { historiqueSemaines:[], semaineCourante: semaineVierge(), clients:{} },
     tuto: { etape:0, fait:[] },
@@ -996,6 +1132,7 @@ function nouvellePartie(nomEntreprise, modeChoisi){
   U().ouvriers.push(o);
 
   initMarche();
+  nettoyerRecettesJoueur();
   reindexer();
   return etat;
 }
@@ -2054,10 +2191,14 @@ function finJournee(){
   // 7. État de la caisse
   verifierFaillite();
 
-  // 8. Objectif
+  // 8. La recherche avance, et la mode du marché tourne
+  avancerRecherche();
+  majTendance();
+
+  // 9. Objectif
   verifierObjectif();
 
-  // 9. Vendredi soir : on arrête tout et on décide.
+  // 10. Vendredi soir : on arrête tout et on décide.
   if (jourSemaine() === 0 && jourCourant() > 0) finSemaine();
   else majBandeau();
 }
@@ -2274,7 +2415,10 @@ function creerContrat(produitId){
   const pas = ITEMS[produitId].unite === "kg" ? (brut > 800 ? 100 : 25) : (brut > 4000 ? 500 : 100);
   const quantite = Math.max(pas, Math.round(brut / pas) * pas);
   const base = ITEMS[produitId].vente;
-  const prixUnitaire = Math.round(base * cl.marge * mode().prixClient * (0.9 + etat.reputation/100*0.18) * hasard(0.97,1.06));
+  // Une maison connue vend ses propres recettes plus cher.
+  const renom = ITEMS[produitId].maison ? (0.88 + etat.recherche.notoriete/100 * 0.34) : 1;
+  const prixUnitaire = Math.round(base * cl.marge * mode().prixClient * renom *
+                                  (0.9 + etat.reputation/100*0.18) * hasard(0.97,1.06)) || 1;
   return {
     id: nouvelId(),
     client: cl.nom, ton: cl.ton,
@@ -2611,6 +2755,266 @@ function emprunter(b){
   encaisser(b.montant, "emprunt");
   notif("Emprunt accordé", b.nom + " vous prête " + euros(b.montant) + ". Remboursement " + euros(total/b.jours) + " par jour.", "ok");
   son("argent");
+}
+
+/* ============================================================================
+   SIMULATION — la recherche (âge 4)
+   ----------------------------------------------------------------------------
+   Le joueur compose une recette en mélangeant des propositions. L'étude coûte
+   de l'argent et du temps. À la sortie, le public tranche : une note, des avis,
+   et un prix de vente qui en découle. Ce qui plaît se vend cher et fait
+   connaître la maison ; ce qui rate se brade.
+   ========================================================================== */
+
+function optionRecette(axeCle, id){
+  const a = AXES_RECETTE.find(x => x.cle === axeCle);
+  return a ? a.options.find(o => o.id === id) : null;
+}
+function optionsDe(traits){
+  return AXES_RECETTE.map(a => optionRecette(a.cle, traits[a.cle])).filter(Boolean);
+}
+function tagsDe(traits){
+  const t = new Set();
+  for (const o of optionsDe(traits)) for (const g of (o.tags||[])) t.add(g);
+  return t;
+}
+/** Les accords dont les deux ingrédients sont présents dans la recette. */
+function accordsDe(traits){
+  const v = Object.values(traits);
+  return ACCORDS.filter(a => v.includes(a.a) && v.includes(a.b));
+}
+
+function tendanceCourante(){
+  return TENDANCES[(etat.recherche.tendance || 0) % TENDANCES.length];
+}
+
+/** La note du public, de 0 à 100. Le détail sert à expliquer, jamais à afficher
+ *  un coefficient : le joueur lit des phrases, pas des nombres (§3.1). */
+function noteRecette(traits, alea){
+  const opts = optionsDe(traits);
+  if (opts.length < AXES_RECETTE.length) return null;
+  const base = opts.reduce((s,o) => s + o.attrait, 0) / opts.length;
+  const accords = accordsDe(traits).reduce((s,a) => s + a.delta, 0);
+  const mode = tagsDe(traits).has(tendanceCourante().tag) ? 0.12 : 0;
+  // Une usine qui gâche se retrouve dans le sachet.
+  const rebut = rebutMoyenUsine();
+  const soin = (1 - rebut) * 0.08;
+  const brut = base + accords + mode + soin + (alea || 0);
+  return { note: Math.round(clamp(brut, 0, 1) * 100), base, accords, mode, soin };
+}
+
+function rebutMoyenUsine(){
+  const m = U().machines.filter(x => MACHINES[x.type].qualite);
+  if (!m.length) return 0.08;
+  return m.reduce((s,x) => s + (x.tauxRebut||0), 0) / m.length;
+}
+
+const COULEUR_GOUT = {
+  nature:"#e8c86a", paprika:"#d4552e", oignon_creme:"#e0d3a8", vinaigre:"#8fbf6a",
+  fromage:"#e8a83c", barbecue:"#a8492a", piment:"#c22f2f", truffe:"#5a4a63"
+};
+
+function grammageDe(traits){ return optionRecette("format", traits.format).grammage; }
+
+/** Le prix se déduit de la note : une chips qui plaît se vend, l'autre se brade. */
+function prixUniteRecette(note, traits){
+  const g = grammageDe(traits);
+  const prixKg = 10.4 * (0.55 + note/100 * 0.85);
+  return Math.round(prixKg * g/1000 * 100) / 100;
+}
+function coutEtude(traits){
+  return 3000 + optionsDe(traits).reduce((s,o) => s + (o.etude||0), 0);
+}
+function joursEtude(traits){
+  return Math.min(15, Math.round(4 + optionsDe(traits).reduce((s,o) => s + (o.etude||0), 0) / 1100));
+}
+
+/* -------------------------------------------------- Vie d'une étude */
+function lancerEtude(nom, traits){
+  if (etat.recherche.enCours){ notif("Une étude est déjà en route", "Une seule à la fois.", "ko"); return false; }
+  const cout = coutEtude(traits);
+  if (!mode().argentInfini && etat.finances.solde - cout < CONFIG.faillite){
+    notif("Étude trop chère", "Il faut " + euros(cout) + " pour la lancer.", "ko"); return false;
+  }
+  depenser(cout, "recherche");
+  etat.recherche.enCours = {
+    nom: nom || "Recette maison",
+    traits: Object.assign({}, traits),
+    cout, jours: joursEtude(traits), restant: joursEtude(traits)
+  };
+  notif("Étude lancée", "« " + etat.recherche.enCours.nom + " » — " + etat.recherche.enCours.jours +
+        " jours de mise au point, " + euros(cout) + ".", "ok");
+  parle("On s'y met, patron. Dans " + etat.recherche.enCours.jours + " jours on saura ce que ça donne.", 9000);
+  son("signature");
+  return true;
+}
+
+/** Appelée une fois par jour. */
+function avancerRecherche(){
+  const e = etat.recherche.enCours;
+  if (!e) return;
+  e.restant--;
+  if (e.restant <= 0) finaliserRecette();
+}
+
+function finaliserRecette(){
+  const e = etat.recherche.enCours;
+  etat.recherche.enCours = null;
+  const n = noteRecette(e.traits, hasard(-0.03, 0.03));
+  const id = "maison_" + (etat.recherche.prochain++);
+  const r = {
+    id, nom: e.nom, traits: e.traits, note: n.note,
+    prixUnite: prixUniteRecette(n.note, e.traits),
+    semaine: semaineCourante(), lancee: true,
+    tendance: tendanceCourante().tag,
+    accords: accordsDe(e.traits).map(a => ({ delta:a.delta, dit:a.dit }))
+  };
+  r.avis = genererAvis(r);
+  r.pistes = pistesAmelioration(r);
+  etat.recherche.recettes.push(r);
+  etat.recherche.notoriete = clamp(etat.recherche.notoriete + (n.note - 50)/6, 0, 100);
+
+  injecterRecettesJoueur();
+  reindexer();
+
+  if (n.note >= 75) compter(etat.progression.compteurs, "recetteReussie", 1);
+
+  notif("« " + r.nom + " » est prête", motNote(r.note) + " — " + euros(r.prixUnite) +
+        " le sachet. Réglez une ensacheuse dessus pour la produire.", n.note >= 65 ? "ok" : "att");
+  parle(paroleNote(r), 14000);
+  son(n.note >= 65 ? "age" : "refus");
+  majBarreConstruction(); majPanneau(); majBandeau();
+}
+
+function motNote(n){
+  if (n >= 82) return "Le public en redemande";
+  if (n >= 65) return "Ça plaît";
+  if (n >= 48) return "Accueil tiède";
+  if (n >= 32) return "Ça ne prend pas";
+  return "Personne n'en veut";
+}
+function paroleNote(r){
+  if (r.note >= 82) return "Patron, « " + r.nom + " » cartonne. Les gens reviennent en chercher.";
+  if (r.note >= 65) return "« " + r.nom + " » se vend bien. On peut faire mieux, mais c'est du solide.";
+  if (r.note >= 48) return "« " + r.nom + " », ça se mange, mais personne n'en parle. Regardez les avis.";
+  return "« " + r.nom + " », c'est raté. Lisez ce que disent les gens, tout y est.";
+}
+
+/** Des avis qui apprennent quelque chose : chacun pointe une décision. */
+function genererAvis(r){
+  const out = [];
+  for (const a of AVIS){
+    let d = false;
+    try { d = a.si(r); } catch(e){ d = false; }
+    if (d) out.push({ qui: choix(PRENOMS_CLIENTS), dit: choix(a.dit) });
+  }
+  // Les accords parlent d'eux-mêmes, en bien comme en mal.
+  for (const a of r.accords) out.push({ qui: choix(PRENOMS_CLIENTS), dit: a.dit });
+  // On mélange, on en garde cinq.
+  for (let i=out.length-1; i>0; i--){ const j = Math.floor(Math.random()*(i+1)); [out[i],out[j]] = [out[j],out[i]]; }
+  return out.slice(0,5);
+}
+
+/** Ce qu'on pourrait changer la prochaine fois. */
+function pistesAmelioration(r){
+  const p = [];
+  // 1. L'accord qui a le plus coûté
+  const pires = r.accords.filter(a => a.delta < 0).sort((a,b) => a.delta - b.delta);
+  if (pires.length) p.push(pires[0].dit);
+  // 2. L'axe le plus faible de la recette
+  const opts = AXES_RECETTE.map(a => ({ axe:a, o: optionRecette(a.cle, r.traits[a.cle]) }))
+                           .filter(x => x.o).sort((a,b) => a.o.attrait - b.o.attrait);
+  if (opts.length && opts[0].o.attrait < 0.66){
+    const mieux = opts[0].axe.options.filter(o => o.attrait > opts[0].o.attrait + 0.05)
+                                     .sort((a,b) => b.attrait - a.attrait)[0];
+    if (mieux) p.push("Sur " + opts[0].axe.nom.toLowerCase() + ", « " + opts[0].o.nom +
+                      " » ne convainc pas. « " + mieux.nom + " » plairait davantage.");
+  }
+  // 3. La mode du moment
+  if (r.tendance && !tagsDe(r.traits).has(r.tendance)){
+    const t = TENDANCES.find(x => x.tag === r.tendance);
+    if (t) p.push("Au lancement, " + t.texte.charAt(0).toLowerCase() + t.texte.slice(1) +
+                  " Cette recette passait à côté.");
+  }
+  // 4. L'usine elle-même
+  if (rebutMoyenUsine() > 0.15)
+    p.push("Une partie du problème est dans l'atelier : trop de sachets ratés partent avec les bons.");
+  if (!p.length) p.push("Rien à redire sur la composition. Pour aller plus haut, il faudra suivre la mode du moment.");
+  return p;
+}
+
+/* ------------------------------------- Injection dans la chaîne réelle */
+
+/** Les recettes du joueur deviennent de vraies matières et de vraies recettes
+ *  d'ensachage. Elles ne vivent pas dans les tables constantes : on les
+ *  réinjecte à la création de partie et à chaque chargement. */
+function injecterRecettesJoueur(){
+  nettoyerRecettesJoueur();
+  if (!etat.recherche || !etat.recherche.recettes) return;
+  for (const r of etat.recherche.recettes){
+    if (!r.lancee) continue;
+    const g = grammageDe(r.traits);
+    const fmt = optionRecette("format", r.traits.format);
+    const coutGout = optionRecette("gout", r.traits.gout).cout;
+    const coutCuisson = optionRecette("cuisson", r.traits.cuisson).cout;
+    const dureeCoupe = optionRecette("coupe", r.traits.coupe).duree || 1;
+    const dureeCuisson = optionRecette("cuisson", r.traits.cuisson).duree || 1;
+    const coul = COULEUR_GOUT[r.traits.gout] || "#c9502e";
+
+    ITEMS[r.id] = {
+      nom: r.nom, nomP: r.nom, court: r.nom, courtP: r.nom,
+      couleur: coul, forme:"sachet", unite:null,
+      vente: r.prixUnite, portee:320, capacite:2400,
+      cat:"produit", ageMin:4, rate: r.id + "_rate", maison:true
+    };
+    ITEMS[r.id + "_rate"] = {
+      nom: r.nom + " (écarté)", nomP: r.nom + " (écartés)",
+      court:"Écarté", courtP:"Écartés",
+      couleur:"#7d7168", forme:"sachet", unite:null,
+      portee:320, capacite:2400, cat:"rebut", bon:r.id, ageMin:4, maison:true
+    };
+    const rid = "ensacher_" + r.id;
+    RECETTES[rid] = {
+      id: rid, nom: "Ensacher — " + r.nom, machine:"ensacheuse", maison:true,
+      entrees: [
+        { id:"chips_assaisonnees", qte:10 },
+        { id:"film",  qte: Math.round(0.4 * fmt.film * 100)/100 },
+        { id:"arome", qte: Math.round(0.5 * coutGout * coutCuisson * 100)/100 }
+      ],
+      sortie: { id: r.id, qte: Math.round(10000/g) },
+      duree: Math.round(10 * dureeCoupe * dureeCuisson * 10)/10,
+      ageMin: 4
+    };
+    if (!MACHINES.ensacheuse.recettes.includes(rid)) MACHINES.ensacheuse.recettes.push(rid);
+  }
+}
+
+function nettoyerRecettesJoueur(){
+  for (const k in ITEMS) if (ITEMS[k].maison) delete ITEMS[k];
+  for (const k in RECETTES) if (RECETTES[k].maison) delete RECETTES[k];
+  MACHINES.ensacheuse.recettes = MACHINES.ensacheuse.recettes.filter(x => !RECETTES[x] || !RECETTES[x].maison);
+  MACHINES.ensacheuse.recettes = MACHINES.ensacheuse.recettes.filter(x => x.indexOf("ensacher_maison_") !== 0);
+}
+
+/** La mode change toutes les six semaines environ. */
+function majTendance(){
+  const s = semaineCourante();
+  if (etat.recherche.tendanceSemaine === undefined) etat.recherche.tendanceSemaine = s;
+  if (s - etat.recherche.tendanceSemaine < 6) return;
+  etat.recherche.tendanceSemaine = s;
+  const avant = etat.recherche.tendance || 0;
+  let n = avant;
+  while (n === avant) n = hasardInt(0, TENDANCES.length-1);
+  etat.recherche.tendance = n;
+  if (etat.meta.age >= 4){
+    notif("Le marché bouge", tendanceCourante().texte, "att");
+    parle(tendanceCourante().texte + " Une recette qui colle à ça se vendra mieux.", 11000);
+  }
+}
+
+/** Ce que la maison a vendu de chaque recette, semaine par semaine. */
+function ventesRecette(r){
+  return etat.stats.historiqueSemaines.map(s => (s.livres && s.livres[r.id]) || 0);
 }
 
 /* ============================================================================
@@ -3846,6 +4250,7 @@ function majBandeau(){
   basculer("#indStock", age >= 2);
   basculer("#indReput", age >= 2);
   basculer("#indPerso", age >= 2);
+  $("#btRech").classList.toggle("hidden", !(age >= 4 || mode().toutDebloque));
   if (age >= 2){
     const u = U();
     // On montre le produit fini le plus abondant, avec sa vraie unité.
@@ -6042,6 +6447,18 @@ function majPanneauDev(){
     verifierObjectif();
   });
 
+  const gRech = groupe("Recherche");
+  bt(gRech, "Sortir une recette au hasard", () => {
+    const t = {};
+    for (const a of AXES_RECETTE) t[a.cle] = choix(a.options).id;
+    etat.recherche.enCours = { nom: nomParDefaut(t), traits:t, cout:0, jours:1, restant:1 };
+    finaliserRecette();
+  });
+  bt(gRech, "Terminer l'étude en cours", () => { if (etat.recherche.enCours) finaliserRecette(); });
+  bt(gRech, "Changer la mode du marché", () => {
+    etat.recherche.tendanceSemaine = -99; majTendance();
+  });
+
   const gTests = groupe("Vérifications");
   const bTest = document.createElement("button");
   bTest.className = "devBt devBtLarge";
@@ -6426,6 +6843,240 @@ function motReputation(r){
 }
 
 /* ============================================================================
+   UI — l'écran de recherche (âge 4)
+   À gauche on compose, à droite on lit ce que le public a dit des recettes
+   déjà sorties. Aucun chiffre de coefficient : des mots, des avis, des pistes.
+   ========================================================================== */
+
+let brouillon = null;   // la recette en cours de composition, jamais sauvegardée
+
+function brouillonParDefaut(){
+  const t = {};
+  for (const a of AXES_RECETTE) t[a.cle] = a.options[0].id;
+  return { nom:"", traits:t };
+}
+
+function ouvrirRecherche(){
+  if (etat.meta.age < 4 && !mode().toutDebloque){
+    notif("Pas encore", "La recherche s'ouvre à l'âge de l'industrie.", ""); return;
+  }
+  if (!brouillon) brouillon = brouillonParDefaut();
+  const z = $("#ecranRecherche");
+  z.innerHTML = `
+    <div class="feuille">
+      <div class="enteteFeuille">
+        <h1>Recherche</h1>
+        <div class="sous">${etat.meta.nomEntreprise} · on connaît la maison à ${Math.round(etat.recherche.notoriete)} sur 100</div>
+        <div style="flex:1"></div>
+        <button class="bt" id="btFermerRech">Retour à l'usine</button>
+      </div>
+      <div class="rechGrille">
+        <div id="rechComposer"></div>
+        <div id="rechSuivi"></div>
+      </div>
+    </div>`;
+  $("#btFermerRech").onclick = () => fermer("#ecranRecherche");
+  ouvrir("#ecranRecherche");
+  majComposer();
+  majSuivi();
+}
+
+/* ------------------------------------------------------------ Composer */
+function majComposer(){
+  const z = $("#rechComposer");
+  z.innerHTML = "";
+
+  // Ce que cherche le public : la seule information donnée d'avance.
+  const t = volet("Ce que cherche le public");
+  t.appendChild(elem('<div class="rechTendance"></div>')).textContent = tendanceCourante().texte;
+  z.appendChild(t);
+
+  const e = etat.recherche.enCours;
+  if (e){
+    const v = volet("Étude en cours");
+    v.appendChild(elem('<div style="font-size:16px;font-weight:600;margin-bottom:6px"></div>')).textContent = "« " + e.nom + " »";
+    v.appendChild(elem('<div style="font-size:12.5px;color:var(--texte-doux);margin-bottom:8px"></div>'))
+     .textContent = resumeTraits(e.traits);
+    const j = elem('<div class="jauge vert" style="height:10px"><i></i></div>');
+    j.querySelector("i").style.width = Math.round((1 - e.restant/e.jours)*100) + "%";
+    v.appendChild(j);
+    v.appendChild(elem('<div style="font-size:12px;color:var(--texte-faible);margin-top:5px"></div>'))
+     .textContent = e.restant + " " + pluriel(e.restant,"jour") + " avant la sortie.";
+    z.appendChild(v);
+    return;
+  }
+
+  const v = volet("Composer une recette");
+  const champ = document.createElement("input");
+  champ.className = "champTexte";
+  champ.style.cssText = "text-align:left;margin-bottom:14px";
+  champ.maxLength = 28;
+  champ.placeholder = "Nom de la recette";
+  champ.value = brouillon.nom;
+  champ.oninput = () => { brouillon.nom = champ.value; };
+  v.appendChild(champ);
+
+  for (const axe of AXES_RECETTE){
+    const bloc = document.createElement("div");
+    bloc.className = "rechAxe";
+    bloc.innerHTML = '<div class="rechAxeNom"></div><div class="rechOpts"></div>';
+    bloc.querySelector(".rechAxeNom").textContent = axe.nom;
+    const zo = bloc.querySelector(".rechOpts");
+    for (const o of axe.options){
+      const b = document.createElement("button");
+      b.className = "rechOpt" + (brouillon.traits[axe.cle] === o.id ? " actif" : "");
+      b.innerHTML = '<span class="roNom"></span>';
+      b.querySelector(".roNom").textContent = o.nom;
+      // Ce que la maison a appris : un accord déjà rencontré est rappelé.
+      if (accordConnu(o.id, brouillon.traits)) b.classList.add("connu");
+      b.onclick = () => { brouillon.traits[axe.cle] = o.id; majComposer(); };
+      zo.appendChild(b);
+    }
+    v.appendChild(bloc);
+  }
+
+  const cout = coutEtude(brouillon.traits), jours = joursEtude(brouillon.traits);
+  const g = grammageDe(brouillon.traits);
+  const info = document.createElement("div");
+  info.className = "rechInfo";
+  info.appendChild(ligne("Ce que l'étude coûte", euros(cout)));
+  info.appendChild(ligne("Temps de mise au point", jours + " " + pluriel(jours,"jour")));
+  info.appendChild(ligne("Sachet", g + " g · " + Math.round(10000/g) + " sachets pour 10 kg de chips"));
+  v.appendChild(info);
+
+  // L'avis du contremaître : ce qu'il sait, pas la note.
+  const flair = avisContremaitreRecette(brouillon.traits);
+  if (flair) v.appendChild(elem('<div class="cAvis" style="margin-top:10px"></div>')).textContent = "« " + flair + " »";
+
+  const b = bouton("Lancer l'étude — " + euros(cout), () => {
+    if (lancerEtude(brouillon.nom.trim() || nomParDefaut(brouillon.traits), brouillon.traits)){
+      brouillon = brouillonParDefaut();
+      majComposer(); majSuivi();
+    }
+  }, "large plein");
+  b.style.marginTop = "12px";
+  v.appendChild(b);
+  z.appendChild(v);
+}
+
+/** Un accord déjà vécu sur une recette sortie : la maison s'en souvient. */
+function accordConnu(optionId, traits){
+  const v = Object.values(traits);
+  return ACCORDS.some(a =>
+    ((a.a === optionId && v.includes(a.b)) || (a.b === optionId && v.includes(a.a))) &&
+    etat.recherche.recettes.some(r => {
+      const rv = Object.values(r.traits);
+      return rv.includes(a.a) && rv.includes(a.b);
+    }));
+}
+
+/** Il ne connaît que ce que la maison a déjà essayé. */
+function avisContremaitreRecette(traits){
+  const vus = accordsDe(traits).filter(a =>
+    etat.recherche.recettes.some(r => {
+      const rv = Object.values(r.traits);
+      return rv.includes(a.a) && rv.includes(a.b);
+    }));
+  if (vus.length){
+    const pire = vus.slice().sort((a,b) => a.delta - b.delta)[0];
+    const best = vus.slice().sort((a,b) => b.delta - a.delta)[0];
+    if (pire.delta < 0) return "On a déjà vu ça : " + pire.dit.charAt(0).toLowerCase() + pire.dit.slice(1);
+    return "On l'a déjà constaté : " + best.dit.charAt(0).toLowerCase() + best.dit.slice(1);
+  }
+  if (tagsDe(traits).has(tendanceCourante().tag))
+    return "Ça colle à ce que les gens cherchent en ce moment. Bon point.";
+  if (!etat.recherche.recettes.length)
+    return "On n'a jamais rien inventé ici. Essayez, on verra bien ce que les gens en disent.";
+  return "Celle-là, je ne sais pas ce que ça va donner. Il faut essayer.";
+}
+
+function resumeTraits(traits){
+  return AXES_RECETTE.map(a => {
+    const o = optionRecette(a.cle, traits[a.cle]);
+    return o ? o.nom.toLowerCase() : "?";
+  }).join(" · ");
+}
+function nomParDefaut(traits){
+  const g = optionRecette("gout", traits.gout).nom;
+  const c = optionRecette("coupe", traits.coupe).nom.toLowerCase();
+  return g + " " + c;
+}
+
+/* ------------------------------------------------------------- Le suivi */
+function majSuivi(){
+  const z = $("#rechSuivi");
+  z.innerHTML = "";
+  const rs = etat.recherche.recettes.slice().reverse();
+  if (!rs.length){
+    const v = volet("Nos recettes");
+    v.appendChild(elem('<div class="vide">Rien n\'est encore sorti de la maison.</div>'));
+    z.appendChild(v);
+    return;
+  }
+  for (const r of rs){
+    const v = volet(null);
+    v.innerHTML = "";
+    const ent = document.createElement("div");
+    ent.className = "rechEntete";
+    ent.innerHTML = '<span class="rechPuce"></span><div style="flex:1">' +
+      '<div class="rechNom"></div><div class="rechTraits"></div></div>' +
+      '<div class="rechNote"><div class="rnVal"></div><div class="rnMot"></div></div>';
+    ent.querySelector(".rechPuce").style.background = (ITEMS[r.id] && ITEMS[r.id].couleur) || "#c9502e";
+    ent.querySelector(".rechNom").textContent = r.nom;
+    ent.querySelector(".rechTraits").textContent = resumeTraits(r.traits);
+    ent.querySelector(".rnVal").textContent = r.note;
+    ent.querySelector(".rnVal").className = "rnVal " + (r.note >= 65 ? "bon" : r.note >= 48 ? "moyen" : "mauvais");
+    ent.querySelector(".rnMot").textContent = motNote(r.note);
+    v.appendChild(ent);
+
+    v.appendChild(ligne("Prix du sachet", euros(r.prixUnite)));
+    const vendus = ventesRecette(r);
+    const total = vendus.reduce((s,x)=>s+x,0);
+    v.appendChild(ligne("Vendus depuis la sortie", nb(Math.round(total)) + " " + pluriel(total,"sachet")));
+
+    if (vendus.length > 1){
+      const cv = document.createElement("canvas");
+      v.appendChild(elem('<div class="rechSousTitre">Ventes, semaine par semaine</div>'));
+      v.appendChild(cv);
+      v.appendChild(elem('<div class="vizLecture"></div>'));
+      const semaines = etat.stats.historiqueSemaines.slice(-12);
+      vizCourbe(cv, semaines, s => (s.livres && s.livres[r.id]) || 0,
+                (ITEMS[r.id] && ITEMS[r.id].couleur) || "#c9502e",
+                x => nb(Math.round(x)) + " sachets");
+    }
+
+    if (r.avis && r.avis.length){
+      v.appendChild(elem('<div class="rechSousTitre">Ce qu\'en disent les gens</div>'));
+      for (const a of r.avis){
+        const d = document.createElement("div");
+        d.className = "rechAvis";
+        d.innerHTML = '<span class="raQui"></span><span class="raDit"></span>';
+        d.querySelector(".raQui").textContent = a.qui;
+        d.querySelector(".raDit").textContent = "« " + a.dit + " »";
+        v.appendChild(d);
+      }
+    }
+    if (r.pistes && r.pistes.length){
+      v.appendChild(elem('<div class="rechSousTitre">Ce qu\'on pourrait changer</div>'));
+      for (const p of r.pistes){
+        const d = document.createElement("div");
+        d.className = "rechPiste";
+        d.textContent = p;
+        v.appendChild(d);
+      }
+      const b = bouton("Repartir de cette recette", () => {
+        brouillon = { nom: r.nom + " II", traits: Object.assign({}, r.traits) };
+        majComposer();
+        $("#ecranRecherche").scrollTop = 0;
+      }, "large");
+      b.style.marginTop = "10px";
+      v.appendChild(b);
+    }
+    z.appendChild(v);
+  }
+}
+
+/* ============================================================================
    AUDIO — tout est synthétisé à la volée, aucun fichier (§13)
    ========================================================================== */
 
@@ -6512,15 +7163,15 @@ function construireMusique(){
   }
 }
 
-const ACCORDS = [[110,164.81,220],[98,146.83,196],[123.47,164.81,246.94],[87.31,130.81,174.61]];
+const ACCORDS_MUSIQUE = [[110,164.81,220],[98,146.83,196],[123.47,164.81,246.94],[87.31,130.81,174.61]];
 
 function majMusique(dts){
   if (!audio.pret || !etat) return;
   audio.musique.prochain -= dts;
   if (audio.musique.prochain <= 0){
     audio.musique.prochain = 14 + Math.random()*8;
-    audio.musique.accord = (audio.musique.accord + 1 + Math.floor(Math.random()*2)) % ACCORDS.length;
-    const a = ACCORDS[audio.musique.accord];
+    audio.musique.accord = (audio.musique.accord + 1 + Math.floor(Math.random()*2)) % ACCORDS_MUSIQUE.length;
+    const a = ACCORDS_MUSIQUE[audio.musique.accord];
     const t = audio.ac.currentTime;
     // plus l'usine grandit, plus la nappe est ample
     const ampleur = 1 + Math.min(1, U().machines.length/10);
@@ -6675,6 +7326,10 @@ function appliquer(o){
   etat.finances.creances = etat.finances.creances || [];
   etat.progression.compteurs = etat.progression.compteurs || {};
   etat.stats.clients = etat.stats.clients || {};
+  etat.recherche = Object.assign({ recettes:[], enCours:null, notoriete:0,
+                                   tendance:0, tendanceSemaine:0, prochain:1 }, etat.recherche || {});
+  if (!Array.isArray(etat.recherche.recettes)) etat.recherche.recettes = [];
+  injecterRecettesJoueur();      // les recettes maison ne vivent pas dans les tables constantes
   etat.meta.mode = etat.meta.mode || "normal";
   for (const s of etat.stats.historiqueSemaines) s.depensesParMotif = s.depensesParMotif || {};
   etat.stats.semaineCourante.depensesParMotif = etat.stats.semaineCourante.depensesParMotif || {};
@@ -6817,6 +7472,7 @@ function initClavier(){
     if (e.code === "Escape"){
       if ($("#panneauDev").classList.contains("visible")) return basculerDev();
       if (unEcranOuvert() && $("#ecranStats").classList.contains("visible")) fermer("#ecranStats");
+      else if (unEcranOuvert() && $("#ecranRecherche").classList.contains("visible")) fermer("#ecranRecherche");
       else if (unEcranOuvert() && $("#ecranMenu").classList.contains("visible")) fermer("#ecranMenu");
       else if (vue.outil) annulerOutil();
       else if (vue.selection){ vue.selection = null; majPanneau(); }
@@ -6838,6 +7494,7 @@ function initClavier(){
       case "KeyM": basculerSon(); break;
       case "F2": e.preventDefault(); basculerDev(); break;
       case "KeyS": if (!e.ctrlKey && !e.metaKey) ouvrirStats(); break;
+      case "KeyR": if (!vue.outil && (etat.meta.age >= 4 || mode().toutDebloque)) ouvrirRecherche(); break;
       case "Digit4": reglerVitesse(8); break;
       case "ArrowLeft":  vue.camX -= 1.2; bornerCamera(); break;
       case "ArrowRight": vue.camX += 1.2; bornerCamera(); break;
@@ -6896,6 +7553,7 @@ function init(){
   });
   $("#btMenu").onclick = () => { if (etat) ouvrirMenu(); };
   $("#btStats").onclick = () => { if (etat) ouvrirStats(); };
+  $("#btRech").onclick = () => { if (etat) ouvrirRecherche(); };
   $("#btSon").onclick = () => { initAudio(); basculerSon(); };
   $("#btAide").onclick = ouvrirAide;
   $("#portrait").onclick = () => { initAudio(); conseil(); };

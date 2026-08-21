@@ -43,6 +43,7 @@ sachets se comptent à l'unité.
 | Demander conseil | Clic sur le contremaître, en bas à gauche |
 | Tout savoir | Onglet **Guide**, dans le panneau de droite |
 | Statistiques | <kbd>S</kbd>, ou l'icône ▤ en haut à droite |
+| Recherche (âge 4) | <kbd>R</kbd>, ou l'icône ✦ en haut à droite |
 | Outils de développement | <kbd>F2</kbd> |
 
 ## Ce qui est construit
@@ -92,6 +93,15 @@ sachets se comptent à l'unité.
 - **Des outils de développement** (<kbd>F2</kbd>) : sauter à n'importe quel âge,
   changer de mode, remplir le quai, user ou réviser le matériel, avancer d'une
   semaine, et lancer les **auto-vérifications** de la partie.
+- **La recherche** (âge 4) : on compose une recette maison en mélangeant cinq
+  axes (le goût, la coupe, la cuisson, le sel, le format du sachet). L'étude
+  coûte et prend des jours. À la sortie, le public tranche : une note, des avis
+  de consommateurs qui pointent chacun une décision, et des pistes
+  d'amélioration. La recette devient une **vraie matière** avec sa recette
+  d'ensachage ; son prix découle de sa note, et la notoriété de la maison tire
+  les prix vers le haut. Certains mariages marchent, d'autres non — le joueur
+  les découvre en essayant, et le contremaître s'en souvient. Une **mode du
+  marché** tourne toutes les six semaines.
 - **Les gros clients** (âge 3) : centrales d'achat, gros volumes, prix serrés
   et **paiement à 30 jours** — on avance la matière et les salaires un mois
   durant.
@@ -106,16 +116,17 @@ sachets se comptent à l'unité.
 
 ## Ce qui reste à faire
 
-Le lot 3 est fait (la qualité, les gros clients). Restent les lots 4 et 5.
+Les lots 3 et 4 sont faits (la qualité, les gros clients, la recherche).
+Reste le lot 5, et l'amont agricole.
 Adaptés au métier, ils donneraient :
 
-- **Âge 4 — L'industrie** : la saisonnalité. Récolte, silos, contrats avec les
-  producteurs, prix qui s'effondrent en septembre. Plus les RH avancées et la
-  R&D recettes et arômes.
+- **L'amont agricole** : contrats pluriannuels avec les producteurs, variétés
+  de pommes de terre, récolte saisonnière, silos. De quoi donner du sens au
+  prix de la matière, qui n'est aujourd'hui qu'un cours qui oscille.
 - **Âge 5 — Le groupe** : multi-sites, logistique inter-usines, export, et une
   deuxième famille de produits (snacks soufflés, biscuits apéritif).
 
-Les âges 4 et 5 sont déjà déclarés dans la table `AGES` avec leur surface et
+L'âge 5 est déjà déclaré dans la table `AGES` avec leur surface et
 leur objectif ; il reste à écrire les systèmes correspondants.
 
 Autres pistes laissées de côté : la date limite de consommation et le rappel
