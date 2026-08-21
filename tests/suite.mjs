@@ -1164,6 +1164,41 @@ cas("quai-de-sortie", async (nav) => {
   })()`);
   v.aumoins("des sachets arrivent bien au quai de sortie", flux.arrive, 1);
 
+  // Cliquer sur un quai doit ouvrir la fiche de CE quai-là.
+  const clic = await jeu(`(() => {
+    const u = U();
+    const sel = q => { vue.selection = noeudSous(q.x, q.y+1).id; vue.ongletActif = "detail";
+                       majOnglets(); majPanneau();
+                       return { id: vue.selection,
+                                titre: document.querySelector('#contenuPanneau .titrePan').textContent }; };
+    return { sortie: sel(u.quaiSortie), entree: sel(u.quaiEntree) };
+  })()`);
+  v.egal("cliquer sur le quai de sortie le sélectionne", clic.sortie.id, 2);
+  v.egal("et ouvre sa fiche", clic.sortie.titre, "Quai de sortie");
+  v.egal("cliquer sur le quai d'entrée le sélectionne", clic.entree.id, 1);
+  v.egal("et ouvre la sienne", clic.entree.titre, "Quai d'entrée");
+
+  // Un quai n'accepte que ce qui lui revient : plus de marchandise qui se
+  // téléporte d'un quai à l'autre sans qu'on comprenne pourquoi.
+  const tri = await jeu(`(() => {
+    const u = U();
+    const S = noeudParId(2), E = noeudParId(1);
+    const avant = Math.round(u.stocks.rondelles||0);
+    livrer(S, 'sachet', 10);
+    const place = { rondellesVersSortie: placeEntree(S,'rondelles'),
+                    sachetsVersSortie: placeEntree(S,'sachet') > 0,
+                    patatesVersEntree: placeEntree(E,'pdt_brutes') > 0,
+                    sachetsVersEntree: placeEntree(E,'sachet') };
+    return Object.assign(place, { rondellesRestees: Math.round(u.stocks.rondelles||0) - avant,
+                                  explication: pourquoiRienAVendre().length > 20 });
+  })()`);
+  v.egal("le quai de sortie refuse un en-cours", tri.rondellesVersSortie, 0);
+  v("il accepte le produit fini", tri.sachetsVersSortie);
+  v("le quai d'entrée accepte la matière", tri.patatesVersEntree);
+  v.egal("et refuse le produit fini", tri.sachetsVersEntree, 0);
+  v.egal("rien ne se téléporte vers l'autre quai", tri.rondellesRestees, 0);
+  v("un quai de sortie vide explique pourquoi", tri.explication);
+
   const inv = await jeu("verifierPartie()");
   for (const t of inv) v("invariant : " + t.nom, t.ok, t.detail);
   await page.close();

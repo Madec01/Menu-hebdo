@@ -1634,6 +1634,14 @@ function noeudQuai(u, sortie){
 function estQuai(n){ return !!n && (n.id === 1 || n.id === 2); }
 function estQuaiSortie(n){ return !!n && n.id === 2; }
 
+/** Ce quai-là accepte-t-il cette marchandise ? Même règle que poolDe() :
+ *  ce qui se vend part par la sortie, le reste entre par l'entrée. */
+function quaiAccepte(n, item){
+  if (!ITEMS[item]) return false;
+  return estQuaiSortie(n) ? poolDe(item) === U().stocksSortie
+                          : poolDe(item) === U().stocks;
+}
+
 function nouvelId(){ return ++etat.meta.prochainId; }
 
 /* ------------------------------------------------------------------ Stocks */
@@ -1724,7 +1732,10 @@ function contenuTotal(o){ let s=0; for (const k in o) s += o[k]; return s; }
 /** Combien d'unités de `item` ce nœud peut-il encore recevoir ? */
 function placeEntree(n, item){
   if (!n) return 0;
-  if (estQuai(n)) return 1e9;
+  // Un quai ne prend que ce qui lui revient : le fini part par la sortie, la
+  // matière entre par l'entrée. Sans ça une bande amenait des rondelles au quai
+  // de sortie, et elles réapparaissaient à l'entrée — incompréhensible.
+  if (estQuai(n)) return quaiAccepte(n, item) ? 1e9 : 0;
   if (estConvoyeur(n)){
     if (!itemsAcceptes(n).includes(item)) return 0;     // cul-de-sac : on n'engage rien
     return placeConvoyeur(n, item);
@@ -1750,7 +1761,7 @@ function livrer(n, item, q){
  *  colis est trop gros en soi, ou s'il faut simplement le laisser attendre. */
 function placeTotale(n, item){
   if (!n) return 0;
-  if (estQuai(n)) return 1e9;
+  if (estQuai(n)) return quaiAccepte(n, item) ? 1e9 : 0;
   if (estConvoyeur(n)) return capaciteConvoyeur(n) / volumeItem(item);
   const d = MACHINES[n.type];
   if (d.dedie && n.filtre && n.filtre !== item) return 0;
@@ -6271,7 +6282,7 @@ function initSouris(){
     const n = noeudSous(tx,ty);
     if (n){
       if (n.enPanne){ reparerMachine(n); }
-      vue.selection = estQuai(n) ? 1 : n.id;
+      vue.selection = n.id;          // 1 = quai d'entrée, 2 = quai de sortie
       vue.ongletActif = "detail";
       majOnglets();
     } else {
@@ -6627,6 +6638,28 @@ function detailUsine(z){
 
 function centrerSur(n){ vue.camX = n.x + n.l/2; vue.camY = n.y + n.h/2; }
 
+/** Un quai de sortie vide, c'est toujours pour une raison, et le joueur doit
+ *  la lire là où il l'a cherchée. On dit ce qui manque, en une phrase. */
+function pourquoiRienAVendre(){
+  const u = U();
+  // Ce qui arrive au quai de sortie par une bande : si rien n'y arrive, on le dit.
+  const bandes = u.convoyeurs.filter(c => c.destination === 2);
+  const enCours = bandes.some(c => c.transit.length);
+  if (!bandes.length && !u.machines.some(m => (MACHINES[m.type]||{}).stockage))
+    return "Rien n'amène de marchandise ici : il faut un convoyeur depuis la fin de " +
+           "la chaîne, ou quelqu'un pour la porter.";
+  // Ce qui traîne à l'entrée alors que c'est peut-être ce qu'on croit vendre.
+  const gros = Object.keys(u.stocks)
+    .filter(k => ITEMS[k] && ITEMS[k].cat !== "matiere" && u.stocks[k] >= 20)
+    .sort((a,b) => u.stocks[b] - u.stocks[a])[0];
+  if (gros)
+    return "Il y a " + quantiteItem(gros, u.stocks[gros], true) + " en réserve, mais ça ne se " +
+           "vend pas en l'état : c'est un en-cours, il lui reste des étapes à passer. " +
+           "Seul le produit fini part d'ici.";
+  if (enCours) return "De la marchandise est en route sur les convoyeurs.";
+  return "La chaîne ne sort rien pour l'instant. Regardez « ce qui cloche », onglet Détail.";
+}
+
 function detailQuai(z, n){
   const u = U();
   const sortie = estQuaiSortie(n);
@@ -6646,7 +6679,10 @@ function detailQuai(z, n){
   if (sortie){
     const b = blocTitre("Prêt à partir");
     const finis = Object.keys(u.stocksSortie).filter(k => ITEMS[k] && u.stocksSortie[k] >= 1);
-    if (!finis.length) b.appendChild(elem('<div class="vide">Rien de fini pour le moment.</div>'));
+    if (!finis.length){
+      b.appendChild(elem('<div class="vide">Rien de fini pour le moment.</div>'));
+      b.appendChild(elem('<div class="reapproNote"></div>')).textContent = pourquoiRienAVendre();
+    }
     for (const it of finis){
       const l = document.createElement("div");
       l.className = "item";
