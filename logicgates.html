@@ -4853,123 +4853,188 @@ function drawConfetti(c, dt){
 
 /* ---------- Guide : l'encyclopédie ---------- */
 function buildGuide(){
-  // [type, nom, fonctionnement, exemple à essayer (ou null), anecdote réelle (ou null)]
+  // [type, nom, fonctionnement, exemple à essayer (ou null), anecdote réelle (ou null), types couverts]
   const SECTIONS = [
+  { t:'L’atelier — les outils qui t’aident', p:
+    '<b>🔧 L’inspecteur.</b> <code>Double-clic</code> sur n’importe quel composant non verrouillé ouvre son panneau de réglages : ' +
+    'fréquence exacte et rapport cyclique d’une <b>horloge</b>, nombre de cycles d’un <b>retard</b>, vitesse / longueur / motif d’un ' +
+    '<b>séquenceur</b>, probabilité du <b>bruit</b>, valeur d’un <b>clavier 4 bits</b>, contenu d’une <b>ROM</b>, octave et volume d’une ' +
+    '<b>note</b>, hauteur du <b>buzzer</b>, touche du clavier, nom d’une <b>puce</b> et de ses pins… et, pour tous, une ' +
+    '<b>étiquette</b> personnalisée affichée au-dessus du boîtier. Les réglages voyagent avec le composant : copier-coller, ' +
+    'sauvegardes, exemples et puces les conservent.<br><br>' +
+    '<b>🔬 L’analyseur.</b> Il remonte les câbles depuis chaque ampoule et écrit l’<b>équation booléenne</b> de ton circuit ' +
+    '(<code>¬</code> non, <code>·</code> et, <code>+</code> ou, <code>⊕</code> xor, <code>↺</code> pour une boucle, ' +
+    '<code>mém[…]</code> pour une bascule). Si le circuit est combinatoire et compte au plus 4 interrupteurs, il en mesure ' +
+    'aussi la <b>vraie table de vérité</b> en simulant les combinaisons. Dans les missions 🕵️ boîte noire il est brouillé : ' +
+    'à toi de déduire.<br><br>' +
+    '<b>⌨️ Les gestes qui font gagner du temps.</b> <code>Ctrl+Z</code> / <code>Ctrl+Y</code> annuler-refaire, ' +
+    '<code>Ctrl+C</code> / <code>Ctrl+V</code> copier-coller, <code>Ctrl+D</code> dupliquer la sélection, ' +
+    '<code>Suppr</code> effacer, glisser dans le vide pour sélectionner plusieurs boîtiers (puis ⇤ ⤒ ☰ pour les aligner), ' +
+    '<code>🪄</code> pour ranger les câbles automatiquement et <code>📷</code> pour exporter une image de ton montage.',
+    items:[] },
   { t:'Les entrées — produire des signaux', p:'Tout circuit commence par des sources : elles injectent des 0 et des 1 que la logique va transformer.', items:[
     ['SWITCH','Interrupteur & Bouton',
-     'L\u2019interrupteur <code>garde</code> son état après le clic (0 ou 1). Le bouton, lui, ne vaut 1 que <code>tant qu\u2019on le maintient</code> enfoncé, puis retombe à 0 : c\u2019est une impulsion.',
+     'L’interrupteur <code>garde</code> son état après le clic (0 ou 1). Le bouton, lui, ne vaut 1 que <code>tant qu’on le maintient</code> enfoncé, puis retombe à 0 : c’est une impulsion.',
      'Branche chacun sur une ampoule et compare leur comportement : niveau permanent contre impulsion.',
-     'La distinction niveau/impulsion est fondamentale : une commande de lampe est un niveau, la sonnette de la porte est une impulsion.'],
+     'La distinction niveau/impulsion est fondamentale : une commande de lampe est un niveau, la sonnette de la porte est une impulsion.',
+     ['SWITCH','BUTTON']],
     ['CLOCK','Horloge',
-     'Alterne toute seule entre 0 et 1 à intervalle régulier. Un aller-retour complet = un <code>cycle</code>. Clic = changer la vitesse (1, 2 ou 4 Hz).',
-     'Horloge → Ampoule : le clignotement le plus simple du monde. Puis branche-la sur l\u2019entrée ▷ d\u2019une bascule D : c\u2019est elle qui donne le tempo.',
+     'Alterne toute seule entre 0 et 1 à intervalle régulier. Un aller-retour complet = un <code>cycle</code>. Clic = changer la vitesse (1, 2 ou 4 Hz) ; <code>double-clic</code> = fréquence au dixième de hertz près (0,1 à 30 Hz) et <code>rapport cyclique</code> réglable — 10 % pour de brèves impulsions, 90 % pour de brèves extinctions.',
+     'Horloge → Ampoule : le clignotement le plus simple du monde. Puis branche-la sur l’entrée ▷ d’une bascule D : c’est elle qui donne le tempo.',
      'Ton processeur contient exactement le même composant, réglé à plusieurs milliards de cycles par seconde (GHz). Chaque « tic » déclenche une micro-étape de calcul.'],
     ['RANDOM','Aléatoire & Bruit',
-     'Le dé <code>ALÉA</code> : un clic = un tirage à pile ou face. Le <code>BRUIT</code> retire tout seul un bit aléatoire à chaque tic (clic = vitesse). Deux façons d\u2019injecter de l\u2019imprévisible.',
-     'Branche BRUIT sur le canal 1 d\u2019un oscilloscope : tu visualises un vrai signal aléatoire. Compare-le à une horloge sur le canal 2.',
-     'Les vraies puces de sécurité contiennent des générateurs de bruit physique (agitation thermique) pour fabriquer des clés de chiffrement imprévisibles.'],
+     'Le dé <code>ALÉA</code> : un clic = un tirage à pile ou face. Le <code>BRUIT</code> retire tout seul un bit aléatoire à chaque tic (clic = vitesse, double-clic = vitesse exacte et <code>probabilité</code> du 1 : un dé pipé à 75 % sort trois 1 sur quatre). Deux façons d’injecter de l’imprévisible.',
+     'Branche BRUIT sur le canal 1 d’un oscilloscope : tu visualises un vrai signal aléatoire. Compare-le à une horloge sur le canal 2.',
+     'Les vraies puces de sécurité contiennent des générateurs de bruit physique (agitation thermique) pour fabriquer des clés de chiffrement imprévisibles.',
+     ['RANDOM','NOISE']],
     ['NIBBLE','Clavier 4 bits',
-     'Clic = incrémente la valeur de 0 à 15. Ses 4 sorties donnent le code binaire, poids 8-4-2-1 de haut en bas. Un « nibble », c\u2019est un demi-octet.',
+     'Clic = incrémente la valeur de 0 à 15 (double-clic = taper la valeur directement). Ses 4 sorties donnent le code binaire, poids 8-4-2-1 de haut en bas. Un « nibble », c’est un demi-octet.',
      'Clavier → Afficheur décimal : fais défiler 0→15 et observe les 4 bits danser. La conversion binaire↔décimal devient évidente.',
      null],
     ['KEY','Touche clavier',
-     'Vaut 1 tant que la touche indiquée est enfoncée <code>sur ton vrai clavier</code>. Clic sur le composant = choisir la touche (A, Z, E, R, T, Y).',
+     'Vaut 1 tant que la touche indiquée est enfoncée <code>sur ton vrai clavier</code>. Clic = faire défiler A, Z, E, R, T, Y ; double-clic = choisir <code>n’importe quelle</code> lettre ou chiffre.',
      'Pose deux TOUCHE (A et Z) sur un ET → ampoule : il faut appuyer sur les deux à la fois. Tu viens de fabriquer un raccourci clavier !',
-     'C\u2019est exactement ainsi qu\u2019un clavier fonctionne : chaque touche est un interrupteur, et le contrôleur scanne la matrice de touches des milliers de fois par seconde.'],
+     'C’est exactement ainsi qu’un clavier fonctionne : chaque touche est un interrupteur, et le contrôleur scanne la matrice de touches des milliers de fois par seconde.'],
     ['SEQ','Séquenceur',
-     'Rejoue en boucle une trame de 8 bits, un bit par tic. Clic sur une <code>case</code> = inverser ce bit ; clic sur le <code>corps</code> = vitesse. La case brillante est le bit en cours de lecture.',
-     'Séquenceur → Ampoule : programme S-O-S en morse (1110 1010… à toi de trouver !). Puis branche-le sur la porte ♪ d\u2019une NOTE : rythme musical automatique.',
-     'C\u2019est le principe des boîtes à rythmes (TR-808…) et des registres de configuration : une mémoire qu\u2019on lit en boucle, bit après bit.'],
+     'Rejoue en boucle une trame de bits, un bit par tic. Clic sur une <code>case</code> = inverser ce bit ; clic sur le <code>corps</code> = vitesse ; <code>double-clic</code> = trame de 4, 8 ou 16 pas, motif tapé au clavier (ex. <code>10110010</code>) et vitesse exacte. La case brillante est le bit en cours de lecture.',
+     'Séquenceur → Ampoule : programme S-O-S en morse (1110 1010… à toi de trouver !). Puis branche-le sur la porte ♪ d’une NOTE : rythme musical automatique.',
+     'C’est le principe des boîtes à rythmes (TR-808…) et des registres de configuration : une mémoire qu’on lit en boucle, bit après bit.'],
     ['HIGH','Constantes VRAI / FAUX',
-     '<code>VRAI·1</code> sort toujours 1, <code>FAUX·0</code> toujours 0. Utile pour figer une entrée d\u2019un composant sans poser d\u2019interrupteur.',
+     '<code>VRAI·1</code> sort toujours 1, <code>FAUX·0</code> toujours 0. Utile pour figer une entrée d’un composant sans poser d’interrupteur.',
      null,
-     'En électronique réelle, on dit « tirer au Vcc » ou « à la masse » : brancher une broche directement à l\u2019alimentation ou au 0 volt.']
+     'En électronique réelle, on dit « tirer au Vcc » ou « à la masse » : brancher une broche directement à l’alimentation ou au 0 volt.',
+     ['HIGH','LOW']]
   ]},
-  { t:'Les portes — décider', p:'Une porte lit ses entrées et applique sa règle, en permanence, instantanément. Toute l\u2019informatique repose sur ces sept règles.', items:[
-    ['NOT','NON — l\u2019inverseur',
-     'Retourne le bit : 0→1, 1→0. Formule : S = Ā. La <code>bulle</code> sur son nez symbolise l\u2019inversion — retrouve-la sur NAND, NOR et XNOR.',
+  { t:'Les portes — décider', p:'Une porte lit ses entrées et applique sa règle, en permanence, instantanément. Toute l’informatique repose sur ces sept règles.', items:[
+    ['NOT','NON — l’inverseur',
+     'Retourne le bit : 0→1, 1→0. Formule : S = Ā. La <code>bulle</code> sur son nez symbolise l’inversion — retrouve-la sur NAND, NOR et XNOR.',
      null, null],
-    ['AND','ET — tout le monde d\u2019accord',
+    ['AND','ET — tout le monde d’accord',
      'Sortie à 1 uniquement si <code>toutes</code> les entrées sont à 1. S = A·B. Symbole IEC : <code>&amp;</code>. Pense « interrupteurs en série ».',
-     'Utilise un ET comme <b>vanne</b> : donnée sur une entrée, signal « autoriser » sur l\u2019autre. La donnée ne passe que si la vanne est ouverte.',
+     'Utilise un ET comme <b>vanne</b> : donnée sur une entrée, signal « autoriser » sur l’autre. La donnée ne passe que si la vanne est ouverte.',
      null],
     ['OR','OU — au moins un',
      'Sortie à 1 si <code>au moins une</code> entrée est à 1. S = A+B. Symbole IEC : <code>≥1</code>. Pense « interrupteurs en parallèle ».',
      null, null],
     ['XOR','XOR — différents ?',
-     'Sortie à 1 si les entrées sont <code>différentes</code>. S = A⊕B. Symbole : <code>=1</code>. Trois visages : le va-et-vient de l\u2019escalier, l\u2019addition sans retenue, et le chiffrement réversible.',
+     'Sortie à 1 si les entrées sont <code>différentes</code>. S = A⊕B. Symbole : <code>=1</code>. Trois visages : le va-et-vient de l’escalier, l’addition sans retenue, et le chiffrement réversible.',
      'XOR ton message avec une clé → charabia. Re-XOR le charabia avec la même clé → message retrouvé. Deux portes, un chiffrement !',
      null],
-    ['NAND','NAND — l\u2019universelle',
-     'Un ET suivi d\u2019une inversion : S = NON(A·B). Avec <code>uniquement</code> des NAND, on peut reconstruire absolument tout circuit (chapitre 3 !).',
+    ['NAND','NAND — l’universelle',
+     'Un ET suivi d’une inversion : S = NON(A·B). Avec <code>uniquement</code> des NAND, on peut reconstruire absolument tout circuit (chapitre 3 !).',
      null,
-     'La porte la plus fabriquée de l\u2019histoire : 4 transistors en CMOS. La mémoire « flash NAND » de ton téléphone lui doit son nom.'],
-    ['NOR','NOR — l\u2019autre universelle',
-     'Un OU inversé : S = NON(A+B) — sortie à 1 seulement si tout est à 0. Universelle elle aussi, et c\u2019est la brique des verrous mémoire.',
+     'La porte la plus fabriquée de l’histoire : 4 transistors en CMOS. La mémoire « flash NAND » de ton téléphone lui doit son nom.'],
+    ['NOR','NOR — l’autre universelle',
+     'Un OU inversé : S = NON(A+B) — sortie à 1 seulement si tout est à 0. Universelle elle aussi, et c’est la brique des verrous mémoire.',
      null,
-     'L\u2019ordinateur de guidage d\u2019Apollo 11 était bâti avec ~5 600 puces contenant chacune uniquement des NOR. Un seul motif logique a suffi pour aller sur la Lune.'],
+     'L’ordinateur de guidage d’Apollo 11 était bâti avec ~5 600 puces contenant chacune uniquement des NOR. Un seul motif logique a suffi pour aller sur la Lune.'],
     ['XNOR','XNOR — identiques ?',
      'Le XOR inversé : sortie à 1 si les entrées sont <code>égales</code>. La brique de tout comparateur — chaque « == » de tes programmes finit ici.',
      null, null],
     ['AND3','ET·3 / OU·3 — les élargies',
      'Mêmes règles, trois entrées. Attention : elles comptent pour <code>2 portes</code> dans les objectifs, car une porte à 3 entrées coûte réellement plus de silicium.',
-     null, null]
+     null, null,
+     ['AND3','OR3']]
   ]},
-  { t:'Mémoire & temps — le circuit qui se souvient', p:'Jusqu\u2019ici la sortie ne dépendait que du présent. Ces composants introduisent le passé : c\u2019est la logique séquentielle, celle des registres et des processeurs.', items:[
+  { t:'Mémoire & temps — le circuit qui se souvient', p:'Jusqu’ici la sortie ne dépendait que du présent. Ces composants introduisent le passé : c’est la logique séquentielle, celle des registres et des processeurs.', items:[
     ['DELAY','Retard — Δt',
-     'Recopie son entrée avec <code>un cycle de simulation de retard</code>. Minuscule mais puissant : il désynchronise.',
-     'Signal → RETARD → une entrée d\u2019un ET, signal direct → l\u2019autre entrée, mais inverse l\u2019une des branches avec un NON : tu obtiens un <b>détecteur de front</b>, qui émet une impulsion à chaque changement !',
+     'Recopie son entrée avec <code>un cycle de simulation de retard</code> — et jusqu’à <code>60 cycles</code> (≈ 1 seconde) si tu l’ouvres au double-clic. Minuscule mais puissant : il désynchronise.',
+     'Signal → RETARD → une entrée d’un ET, signal direct → l’autre entrée, mais inverse l’une des branches avec un NON : tu obtiens un <b>détecteur de front</b>, qui émet une impulsion à chaque changement !',
      null],
     ['DFF','Bascule D — le registre 1 bit',
-     'Le composant-roi du séquentiel. Deux entrées : <code>D</code> (la donnée) et <code>▷</code> (l\u2019horloge). Au <code>front montant</code> — l\u2019instant précis où ▷ passe de 0 à 1 — la bascule photographie D et le garde sur Q jusqu\u2019au front suivant. Entre deux fronts, D peut gesticuler : Q ne bouge pas. Q̄ donne l\u2019inverse. Le petit triangle ▷ est la convention mondiale des schémas électroniques pour « sensible au front ».',
-     'Interrupteur → D, Horloge → ▷, Ampoule → Q, et un OSCILLO avec D sur CH1, Q sur CH2 : tu VERRAS Q s\u2019aligner sur D uniquement aux fronts. Puis reboucle Q̄ sur D : la bascule s\u2019inverse à chaque front — tu viens de créer un diviseur de fréquence par 2 !',
-     'Un processeur 64 bits contient des dizaines de milliers de bascules D. À chaque front d\u2019horloge (des milliards par seconde), elles photographient toutes ensemble l\u2019état du calcul. C\u2019est LE battement de cœur de l\u2019informatique.'],
-    ['MUX','Multiplexeur — l\u2019aiguillage (récompense mission 16)',
-     'Trois entrées : deux données <code>0</code> et <code>1</code>, un sélecteur <code>S</code>. Sortie = l\u2019entrée choisie par S. Tu l\u2019as construit à la main : le voici en boîte.',
-     null, null],
-    ['ADD','Additionneur complet — Σ (récompense mission 20)',
-     'La cellule d\u2019addition : A + B + retenue entrante → Somme + retenue sortante. Chaîne-en plusieurs (Co → Ci du suivant) pour additionner des nombres entiers.',
+     'Le composant-roi du séquentiel. Deux entrées : <code>D</code> (la donnée) et <code>▷</code> (l’horloge). Au <code>front montant</code> — l’instant précis où ▷ passe de 0 à 1 — la bascule photographie D et le garde sur Q jusqu’au front suivant. Entre deux fronts, D peut gesticuler : Q ne bouge pas. Q̄ donne l’inverse. Le petit triangle ▷ est la convention mondiale des schémas électroniques pour « sensible au front ».',
+     'Interrupteur → D, Horloge → ▷, Ampoule → Q, et un OSCILLO avec D sur CH1, Q sur CH2 : tu VERRAS Q s’aligner sur D uniquement aux fronts. Puis reboucle Q̄ sur D : la bascule s’inverse à chaque front — tu viens de créer un diviseur de fréquence par 2 !',
+     'Un processeur 64 bits contient des dizaines de milliers de bascules D. À chaque front d’horloge (des milliards par seconde), elles photographient toutes ensemble l’état du calcul. C’est LE battement de cœur de l’informatique.'],
+    ['CNT4','Compteur 4 bits — ▷ et RZ',
+     'Huit bascules et une chaîne de retenues en un seul boîtier : à chaque <code>front montant</code> de ▷ il ajoute 1, de 0 à 15, puis repart à 0. L’entrée <code>RZ</code> remet à zéro <b>tant qu’elle est à 1</b> (niveau, pas front). Ses 4 sorties sont les bits 8-4-2-1 et la valeur s’affiche en clair sur le boîtier. Il coûte 24 portes : le prix honnête du silicium qu’il représente.',
+     'Horloge → ▷, sorties → AFFICHEUR DÉC : un compteur qui tourne tout seul. Ajoute un ET·3 sur les bits 8+2 pour remettre à zéro à 10 : tu obtiens un compteur <b>décimal</b>, exactement comme dans une horloge numérique.',
+     'C’est le cœur des chronomètres, des diviseurs de fréquence et du « program counter » d’un processeur — ce compteur qui désigne la prochaine instruction à exécuter.'],
+    ['CHIP','Tes puces — l’abstraction',
+     'Le vrai super-pouvoir de l’ingénieur. En sandbox, construis un circuit avec des interrupteurs (futures entrées, triées de haut en bas) et des ampoules (futures sorties), puis bouton <code>＋ PUCE</code> : tout est encapsulé dans une boîte réutilisable, qui garde le coût réel en portes. Double-clic sur une puce = la renommer et <b>nommer ses pins</b> ; le gestionnaire ⚙ permet de l’<b>exporter</b> pour l’envoyer à quelqu’un (et d’importer la sienne). Une puce peut en contenir d’autres !',
+     'Crée une puce « DEMI-ADD » (XOR + ET), puis pose-en deux et un OU pour faire un additionneur complet en trois composants. C’est exactement la démarche des chapitres du jeu — mais avec TES briques.',
+     'Les vraies puces sont conçues ainsi : des blocs qui contiennent des blocs qui contiennent des transistors. Un processeur moderne, c’est ~15 niveaux d’encapsulation.']
+  ]},
+  { t:'Calcul & données — les blocs tout faits', p:'Ces boîtiers font en un composant ce que tu as câblé porte par porte dans les chapitres. Ils ne trichent pas : leur coût en portes reste celui du circuit qu’ils remplacent. Sers-t’en pour construire plus grand.', items:[
+    ['MUX','Multiplexeur — l’aiguillage',
+     'Trois entrées : deux données <code>0</code> et <code>1</code>, un sélecteur <code>S</code>. Sortie = l’entrée choisie par S. Tu l’as construit à la main : le voici en boîte.',
+     null,
+     'Un multiplexeur, c’est l’aiguillage de gare de l’électronique : c’est lui qui, dans un processeur, choisit quelle valeur entre dans l’UAL.'],
+    ['DEMUX','Démultiplexeur — l’aiguillage inverse',
+     'L’opération miroir du MUX : une donnée <code>D</code>, un sélecteur <code>S</code>, et deux sorties. La donnée part sur la sortie 0 si S=0, sur la sortie 1 si S=1 ; l’autre reste à 0.',
+     'MUX puis DEMUX avec le même sélecteur : la donnée traverse un fil unique et ressort sur la bonne voie. Tu viens d’inventer le multiplexage temporel — le principe du câble réseau qui transporte mille conversations.',
+     null],
+    ['ADD','Additionneur complet — Σ',
+     'La cellule d’addition : A + B + retenue entrante → Somme + retenue sortante. Chaîne-en plusieurs (Co → Ci du suivant) pour additionner des nombres entiers.',
      'Deux claviers 4 bits + 4 additionneurs chaînés + afficheurs : construis une vraie calculatrice 4 bits !',
      null],
-    ['CHIP','Tes puces — l\u2019abstraction',
-     'Le vrai super-pouvoir de l\u2019ingénieur. En sandbox, construis un circuit avec des interrupteurs (futures entrées, triées de haut en bas) et des ampoules (futures sorties), puis bouton <code>＋ PUCE</code> : tout est encapsulé dans une boîte réutilisable, qui garde le coût réel en portes. Une puce peut en contenir d\u2019autres !',
-     'Crée une puce « DEMI-ADD » (XOR + ET), puis pose-en deux et un OU pour faire un additionneur complet en trois composants. C\u2019est exactement la démarche des chapitres du jeu — mais avec TES briques.',
-     'Les vraies puces sont conçues ainsi : des blocs qui contiennent des blocs qui contiennent des transistors. Un processeur moderne, c\u2019est ~15 niveaux d\u2019encapsulation.']
+    ['SUB','Soustracteur complet — −',
+     'Le frère miroir de l’additionneur : A − B − emprunt entrant → Différence + <code>emprunt sortant</code>. L’emprunt, c’est le « je retiens » de la soustraction posée à l’école : il vaut 1 quand on doit emprunter à la colonne suivante.',
+     'Chaîne 4 soustracteurs entre deux claviers 4 bits : si l’emprunt final s’allume, c’est que le résultat est négatif.',
+     'Les vrais processeurs n’ont pas de soustracteur : ils additionnent le <b>complément à deux</b> (inverser tous les bits, ajouter 1). Un seul circuit fait donc les deux opérations.'],
+    ['COMP','Comparateur — >, =, <',
+     'Compare deux bits A et B et allume <b>une seule</b> de ses trois sorties : A&gt;B, A=B ou A&lt;B. Pour comparer des nombres de plusieurs bits, on chaîne les comparateurs du bit de poids fort vers le bit de poids faible.',
+     'Deux interrupteurs → comparateur → trois ampoules étiquetées &gt; = &lt; : la table de vérité se lit d’un coup d’œil.',
+     'Chaque <code>if (a &gt; b)</code> de tes programmes finit sur un circuit comme celui-ci, gravé dans le silicium.'],
+    ['ROM','ROM 3→2 — la table de vérité en dur',
+     'Une mémoire morte : 3 entrées d’<code>adresse</code> (poids 4-2-1) désignent une des 8 lignes, et la ligne renvoie ses 2 bits sur les sorties. <code>Double-clic</code> pour cocher la table case par case — la ligne adressée est surlignée sur le boîtier. Toute logique combinatoire peut se remplacer par une table : c’est le raccourci de l’ingénieur pressé.',
+     'Programme la table d’un additionneur (A, B, Ci → S, Co) : ta ROM fait le travail de 5 portes. Puis compare le coût des deux solutions.',
+     'C’est ainsi qu’on fabrique les décodeurs, les tables de caractères et les micro-codes : plutôt que câbler la logique, on la <b>range dans une mémoire</b>. Les FPGA modernes ne sont qu’un océan de minuscules ROM reprogrammables.',
+     ['ROM']],
+    ['GROUP','Bus 4 bits — GROUPER / DÉGROUPER',
+     '<code>GROUPER</code> réunit 4 fils (poids 8-4-2-1) en un seul câble qui transporte la <b>valeur</b> 0-15 : un <b>bus</b>. <code>DÉGROUPER</code> fait l’inverse et rend les 4 bits. Entre les deux, un seul câble au lieu de quatre — ton schéma respire. Attention : un bus branché sur une porte logique ordinaire est vu comme un simple 1 (toute valeur non nulle) ; les bus se parlent entre eux.',
+     'Clavier 4 bits → GROUPER → (un seul câble à travers tout l’écran) → DÉGROUPER → afficheur décimal. Le montage devient lisible d’un coup.',
+     'Dans un vrai ordinateur, les bus d’adresses et de données sont dessinés exactement comme ça sur les schémas : un trait épais barré d’un chiffre qui dit combien de bits il transporte.',
+     ['GROUP','UNGROUP']],
+    ['BLACKBOX','Boîte noire — le composant mystère',
+     'On ne la pose pas : elle apparaît <b>dans les missions 🕵️ de rétro-ingénierie</b>, verrouillée et déjà câblée aux entrées, avec une LED 👁 OBS pour l’observer. Sa table de vérité est masquée par des « ? » et l’analyseur est brouillé : la seule méthode est d’essayer toutes les combinaisons, noter ce que fait 👁, puis reconstruire la logique à côté.',
+     null,
+     'Déduire le dedans en n’observant que le dehors : c’est le quotidien des experts en sécurité, des réparateurs sans documentation… et des neurosciences.']
   ]},
-  { t:'Les sorties — voir, entendre, agir', p:'Un circuit ne sert à rien si on ne voit pas ce qu\u2019il raconte. Chaque sortie traduit des bits en lumière, chiffres, son ou mouvement.', items:[
+  { t:'Les sorties — voir, entendre, agir', p:'Un circuit ne sert à rien si on ne voit pas ce qu’il raconte. Chaque sortie traduit des bits en lumière, chiffres, son ou mouvement.', items:[
     ['LED','Ampoule',
-     'S\u2019allume si son entrée vaut 1. Le voyant universel — commence toujours par elle pour déboguer un circuit.',
+     'S’allume si son entrée vaut 1. Le voyant universel — commence toujours par elle pour déboguer un circuit.',
      null, null],
     ['SEGMENT','Afficheurs 7 segments & décimal',
-     '4 entrées binaires (poids 8-4-2-1 de haut en bas). L\u2019<code>AFF. HEX</code> dessine le chiffre en segments (0-F), l\u2019<code>AFF. DÉC</code> écrit la valeur en clair (0-15).',
+     '4 entrées binaires (poids 8-4-2-1 de haut en bas). L’<code>AFF. HEX</code> dessine le chiffre en segments (0-F), l’<code>AFF. DÉC</code> écrit la valeur en clair (0-15).',
      null,
-     'Les 7 segments (A en haut, puis B,C,D,E,F,G au centre) datent de 1910 et régnaient sur les réveils, ascenseurs et pompes à essence bien avant les écrans.'],
+     'Les 7 segments (A en haut, puis B,C,D,E,F,G au centre) datent de 1910 et régnaient sur les réveils, ascenseurs et pompes à essence bien avant les écrans.',
+     ['SEGMENT','DEC']],
+    ['OCTET','Afficheur octet — 8 bits d’un coup',
+     '8 entrées (poids 128 à 1, de haut en bas) et la valeur affichée en <code>décimal</code> et en <code>hexadécimal</code>. Un octet, c’est l’unité de base de toute l’informatique : 256 valeurs, de 0 à 255.',
+     'Deux claviers 4 bits l’un au-dessus de l’autre → les 8 entrées : le premier écrit le chiffre hexadécimal de gauche, le second celui de droite. La lecture hexa devient limpide.',
+     'Une couleur d’écran, un caractère de texte, un octet de fichier : tous tiennent dans ces 8 bits. Le « 255 » que tu croises partout, c’est simplement 11111111.'],
+    ['PROBE','Sonde — mesurer un signal',
+     'L’instrument de diagnostic : elle affiche l’<code>état</code> du fil qu’elle touche <b>et compte les fronts</b> pour en déduire une <code>fréquence</code> en hertz, sur une fenêtre glissante de 2 secondes. Indispensable dès qu’un circuit oscille.',
+     'Pose une sonde sur une horloge à 4 Hz, puis sur la sortie d’une bascule D rebouclée : tu lis 4 Hz d’un côté, 2 Hz de l’autre. La division de fréquence, prouvée par la mesure.',
+     'Un électronicien a toujours deux instruments : l’oscilloscope pour <b>voir la forme</b> du signal, le fréquencemètre pour <b>chiffrer</b> sa cadence. Tu as les deux.'],
     ['RGB','LED RVB',
      '3 entrées Rouge/Vert/Bleu → 8 couleurs par mélange additif. Trois bits = une palette.',
      'Trois horloges à des vitesses différentes sur R, V et B : machine à ambiance disco.',
      null],
-    ['MATRIX','Matrice 8×8 — l\u2019écran',
-     'Un pixel (ligne i, colonne j) s\u2019allume quand la ligne <code>ET</code> la colonne sont actives ensemble — il n\u2019y a pas un fil par pixel, seulement 8+8 fils pour 64 points ! Pour afficher une image complète, il faut donc <code>balayer</code> : afficher une partie, puis une autre, très vite. La matrice a une petite rémanence, comme ton œil.',
-     'Allume la ligne 4 et TOUTES les colonnes : une barre. Maintenant, avec une horloge et un NON, alterne « ligne 4 + toutes colonnes » et « toutes lignes + colonne 4 » : une CROIX apparaît, alors qu\u2019elle n\u2019existe jamais entièrement à l\u2019écran. Bienvenue dans le multiplexage d\u2019affichage.',
-     'Ton écran fait pareil : il rafraîchit des lignes successives 60 fois par seconde, et la persistance rétinienne recolle l\u2019image. Les panneaux LED géants, les afficheurs de gare : tous balayés.'],
+    ['MATRIX','Matrice 8×8 — l’écran',
+     'Un pixel (ligne i, colonne j) s’allume quand la ligne <code>ET</code> la colonne sont actives ensemble — il n’y a pas un fil par pixel, seulement 8+8 fils pour 64 points ! Pour afficher une image complète, il faut donc <code>balayer</code> : afficher une partie, puis une autre, très vite. La matrice a une petite rémanence, comme ton œil.',
+     'Allume la ligne 4 et TOUTES les colonnes : une barre. Maintenant, avec une horloge et un NON, alterne « ligne 4 + toutes colonnes » et « toutes lignes + colonne 4 » : une CROIX apparaît, alors qu’elle n’existe jamais entièrement à l’écran. Bienvenue dans le multiplexage d’affichage.',
+     'Ton écran fait pareil : il rafraîchit des lignes successives 60 fois par seconde, et la persistance rétinienne recolle l’image. Les panneaux LED géants, les afficheurs de gare : tous balayés.'],
     ['SCOPE','Oscilloscope — voir le temps',
-     'Trace les 2 signaux branchés sur CH1 (cyan) et CH2 (rose) au fil du temps, en escalier. L\u2019outil n°1 pour comprendre le séquentiel : fronts, retards, divisions de fréquence deviennent visibles.',
+     'Trace les 2 signaux branchés sur CH1 (cyan) et CH2 (rose) au fil du temps, en escalier. L’outil n°1 pour comprendre le séquentiel : fronts, retards, divisions de fréquence deviennent visibles.',
      'Horloge sur CH1, et la même horloge à travers une bascule D rebouclée (diviseur) sur CH2 : tu vois littéralement la fréquence divisée par deux.',
-     'L\u2019oscilloscope est l\u2019instrument fétiche de tout électronicien : quand un circuit déraille, on ne devine pas, on REGARDE les signaux.'],
+     'L’oscilloscope est l’instrument fétiche de tout électronicien : quand un circuit déraille, on ne devine pas, on REGARDE les signaux.'],
     ['BUZZER','Buzzer & Note musicale',
-     'Le <code>BUZZER</code> sonne tant que son entrée est à 1 (un seul ton). La <code>NOTE ♪</code> est un vrai instrument : l\u2019entrée ♪ déclenche le son, les 3 entrées 4-2-1 choisissent la note dans la gamme de do (DO à DO⁺, 8 notes).',
-     'Séquenceur → ♪ pour le rythme, et un compteur (2 bascules D) sur les bits de note : la mélodie monte toute seule. Ta première boîte à musique câblée !',
-     null],
+     'Le <code>BUZZER</code> sonne tant que son entrée est à 1 (double-clic : hauteur du son, de 80 à 2000 Hz). La <code>NOTE ♪</code> est un vrai instrument : l’entrée ♪ déclenche le son, les 3 entrées 4-2-1 choisissent la note dans la gamme de do (DO à DO⁺, 8 notes) et le double-clic règle l’octave et le volume.',
+     'Séquenceur → ♪ pour le rythme, et un compteur (2 bascules D, ou un COMPTEUR 4 BITS) sur les bits de note : la mélodie monte toute seule. Ta première boîte à musique câblée !',
+     null,
+     ['BUZZER','NOTE']],
     ['TRAFFIC','Feu tricolore & Barrière',
-     'Le <code>FEU</code> a 3 entrées (Vert, Orange, Rouge) et affiche un vrai feu de circulation. La <code>BARRIÈRE</code> s\u2019ouvre en douceur quand son entrée passe à 1, et se referme sinon. Deux sorties « décor » pour piloter des scènes réalistes.',
+     'Le <code>FEU</code> a 3 entrées (Vert, Orange, Rouge) et affiche un vrai feu de circulation. La <code>BARRIÈRE</code> s’ouvre en douceur quand son entrée passe à 1, et se referme sinon. Deux sorties « décor » pour piloter des scènes réalistes.',
      'Refais la mission des feux de carrefour, mais branchée sur le vrai FEU cette fois. Puis ajoute la barrière : passage à niveau complet.',
-     null]
+     null,
+     ['TRAFFIC','BARRIER']]
   ]}
   ];
   document.getElementById('guide-body').innerHTML = SECTIONS.map(sec =>
     '<div class="g-sec">' + sec.t + '</div><p class="g-secp">' + sec.p + '</p>' +
-    sec.items.map(([t, name, txt, ex, real]) =>
-      '<div class="g-item" style="color:' + GATE_STYLE[t].c + '">' + ICO[t] +
+    sec.items.map(([t, name, txt, ex, real, covers]) =>
+      '<div class="g-item" data-t="' + (covers || [t]).join(' ') + '" style="color:' + GATE_STYLE[t].c + '">' + ICO[t] +
       '<div><h4 style="color:var(--text)">' + name + '</h4><p>' + txt + '</p>' +
       (ex ? '<div class="g-ex">💡 <b>Essaie :</b> ' + ex + '</div>' : '') +
       (real ? '<div class="g-real">🌍 ' + real + '</div>' : '') +
