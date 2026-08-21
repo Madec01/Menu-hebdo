@@ -19,12 +19,14 @@ concatène entre `test/pre.js` (stubs DOM / Canvas / Audio / localStorage, plus
 une horloge `Date.now` pilotable) et `test/post.js` (les tests), puis exécute le
 tout dans un contexte `vm`. Aucun navigateur, aucune dépendance npm.
 
-51 tests couvrent le moteur (portes, câblage, coûts), le séquentiel (bascule D,
+62 tests couvrent le moteur (portes, câblage, coûts), le séquentiel (bascule D,
 retard n cycles, compteur 4 bits, sonde, horloge paramétrée), les blocs v5
 (ROM, soustracteur, comparateur, démultiplexeur, bus), l'édition (sérialisation,
-copier-coller, annuler/refaire, alignement, puces, sauvegardes, exemples),
-l'analyseur d'équations, les 106 missions (structure, chargement, solutions,
-vérification, boîtes noires) et la couverture du guide.
+copier-coller, annuler/refaire, alignement, puces, sauvegardes, exemples,
+persistance des réglages), l'analyseur d'équations, les 106 missions
+(structure, chargement, solutions, vérification, boîtes noires), l'interface
+(placement de l'inspecteur, appui long tactile, export PNG, raccourcis,
+balisage des modales) et la couverture du guide.
 
 ## Sauvegarde locale
 
