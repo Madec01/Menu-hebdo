@@ -214,6 +214,13 @@ table.tt tr.tt-fail td:first-child::before{content:'✗ ';color:var(--red)}
   text-transform:uppercase;text-align:center}
 .tool-row{display:flex;gap:4px;max-width:calc(100vw - 60px);overflow-x:auto;scrollbar-width:none;padding:2px}
 .tool-row::-webkit-scrollbar{display:none}
+/* La rangée déborde (onglet « Mémoire & puces ») : on estompe le bord côté suite */
+.tool-row.more-right{-webkit-mask-image:linear-gradient(90deg,#000 88%,transparent);
+  mask-image:linear-gradient(90deg,#000 88%,transparent)}
+.tool-row.more-left{-webkit-mask-image:linear-gradient(90deg,transparent,#000 12%);
+  mask-image:linear-gradient(90deg,transparent,#000 12%)}
+.tool-row.more-left.more-right{-webkit-mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);
+  mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)}
 .tool-sep{width:1px;background:linear-gradient(transparent,rgba(99,179,255,.25),transparent);
   margin:2px 8px;align-self:stretch}
 .tool-btn{width:56px;height:56px;border-radius:11px;border:1px solid rgba(255,255,255,.07);
@@ -4251,6 +4258,20 @@ function buildToolbar(){
     }
   }
   bar.appendChild(row);
+  // La rangée peut déborder (11 outils + les puces) : molette = défilement
+  // horizontal, et un dégradé signale qu'il reste des outils à droite/gauche.
+  row.addEventListener('wheel', e => {
+    if ((row.scrollWidth || 0) <= (row.clientWidth || 0)) return;
+    row.scrollLeft += (e.deltaY || e.deltaX || 0);
+    e.preventDefault();
+  }, { passive:false });
+  const fade = () => {
+    const sw = row.scrollWidth || 0, cw = row.clientWidth || 0, sl = row.scrollLeft || 0;
+    row.classList.toggle('more-right', sw - cw - sl > 4);
+    row.classList.toggle('more-left', sl > 4);
+  };
+  row.addEventListener('scroll', fade);
+  setTimeout(fade, 0);
 }
 function spawnChip(name){
   const c0 = s2w(W/2, H/2 - 60);
