@@ -44,6 +44,7 @@ sachets se comptent à l'unité.
 | Tout savoir | Onglet **Guide**, dans le panneau de droite |
 | Statistiques | <kbd>S</kbd>, ou l'icône ▤ en haut à droite |
 | Recherche (âge 4) | <kbd>R</kbd>, ou l'icône ✦ en haut à droite |
+| Masquer la cadence | <kbd>C</kbd> |
 | Outils de développement | <kbd>F2</kbd> |
 
 ## Ce qui est construit
@@ -56,8 +57,17 @@ sachets se comptent à l'unité.
   tambour d'assaisonnement, ensacheuse et bacs de stockage
 - Convoyeurs en **réseau** : les bandes se branchent les unes aux autres, on
   bâtit un trajet par tronçons et plusieurs bandes peuvent converger vers un
-  même poste. Latence, bouchons, chevrons de sens et marchandise visible sur
-  la bande. Une bande ne prend que ce que son aval finira par consommer.
+  même poste. Elles se dessinent jointives — une bande touche sa voisine et la
+  machine qu'elle alimente, la marchandise circule sans rupture. Latence,
+  bouchons, chevrons de sens. Une bande ne prend que ce que son aval finira
+  par consommer.
+- **Cadence et rendement en direct**, en surimpression sur l'atelier : ce que
+  la ligne sort par seconde, et combien de kilos de pommes de terre il faut
+  réellement pour un kilo de chips vendables (la recette en demande 4,8 ; tout
+  ce qui dépasse est du gâchis ou de l'en-cours).
+- **Réapprovisionnement programmable** : pour chaque matière, le seuil de
+  déclenchement et la taille du lot se règlent, avec le rappel de ce que
+  l'atelier consomme par jour et de ce que le lot coûtera.
 - Ouvriers simulés individuellement : déplacement A\*, portage au bac roulant,
   tenue de poste, fatigue, moral, compétences qui montent, embauche et
   démission. Un ouvrier lâche son poste quand un poste en aval crie famine.

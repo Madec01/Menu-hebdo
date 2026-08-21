@@ -338,6 +338,31 @@ table.tab tr:hover td{background:rgba(255,255,255,.028)}
   border-radius:4px;padding:1px 5px;font-size:11px;font-family:inherit;color:var(--texte);
 }
 
+/* ---------- Réapprovisionnement programmable ---------- */
+.reappro{margin-top:7px;padding:7px 9px;border-radius:6px;background:var(--fond);border:1px solid var(--bord)}
+.reappro.actif{border-color:#4a5540;background:#1c2119}
+.reapproTete{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--texte-doux);cursor:pointer}
+.reapproPhrase{margin-top:7px;font-size:11.5px;color:var(--texte-doux);line-height:2}
+.reapproNb{
+  width:62px;margin:0 4px;padding:2px 5px;background:var(--fond3);border:1px solid var(--bord-clair);
+  border-radius:4px;font-size:11.5px;font-variant-numeric:tabular-nums;text-align:right;
+}
+.reapproNb:focus{outline:none;border-color:var(--or)}
+.reapproNote{margin-top:5px;font-size:10.5px;color:var(--texte-faible);line-height:1.4}
+
+/* ---------- Cadence et rendement, en surimpression ---------- */
+#cadenceHud{
+  position:absolute;top:12px;left:12px;z-index:24;
+  background:rgba(22,25,29,.86);border:1px solid var(--bord);border-radius:8px;
+  padding:8px 11px;backdrop-filter:blur(3px);min-width:172px;
+}
+#cadenceHud.hidden{display:none}
+.chLigne{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:2px 0}
+.chLab{font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--texte-faible)}
+.chVal{font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.chVal.bon{color:var(--vert)}
+.chVal.faible{color:var(--texte-faible)}
+
 /* ---------- Recherche ---------- */
 .rechGrille{display:grid;grid-template-columns:minmax(380px,1fr) minmax(380px,1fr);gap:16px;align-items:start}
 .rechTendance{font-size:14px;color:#f0d493;font-style:italic;line-height:1.5}
@@ -466,6 +491,10 @@ table.tab tr:hover td{background:rgba(255,255,255,.028)}
         <div id="contremaitre" class="muet">
           <canvas id="portrait" width="120" height="120" title="Demander l'avis du contremaître"></canvas>
           <div id="bulle"><div class="qui">Gérard, contremaître</div><div id="bulleTexte"></div></div>
+        </div>
+        <div id="cadenceHud">
+          <div class="chLigne"><span class="chLab">Cadence</span><span class="chVal" id="chDebit">—</span></div>
+          <div class="chLigne"><span class="chLab">Rendement</span><span class="chVal" id="chRend">—</span></div>
         </div>
         <div id="infobulle"></div>
         <div id="coinAide">
@@ -956,7 +985,7 @@ const LIB_ETAT = {
 let etat = null;
 
 // Index reconstruit à la volée : jamais sauvegardé.
-const idx = { parId:new Map(), noeuds:[], besoinsServis:new Set() };
+const idx = { parId:new Map(), noeuds:[], besoinsServis:new Set(), renduConv:new Map(), quai:null };
 
 // État de la vue et des interactions : jamais sauvegardé.
 const vue = {
@@ -1199,6 +1228,7 @@ function retirerDeGrille(u, noeud){
 function reindexer(){
   idx.parId.clear();
   idx.noeuds.length = 0;
+  idx.renduConv.clear();
   for (const u of etat.usines){
     for (const m of u.machines){ idx.parId.set(m.id, m); idx.noeuds.push(m); }
     for (const c of u.convoyeurs) idx.parId.set(c.id, c);
@@ -3354,26 +3384,69 @@ function dessinerQuai(){
    ========================================================================== */
 
 /* ---------------------------------------------------------- Convoyeurs */
+/** Où se trouve, en coordonnées de tuile, le « cœur » d'un nœud vu depuis
+ *  une tuile donnée. Pour un convoyeur, c'est sa tuile la plus proche. */
+function ancreNoeud(n, depuis){
+  if (!n) return null;
+  if (n.type === "convoyeur"){
+    let best = null, bd = 1e9;
+    for (const t of n.chemin){
+      const d = (t.x-depuis.x)*(t.x-depuis.x) + (t.y-depuis.y)*(t.y-depuis.y);
+      if (d < bd){ bd = d; best = t; }
+    }
+    return best ? { x:best.x+0.5, y:best.y+0.5 } : null;
+  }
+  return { x: n.x + (n.l||1)/2, y: n.y + (n.h||1)/2 };
+}
+
+/** Le chemin dessiné déborde d'une demi-tuile à chaque bout, vers ce à quoi la
+ *  bande est raccordée : deux convoyeurs qui se suivent se rejoignent alors
+ *  vraiment, et une bande touche la machine qu'elle alimente. Sans ça, la
+ *  marchandise a l'air posée sur deux îlots séparés.
+ *  Mis en cache : il ne change qu'en cas de modification de l'atelier. */
+function cheminRendu(c){
+  let r = idx.renduConv.get(c.id);
+  if (r && r.cle === c.source + ":" + c.destination + ":" + c.chemin.length) return r.pts;
+
+  const pts = c.chemin.map(t => ({ x:t.x+0.5, y:t.y+0.5 }));
+  const deborde = (bout, voisinTuile, noeud) => {
+    const a = ancreNoeud(noeud, bout);
+    if (!a) return null;
+    const dx = a.x - (bout.x+0.5), dy = a.y - (bout.y+0.5);
+    const ax = Math.abs(dx) > Math.abs(dy);
+    return { x: bout.x+0.5 + (ax ? Math.sign(dx)*0.52 : 0),
+             y: bout.y+0.5 + (ax ? 0 : Math.sign(dy)*0.52) };
+  };
+  const deb = deborde(c.chemin[0], c.chemin[1], noeudParId(c.source));
+  if (deb) pts.unshift(deb);
+  const fin = deborde(c.chemin[c.chemin.length-1], c.chemin[c.chemin.length-2], noeudParId(c.destination));
+  if (fin) pts.push(fin);
+
+  idx.renduConv.set(c.id, { cle: c.source + ":" + c.destination + ":" + c.chemin.length, pts });
+  return pts;
+}
+
 function pointSurChemin(c, t){
-  const n = c.chemin.length;
+  const ch = cheminRendu(c);
+  const n = ch.length;
   if (n === 0) return {x:0,y:0};
-  if (n === 1) return {x:c.chemin[0].x+0.5, y:c.chemin[0].y+0.5};
+  if (n === 1) return ch[0];
   const f = clamp(t,0,1)*(n-1);
   const i = Math.min(n-2, Math.floor(f));
   const k = f-i;
-  const a = c.chemin[i], b = c.chemin[i+1];
-  return { x: lerp(a.x,b.x,k)+0.5, y: lerp(a.y,b.y,k)+0.5 };
+  const a = ch[i], b = ch[i+1];
+  return { x: lerp(a.x,b.x,k), y: lerp(a.y,b.y,k) };
 }
 
 function dessinerConvoyeur(c){
-  const ch = c.chemin;
-  if (!ch.length) return;
+  if (!c.chemin.length) return;
   const orphelin = c.etat === "non_relie";
+  const ch = cheminRendu(c);
 
   ctx.lineJoin = "round"; ctx.lineCap = "round";
   ctx.beginPath();
-  ctx.moveTo(ch[0].x+0.5, ch[0].y+0.5);
-  for (let i=1;i<ch.length;i++) ctx.lineTo(ch[i].x+0.5, ch[i].y+0.5);
+  ctx.moveTo(ch[0].x, ch[0].y);
+  for (let i=1;i<ch.length;i++) ctx.lineTo(ch[i].x, ch[i].y);
 
   // châssis
   ctx.strokeStyle = orphelin ? "#5a3430" : "#2c3036";
@@ -3409,7 +3482,7 @@ function dessinerConvoyeur(c){
     for (let i = 0; i < n-1; i++){
       const a = ch[i], b = ch[i+1];
       const dx = b.x-a.x, dy = b.y-a.y;
-      const px = a.x+0.5 + dx*glisse, py = a.y+0.5 + dy*glisse;
+      const px = a.x + dx*glisse, py = a.y + dy*glisse;
       ctx.beginPath();
       ctx.moveTo(px - dx*0.16 - dy*0.16, py - dy*0.16 - dx*0.16);
       ctx.lineTo(px + dx*0.1, py + dy*0.1);
@@ -4097,9 +4170,10 @@ function dessinerSelection(){
     ctx.setLineDash([]); ctx.lineDashOffset = 0;
   } else if (n && n.type === "convoyeur"){
     ctx.strokeStyle = "#f0b429"; ctx.lineWidth = 0.1;
+    const ps = cheminRendu(n);
     ctx.beginPath();
-    ctx.moveTo(n.chemin[0].x+0.5, n.chemin[0].y+0.5);
-    for (let i=1;i<n.chemin.length;i++) ctx.lineTo(n.chemin[i].x+0.5, n.chemin[i].y+0.5);
+    ctx.moveTo(ps[0].x, ps[0].y);
+    for (let i=1;i<ps.length;i++) ctx.lineTo(ps[i].x, ps[i].y);
     ctx.stroke();
   }
   const s = vue.survol;
@@ -4160,9 +4234,10 @@ function dessinerSchema(){
     const e = clamp(0.12 + c.debitActuel/60, 0.12, 0.7);
     ctx.strokeStyle = c.etat === "non_relie" ? "#7a4038" : "rgba(240,180,41,.7)";
     ctx.lineWidth = e; ctx.lineCap = "round"; ctx.lineJoin = "round";
+    const pr = cheminRendu(c);
     ctx.beginPath();
-    ctx.moveTo(c.chemin[0].x+0.5, c.chemin[0].y+0.5);
-    for (let i=1;i<c.chemin.length;i++) ctx.lineTo(c.chemin[i].x+0.5, c.chemin[i].y+0.5);
+    ctx.moveTo(pr[0].x, pr[0].y);
+    for (let i=1;i<pr.length;i++) ctx.lineTo(pr[i].x, pr[i].y);
     ctx.stroke();
   }
   // machines en blocs colorés
@@ -4270,6 +4345,68 @@ function resteJours(c){
   if (r < 0) return "en retard";
   if (r === 0) return "aujourd'hui";
   return "dans " + r + " " + pluriel(r,"jour");
+}
+
+/* --------------------------------------- Cadence et rendement (en direct)
+   Le §3.1 proscrit les quantités par seconde à l'écran ; c'est une demande
+   expresse du joueur, qui veut lire la cadence instantanée de sa ligne comme
+   sur un vrai tableau de bord d'atelier. Le bandeau se coupe d'une touche. */
+
+/** Le produit fini dominant : celui dont il est sorti le plus depuis le début. */
+function produitDominant(){
+  const p = etat.progression.produits;
+  let best = null, bq = 0;
+  for (const k in p){
+    if (!ITEMS[k] || ITEMS[k].cat !== "produit" || k === "rebut") continue;
+    if (p[k] > bq){ bq = p[k]; best = k; }
+  }
+  return best;
+}
+
+function majCadence(dts){
+  const c = vue.cadence || (vue.cadence = { item:null, cumul:0, valeur:0 });
+  const id = produitDominant();
+  const hud = $("#cadenceHud");
+  if (!id){ hud.classList.add("hidden"); return; }
+  hud.classList.remove("hidden");
+
+  const cumul = etat.progression.produits[id] || 0;
+  if (c.item !== id){ c.item = id; c.cumul = cumul; c.valeur = 0; }
+  const taux = dts > 0 ? (cumul - c.cumul) / dts : 0;    // par seconde réelle
+  c.cumul = cumul;
+  c.valeur = lerp(c.valeur, taux, 0.35);                  // lissage, sinon ça saute
+
+  const e = $("#chDebit");
+  const v = c.valeur;
+  e.textContent = (ITEMS[id].unite === "kg"
+      ? nb(v, v < 10 ? 1 : 0) + " kg/s"
+      : nb(Math.round(v)) + " " + nomItem(id, 2, true, true) + "/s");
+  e.className = "chVal " + (v > 0.05 ? "bon" : "faible");
+
+  const r = rendementMatiere();
+  const er = $("#chRend");
+  if (r){
+    er.textContent = "1 kg pour " + nb(r, 1) + " kg de patates";
+    er.className = "chVal " + (r <= 5.4 ? "bon" : "");
+  } else {
+    er.textContent = "—"; er.className = "chVal faible";
+  }
+}
+
+/** Combien de kilos de pommes de terre pour un kilo de chips vendables,
+ *  réellement obtenus sur les deux dernières semaines. Le rebut le dégrade. */
+function rendementMatiere(){
+  const h = etat.stats.historiqueSemaines;
+  const sem = h.slice(-4).concat([etat.stats.semaineCourante]);
+  let lavees = 0, chips = 0;
+  for (const s of sem){
+    lavees += (s.produits && s.produits.pdt_lavees) || 0;
+    chips  += (s.produits && s.produits.chips_vrac) || 0;
+  }
+  if (chips < 1 || lavees < 1) return null;
+  const rl = RECETTES.laver;                       // 30 kg brutes → 25 kg lavées
+  const brutes = lavees / rl.sortie.qte * rl.entrees[0].qte;
+  return brutes / chips;
 }
 
 /* --------------------------------------------------------- Notifications */
@@ -5090,15 +5227,42 @@ function panneauStocks(z){
       const defaut = it.unite === "kg" ? { actif:false, seuil:150, lot:400 }
                                        : { actif:false, seuil:40, lot:80 };
       const rp = etat.reappro[id] || (etat.reappro[id] = defaut);
+
+      const bloc = document.createElement("div");
+      bloc.className = "reappro" + (rp.actif ? " actif" : "");
       const lab = document.createElement("label");
-      lab.style.cssText = "display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--texte-faible);margin-top:5px";
+      lab.className = "reapproTete";
       const cb = document.createElement("input");
       cb.type = "checkbox"; cb.checked = rp.actif;
-      cb.onchange = () => { rp.actif = cb.checked; };
+      cb.onchange = () => { rp.actif = cb.checked; majPanneau(); };
       lab.appendChild(cb);
-      lab.appendChild(document.createTextNode(
-        "Recommander " + mesure(id, rp.lot) + " dès qu'il en reste moins de " + mesure(id, rp.seuil)));
-      bm.appendChild(lab);
+      lab.appendChild(document.createTextNode("Recommander toute seule"));
+      bloc.appendChild(lab);
+
+      if (rp.actif){
+        // Deux réglages, écrits comme une phrase : « dès qu'il en reste moins
+        // de 150 kg, en faire livrer 400 kg ».
+        const champ = (val, maj) => {
+          const i = document.createElement("input");
+          i.type = "number"; i.min = "0"; i.step = it.unite === "kg" ? "50" : "10";
+          i.value = Math.round(val); i.className = "reapproNb";
+          i.onchange = () => { maj(Math.max(0, Math.round(+i.value || 0))); majPanneau(); };
+          return i;
+        };
+        const p = document.createElement("div");
+        p.className = "reapproPhrase";
+        p.appendChild(document.createTextNode("Dès qu'il en reste moins de"));
+        p.appendChild(champ(rp.seuil, v => rp.seuil = v));
+        p.appendChild(document.createTextNode((it.unite === "kg" ? "kg" : "") + ", en faire livrer"));
+        p.appendChild(champ(rp.lot, v => rp.lot = v));
+        p.appendChild(document.createTextNode(it.unite === "kg" ? "kg." : "."));
+        bloc.appendChild(p);
+        const jours = uneJourneeDe(id);
+        bloc.appendChild(elem('<div class="reapproNote"></div>')).textContent =
+          "L'atelier en consomme environ " + mesure(id, jours*2) + " par jour. " +
+          "Le lot coûtera " + euros(rp.lot * prixAchat(id)) + ".";
+      }
+      bm.appendChild(bloc);
     }
   }
   z.appendChild(bm);
@@ -6093,6 +6257,16 @@ function sectionGuide(titre, corps){
 function SECTIONS_GUIDE(){
   const loyer = CONFIG.loyerParJour[etat.meta.age-1];
   return [
+  { titre:"La cadence et le rendement", corps:
+    "<p>En haut à gauche de l'atelier, deux chiffres qui bougent en direct.</p>"+
+    "<p>La <b>cadence</b> est ce que la ligne sort par seconde réelle. C'est la mesure "+
+    "immédiate : si elle tombe, un poste vient de s'arrêter quelque part.</p>"+
+    "<p>Le <b>rendement</b> dit combien de kilos de pommes de terre il faut pour un kilo de chips "+
+    "vendables, réellement obtenus sur les dernières semaines. La recette en demande environ "+
+    "<b>4,8</b> : tout ce qui dépasse est du gâchis — de la marchandise ratée, ou des machines qui "+
+    "traînent. C'est le chiffre à surveiller quand la caisse se vide sans qu'on comprenne pourquoi.</p>"+
+    "<p><kbd>C</kbd> masque le bandeau.</p>" },
+
   { titre:"Le temps qui passe", corps:
     "<p>Une journée de travail fait <b>8 heures</b>, et dure <b>40 secondes</b> à la vitesse ×1. "+
     "La semaine fait <b>5 jours</b>, du lundi au vendredi.</p>"+
@@ -6212,7 +6386,7 @@ function SECTIONS_GUIDE(){
     "<li><kbd>Suppr</kbd> démolir ce qui est sélectionné</li>"+
     "<li>Clic droit glissé pour se déplacer · clic droit sec pour démolir</li>"+
     "<li>Molette ou <kbd>+</kbd> <kbd>−</kbd> pour le zoom · très dézoomé, on passe en vue schématique</li>"+
-    "<li><kbd>M</kbd> couper le son</li>"+
+    "<li><kbd>C</kbd> masquer le bandeau de cadence · <kbd>M</kbd> couper le son</li>"+
     "</ul>" }
   ];
 }
@@ -7424,6 +7598,7 @@ function boucle(t){
     if (cadenceUI > 0.25){
       cadenceUI = 0;
       majBandeau();
+      majCadence(0.25);
       // Le guide ne bouge pas : le reconstruire en boucle casserait les
       // sections que le joueur vient d'ouvrir.
       if (vue.ongletActif !== "guide") majPanneau();
@@ -7492,6 +7667,7 @@ function initClavier(){
       case "Digit2": reglerVitesse(2); break;
       case "Digit3": reglerVitesse(4); break;
       case "KeyM": basculerSon(); break;
+      case "KeyC": $("#cadenceHud").classList.toggle("hidden"); break;
       case "F2": e.preventDefault(); basculerDev(); break;
       case "KeyS": if (!e.ctrlKey && !e.metaKey) ouvrirStats(); break;
       case "KeyR": if (!vue.outil && (etat.meta.age >= 4 || mode().toutDebloque)) ouvrirRecherche(); break;
