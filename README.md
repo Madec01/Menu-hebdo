@@ -51,8 +51,10 @@ sachets se comptent à l'unité.
 - Moteur de flux à pas fixe (4 Hz), rendu interpolé à 60 fps
 - Trois postes de départ (laveuse-éplucheuse, trancheuse, friteuse), puis
   tambour d'assaisonnement, ensacheuse et bacs de stockage
-- Convoyeurs : modèle par arête, avec latence, bouchons et marchandise
-  visible sur la bande
+- Convoyeurs en **réseau** : les bandes se branchent les unes aux autres, on
+  bâtit un trajet par tronçons et plusieurs bandes peuvent converger vers un
+  même poste. Latence, bouchons, chevrons de sens et marchandise visible sur
+  la bande. Une bande ne prend que ce que son aval finira par consommer.
 - Ouvriers simulés individuellement : déplacement A\*, portage au bac roulant,
   tenue de poste, fatigue, moral, compétences qui montent, embauche et
   démission. Un ouvrier lâche son poste quand un poste en aval crie famine.
@@ -71,32 +73,41 @@ sachets se comptent à l'unité.
   l'équilibrage réel. Ce qui n'est pas encore débloqué reste masqué, avec une
   case à cocher pour l'afficher quand même.
 - Usure, pannes, révision · saleté de l'atelier et nettoyage
+- **La qualité** (âge 3) : une part de la production part au rebut, d'autant
+  plus grande que l'huile fatigue, que l'atelier est sale, que la machine est
+  usée ou que la personne au poste débute. Le bain d'huile se refait (coût et
+  immobilisation) et fonce visiblement en vieillissant. La marchandise ratée
+  ne se vend pas : laissée sur le quai, elle part mélangée aux livraisons et
+  le client réclame. La **table de tri** l'écarte.
+- **Les gros clients** (âge 3) : centrales d'achat, gros volumes, prix serrés
+  et **paiement à 30 jours** — on avance la matière et les salaires un mois
+  durant.
 - Audio entièrement synthétisé (Web Audio) : le brassage de la laveuse, la
   lame de la trancheuse, le grésillement de l'huile, le roulement du tambour,
   le chuintement de l'ensacheuse
 - Sauvegarde automatique, 3 emplacements manuels, export/import de fichier,
   champ `version` et fonction de migration
 
-**Progression disponible** : âge 1 (La friterie) → âge 2 (La fabrique), avec
-l'assaisonnement, l'ensachage et les convoyeurs. Une fois l'âge 2 bouclé, la
-partie continue en mode libre.
+**Progression disponible** : âge 1 (La friterie) → âge 2 (La fabrique) →
+âge 3 (La PME). Une fois l'âge 3 bouclé, la partie continue en mode libre.
 
 ## Ce qui reste à faire
 
-Les lots 3 à 5 du document de game design ne sont pas construits. Adaptés au
-métier, ils donneraient :
+Le lot 3 est fait (la qualité, les gros clients). Restent les lots 4 et 5.
+Adaptés au métier, ils donneraient :
 
-- **Âge 3 — La PME** : l'hygiène et la fraîcheur. Date limite de consommation,
-  nettoyage obligatoire, contrôle qualité, rappel de lot quand un mauvais
-  sachet part chez le client.
 - **Âge 4 — L'industrie** : la saisonnalité. Récolte, silos, contrats avec les
   producteurs, prix qui s'effondrent en septembre. Plus les RH avancées et la
   R&D recettes et arômes.
 - **Âge 5 — Le groupe** : multi-sites, logistique inter-usines, export, et une
   deuxième famille de produits (snacks soufflés, biscuits apéritif).
 
-Les âges 3 à 5 sont déjà déclarés dans la table `AGES` avec leur surface et
+Les âges 4 et 5 sont déjà déclarés dans la table `AGES` avec leur surface et
 leur objectif ; il reste à écrire les systèmes correspondants.
+
+Autres pistes laissées de côté : la date limite de consommation et le rappel
+de lot (l'un des deux systèmes « fraîcheur » du métier — la qualité couvre
+déjà l'essentiel), et la division d'un convoyeur vers deux postes.
 
 Autre piste laissée de côté volontairement : les **sous-produits**. Les
 épluchures se revendent en alimentation animale, mais les modéliser ajoutait

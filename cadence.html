@@ -450,6 +450,12 @@ const CONFIG = {
   energieParMachineJour: 9,
   reputationDepart: 50,
   decisionsMax: 4,
+  // Qualité (âge 3) : l'huile perd sa fraîcheur en cuisant, et une friteuse
+  // à l'huile fatiguée sort de la marchandise ratée.
+  usureHuileParJour: 0.30,
+  chargeHuile: 60,             // kilos pour refaire un bain
+  arretChangementHuile: 45,    // minutes de jeu, friteuse à l'arrêt
+  rebutMax: 0.5,
   sauvegarde: "cadence_save_v1",
   version: 1
 };
@@ -514,12 +520,30 @@ const ITEMS = {
   chips_vrac: {
     nom:"Chips nature", nomP:"Chips nature", court:"Chips", courtP:"Chips",
     couleur:"#e8b04a", forme:"chips", unite:"kg",
-    vente:13.50, portee:40, cat:"produit"
+    vente:13.50, portee:40, cat:"produit", rate:"chips_ratees"
+  },
+
+  // Ce qui sort mal cuit ou mal soudé. Invendable en l'état : il faut le
+  // trier, sinon il finit dans les cartons du client (§6.6).
+  chips_ratees: {
+    nom:"Chips ratées", nomP:"Chips ratées", court:"Ratées", courtP:"Ratées",
+    couleur:"#8f7d4e", forme:"chips", unite:"kg",
+    portee:40, cat:"rebut", bon:"chips_vrac", ageMin:3
+  },
+  sachet_rate: {
+    nom:"Sachet écarté", nomP:"Sachets écartés", court:"Écarté", courtP:"Écartés",
+    couleur:"#7d7168", forme:"sachet", unite:null,
+    portee:320, capacite:2400, cat:"rebut", bon:"sachet", ageMin:3
+  },
+  rebut: {
+    nom:"Rebut trié", nomP:"Rebut trié", court:"Rebut", courtP:"Rebut",
+    couleur:"#6b6152", forme:"sac", unite:"kg",
+    vente:0.40, portee:80, cat:"produit", ageMin:3
   },
   sachet: {
     nom:"Sachet de chips", nomP:"Sachets de chips", court:"Sachet", courtP:"Sachets",
     couleur:"#c9502e", forme:"sachet", unite:null,
-    vente:1.30, portee:320, capacite:2400, cat:"produit", ageMin:2
+    vente:1.30, portee:320, capacite:2400, cat:"produit", ageMin:2, rate:"sachet_rate"
   }
 };
 
@@ -550,6 +574,16 @@ const RECETTES = {
     sortie:{id:"chips_assaisonnees", qte:20},
     duree:10, ageMin:2
   },
+  trier_chips: {
+    id:"trier_chips", nom:"Trier les chips ratées", machine:"tri",
+    entrees:[{id:"chips_ratees", qte:20}], sortie:{id:"rebut", qte:20},
+    duree:6, ageMin:3
+  },
+  trier_sachets: {
+    id:"trier_sachets", nom:"Trier les sachets écartés", machine:"tri",
+    entrees:[{id:"sachet_rate", qte:160}], sortie:{id:"rebut", qte:20},
+    duree:6, ageMin:3
+  },
   ensacher: {
     id:"ensacher", nom:"Ensacher (sachets de 125 g)", machine:"ensacheuse",
     entrees:[{id:"chips_assaisonnees", qte:10},{id:"film", qte:0.4}],
@@ -578,6 +612,7 @@ const MACHINES = {
     id:"friteuse", nom:"Friteuse", cout:2400, l:3, h:2,
     couleur:"#e8863c", accent:"#ffb571",
     recettes:["frire"], auto:false, usureParJour:0.06, ageMin:1, cat:"machines",
+    qualite:true, bainHuile:true,
     resume:"Cuit les rondelles dans le bain d'huile. Quatre kilos de rondelles font un kilo de chips.",
     besoinOperateur:"Quelqu'un doit tenir le bain d'huile à l'œil."
   },
@@ -592,8 +627,16 @@ const MACHINES = {
     id:"ensacheuse", nom:"Ensacheuse", cout:4200, l:3, h:3,
     couleur:"#9b6dc9", accent:"#c49ef0",
     recettes:["ensacher"], auto:true, usureParJour:0.055, ageMin:2, cat:"machines",
+    qualite:true,
     resume:"Pèse, remplit et soude les sachets. Tourne toute seule.",
     besoinOperateur:"Tourne sans personne."
+  },
+  tri: {
+    id:"tri", nom:"Table de tri", cout:1800, l:3, h:2,
+    couleur:"#3fb8c4", accent:"#8fe4ec",
+    recettes:["trier_chips","trier_sachets"], auto:false, usureParJour:0.02, ageMin:3, cat:"machines",
+    resume:"Écarte la marchandise ratée avant qu'elle parte chez le client.",
+    besoinOperateur:"Il faut quelqu'un pour trier à la main."
   },
   caisse: {
     id:"caisse", nom:"Bac de stockage", cout:300, l:2, h:2,
@@ -620,8 +663,10 @@ const AGES = [
     intro:"On casse le mur du fond. Convoyeurs, assaisonnement, ensacheuse — et le sachet, qui rapporte bien plus que le vrac." },
 
   { n:3, nom:"La PME", largeur:32, hauteur:24,
-    objectif:{ texte:"Passer un contrôle sanitaire sans un seul lot rappelé", type:"aVenir", cible:1 },
-    debloque:[], intro:"" },
+    objectif:{ texte:"Honorer une grosse commande sans une seule réclamation",
+               type:"compteur", cle:"grosseCommande", cible:1 },
+    debloque:["tri","qualite","grosClients"],
+    intro:"Les clients deviennent regardants. Un sachet mal cuit qui part chez eux, et ça se sait." },
 
   { n:4, nom:"L'industrie", largeur:48, hauteur:36,
     objectif:{ texte:"Tenir la saison avec ses propres silos", type:"aVenir", cible:1 },
@@ -640,6 +685,8 @@ const CLIENTS = [
   { nom:"Supérette Marceau",     ton:"lent",      ageMin:1, marge:0.96 },
   { nom:"Chaîne Prixbon",        ton:"volume",    ageMin:2, marge:0.88 },
   { nom:"Grossiste Delaunay",    ton:"volume",    ageMin:2, marge:0.92 },
+  { nom:"Centrale Ouest-Achat",  ton:"gros",      ageMin:3, marge:0.84, gros:true, paiement:30 },
+  { nom:"Enseigne Bonprix",      ton:"gros",      ageMin:3, marge:0.86, gros:true, paiement:30 },
   { nom:"Comité d'entreprise",   ton:"régulier",  ageMin:2, marge:1.05 }
 ];
 
@@ -817,6 +864,7 @@ function nouvellePartie(nomEntreprise){
     finances: {
       solde: CONFIG.argentDepart,
       emprunts: [],
+      creances: [],          // ventes payées à 30 jours (gros clients, âge 3)
       journalJour: null,
       totalVentes: 0,
       totalAchats: 0,
@@ -828,7 +876,7 @@ function nouvellePartie(nomEntreprise){
     marche: { prix:{}, tendances:{}, dernierJour:-1 },
     reputation: CONFIG.reputationDepart,
     recherche: { terminees:[], enCours:null },
-    progression: { age:1, objectifsCompletes:[], jaugeObjectif:0, vendus:{}, produits:{}, produitsSemaine:{} },
+    progression: { age:1, objectifsCompletes:[], jaugeObjectif:0, vendus:{}, produits:{}, produitsSemaine:{}, compteurs:{} },
     stats: { historiqueSemaines:[], semaineCourante: semaineVierge() },
     tuto: { etape:0, fait:[] },
     reglages: { volAmbiance:0.5, volEffets:0.6, volMusique:0.35, muet:false },
@@ -851,7 +899,7 @@ function nouvellePartie(nomEntreprise){
 }
 
 function semaineVierge(){
-  return { produits:{}, livres:{}, ca:0, depenses:0, pannes:0, retards:0, rebuts:0, faits:[] };
+  return { produits:{}, livres:{}, ca:0, depenses:0, pannes:0, retards:0, rebuts:0, reclamations:0, faits:[] };
 }
 
 function creerUsine(nom, largeur, hauteur){
@@ -1063,6 +1111,9 @@ function creerMachine(type, x, y, rotation){
     operateurId: null,
     debitReel: 0,
     produitAujourdhui: 0,
+    fraicheurHuile: d.bainHuile ? 1 : undefined,
+    tauxRebut: 0,
+    arretRestant: 0,
     etat: "arret",
     minuteBloquee: 0,
     flash: 0            // purement visuel, remis à zéro par le rendu
@@ -1077,6 +1128,13 @@ function simMachine(m, dt){
   if (!r){ m.etat = "arret"; m.debitReel = 0; return; }
 
   if (m.enPanne){ m.etat = "panne"; m.debitReel = 0; m.minuteBloquee += dt; return; }
+
+  // Immobilisation volontaire : on refait le bain d'huile.
+  if (m.arretRestant > 0){
+    m.arretRestant -= dt;
+    m.etat = "arret"; m.debitReel = 0; m.minuteBloquee += dt;
+    return;
+  }
 
   // Opérateur : les machines manuelles ne tournent pas toutes seules.
   let op = null, fOp = 1, fMoral = 1;
@@ -1093,7 +1151,10 @@ function simMachine(m, dt){
 
   // Démarrage d'un cycle : on réserve les entrées tout de suite.
   if (!m.enCycle){
-    if (!placeSortie(m, r.sortie.id, r.sortie.qte)){
+    const idRate = ITEMS[r.sortie.id].rate;
+    const trieQualite = d.qualite && idRate && etat.meta.age >= 3;
+    if (!placeSortie(m, r.sortie.id, r.sortie.qte) ||
+        (trieQualite && !placeSortie(m, idRate, r.sortie.qte*0.25))){
       m.etat = "sortie_pleine"; m.debitReel = 0; m.minuteBloquee += dt; return;
     }
     let manque = false;
@@ -1119,14 +1180,29 @@ function simMachine(m, dt){
   // Usure proportionnelle à la charge
   m.usure = clamp(m.usure + d.usureParJour * (dt / CONFIG.minutesParJour), 0, 1);
 
+  // Le bain d'huile perd sa fraîcheur à mesure qu'on y cuit.
+  if (d.bainHuile && etat.meta.age >= 3)
+    m.fraicheurHuile = clamp((m.fraicheurHuile ?? 1) - CONFIG.usureHuileParJour * (dt/CONFIG.minutesParJour), 0, 1);
+
   if (m.progression >= 1){
     m.progression = 0;
     m.enCycle = false;
-    m.sortie[r.sortie.id] = (m.sortie[r.sortie.id]||0) + r.sortie.qte;
-    m.produitAujourdhui += r.sortie.qte;
-    compter(etat.progression.produits, r.sortie.id, r.sortie.qte);
-    compter(etat.progression.produitsSemaine, r.sortie.id, r.sortie.qte);
-    compter(etat.stats.semaineCourante.produits, r.sortie.id, r.sortie.qte);
+    // Ce qui est mal cuit ou mal soudé sort quand même, mais à part (§6.6).
+    const idRate = ITEMS[r.sortie.id].rate;
+    const t = (d.qualite && idRate) ? tauxRebut(m, op) : 0;
+    m.tauxRebut = t;
+    const mauvais = r.sortie.qte * t;
+    const bon = r.sortie.qte - mauvais;
+    if (bon > 0) m.sortie[r.sortie.id] = (m.sortie[r.sortie.id]||0) + bon;
+    if (mauvais > 0){
+      m.sortie[idRate] = (m.sortie[idRate]||0) + mauvais;
+      etat.stats.semaineCourante.rebuts += mauvais;
+      compter(etat.progression.produits, idRate, mauvais);
+    }
+    m.produitAujourdhui += bon;
+    compter(etat.progression.produits, r.sortie.id, bon);
+    compter(etat.progression.produitsSemaine, r.sortie.id, bon);
+    compter(etat.stats.semaineCourante.produits, r.sortie.id, bon);
     m.flash = 1;
     if (op){ op.fatigue = clamp(op.fatigue + 0.012, 0, 1); gagnerCompetence(op, m); }
     effetProduction(m, r);
@@ -1143,6 +1219,55 @@ function gagnerCompetence(o, m){
   const c = COMP_MACHINE[m.type];
   if (!c) return;
   o.competences[c] = clamp((o.competences[c]||0.5) + 0.0012, 0, 1);
+}
+
+/* ------------------------------------------------------------- Qualité
+   Une note implicite, jamais montrée en chiffre au joueur : elle se dit en
+   mots, et se voit au bac de rebut qui se remplit (§3.1, §3.2). */
+function qualiteMachine(m, op){
+  const u = U();
+  const d = MACHINES[m.type];
+  let q = 0.58;
+  q += 0.25 * (op ? (op.competences[COMP_MACHINE[m.type]] ?? 0.5) : 0.7);
+  q += 0.15 * (1 - clamp(m.usure,0,1));
+  q -= 0.15 * (op ? op.fatigue : 0);
+  q -= 0.25 * clamp(u.salete,0,1);
+  if (d.bainHuile) q += 0.20 * clamp(m.fraicheurHuile ?? 1, 0, 1) - 0.10;
+  return clamp(q, 0, 1);
+}
+
+/** Part de la production qui part au rebut. 0 tant que la qualité n'est pas
+ *  un sujet, c'est-à-dire avant l'âge 3 (§3.3). */
+function tauxRebut(m, op){
+  if (etat.meta.age < 3) return 0;
+  return clamp(0.90 - qualiteMachine(m, op), 0, CONFIG.rebutMax);
+}
+
+/** La même chose, en français d'atelier. */
+function motRebut(t){
+  if (t <= 0.005) return "rien ne part au rebut";
+  const surN = Math.max(2, Math.round(1/t));
+  return "1 kilo sur " + surN + " part au rebut";
+}
+
+/** Refaire le bain : de l'huile neuve, et la friteuse s'arrête un moment. */
+function changerHuile(m){
+  const besoin = CONFIG.chargeHuile;
+  const enStock = Math.min(besoin, stockDe("huile"));
+  const aAcheter = besoin - enStock;
+  const cout = aAcheter * prixAchat("huile");
+  if (etat.finances.solde - cout < CONFIG.faillite){
+    notif("Impossible", "Pas de quoi payer l'huile neuve.", "ko"); return;
+  }
+  if (enStock > 0) ajouterStock("huile", -enStock);
+  if (aAcheter > 0) depenser(cout, "achat");
+  m.fraicheurHuile = 1;
+  m.arretRestant = CONFIG.arretChangementHuile;
+  m.enCycle = false; m.progression = 0;
+  notif("Bain refait", "Huile neuve dans " + MACHINES[m.type].nom.toLowerCase() +
+        ". Elle repart dans " + CONFIG.arretChangementHuile + " minutes.", "ok");
+  son("depot");
+  for (let i=0;i<8;i++) particule(m.x+m.l/2+hasard(-0.5,0.5), m.y+m.h/2, "vapeur");
 }
 
 function declencherPanne(m){
@@ -1760,7 +1885,16 @@ function debutJournee(){
 function finJournee(){
   const u = U();
 
-  // 1. Livraisons du jour, puis vente du surplus aux commerces du coin
+  // 1. Les gros clients paient à 30 jours : on encaisse ce qui arrive à terme.
+  const dus = etat.finances.creances.filter(c => c.jour <= jourCourant());
+  for (const c of dus){
+    encaisser(c.montant, "vente");
+    notif("Paiement reçu", c.client + " a réglé " + euros(c.montant) + ".", "ok");
+    son("argent");
+  }
+  etat.finances.creances = etat.finances.creances.filter(c => c.jour > jourCourant());
+
+  // 2. Livraisons du jour, puis vente du surplus aux commerces du coin
   livrerContrats();
   vendreSurplus();
 
@@ -1983,11 +2117,12 @@ function capaciteHebdoEstimee(produitId){
 }
 
 function creerContrat(produitId){
-  const dispo = CLIENTS.filter(c => c.ageMin <= etat.meta.age);
+  // Les gros clients ne viennent qu'une fois la maison connue.
+  const dispo = CLIENTS.filter(c => c.ageMin <= etat.meta.age && (!c.gros || etat.reputation >= 55));
   const cl = choix(dispo);
   const cap = capaciteHebdoEstimee(produitId);
-  const semaines = hasardInt(1,3);
-  const facteur = hasard(0.5, 1.35);
+  const semaines = cl.gros ? hasardInt(2,4) : hasardInt(1,3);
+  const facteur = cl.gros ? hasard(1.1, 1.6) : hasard(0.5, 1.35);
   // On arrondit à quelque chose qu'un client dirait vraiment : 250 kg, 4 000 sachets.
   const brut = Math.max(5, cap * semaines * facteur);
   const pas = ITEMS[produitId].unite === "kg" ? (brut > 800 ? 100 : 25) : (brut > 4000 ? 500 : 100);
@@ -2001,8 +2136,11 @@ function creerContrat(produitId){
     prixUnitaire,
     dateLimite: jourCourant() + semaines*CONFIG.joursParSemaine,
     penaliteRetard: Math.max(30, Math.round(prixUnitaire*quantite*0.012)),
-    reputationRequise: 0,
+    reputationRequise: cl.gros ? 55 : 0,
     joursRetard: 0,
+    reclamations: 0,
+    gros: !!cl.gros,
+    paiement: cl.paiement || 0,        // jours avant règlement
     accepteLe: null
   };
 }
@@ -2045,18 +2183,40 @@ function livrerContrats(){
   for (const c of acc){
     const reste = c.quantite - c.livre;
     if (reste <= 0) continue;
-    const dispo = stockDe(c.produitId);
+
+    // Le raté ne se met pas de côté tout seul : il part mélangé au bon, au
+    // prorata de ce qui traîne sur le quai. C'est tout l'intérêt de trier.
+    const idRate = ITEMS[c.produitId].rate;
+    const bon = stockDe(c.produitId);
+    const mauvais = idRate ? stockDe(idRate) : 0;
+    const dispo = bon + mauvais;
     if (dispo < 1) continue;
+
     const q = Math.min(Math.floor(dispo), reste);
     if (q < 1) continue;
-    ajouterStock(c.produitId, -q);
+    const qMauvais = mauvais > 0 ? Math.min(mauvais, q * (mauvais/dispo)) : 0;
+    const qBon = q - qMauvais;
+
+    if (qBon > 0) ajouterStock(c.produitId, -qBon);
+    if (qMauvais > 0) ajouterStock(idRate, -qMauvais);
     c.livre += q;
+
     const montant = q * c.prixUnitaire;
-    encaisser(montant, "vente");
+    if (c.paiement){
+      etat.finances.creances.push({ montant, jour: jourCourant() + c.paiement, client: c.client });
+      notif("Expédition", quantiteItem(c.produitId, q, true) + " partis chez " + c.client +
+            " · " + euros(montant) + " payés dans " + c.paiement + " jours.", "");
+    } else {
+      encaisser(montant, "vente");
+      flottant(U().quai.x+1, U().quai.y+1, "+" + Math.round(montant) + " €", "#5cba6b");
+      son("argent");
+      notif("Expédition", quantiteItem(c.produitId, q, true) + " partis chez " + c.client + " : " + euros(montant) + ".", "ok");
+    }
     compter(etat.progression.vendus, c.produitId, q);
     compter(etat.stats.semaineCourante.livres, c.produitId, q);
-    flottant(U().quai.x+1, U().quai.y+1, "+" + Math.round(montant) + " €", "#5cba6b");
-    son("argent");
+
+    if (qMauvais > 0.5) reclamation(c, qMauvais);
+
     if (c.livre >= c.quantite){
       const aLheure = jourCourant() <= c.dateLimite;
       etat.reputation = clamp(etat.reputation + (aLheure ? 4 : 1), 0, 100);
@@ -2065,10 +2225,24 @@ function livrerContrats(){
       notif("Commande honorée", c.client + " est livré" + (aLheure ? ", dans les temps." : ", avec du retard."), aLheure ? "ok" : "att");
       son("valide");
       fait(aLheure ? ("Commande " + c.client + " livrée dans les temps") : ("Commande " + c.client + " livrée en retard"));
-    } else {
-      notif("Expédition", quantiteItem(c.produitId, q, true) + " partis chez " + c.client + " : " + euros(montant) + ".", "ok");
+      // L'objectif de l'âge 3 : une grosse commande, sans une seule réclamation.
+      if (c.gros && aLheure && !(c.reclamations > 0))
+        compter(etat.progression.compteurs, "grosseCommande", 1);
     }
   }
+}
+
+/** Le client a trouvé de la marchandise ratée dans ses cartons. */
+function reclamation(c, qMauvais){
+  c.reclamations = (c.reclamations||0) + qMauvais;
+  const geste = qMauvais * c.prixUnitaire * 2;
+  depenser(geste, "reclamation");
+  etat.reputation = clamp(etat.reputation - clamp(1 + qMauvais/Math.max(1,c.quantite)*40, 1, 7), 0, 100);
+  etat.stats.semaineCourante.reclamations++;
+  notif("Réclamation", c.client + " a trouvé " + quantiteItem(ITEMS[c.produitId].rate, qMauvais, true) +
+        " dans la livraison. " + euros(geste) + " de geste commercial.", "ko");
+  paroleContexte("reclamation", { client:c.client });
+  fait("Réclamation de " + c.client);
 }
 
 /** Ce qu'il faut encore livrer sur les commandes signées : on ne brade jamais
@@ -2081,7 +2255,8 @@ function reserveContrats(produitId){
 }
 
 /** Les commerces du coin passent tous les soirs prendre ce qui dépasse.
- *  Moins payé qu'une commande : c'est tout l'intérêt d'en signer. */
+ *  Moins payé qu'une commande : c'est tout l'intérêt d'en signer.
+ *  Ils ne prennent que du bon : la marchandise ratée reste sur les bras. */
 function vendreSurplus(){
   if (!etat.venteAuto) return;
   let total = 0, detail = [];
@@ -2134,7 +2309,8 @@ function progressionObjectif(){
   const age = AGES[etat.meta.age-1];
   const o = age.objectif;
   let val = 0, cible = o.cible;
-  if (o.type === "vendus") val = etat.progression.vendus[o.produit] || 0;
+  if (o.type === "compteur") val = (etat.progression.compteurs||{})[o.cle] || 0;
+  else if (o.type === "vendus") val = etat.progression.vendus[o.produit] || 0;
   else if (o.type === "produitsSemaine") val = etat.progression.produitsSemaine[o.produit] || 0;
   else if (o.type === "argent") val = etat.finances.solde;
   else val = 0;
@@ -2155,7 +2331,7 @@ function verifierObjectif(){
 function passerAgeSuivant(){
   etat.progression.objectifsCompletes.push(etat.meta.age);
   const ancien = AGES[etat.meta.age-1];
-  if (etat.meta.age >= 2){
+  if (etat.meta.age >= 3){
     // Les âges 3 à 5 sont décrits au document mais pas encore construits.
     notif("Bravo", "Vous avez bouclé « " + ancien.nom + " ». La suite (l'hygiène, la saison, les autres sites) reste à bâtir : la partie continue en mode libre.", "ok");
     paroleContexte("fin_contenu", {});
@@ -2866,9 +3042,12 @@ function detailMachine(m, d, x, y, l, h, produit){
       // bain d'huile chaude : bouillonnement et buée
       ctx.fillStyle = "#2f3238";
       coinsArrondis(x+0.2, y+0.4, l-0.4, h-0.72, 0.07); ctx.fill();
+      // Une huile fatiguée se voit : elle fonce. C'est le premier signe (§3.2).
+      const f = clamp(m.fraicheurHuile ?? 1, 0, 1);
+      const a1 = produit ? 0.9 : 0.55;
       const hu = ctx.createLinearGradient(0, y+0.44, 0, y+h-0.34);
-      hu.addColorStop(0, produit ? "rgba(240,185,60,.9)" : "rgba(150,120,55,.55)");
-      hu.addColorStop(1, produit ? "rgba(190,125,35,.9)" : "rgba(110,85,40,.55)");
+      hu.addColorStop(0, "rgba("+Math.round(lerp(96,240,f))+","+Math.round(lerp(62,185,f))+","+Math.round(lerp(24,60,f))+","+a1+")");
+      hu.addColorStop(1, "rgba("+Math.round(lerp(66,190,f))+","+Math.round(lerp(42,125,f))+","+Math.round(lerp(16,35,f))+","+a1+")");
       ctx.fillStyle = hu;
       coinsArrondis(x+0.28, y+0.48, l-0.56, h-0.88, 0.05); ctx.fill();
       if (produit){
@@ -2945,6 +3124,34 @@ function detailMachine(m, d, x, y, l, h, produit){
       break;
     }
 
+    case "tri": {
+      // plan de travail, deux bacs : ce qui passe, ce qu'on écarte
+      ctx.fillStyle = "#cfd6dd";
+      coinsArrondis(x+0.2, y+0.42, l-0.4, h-0.78, 0.05); ctx.fill();
+      ctx.strokeStyle = "#8d959e"; ctx.lineWidth = 0.04;
+      coinsArrondis(x+0.2, y+0.42, l-0.4, h-0.78, 0.05); ctx.stroke();
+      // le tapis de tri défile
+      if (produit){
+        ctx.strokeStyle = "rgba(90,100,110,.5)"; ctx.lineWidth = 0.05;
+        const d2 = (vue.temps*0.7) % 0.4;
+        for (let i=-0.4; i<l; i+=0.4){
+          const px = x+0.25+i+d2;
+          if (px < x+0.24 || px > x+l-0.24) continue;
+          ctx.beginPath(); ctx.moveTo(px, y+0.46); ctx.lineTo(px, y+h-0.4); ctx.stroke();
+        }
+      }
+      // bac de rebut au bout
+      ctx.fillStyle = "#4a4034";
+      coinsArrondis(x+l-0.5, y+h-0.5, 0.36, 0.34, 0.04); ctx.fill();
+      const r = m.entree["chips_ratees"] || m.entree["sachet_rate"] || 0;
+      if (r > 0.5){
+        const it = m.entree["chips_ratees"] ? "chips_ratees" : "sachet_rate";
+        for (let i=0;i<3;i++)
+          dessinerItem(x+0.55+bruit(i*7+m.id)*(l-1.3), y+0.62+bruit(i*3+m.id)*(h-1.1), 0.3, it);
+      }
+      break;
+    }
+
     case "caisse": {
       ctx.fillStyle = "#8a6b45";
       coinsArrondis(x+0.12, y+0.12, l-0.24, h-0.24, 0.05); ctx.fill();
@@ -2995,6 +3202,16 @@ function dessinerEtatMachine(m){
     ctx.restore();
     return;
   }
+  if (m.arretRestant > 0){
+    ctx.save(); ctx.globalAlpha = 0.5 + bat*0.4;
+    dessinerAlerte(cx, hy, "goutte", "#d9b23c"); ctx.restore();
+    return;
+  }
+  // Huile fatiguée : on prévient avant que la marchandise en pâtisse.
+  if (MACHINES[m.type].bainHuile && etat.meta.age >= 3 && (m.fraicheurHuile ?? 1) < 0.35){
+    ctx.save(); ctx.globalAlpha = 0.3 + bat*0.45;
+    dessinerAlerte(cx, hy, "goutte", "#e8863c"); ctx.restore();
+  }
   if (m.etat === "attente_matiere"){
     // liseré orange clignotant + la pièce qui manque
     ctx.save();
@@ -3044,6 +3261,12 @@ function dessinerAlerte(x, y, sorte, couleur){
     ctx.beginPath(); ctx.arc(x,y+0.13,0.032,0,7); ctx.fill();
   } else if (sorte === "plein"){
     for (let i=0;i<3;i++) ctx.fillRect(x-0.13+i*0.1, y-0.02+i*0.03, 0.075, 0.075);
+  } else if (sorte === "goutte"){
+    ctx.beginPath();
+    ctx.moveTo(x, y-0.15);
+    ctx.quadraticCurveTo(x+0.12, y+0.02, x, y+0.12);
+    ctx.quadraticCurveTo(x-0.12, y+0.02, x, y-0.15);
+    ctx.closePath(); ctx.fill();
   } else if (sorte === "personne"){
     ctx.beginPath(); ctx.arc(x,y-0.09,0.06,0,7); ctx.fill();
     ctx.beginPath(); ctx.moveTo(x,y-0.02); ctx.lineTo(x,y+0.1); ctx.stroke();
@@ -3526,6 +3749,8 @@ function paroleContexte(cle, d){
     panne:      d.machine + " vient de lâcher. Un clic dessus et je vais la remettre en route.",
     retard:     "On est en retard chez " + d.client + ". Chaque jour qui passe nous coûte de l'argent.",
     banque:     "La banque nous a pris une machine. Faut redresser la caisse, patron.",
+    reclamation:d.client + " nous renvoie de la marchandise ratée. Faut trier avant d'expédier, patron, sinon on va tous les perdre.",
+    age3:       "Les gros clients arrivent, et eux, ils regardent ce qu'il y a dans le carton. Il va falloir trier — et surveiller l'huile.",
     age2:       "On a cassé le mur du fond. Convoyeurs, tambour d'assaisonnement, ensacheuse — et le sachet, qui rapporte bien plus que le vrac.",
     fin_contenu:"Voilà, on a fait le tour de ce qui est bâti. L'hygiène, la saison, les autres sites : ça viendra. En attendant, faites tourner."
   }[cle];
@@ -3572,6 +3797,15 @@ function conseil(){
 
   const usees = u.machines.filter(m => m.usure > 0.65);
   if (usees.length) c.push(MACHINES[usees[0].type].nom + " grince sérieusement. Une révision avant qu'elle casse ?");
+
+  if (etat.meta.age >= 3){
+    const huileMorte = u.machines.filter(m => MACHINES[m.type].bainHuile && (m.fraicheurHuile ?? 1) < 0.35);
+    if (huileMorte.length)
+      c.push("L'huile de " + MACHINES[huileMorte[0].type].nom.toLowerCase() + " est brune. Tant qu'on ne la change pas, on jette la moitié de ce qu'on cuit.");
+    const rate = Object.keys(u.stocks).filter(k => ITEMS[k].cat === "rebut" && u.stocks[k] > 20);
+    if (rate.length && !u.machines.some(m => m.type === "tri"))
+      c.push("Il y a " + quantiteItem(rate[0], u.stocks[rate[0]], true) + " au quai. Sans table de tri, ça part chez le client.");
+  }
 
   const moralBas = u.ouvriers.filter(o => o.moral < 0.35);
   if (moralBas.length) c.push("L'équipe fait la tête. " + moralBas[0].prenom + " parle de partir.");
@@ -3692,9 +3926,15 @@ function majInfobulle(){
 
 function phraseEtat(m){
   if (m.enPanne) return "En panne — cliquez pour la réparer";
+  if (m.arretRestant > 0) return "Arrêtée pour la vidange";
   if (MACHINES[m.type].stockage) return "";
   switch (m.etat){
-    case "produit": return m.usure > 0.6 ? "Tourne, mais elle fatigue" : "Tourne bien";
+    case "produit":
+      // Une machine qui tourne en gâchant la moitié de sa production ne
+      // « tourne pas bien » : on le dit.
+      if (m.tauxRebut > 0.12) return "Tourne, mais " + motRebut(m.tauxRebut);
+      if (m.usure > 0.6) return "Tourne, mais elle fatigue";
+      return "Tourne bien";
     case "attente_matiere": {
       const r = recetteDe(m);
       const e = r && r.entrees.find(x => (m.entree[x.id]||0) < x.qte);
@@ -3965,7 +4205,8 @@ function detailUsine(z){
   z.appendChild(b2);
 
   const b3 = blocTitre("Ce qui cloche");
-  const soucis = u.machines.filter(m => m.etat !== "produit" && m.etat !== "arret" && !MACHINES[m.type].stockage);
+  const soucis = u.machines.filter(m => !MACHINES[m.type].stockage &&
+    ((m.etat !== "produit" && m.etat !== "arret") || m.tauxRebut > 0.12));
   if (!soucis.length) b3.appendChild(elem('<div class="vide">Tout tourne.</div>'));
   else for (const m of soucis.slice(0,6)){
     const l = document.createElement("div");
@@ -3974,8 +4215,8 @@ function detailUsine(z){
     l.querySelector(".puce").style.background = MACHINES[m.type].couleur;
     l.querySelector(".nom").textContent = MACHINES[m.type].nom;
     const p2 = l.querySelector(".pastille");
-    p2.textContent = LIB_ETAT[m.etat].texte;
-    p2.className = "pastille " + LIB_ETAT[m.etat].classe;
+    if (m.etat === "produit" && m.tauxRebut > 0.12){ p2.textContent = "Elle gâche"; p2.className = "pastille att"; }
+    else { p2.textContent = LIB_ETAT[m.etat].texte; p2.className = "pastille " + LIB_ETAT[m.etat].classe; }
     l.style.cursor = "pointer";
     l.onclick = () => { vue.selection = m.id; centrerSur(m); majPanneau(); };
     b3.appendChild(l);
@@ -4055,8 +4296,10 @@ function detailMachinePanneau(z, m){
   const be = blocTitre("État");
   const pe = elem('<div style="margin-bottom:6px"><span class="pastille"></span></div>');
   const pp = pe.querySelector(".pastille");
-  pp.textContent = LIB_ETAT[m.etat] ? LIB_ETAT[m.etat].texte : "—";
-  pp.className = "pastille " + (LIB_ETAT[m.etat]?.classe||"");
+  if (m.arretRestant > 0){ pp.textContent = "À l'arrêt"; pp.className = "pastille"; }
+  else if (m.etat === "produit" && m.tauxRebut > 0.12){ pp.textContent = "Tourne, mais elle gâche"; pp.className = "pastille att"; }
+  else { pp.textContent = LIB_ETAT[m.etat] ? LIB_ETAT[m.etat].texte : "—";
+         pp.className = "pastille " + (LIB_ETAT[m.etat]?.classe||""); }
   be.appendChild(pe);
   const ph = phraseEtat(m);
   if (ph && ph !== pp.textContent)
@@ -4152,6 +4395,40 @@ function detailMachinePanneau(z, m){
     z.appendChild(bc);
   }
 
+  // Le bain d'huile
+  if (d.bainHuile && etat.meta.age >= 3){
+    const bh = blocTitre("Le bain d'huile");
+    const f = clamp(m.fraicheurHuile ?? 1, 0, 1);
+    bh.appendChild(elem('<div style="font-size:12.5px;color:var(--texte-doux)"></div>')).textContent = motHuile(f);
+    const j = elem('<div class="jauge"><i></i></div>');
+    j.querySelector("i").style.width = Math.round(f*100)+"%";
+    j.classList.add(f < 0.35 ? "rouge" : f < 0.6 ? "" : "vert");
+    bh.appendChild(j);
+    if (m.arretRestant > 0)
+      bh.appendChild(elem('<div style="font-size:12px;color:var(--or)">Vidange en cours — repart dans '+
+        Math.ceil(m.arretRestant)+' minutes.</div>'));
+    else
+      bh.appendChild(bouton("Refaire le bain (" + CONFIG.chargeHuile + " kg d'huile)",
+        () => { changerHuile(m); majPanneau(); }, "large"));
+    z.appendChild(bh);
+  }
+
+  // Ce qui part au rebut
+  if (d.qualite && etat.meta.age >= 3){
+    const bq = blocTitre("Qualité");
+    const op = (m.operateurId != null) ? ouvrierParId(m.operateurId) : null;
+    const t = tauxRebut(m, op);
+    bq.appendChild(elem('<div style="font-size:12.5px;color:var(--texte-doux)"></div>')).textContent =
+      motRebut(t).charAt(0).toUpperCase() + motRebut(t).slice(1) + ".";
+    const j = elem('<div class="jauge vert"><i></i></div>');
+    j.querySelector("i").style.width = Math.round((1-t/CONFIG.rebutMax)*100)+"%";
+    if (t > 0.2) j.classList.add("rouge");
+    bq.appendChild(j);
+    bq.appendChild(elem('<div style="font-size:11px;color:var(--texte-faible);margin-top:5px">'+
+      causeRebut(m, op)+'</div>'));
+    z.appendChild(bq);
+  }
+
   // Entretien
   if (d.usureParJour > 0){
     const bu = blocTitre("Entretien");
@@ -4167,6 +4444,30 @@ function detailMachinePanneau(z, m){
 
   z.appendChild(bouton("Démolir (rendu " + euros(d.cout*CONFIG.remboursementCasse) + ")",
     () => { demolir(m); majBarreConstruction(); majPanneau(); }, "large danger"));
+}
+
+function motHuile(f){
+  if (f > 0.8) return "Huile neuve.";
+  if (f > 0.6) return "L'huile est encore bonne.";
+  if (f > 0.35) return "L'huile commence à fatiguer.";
+  if (f > 0.15) return "L'huile est brune, ça se sent à la cuisson.";
+  return "L'huile est morte. Tout ce qui sort est raté.";
+}
+
+/** Pourquoi ça rate : on nomme la cause la plus lourde, pas un coefficient. */
+function causeRebut(m, op){
+  const u = U();
+  const causes = [];
+  if (MACHINES[m.type].bainHuile) causes.push([0.20*(1-clamp(m.fraicheurHuile ?? 1,0,1)), "l'huile fatigue"]);
+  causes.push([0.25*clamp(u.salete,0,1), "l'atelier est sale"]);
+  causes.push([0.15*clamp(m.usure,0,1), "la machine est usée"]);
+  if (op){
+    causes.push([0.25*(1-(op.competences[COMP_MACHINE[m.type]] ?? 0.5)), op.prenom + " débute encore sur ce poste"]);
+    causes.push([0.15*op.fatigue, op.prenom + " est fatigué"]);
+  }
+  causes.sort((a,b) => b[0]-a[0]);
+  if (causes[0][0] < 0.04) return "Rien à redire.";
+  return "Surtout parce que " + causes[0][1] + ".";
 }
 
 function usureTexte(u){
@@ -4418,6 +4719,19 @@ function panneauFinances(z){
   lt.querySelector(".v").style.color = "var(--rouge)";
   bj.appendChild(lt);
   z.appendChild(bj);
+
+  if (etat.finances.creances && etat.finances.creances.length){
+    const bc = blocTitre("En attente de paiement");
+    let t = 0;
+    for (const c of etat.finances.creances){
+      t += c.montant;
+      bc.appendChild(ligne(c.client, euros(c.montant) + " · dans " + Math.max(0, c.jour - jourCourant()) + " j"));
+    }
+    const lt = ligne("Total dû", euros(t));
+    lt.querySelector(".v").style.color = "var(--or)";
+    bc.appendChild(lt);
+    z.appendChild(bc);
+  }
 
   if (etat.finances.emprunts.length){
     const be = blocTitre("Emprunts");
@@ -4712,8 +5026,10 @@ function carteDecision(d){
             " à " + euros(k.prixUnitaire) + (ITEMS[k.produitId].unite === "kg" ? " le kg" : " pièce") +
             ", soit " + euros(k.quantite*k.prixUnitaire) + ". " +
             "À livrer sous " + (k.dateLimite - jourCourant()) + " jours ouvrés. " +
-            "Pénalité de " + euros(k.penaliteRetard) + " par jour de retard.";
-    avis = avisContremaitre(k);
+            "Pénalité de " + euros(k.penaliteRetard) + " par jour de retard." +
+            (k.paiement ? " Payé à " + k.paiement + " jours." : "");
+    avis = avisContremaitre(k) +
+           (k.paiement ? " Attention : ils paient à " + k.paiement + " jours. On avance la matière et les salaires en attendant." : "");
     actions = [["Accepter", () => accepterContrat(k), "plein"], ["Refuser", () => refuserContrat(k), ""]];
   }
   else if (d.sorte === "rh"){
@@ -4790,7 +5106,10 @@ function ouvrirAnnonceAge(age){
     tambour:"Le tambour d'assaisonnement, qui tourne tout seul",
     ensacheuse:"L'ensacheuse, qui pèse et soude les sachets",
     sachet:"Le sachet de chips, qui rapporte bien plus que le vrac",
-    reappro:"Le réapprovisionnement automatique"
+    reappro:"Le réapprovisionnement automatique",
+    tri:"La table de tri, qui écarte la marchandise ratée",
+    qualite:"La qualité : ce qui sort mal cuit ne se vend plus",
+    grosClients:"Les centrales d'achat — gros volumes, paiement à 30 jours"
   };
   for (const d of age.debloque)
     if (noms[d]) l.appendChild(elem('<div class="ligne"><span class="k">'+noms[d]+'</span></div>'));
@@ -5179,6 +5498,13 @@ function SECTIONS_GUIDE(){
     "une machine. À "+euros(CONFIG.faillite)+", c'est le dépôt de bilan.</p>"+
     "<p>Démolir une machine en rend <b>60 %</b>. Réviser coûte 20 % de son prix, réparer une panne 12 %.</p>" },
 
+  { titre:"Les gros clients", corps:
+    "<p>Passé une certaine réputation, les <b>centrales d'achat</b> se présentent. Gros volumes, prix au "+
+    "kilo plus serré, et surtout : elles paient à <b>30 jours</b>.</p>"+
+    "<p>C'est le vrai piège. On avance la matière et les salaires pendant un mois avant de voir la couleur "+
+    "de l'argent. Une commande peut être rentable et vous mettre à découvert. L'onglet Argent montre ce "+
+    "qui est en attente de paiement.</p>" },
+
   { titre:"Vendre : commande ou comptant", corps:
     "<p>Une <b>commande</b> se signe le vendredi soir. Elle fixe une quantité, un prix et une date. "+
     "Ce qui est fini part automatiquement chez le client, au fil de la production.</p>"+
@@ -5224,6 +5550,24 @@ function SECTIONS_GUIDE(){
     "à deux ingrédients a besoin des deux.</p>"+
     "<p>Si la marchandise s'accumule au bout de la bande, c'est que l'aval ne suit pas. Ça se voit à l'œil "+
     "nu : les pièces s'entassent.</p>" },
+
+  { titre:"La qualité", corps:
+    "<p>À partir de la PME, tout ce qui sort de la <b>friteuse</b> et de l'<b>ensacheuse</b> n'est pas bon à "+
+    "vendre. Une part part au rebut, et elle grandit quand :</p>"+
+    "<ul>"+
+    "<li>l'<b>huile fatigue</b> — c'est de loin la première cause ;</li>"+
+    "<li>l'<b>atelier est sale</b> ;</li>"+
+    "<li>la <b>machine est usée</b> ;</li>"+
+    "<li>la personne au poste <b>débute</b> ou <b>est fatiguée</b>.</li>"+
+    "</ul>"+
+    "<p>La fiche de la machine dit toujours <b>laquelle</b> de ces causes pèse le plus. Inutile de chercher : "+
+    "elle le nomme.</p>"+
+    "<p>Le <b>bain d'huile</b> se refait depuis la fiche de la friteuse. Ça coûte "+CONFIG.chargeHuile+" kg "+
+    "d'huile et immobilise la machine "+CONFIG.arretChangementHuile+" minutes. Une huile brune se voit à "+
+    "l'œil nu : le bain fonce.</p>"+
+    "<p>La marchandise ratée <b>ne se vend pas</b>. Si on la laisse traîner sur le quai, elle part mélangée "+
+    "aux livraisons, et le client réclame : geste commercial, réputation en baisse. La <b>table de tri</b> "+
+    "l'écarte et en tire un peu d'argent en alimentation animale.</p>" },
 
   { titre:"L'entretien", corps:
     "<p>Une machine s'use en tournant. Elle <b>ralentit</b> d'abord, puis se met à grincer, à vibrer et à "+
@@ -5510,6 +5854,8 @@ function appliquer(o){
   // champs ajoutés après coup : on complète sans casser les vieilles parties
   etat.reglages = Object.assign({ volAmbiance:0.5, volEffets:0.6, volMusique:0.35, muet:false }, etat.reglages||{});
   etat.reappro = etat.reappro || {};
+  etat.finances.creances = etat.finances.creances || [];
+  etat.progression.compteurs = etat.progression.compteurs || {};
   if (etat.venteAuto === undefined) etat.venteAuto = true;
   etat.tuto = etat.tuto || { etape:TUTO.length, fait:[] };
   etat.stats.semaineCourante = etat.stats.semaineCourante || semaineVierge();
