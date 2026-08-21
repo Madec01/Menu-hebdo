@@ -65,6 +65,25 @@ sachets se comptent à l'unité.
   première marchandise reçue, ou à la main.
 - **Filtre de convoyeur** : quand un poste sort deux choses — la friteuse et son
   rebut — on dit à chaque bande ce qu'elle emporte.
+- **Se brancher ou croiser** : un interrupteur à côté de l'outil Convoyeur
+  (touche <kbd>X</kbd>) décide de ce qui arrive quand un tracé rencontre une
+  bande existante — il la contourne, ou il l'enjambe sur une passerelle. Un
+  croisement ne relie jamais rien : c'est là où l'on s'arrête qui fait le
+  raccord. La tuile reste à la bande du dessous, et un pont dont on démolit le
+  dessous redescend tout seul.
+- **Le réapprovisionnement, en quatre phrases** : dès qu'il en reste moins de
+  tant, en faire livrer tant, sans jamais dépasser tant, et jamais au-dessus de
+  tel prix. Le plafond évite le stock dormant, le prix maximum laisse passer les
+  coups de chaud du marché. Chaque matière affiche son **autonomie en jours**, et
+  « Régler sur la consommation » cale tout d'un coup. L'automatique ne met jamais
+  la maison en faillite.
+- **Affecter tout le monde** d'un bouton : chacun sur le poste où il est le
+  meilleur, sans traverser l'atelier, une machine par personne ; le reste passe
+  au portage.
+- **La sortie d'une recette est un moment** : quand l'étude aboutit, tout
+  s'arrête et l'écran montre la note, ce qu'en disent les gens, les pistes pour
+  la suite — et un bouton qui met la recette en production sur les ensacheuses
+  dans la foulée.
 - Convoyeurs en **réseau**, d'**une seule tuile ou de cinquante** : les bandes se branchent les unes aux autres, on
   bâtit un trajet par tronçons et plusieurs bandes peuvent converger vers un
   même poste. Elles se dessinent jointives — une bande touche sa voisine et la
@@ -216,12 +235,12 @@ réelles** à la vitesse ×1.
 
 ## Tests
 
-`node tests/suite.mjs` pilote le jeu dans un vrai navigateur : dix-huit cas qui
+`node tests/suite.mjs` pilote le jeu dans un vrai navigateur : vingt-et-un cas qui
 couvrent le didacticiel, la chaîne, la conservation de la matière, le réseau de
 convoyeurs, la qualité, les modes, les cinq âges, les auto-vérifications, la
 sauvegarde, le rythme, la performance, la recherche, le raccord entre bandes,
 les quais et rangements, les bâtiments d'équipe, la cour, le garde-manger du
-labo et les raccords courts. Voir [`tests/README.md`](tests/README.md).
+labo, les raccords courts, les croisements, l'équipe et les stocks. Voir [`tests/README.md`](tests/README.md).
 
 ## Organisation du code
 

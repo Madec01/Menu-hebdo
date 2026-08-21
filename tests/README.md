@@ -22,7 +22,7 @@ La suite sort en code 1 si un cas échoue.
 | `qualite-age3` | l'huile vieillit, le bain se refait, le raté part chez le client s'il n'est pas trié |
 | `modes-de-partie` | le bac à sable ne débite rien, ne verrouille rien, ne fait pas faillite |
 | `saut-de-niveau` | les cinq âges s'atteignent, l'atelier prend la bonne taille |
-| `auto-verifications` | les 9 invariants du jeu (`verifierPartie()`) tiennent sur une usine qui tourne |
+| `auto-verifications` | les 10 invariants du jeu (`verifierPartie()`) tiennent sur une usine qui tourne |
 | `sauvegarde` | aller-retour complet : la partie rechargée est identique au bit près |
 | `rythme-age1` | l'âge 1 se boucle dans la fenêtre de 15 à 35 minutes réelles |
 | `performance` | un tick reste sous 2 ms, une image sous 40 ms en rendu logiciel |
@@ -33,6 +33,9 @@ La suite sort en code 1 si un cas échoue.
 | `cour-et-murs` | machines dedans, bâtiments dehors, sortie par les portes, mur qui pousse la cour |
 | `garde-manger` | la table du labo se tient, et chaque verrou s'ouvre pour la bonne raison |
 | `bande-courte-et-quai` | une bande touche le quai, et une seule tuile suffit à relier deux machines |
+| `croiser-ou-brancher` | contourner ou enjamber, au choix, et un croisement ne relie jamais rien |
+| `equipe-et-stocks` | l'affectation d'un coup, et les quatre réglages du réapprovisionnement |
+| `quai-de-sortie` | on l'accroche, on trace jusqu'à lui, et la marchandise y arrive |
 
 ## Les invariants, aussi dans le jeu
 

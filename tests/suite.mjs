@@ -37,6 +37,7 @@ async function contexte(nav, mode){
     for (let t=0; t<n*CONFIG.ticksParJour; t++) simTick();
     document.querySelector("#ecranVendredi")?.classList.remove("visible");
     document.querySelector("#ecranMenu")?.classList.remove("visible");
+    document.querySelector("#ecranSortieRecette")?.classList.remove("visible");
     etat.meta.vitesse = 1;
   }, jours);
   return { page, jeu, sim, erreurs };
@@ -936,6 +937,237 @@ cas("bande-courte-et-quai", async (nav) => {
   for (const t of inv) v("invariant : " + t.nom, t.ok, t.detail);
   await page.close();
   return { echecs: v.echecs.concat(erreurs), note: prod + " kg via une bande d'une tuile" };
+});
+
+cas("croiser-ou-brancher", async (nav) => {
+  const { page, jeu, erreurs } = await contexte(nav);
+  const v = verif();
+
+  const r = await jeu(`(() => {
+    sauterAge(3); etat.finances.solde = 400000; remplirStocks();
+    const u = U();
+    poserMachine('laveuse',4,2,0); poserMachine('trancheuse',10,2,0);
+    poserMachine('friteuse',6,7,0); poserMachine('caisse',6,0,0);
+    const seg = (x1,y1,x2,y2)=>{const p=[];const dx=Math.sign(x2-x1),dy=Math.sign(y2-y1);
+      let x=x1,y=y1;p.push({x,y});while(x!==x2||y!==y2){if(x!==x2)x+=dx;else y+=dy;p.push({x,y});}return p;};
+    vue.traceConvoyeur = seg(6,3,9,3); validerTrace(); vue.traceConvoyeur = null;
+    const h = u.convoyeurs[u.convoyeurs.length-1];
+    vue.convCroise = false;
+    const contourne = routerConvoyeur({x:7,y:2},{x:7,y:6});
+    vue.convCroise = true;
+    const croise = routerConvoyeur({x:7,y:2},{x:7,y:6});
+    const avant = etat.finances.solde;
+    vue.traceConvoyeur = croise; vue.convDepart = null; vue.convArrivee = null;
+    const pose = validerTrace();
+    const cout = avant - etat.finances.solde;
+    vue.traceConvoyeur = null; vue.convCroise = false;
+    const vert = u.convoyeurs[u.convoyeurs.length-1];
+    return { contourne: contourne && contourne.length, croise: croise && croise.length, pose, cout,
+             ponts: vert.ponts, tuiles: vert.chemin.length, idH: h.id, idV: vert.id,
+             sousLePont: occupant(u,7,3),
+             hIntact: h.chemin.every(t => occupant(u,t.x,t.y) === h.id),
+             relies: [vert.source, vert.destination].every(x => !!noeudParId(x)),
+             croiseSansLien: vert.source !== h.id && vert.destination !== h.id };
+  })()`);
+  v("sans croisement, le tracé fait le tour", r.contourne > r.croise + 6,
+    r.contourne + " tuiles contre " + r.croise);
+  v.egal("en croisant, il va tout droit", r.croise, 5);
+  v("la bande se pose", r.pose === true);
+  v.egal("avec un pont", r.ponts.length, 1);
+  v.egal("le pont est au croisement", r.ponts[0], "7,3");
+  v.egal("la tuile reste à la bande du dessous", r.sousLePont, r.idH);
+  v("la bande du dessous est intacte", r.hIntact);
+  v("celle du dessus est reliée à ses deux bouts", r.relies);
+  v("et surtout : croiser n'est pas se brancher", r.croiseSansLien);
+  v.aumoins("un pont se paie", r.cout, 5*45 + 120);
+
+  // La marchandise circule des deux côtés sans se mélanger.
+  const flux = await jeu(`(() => {
+    acheter('pdt_brutes',3000); for(let i=0;i<4;i++) embaucher(creerCandidat());
+    for (let t=0;t<CONFIG.ticksParJour*4;t++) simTick();
+    document.querySelector('#ecranVendredi')?.classList.remove('visible');
+    const u = U();
+    const h = u.convoyeurs[0], vert = u.convoyeurs[1];
+    const items = c => [...new Set(c.transit.map(p => p.item))];
+    return { surH: items(h), surV: items(vert),
+             rondelles: Math.round(etat.progression.produits.rondelles||0) };
+  })()`);
+  v.aumoins("la ligne du dessous tourne", flux.rondelles, 100);
+  v("rien de la bande du dessous ne se retrouve sur celle du dessus",
+    !flux.surH.some(i => flux.surV.includes(i)) || !flux.surH.length || !flux.surV.length,
+    "dessous " + flux.surH.join(",") + " · dessus " + flux.surV.join(","));
+
+  // Démolir ce qui est dessous fait redescendre le pont.
+  const bas = await jeu(`(() => {
+    const u = U();
+    demolir(u.convoyeurs[0], true);
+    reindexer();
+    const vert = u.convoyeurs[0];
+    return { ponts: vert.ponts.length, grille: occupant(u,7,3) === vert.id };
+  })()`);
+  v.egal("le pont redescend quand il n'enjambe plus rien", bas.ponts, 0);
+  v("et il reprend sa tuile", bas.grille);
+
+  const inv = await jeu("verifierPartie()");
+  for (const t of inv) v("invariant : " + t.nom, t.ok, t.detail);
+  await page.close();
+  return { echecs: v.echecs.concat(erreurs), note: "contourner " + r.contourne + " vs croiser " + r.croise };
+});
+
+cas("equipe-et-stocks", async (nav) => {
+  const { page, jeu, erreurs } = await contexte(nav);
+  const v = verif();
+
+  // Affecter tout le monde d'un coup : chacun sur le poste où il est le meilleur.
+  const a = await jeu(`(() => {
+    sauterAge(3); etat.finances.solde = 400000; remplirStocks();
+    poserMachine('laveuse',4,3,0); poserMachine('trancheuse',9,3,0);
+    poserMachine('friteuse',14,3,0); poserMachine('tambour',4,9,0);
+    for (const o of U().ouvriers.slice()) licencier(o, true);
+    for (let i=0;i<6;i++) embaucher(creerCandidat());
+    const postes = machinesAOperer().length;
+    const n = affecterAutomatiquement();
+    const u = U();
+    const assignes = u.ouvriers.filter(o => o.posteAssigne != null).map(o => o.posteAssigne);
+    const uniques = new Set(assignes).size;
+    const auPortage = u.ouvriers.filter(o => o.posteAssigne == null).length;
+    return { postes, n, assignes: assignes.length, uniques, auPortage, equipe: u.ouvriers.length };
+  })()`);
+  v.egal("chaque machine reçoit quelqu'un", a.n, a.postes);
+  v.egal("et personne n'est mis deux fois", a.uniques, a.assignes);
+  v.egal("le reste part au portage", a.auPortage, a.equipe - a.n);
+
+  // Le placement tient compte de la compétence : pas d'affectation au hasard.
+  const comp = await jeu(`(() => {
+    const u = U();
+    const somme = u.ouvriers.filter(o => o.posteAssigne != null).reduce((s,o) => {
+      const m = noeudParId(o.posteAssigne);
+      return s + (o.competences[COMP_MACHINE[m.type]] ?? 0.5);
+    }, 0);
+    // le même nombre de gens tirés au sort sur les mêmes postes
+    const postes = machinesAOperer();
+    let pire = 0;
+    for (let i=0;i<postes.length;i++)
+      pire += (u.ouvriers[i].competences[COMP_MACHINE[postes[i].type]] ?? 0.5);
+    return { choisi: somme, arbitraire: pire, n: postes.length };
+  })()`);
+  v("l'affectation vaut mieux qu'un tirage dans l'ordre",
+    comp.choisi >= comp.arbitraire - 0.001,
+    comp.choisi.toFixed(2) + " contre " + comp.arbitraire.toFixed(2));
+
+  const lib = await jeu(`(() => { const n = libererTousLesPostes();
+    return { n, restants: U().ouvriers.filter(o => o.posteAssigne != null).length }; })()`);
+  v.aumoins("on peut tout libérer", lib.n, 1);
+  v.egal("et il ne reste aucun poste fixe", lib.restants, 0);
+
+  // Réapprovisionnement : seuil, lot, plafond, prix maximum.
+  const st = await jeu(`(() => {
+    const u = U();
+    u.stocks = {};
+    const r = reglerSurConsommation('pdt_brutes');
+    r.actif = true; r.plafond = 800; r.prixMax = 0;
+    const avant = etat.finances.solde;
+    reapprovisionner();
+    const apres1 = Math.round(stockDe('pdt_brutes'));
+    // deuxième passage : le plafond doit borner
+    ajouterStock('pdt_brutes', 0);
+    reapprovisionner(); reapprovisionner();
+    const apres2 = Math.round(stockDe('pdt_brutes'));
+    return { seuil:r.seuil, lot:r.lot, plafond:r.plafond, apres1, apres2,
+             depense: avant - etat.finances.solde };
+  })()`);
+  v("le réglage automatique donne un seuil et un lot sensés",
+    st.seuil > 0 && st.lot > st.seuil, st.seuil + " / " + st.lot);
+  v("la première recommande arrive", st.apres1 > 0 && st.apres1 <= st.plafond,
+    st.apres1 + " livrés pour un lot de " + st.lot + " et un plafond de " + st.plafond);
+  v("le plafond borne le stock", st.apres2 <= st.plafond, st.apres2 + " pour un plafond de " + st.plafond);
+  v.aumoins("et ça se paie", st.depense, 1);
+
+  const cher = await jeu(`(() => {
+    const u = U(); u.stocks = {};
+    const r = etat.reappro['pdt_brutes'];
+    r.plafond = 0; r.prixMax = prixAchat('pdt_brutes') * 0.5;   // limite sous le cours
+    const avant = Math.round(stockDe('pdt_brutes'));
+    reapprovisionner();
+    const bloque = Math.round(stockDe('pdt_brutes'));
+    r.prixMax = prixAchat('pdt_brutes') * 2;
+    reapprovisionner();
+    return { avant, bloque, passe: Math.round(stockDe('pdt_brutes')) };
+  })()`);
+  v.egal("au-dessus du prix maximum, on n'achète pas", cher.bloque, cher.avant);
+  v.aumoins("en dessous, la livraison arrive", cher.passe, 1);
+
+  const auto = await jeu(`(() => {
+    U().stocks = {}; ajouterStock('pdt_brutes', 10);
+    return { faible: autonomieDe('pdt_brutes') < 1, jour: uneJourneeDe('pdt_brutes') > 0 };
+  })()`);
+  v("l'autonomie se lit en jours", auto.faible && auto.jour);
+
+  const inv = await jeu("verifierPartie()");
+  for (const t of inv) v("invariant : " + t.nom, t.ok, t.detail);
+  await page.close();
+  return { echecs: v.echecs.concat(erreurs), note: a.n + " postes placés, seuils réglés" };
+});
+
+cas("quai-de-sortie", async (nav) => {
+  const { page, jeu, erreurs } = await contexte(nav);
+  const v = verif();
+
+  // Le geste du joueur, dans les deux sens, sur les deux quais.
+  const r = await jeu(`(() => {
+    sauterAge(2); etat.finances.solde = 300000; remplirStocks();
+    const u = U(), qs = u.quaiSortie, qe = u.quaiEntree;
+    poserMachine('ensacheuse', qs.x-6, qs.y, 0);
+    const m = u.machines[u.machines.length-1];
+    const clic = (x,y,vers) => ancrageConvoyeur(x, y, vers);
+    const aS = clic(qs.x, qs.y+1, { x:m.x, y:m.y });
+    const aE = clic(qe.x, qe.y+1, { x:m.x, y:m.y });
+    // machine -> quai de sortie, par le tracé automatique
+    vue.outil = { type:"convoyeur" };
+    vue.convDepart = clic(m.x+1, m.y+1, { x:qs.x, y:qs.y });
+    majApercuConvoyeur(qs.x, qs.y+1);
+    const trace = vue.traceConvoyeur;
+    const pose = validerTrace();
+    const c = u.convoyeurs[u.convoyeurs.length-1];
+    annulerTrace();
+    return { ancreSortie: !!(aS && aS.noeud && aS.noeud.id === 2),
+             ancreEntree: !!(aE && aE.noeud && aE.noeud.id === 1),
+             surLaTuile: !!noeudSous(qs.x, qs.y+1),
+             trace: !!trace, pose,
+             src: c && c.source, dst: c && c.destination, etat: c && c.etat,
+             nomSortie: nomNoeud(noeudParId(2)), nomEntree: nomNoeud(noeudParId(1)) };
+  })()`);
+  v("cliquer sur le quai de sortie l'accroche", r.ancreSortie);
+  v("cliquer sur le quai d'entrée aussi", r.ancreEntree);
+  v("le quai de sortie répond quand on le survole", r.surLaTuile);
+  v("le tracé se calcule jusqu'à lui", r.trace && r.pose === true);
+  v.egal("et la bande le prend pour destination", r.dst, 2);
+  v("elle est reliée", r.etat !== "non_relie", r.etat);
+  v("les deux quais se nomment différemment", r.nomSortie !== r.nomEntree,
+    r.nomEntree + " / " + r.nomSortie);
+
+  // Et la marchandise y arrive vraiment.
+  const flux = await jeu(`(() => {
+    const u = U();
+    const m = u.machines.find(x => x.type === 'ensacheuse');
+    ajouterStock('chips_assaisonnees', 400); ajouterStock('film', 200);
+    m.entree = { chips_assaisonnees: 80, film: 8 };
+    for (let i=0;i<3;i++) embaucher(creerCandidat());
+    let arrive = 0;
+    for (let t=0;t<CONFIG.ticksParJour*2;t++){
+      const avant = stockDe('sachet');
+      simTick();
+      arrive += Math.max(0, stockDe('sachet') - avant);
+    }
+    document.querySelector('#ecranVendredi')?.classList.remove('visible');
+    return { arrive: Math.round(arrive), pool: Math.round(u.stocksSortie.sachet||0) };
+  })()`);
+  v.aumoins("des sachets arrivent bien au quai de sortie", flux.arrive, 1);
+
+  const inv = await jeu("verifierPartie()");
+  for (const t of inv) v("invariant : " + t.nom, t.ok, t.detail);
+  await page.close();
+  return { echecs: v.echecs.concat(erreurs), note: flux.arrive + " sachets livrés au quai" };
 });
 
 /* ============================================================== Exécution ==*/

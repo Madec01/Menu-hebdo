@@ -116,6 +116,9 @@ input,select{font:inherit;color:inherit}
 .outil .nom{font-size:10.5px;line-height:1.15;text-align:center;color:var(--texte-doux)}
 .outil .prix{font-size:10px;font-variant-numeric:tabular-nums;color:var(--or)}
 .outil.cher .prix{color:var(--rouge)}
+.outil.bascule{border-style:dashed}
+.outil.bascule.basculeOn{border-color:#c98b45;background:#33270f;border-style:solid}
+.outil.bascule:not(.basculeOn){border-color:#3d5b40;background:#1b2a1d}
 
 /* ---------- Panneau droit ---------- */
 #panneau{
@@ -353,6 +356,36 @@ table.tab tr:hover td{background:rgba(255,255,255,.028)}
 }
 .reapproNb:focus{outline:none;border-color:var(--or)}
 .reapproNote{margin-top:5px;font-size:10.5px;color:var(--texte-faible);line-height:1.4}
+.reapproNote.alerte{color:var(--or)}
+
+/* ---------- La sortie d'une recette ---------- */
+.noteGeante{
+  font-size:64px;font-weight:200;line-height:1;font-variant-numeric:tabular-nums;
+}
+.noteGeante small{font-size:20px;color:var(--texte-faible);font-weight:400}
+.jaugeNote{height:9px;border-radius:5px;background:#22262c;overflow:hidden;margin:12px 0 4px}
+.jaugeNote i{display:block;height:100%;border-radius:5px;transition:width .8s ease-out}
+.avisClient{
+  display:flex;gap:10px;align-items:flex-start;padding:9px 0;
+  border-bottom:1px solid rgba(255,255,255,.05);text-align:left;
+}
+.avisClient:last-child{border-bottom:none}
+.avisClient canvas{width:34px;height:34px;border-radius:50%;flex:0 0 34px;background:#2a2e34}
+.avisClient .qui{font-size:11px;color:var(--texte-faible);letter-spacing:.04em}
+.avisClient .dit{font-size:13px;color:var(--texte-doux);line-height:1.45;font-style:italic}
+.pisteAmelio{
+  display:flex;gap:8px;padding:6px 0;font-size:12.5px;color:var(--texte-doux);
+  line-height:1.45;text-align:left;
+}
+.pisteAmelio::before{content:"→";color:var(--or);flex:0 0 auto}
+.sachetApercu{
+  width:70px;height:92px;border-radius:7px 7px 4px 4px;margin:0 auto 6px;
+  position:relative;box-shadow:0 6px 18px rgba(0,0,0,.45);
+}
+.sachetApercu::after{
+  content:"";position:absolute;left:8%;right:8%;top:26%;height:34%;border-radius:4px;
+  background:rgba(255,255,255,.14);
+}
 
 /* ---------- Cadence et rendement, en surimpression ---------- */
 #cadenceHud{
@@ -546,6 +579,7 @@ table.tab tr:hover td{background:rgba(255,255,255,.028)}
 <div class="overlay" id="ecranFin"></div>
 <div class="overlay" id="ecranStats"></div>
 <div class="overlay" id="ecranRecherche"></div>
+<div class="overlay" id="ecranSortieRecette"></div>
 <div id="panneauDev"></div>
 
 <script>
@@ -637,7 +671,7 @@ const ITEMS = {
     achat:0.55, portee:40, cat:"matiere", ageMin:2
   },
   arome: {
-    nom:"Arôme paprika", nomP:"Arôme paprika", court:"Arôme", courtP:"Arôme",
+    nom:"Arôme", nomP:"Arômes", court:"Arôme", courtP:"Arômes",
     couleur:"#c9502e", forme:"sac", unite:"kg",
     achat:5.20, portee:30, cat:"matiere", ageMin:2
   },
@@ -1266,6 +1300,7 @@ const vue = {
   traceConvoyeur:null,   // [{x,y}] pendant le tracé
   convDepart:null,       // ancrage du premier clic
   convArrivee:null,
+  convCroise:false,      // false = se brancher (contourne) · true = croiser (enjambe)
   particules:[],
   flottants:[],          // textes qui montent (€, +1 vélo)
   temps:0,               // secondes réelles écoulées, pour les animations
@@ -1628,7 +1663,7 @@ function estConvoyeur(n){ return !!n && n.type === "convoyeur"; }
 /** Le nom d'un nœud tel qu'on le dit au joueur. */
 function nomNoeud(n){
   if (!n) return "rien";
-  if (estQuai(n)) return "le quai";
+  if (estQuai(n)) return estQuaiSortie(n) ? "le quai de sortie" : "le quai d'entrée";
   if (estConvoyeur(n)) return "un autre convoyeur";
   return MACHINES[n.type] ? MACHINES[n.type].nom : "?";
 }
@@ -1962,9 +1997,18 @@ function reviserMachine(m){
 /* ------------------------------------------------------------ Convoyeurs */
 const CONV = {
   coutParTuile: 45,
+  coutPont: 120,      // le supplément d'une tuile qui enjambe une autre bande
   debitMax: 6,        // unités par minute de jeu
   vitesse: 0.5        // tuiles par minute de jeu
 };
+
+/* Les ponts. Une bande peut enjamber une autre bande : la tuile est alors
+   partagée, et c'est la bande du dessous qui garde la grille. Une tuile de
+   pont ne raccorde rien — un raccord ne se fait qu'aux deux bouts d'une
+   bande — donc croiser et se brancher ne se confondent jamais. */
+function clePont(x,y){ return x + "," + y; }
+function estPont(c, x, y){ return !!c.ponts && c.ponts.indexOf(clePont(x,y)) >= 0; }
+function tuilesAuSol(c){ return c.chemin.filter(t => !estPont(c, t.x, t.y)); }
 
 /** La place qu'occupe UNE unité d'une matière sur une bande.
  *  Un kilo de rondelles et un sachet de 150 g ne tiennent pas la même place :
@@ -2010,6 +2054,7 @@ function creerConvoyeur(chemin, source, destination){
     filtre: null,               // null = la bande prend ce que l'aval réclame
     debitMax: CONV.debitMax,
     debitActuel: 0,
+    ponts: [],          // tuiles où la bande passe au-dessus d'une autre
     latence: Math.max(0.5, chemin.length / CONV.vitesse),
     transit: [],        // [{item, qte, t}] — t = minutes restantes
     etat: "produit"
@@ -2127,6 +2172,14 @@ function relierConvoyeurs(){
   if (!u) return;
   for (const c of u.convoyeurs){
     if (!c.chemin.length) continue;
+    // Un pont dont le dessous a été démoli redescend au sol et reprend sa tuile.
+    if (c.ponts && c.ponts.length)
+      c.ponts = c.ponts.filter(k => {
+        const [x,y] = k.split(",").map(Number);
+        if (occupant(u,x,y) !== 0) return true;
+        u.grille[indexCase(u,x,y)] = c.id;
+        return false;
+      });
     const a = c.chemin[0], b = c.chemin[c.chemin.length-1];
     const apres = c.chemin.length > 1 ? c.chemin[1] : null;
     const avant = c.chemin.length > 1 ? c.chemin[c.chemin.length-2] : null;
@@ -2410,6 +2463,70 @@ function meilleureMachineAOperer(o){
     if (score > bs){ bs = score; best = m; }
   }
   return best ? { machine:best, score:bs } : null;
+}
+
+/* ------------------------------------------------- Affectation d'un coup
+   Sur une grande ligne, assigner poste par poste est fastidieux. Ce bouton
+   place au mieux : chaque machine à opérer reçoit la personne disponible qui
+   s'y débrouille le mieux, en tenant compte du trajet. On couvre d'abord les
+   machines qui n'ont personne — il vaut toujours mieux dix postes tenus
+   correctement qu'un seul tenu parfaitement. */
+function machinesAOperer(){
+  return U().machines.filter(m => {
+    const d = MACHINES[m.type];
+    return !d.auto && !d.stockage && !d.batiment;
+  });
+}
+
+function affecterAutomatiquement(){
+  const u = U();
+  const libres = u.ouvriers.filter(o => !o.enFormation);
+  const postes = machinesAOperer();
+  if (!postes.length){ notif("Rien à tenir", "Aucune machine ne demande quelqu'un.", "att"); return 0; }
+  if (!libres.length){ notif("Personne", "Il n'y a personne à placer.", "att"); return 0; }
+
+  // Toutes les paires possibles, la meilleure d'abord. Tableaux courts : un tri
+  // suffit, pas besoin d'algorithme d'affectation optimale.
+  const paires = [];
+  for (const o of libres)
+    for (const m of postes){
+      const acces = tuileAcces(u, m, o.x, o.y);
+      if (!acces) continue;
+      const comp = o.competences[COMP_MACHINE[m.type]] ?? 0.5;
+      const dist = Math.hypot(acces.x - o.x, acces.y - o.y);
+      paires.push({ o, m, score: 10*comp - dist*0.12 });
+    }
+  paires.sort((a,b) => b.score - a.score);
+
+  const prisO = new Set(), prisM = new Set();
+  let n = 0;
+  for (const p of paires){
+    if (prisO.has(p.o.id) || prisM.has(p.m.id)) continue;
+    prisO.add(p.o.id); prisM.add(p.m.id);
+    if (p.o.posteAssigne !== p.m.id){ p.o.posteAssigne = p.m.id; libererTache(p.o); }
+    n++;
+  }
+  // Ceux qui restent sans poste redeviennent libres : ils porteront la
+  // marchandise, ce qui est souvent ce qui manque le plus.
+  for (const o of libres) if (!prisO.has(o.id)) o.posteAssigne = null;
+
+  const reste = postes.length - n, dispo = libres.length - n;
+  let dit = n + " " + pluriel(n,"poste") + " " + pluriel(n,"tenu") + ".";
+  if (reste > 0) dit += " " + reste + " " + pluriel(reste,"machine") + " sans personne.";
+  else if (dispo > 0) dit += " " + dispo + " " + pluriel(dispo,"personne") + " au portage.";
+  notif("Équipe placée", dit, n ? "ok" : "att");
+  son("valide");
+  return n;
+}
+
+/** Tout le monde redevient libre : l'équipe se replace toute seule. */
+function libererTousLesPostes(){
+  const u = U();
+  let n = 0;
+  for (const o of u.ouvriers) if (o.posteAssigne != null){ o.posteAssigne = null; libererTache(o); n++; }
+  notif("Postes libérés", n ? n + " " + pluriel(n,"personne") + " " + pluriel(n,"redevient","redeviennent") +
+        " libre" + (n>1?"s":"") + " de choisir." : "Personne n'avait de poste fixe.", "");
+  return n;
 }
 
 /* ---------------------------------------------------------- Un ouvrier, un tick */
@@ -2887,13 +3004,89 @@ function acheter(id, qte){
   return true;
 }
 
+/* --------------------------------------------------- Gestion des stocks
+   Quatre réglages par matière, et pas un de plus : à partir de quand on
+   recommande, combien on fait livrer, jusqu'où on accepte de monter, et à quel
+   prix on refuse d'acheter. Tout est écrit comme une phrase dans l'onglet
+   Stocks — le joueur ne voit jamais un coefficient. */
+function reglageStock(id){
+  const it = ITEMS[id];
+  if (!etat.reappro[id]){
+    const j = Math.max(1, uneJourneeDe(id) * 2);
+    etat.reappro[id] = it.unite === "kg"
+      ? { actif:false, seuil: arrondiLot(j*2, 50), lot: arrondiLot(j*6, 50), plafond:0, prixMax:0 }
+      : { actif:false, seuil: arrondiLot(j*2, 10), lot: arrondiLot(j*6, 10), plafond:0, prixMax:0 };
+  }
+  const r = etat.reappro[id];
+  if (r.plafond == null) r.plafond = 0;     // 0 = pas de plafond
+  if (r.prixMax == null) r.prixMax = 0;     // 0 = à n'importe quel prix
+  return r;
+}
+function arrondiLot(v, pas){ return Math.max(pas, Math.round(v/pas)*pas); }
+
+/** Combien de jours de marche il reste avec ce qu'on a. */
+function autonomieDe(id){
+  const parJour = uneJourneeDe(id) * 2;
+  if (parJour <= 0) return Infinity;
+  return stockDe(id) / parJour;
+}
+
+/** Règle une matière sur ce que l'atelier consomme vraiment : deux jours de
+ *  marge, six jours de lot. C'est le réglage qu'on ferait à la main. */
+function reglerSurConsommation(id){
+  const it = ITEMS[id], r = reglageStock(id);
+  const pas = it.unite === "kg" ? 50 : 10;
+  const j = Math.max(1, uneJourneeDe(id) * 2);
+  r.seuil = arrondiLot(j*2, pas);
+  r.lot = arrondiLot(j*6, pas);
+  r.plafond = arrondiLot(j*14, pas);
+  return r;
+}
+
+/** Le passage quotidien du fournisseur. Silencieux quand il n'y a rien à faire. */
 function reapprovisionner(){
   if (!debloque("reappro")) return;
+  const faits = [];
   for (const id in etat.reappro){
     const r = etat.reappro[id];
-    if (!r.actif) continue;
-    if (stockDe(id) < r.seuil) acheter(id, r.lot);
+    if (!r || !r.actif || !ITEMS[id]) continue;
+    const stock = stockDe(id);
+    if (stock >= r.seuil) continue;
+    // Le prix du jour : on peut refuser d'acheter trop cher et attendre.
+    const prix = prixAchat(id);
+    if (r.prixMax > 0 && prix > r.prixMax){
+      if (autonomieDe(id) < 1.5)
+        notif("Trop cher pour l'instant", nomItem(id,2,true) + " " + nb(prix,2) + " € le kg, au-dessus de " +
+              "votre limite. Il en reste pour moins d'une journée.", "att");
+      continue;
+    }
+    // Le plafond : on ne remplit pas au-delà de ce qu'on a demandé.
+    let lot = r.lot;
+    if (r.plafond > 0) lot = Math.min(lot, Math.max(0, r.plafond - stock));
+    if (lot < 1) continue;
+    // La caisse : un réapprovisionnement automatique ne met jamais en faillite.
+    if (etat.finances.solde - lot*prix < CONFIG.decouvertMax){
+      notif("Recommande impossible", "Il faudrait " + euros(lot*prix) + " pour " +
+            nomItem(id,2,true) + ", la caisse ne suit pas.", "ko");
+      continue;
+    }
+    if (acheterSilencieux(id, lot)) faits.push({ id, lot, prix: lot*prix });
   }
+  if (faits.length){
+    const tot = faits.reduce((s,f) => s + f.prix, 0);
+    notif("Livraison automatique",
+          faits.map(f => quantiteItem(f.id, f.lot, true)).join(", ") + " — " + euros(tot) + ".", "");
+    for (const f of faits) compter(etat.stats.semaineCourante.produits, "_reappro", 0);
+  }
+}
+
+/** Comme acheter(), sans la notification : le récapitulatif est groupé. */
+function acheterSilencieux(id, qte){
+  const prix = prixAchat(id) * qte;
+  if (etat.finances.solde - prix < CONFIG.faillite) return false;
+  depenser(prix, "achat");
+  ajouterStock(id, qte);
+  return true;
 }
 
 function vendreComptant(id, qte){
@@ -3348,6 +3541,7 @@ function demolir(n, remboursementForce){
   const u = U();
   if (n.type === "convoyeur"){
     for (const t of n.chemin) if (u.grille[indexCase(u,t.x,t.y)] === n.id) u.grille[indexCase(u,t.x,t.y)] = 0;
+    // ce qui passait au-dessus d'elle redescend : relierConvoyeurs s'en charge
     u.convoyeurs = u.convoyeurs.filter(c => c.id !== n.id);
     encaisser(Math.round(CONV.coutParTuile * n.chemin.length * CONFIG.remboursementCasse), "casse");
   } else {
@@ -3647,11 +3841,9 @@ function finaliserRecette(){
   if (n.note >= 75) compter(etat.progression.compteurs, "recetteReussie", 1);
   verifierDeblocages(true);
 
-  notif("« " + r.nom + " » est prête", motNote(r.note) + " — " + euros(r.prixUnite) +
-        " le sachet. Réglez une ensacheuse dessus pour la produire.", n.note >= 65 ? "ok" : "att");
   parle(paroleNote(r), 14000);
-  son(n.note >= 65 ? "age" : "refus");
   majBarreConstruction(); majPanneau(); majBandeau();
+  ouvrirSortieRecette(r);        // on arrête tout : c'est le moment du verdict
 }
 
 function motNote(n){
@@ -3689,14 +3881,20 @@ function pistesAmelioration(r){
   // 1. L'accord qui a le plus coûté
   const pires = r.accords.filter(a => a.delta < 0).sort((a,b) => a.delta - b.delta);
   if (pires.length) p.push(pires[0].dit);
-  // 2. L'axe le plus faible de la recette
+  // 2. L'axe le plus faible — mais on ne propose jamais de retirer un ingrédient
+  // qui porte un bon accord : c'est justement lui qui fait la recette.
+  const porteurs = new Set();
+  for (const a of (r.accords||[])) if (a.delta > 0){ porteurs.add(a.a); porteurs.add(a.b); }
   const opts = AXES_RECETTE.map(a => ({ axe:a, o: optionRecette(a.cle, r.traits[a.cle]) }))
-                           .filter(x => x.o).sort((a,b) => a.o.attrait - b.o.attrait);
+                           .filter(x => x.o && !porteurs.has(x.o.id))
+                           .sort((a,b) => a.o.attrait - b.o.attrait);
   if (opts.length && opts[0].o.attrait < 0.66){
-    const mieux = opts[0].axe.options.filter(o => o.attrait > opts[0].o.attrait + 0.05)
-                                     .sort((a,b) => b.attrait - a.attrait)[0];
+    const mieux = opts[0].axe.options.filter(o =>
+        o.attrait > opts[0].o.attrait + 0.05 && optionDisponible(o))
+      .sort((a,b) => b.attrait - a.attrait)[0];
     if (mieux) p.push("Sur " + opts[0].axe.nom.toLowerCase() + ", « " + opts[0].o.nom +
-                      " » ne convainc pas. « " + mieux.nom + " » plairait davantage.");
+                      " » ne convainc pas tout seul. « " + mieux.nom + " » plairait davantage — " +
+                      "à moins de lui trouver le bon partenaire.");
   }
   // 3. La mode du moment
   if (r.tendance && !tagsDe(r.traits).has(r.tendance)){
@@ -3707,6 +3905,9 @@ function pistesAmelioration(r){
   // 4. L'usine elle-même
   if (rebutMoyenUsine() > 0.15)
     p.push("Une partie du problème est dans l'atelier : trop de sachets ratés partent avec les bons.");
+  if (r.note >= 82 && !(r.accords||[]).some(a => a.delta < 0))
+    return ["Ne touchez à rien : les accords tiennent, le public suit. La suite se joue " +
+            "sur ce qu'on n'a pas encore débloqué au labo."];
   if (!p.length) p.push("Rien à redire sur la composition. Pour aller plus haut, il faudra suivre la mode du moment.");
   return p;
 }
@@ -4365,6 +4566,72 @@ function cheminRendu(c){
   return pts;
 }
 
+/* Les passerelles se dessinent après toutes les bandes : sinon une bande posée
+   plus tard passerait par-dessus le pont qui l'enjambe, et le dessus-dessous
+   serait inversé à l'écran. */
+const pontsAdessiner = [];
+function dessinerPonts(){
+  for (const c of pontsAdessiner){
+    const ch = cheminRendu(c);
+    // Chaque tuile de pont, avec un bout de bande de part et d'autre pour la
+    // rampe : on doit voir que ça monte, passe, et redescend.
+    for (const k of c.ponts){
+      const [px, py] = k.split(",").map(Number);
+      let i = c.chemin.findIndex(t => t.x === px && t.y === py);
+      if (i < 0) continue;
+      const d = ch.length - c.chemin.length;      // décalage dû aux débords
+      const j = i + (d > 0 ? 1 : 0);
+      const a = ch[Math.max(0, j-1)], b = ch[j], e = ch[Math.min(ch.length-1, j+1)];
+      const dx = Math.sign(e.x - a.x), dy = Math.sign(e.y - a.y);
+      const d0 = { x: b.x - dx*0.85, y: b.y - dy*0.85 };
+      const d1 = { x: b.x + dx*0.85, y: b.y + dy*0.85 };
+      ctx.lineJoin = "round"; ctx.lineCap = "butt";
+      // l'ombre portée sur la bande du dessous
+      ctx.strokeStyle = "rgba(0,0,0,.42)";
+      ctx.lineWidth = 0.92;
+      ctx.beginPath(); ctx.moveTo(d0.x+0.10, d0.y+0.14); ctx.lineTo(d1.x+0.10, d1.y+0.14); ctx.stroke();
+      // les piles de chaque côté
+      ctx.fillStyle = "#23262b";
+      for (const p of [d0, d1]){
+        ctx.beginPath();
+        ctx.ellipse(p.x, p.y, dx ? 0.10 : 0.42, dx ? 0.42 : 0.10, 0, 0, 7);
+        ctx.fill();
+      }
+      // le tablier
+      ctx.strokeStyle = "#343941"; ctx.lineWidth = 0.86;
+      ctx.beginPath(); ctx.moveTo(d0.x, d0.y); ctx.lineTo(d1.x, d1.y); ctx.stroke();
+      ctx.strokeStyle = orphelinCouleur(c, "#4b525b"); ctx.lineWidth = 0.62;
+      ctx.beginPath(); ctx.moveTo(d0.x, d0.y); ctx.lineTo(d1.x, d1.y); ctx.stroke();
+      // garde-corps : deux traits clairs, c'est ce qui dit « c'est en hauteur »
+      ctx.strokeStyle = "rgba(255,255,255,.20)"; ctx.lineWidth = 0.05;
+      for (const s2 of [-1, 1]){
+        ctx.beginPath();
+        ctx.moveTo(d0.x + (dx ? 0 : s2*0.33), d0.y + (dx ? s2*0.33 : 0));
+        ctx.lineTo(d1.x + (dx ? 0 : s2*0.33), d1.y + (dx ? s2*0.33 : 0));
+        ctx.stroke();
+      }
+      // la marchandise repasse par-dessus
+      dessinerMarchandiseSegment(c, d0, d1);
+    }
+  }
+  pontsAdessiner.length = 0;
+}
+function orphelinCouleur(c, normal){ return c.etat === "non_relie" ? "#7a4038" : normal; }
+
+/** Ce que porte la bande sur ce court segment : on redessine par-dessus le
+ *  tablier ce qui s'y trouve, sinon la marchandise disparaît sous le pont. */
+function dessinerMarchandiseSegment(c, d0, d1){
+  if (vue.zoom <= CONFIG.seuilDetail) return;
+  const ch = cheminRendu(c);
+  for (const p of c.transit){
+    const t = clamp(1 - p.t/c.latence, 0, 1);
+    const q = pointSurChemin(c, t);
+    const dedans = (q.x-d0.x)*(d1.x-q.x) >= -0.01 && (q.y-d0.y)*(d1.y-q.y) >= -0.01;
+    if (!dedans) continue;
+    dessinerItem(q.x, q.y, 0.34, p.item);
+  }
+}
+
 function pointSurChemin(c, t){
   const ch = cheminRendu(c);
   const n = ch.length;
@@ -4381,6 +4648,7 @@ function dessinerConvoyeur(c){
   if (!c.chemin.length) return;
   const orphelin = c.etat === "non_relie";
   const ch = cheminRendu(c);
+  if (c.ponts && c.ponts.length) pontsAdessiner.push(c);
 
   ctx.lineJoin = "round"; ctx.lineCap = "round";
   ctx.beginPath();
@@ -5506,6 +5774,7 @@ function dessiner(){
   dessinerQuais();
 
   for (const c of u.convoyeurs) dessinerConvoyeur(c);
+  dessinerPonts();                    // les passerelles, par-dessus tout le reste
 
   // les machines les plus basses passent devant : tri par y
   const ms = u.machines;
@@ -5760,6 +6029,11 @@ function majBarreConstruction(){
     if (cat.id === "convoyeurs"){
       outils.push({ type:"convoyeur", id:"convoyeur", nom:"Convoyeur", prix:CONV.coutParTuile+" €/tuile",
                     couleur:"#41474e", verrou:!debloque("convoyeur") });
+      outils.push({ type:"croise", id:"croise",
+                    nom: vue.convCroise ? "Croiser" : "Se brancher",
+                    prix: vue.convCroise ? "+"+CONV.coutPont+" €/pont" : "raccords",
+                    couleur: vue.convCroise ? "#c98b45" : "#5cba6b",
+                    verrou:!debloque("convoyeur") });
     } else if (cat.id === "outils"){
       outils.push({ type:"pioche", id:"pioche", nom:"Démolir", prix:"+60 %", couleur:"#e0574a", verrou:false });
     } else {
@@ -5787,13 +6061,36 @@ function majBarreConstruction(){
       bt.querySelector(".nom").textContent = o.nom;
       bt.querySelector(".prix").textContent = o.prix;
       bt.dataset.type = o.type; bt.dataset.id = o.id;
+      if (o.type === "croise"){
+        bt.classList.remove("actif");
+        bt.classList.toggle("bascule", true);
+        bt.classList.toggle("basculeOn", !!vue.convCroise);
+        bt.title = vue.convCroise
+          ? "Le tracé enjambe les autres bandes. Cliquez pour revenir aux raccords. (C)"
+          : "Le tracé contourne les autres bandes et se raccorde à ce qu'on clique. Cliquez pour croiser. (C)";
+      }
       if (o.verrou) bt.title = "Débloqué plus tard";
-      else bt.onclick = () => choisirOutil(o.type, o.id);
+      else bt.onclick = () => (o.type === "croise" ? basculerCroisement() : choisirOutil(o.type, o.id));
       zone.appendChild(bt);
     }
     b.appendChild(bloc);
   }
   majOutilActif();
+}
+
+/** Se brancher ou croiser : un seul interrupteur, et il est visible.
+ *  Se brancher — le tracé contourne les autres bandes ; cliquer sur une bande
+ *  s'y raccorde. Croiser — le tracé les enjambe sur un petit pont, et les deux
+ *  marchandises ne se mélangent jamais. Dans les deux cas, finir sur une bande
+ *  s'y raccorde : c'est là où l'on s'arrête qui décide. */
+function basculerCroisement(){
+  vue.convCroise = !vue.convCroise;
+  if (vue.convDepart) majApercuConvoyeur(vue.souris.tx, vue.souris.ty);
+  majBarreConstruction();
+  notif(vue.convCroise ? "Croiser" : "Se brancher",
+        vue.convCroise ? "Le tracé passera par-dessus les autres bandes."
+                       : "Le tracé contournera les autres bandes.", "");
+  son("cle");
 }
 
 function choisirOutil(type, id){
@@ -6061,8 +6358,25 @@ function ancrageConvoyeur(tx, ty, vers){
   return { x:abords[0].x, y:abords[0].y, noeud:n };
 }
 
+/** Y a-t-il une bande, et rien d'autre, sur cette tuile ? */
+function surBande(u, x, y){
+  const o = occupant(u,x,y);
+  if (o <= 1) return false;
+  const n = noeudParId(o);
+  return !!n && n.type === "convoyeur";
+}
+
+/** Les tuiles d'un tracé qui enjambent une autre bande. */
+function pontsDuTrace(tuiles){
+  const u = U(), out = [];
+  for (let i=1; i<tuiles.length-1; i++)
+    if (surBande(u, tuiles[i].x, tuiles[i].y)) out.push(clePont(tuiles[i].x, tuiles[i].y));
+  return out;
+}
+
 /** A* sur les tuiles libres, avec une petite pénalité de virage : à longueur
- *  égale, un tracé droit est préféré, et le résultat a l'air voulu. */
+ *  égale, un tracé droit est préféré, et le résultat a l'air voulu.
+ *  En mode croiser, une autre bande n'arrête plus le tracé : il l'enjambe. */
 function routerConvoyeur(a, b){
   const u = U();
   if (!a || !b) return null;
@@ -6089,8 +6403,12 @@ function routerConvoyeur(a, b){
       const nx = c.x+dirs[d][0], ny = c.y+dirs[d][1];
       if (!dansAtelier(u,nx,ny)) continue;
       const libre = occupant(u,nx,ny) === 0;
-      if (!libre && !(nx === b.x && ny === b.y)) continue;
-      const g = c.g + 1 + (c.d !== 4 && c.d !== d ? 0.45 : 0);
+      const arrivee = nx === b.x && ny === b.y;
+      // En mode croiser, on peut enjamber une autre bande — jamais une machine,
+      // jamais un quai : un pont, ça se pose au-dessus d'un tapis.
+      const enjambe = !libre && !arrivee && vue.convCroise && surBande(u,nx,ny);
+      if (!libre && !arrivee && !enjambe) continue;
+      const g = c.g + (enjambe ? 3.2 : 1) + (c.d !== 4 && c.d !== d ? 0.45 : 0);
       const k2 = cle(nx,ny,d);
       if (g >= (meilleur.get(k2) ?? 1e9)) continue;
       meilleur.set(k2, g);
@@ -6121,10 +6439,13 @@ function validerTrace(){
   if (tuiles) tuiles = tuiles.filter((t,i) => i === 0 || t.x !== tuiles[i-1].x || t.y !== tuiles[i-1].y);
   if (!tuiles || !tuiles.length) return false;
   const u = U();
-  if (tuiles.some(t => occupant(u,t.x,t.y) !== 0)){
+  const ponts = pontsDuTrace(tuiles);
+  const bouche = tuiles.some((t,i) =>
+    occupant(u,t.x,t.y) !== 0 && !(i > 0 && i < tuiles.length-1 && ponts.includes(clePont(t.x,t.y))));
+  if (bouche){
     notif("Chemin bouché", "Quelque chose s'est mis en travers.", "ko"); son("refus"); return false;
   }
-  const cout = tuiles.length * CONV.coutParTuile;
+  const cout = tuiles.length * CONV.coutParTuile + ponts.length * CONV.coutPont;
   if (!mode().constructionGratuite && !mode().argentInfini &&
       etat.finances.solde - cout < CONFIG.faillite){
     notif("Trop cher", "Ce convoyeur coûterait " + euros(cout) + ".", "ko"); return false;
@@ -6137,13 +6458,18 @@ function validerTrace(){
   const c = creerConvoyeur(tuiles,
     (vue.convDepart && vue.convDepart.noeud) ? vue.convDepart.noeud.id : 0,
     (vue.convArrivee && vue.convArrivee.noeud) ? vue.convArrivee.noeud.id : 0);
+  c.ponts = ponts;
   u.convoyeurs.push(c);
-  for (const t of tuiles) u.grille[indexCase(u,t.x,t.y)] = c.id;
+  // Une tuile de pont laisse la grille à la bande du dessous : c'est ce qui
+  // fait qu'un croisement ne se transforme jamais en raccord.
+  for (const t of tuiles) if (!estPont(c,t.x,t.y)) u.grille[indexCase(u,t.x,t.y)] = c.id;
   depenser(mode().constructionGratuite ? 0 : cout, "investissement");
   reindexer();
   son("pose");
   if (c.etat === "non_relie")
     notif("Convoyeur posé", "Il ne relie rien pour l'instant : il lui faut une machine, un quai ou un autre convoyeur à chaque bout.", "att");
+  else if (ponts.length)
+    notif("Croisement posé", ponts.length + " " + pluriel(ponts.length,"passage") + " au-dessus d'une autre bande. Les deux marchandises ne se mélangent pas.", "ok");
   tutoEvenement("pose_convoyeur");
   majPanneau();
   return true;
@@ -6660,6 +6986,35 @@ function panneauStocks(z){
   z.appendChild(elem('<h2 class="titrePan">Stocks et achats</h2>'));
   z.appendChild(elem('<p class="sousTitre">Ce qu\'on a sous la main, et ce qu\'on peut faire livrer.</p>'));
 
+  if (debloque("reappro")){
+    const g = blocTitre("Le réapprovisionnement");
+    const achetables = Object.keys(ITEMS).filter(id =>
+      ITEMS[id].achat && (ITEMS[id].ageMin||1) <= etat.meta.age);
+    const actifs = achetables.filter(id => (etat.reappro[id]||{}).actif).length;
+    const court = achetables.filter(id => autonomieDe(id) < 2);
+    g.appendChild(elem('<div style="font-size:12.5px;color:var(--texte-doux);margin-bottom:7px"></div>'))
+     .textContent = actifs + " " + pluriel(actifs,"matière") + " sur " + achetables.length +
+       " " + pluriel(actifs,"se recommande","se recommandent") + " toute" + (actifs>1?"s":"") +
+       " seule" + (actifs>1?"s":"") + ".";
+    if (court.length)
+      g.appendChild(elem('<div class="reapproNote alerte"></div>')).textContent =
+        "Moins de deux jours d'avance : " + court.map(id => nomItem(id,2,true)).join(", ") + ".";
+    const rg = document.createElement("div");
+    rg.className = "btRang";
+    rg.appendChild(bouton("Tout régler et activer", () => {
+      for (const id of achetables){ reglerSurConsommation(id); etat.reappro[id].actif = true; }
+      notif("Réapprovisionnement réglé", achetables.length + " matières calées sur la consommation " +
+            "de l'atelier : deux jours de marge, six jours de lot.", "ok");
+      majPanneau();
+    }));
+    rg.appendChild(bouton("Tout couper", () => {
+      for (const id of achetables) if (etat.reappro[id]) etat.reappro[id].actif = false;
+      majPanneau();
+    }));
+    g.appendChild(rg);
+    z.appendChild(g);
+  }
+
   const bm = blocTitre("À acheter");
   for (const id in ITEMS){
     const it = ITEMS[id];
@@ -6683,9 +7038,9 @@ function panneauStocks(z){
     bm.appendChild(r);
 
     if (debloque("reappro")){
-      const defaut = it.unite === "kg" ? { actif:false, seuil:150, lot:400 }
-                                       : { actif:false, seuil:40, lot:80 };
-      const rp = etat.reappro[id] || (etat.reappro[id] = defaut);
+      const rp = reglageStock(id);
+      const pas = it.unite === "kg" ? 50 : 10;
+      const u2 = it.unite === "kg" ? " kg" : "";
 
       const bloc = document.createElement("div");
       bloc.className = "reappro" + (rp.actif ? " actif" : "");
@@ -6699,27 +7054,51 @@ function panneauStocks(z){
       bloc.appendChild(lab);
 
       if (rp.actif){
-        // Deux réglages, écrits comme une phrase : « dès qu'il en reste moins
-        // de 150 kg, en faire livrer 400 kg ».
-        const champ = (val, maj) => {
+        // Les réglages sont écrits comme des phrases : « dès qu'il en reste
+        // moins de 150 kg, en faire livrer 400 kg, sans dépasser 1 200 kg ».
+        const champ = (val, maj, largeur) => {
           const i = document.createElement("input");
-          i.type = "number"; i.min = "0"; i.step = it.unite === "kg" ? "50" : "10";
+          i.type = "number"; i.min = "0"; i.step = String(pas);
           i.value = Math.round(val); i.className = "reapproNb";
+          if (largeur) i.style.width = largeur;
           i.onchange = () => { maj(Math.max(0, Math.round(+i.value || 0))); majPanneau(); };
           return i;
         };
-        const p = document.createElement("div");
-        p.className = "reapproPhrase";
-        p.appendChild(document.createTextNode("Dès qu'il en reste moins de"));
-        p.appendChild(champ(rp.seuil, v => rp.seuil = v));
-        p.appendChild(document.createTextNode((it.unite === "kg" ? "kg" : "") + ", en faire livrer"));
-        p.appendChild(champ(rp.lot, v => rp.lot = v));
-        p.appendChild(document.createTextNode(it.unite === "kg" ? "kg." : "."));
-        bloc.appendChild(p);
-        const jours = uneJourneeDe(id);
-        bloc.appendChild(elem('<div class="reapproNote"></div>')).textContent =
-          "L'atelier en consomme environ " + mesure(id, jours*2) + " par jour. " +
-          "Le lot coûtera " + euros(rp.lot * prixAchat(id)) + ".";
+        const phrase = (...bouts) => {
+          const p = document.createElement("div");
+          p.className = "reapproPhrase";
+          for (const b of bouts) p.appendChild(typeof b === "string" ? document.createTextNode(b) : b);
+          bloc.appendChild(p);
+        };
+        phrase("Dès qu'il en reste moins de", champ(rp.seuil, v => rp.seuil = v),
+               u2 + ", en faire livrer", champ(rp.lot, v => rp.lot = v), u2 + ".");
+        phrase("Sans jamais dépasser", champ(rp.plafond, v => rp.plafond = v),
+               u2 + (rp.plafond ? "." : " — 0 : pas de plafond."));
+        const pm = document.createElement("input");
+        pm.type = "number"; pm.min = "0"; pm.step = "0.1";
+        pm.value = rp.prixMax ? nb(rp.prixMax,2).replace(",", ".") : 0;
+        pm.className = "reapproNb";
+        pm.onchange = () => { rp.prixMax = Math.max(0, +pm.value || 0); majPanneau(); };
+        phrase("Et jamais au-dessus de", pm,
+               " € " + (it.unite === "kg" ? "le kg" : "pièce") +
+               (rp.prixMax ? "." : " — 0 : à n'importe quel prix."));
+
+        const auto = autonomieDe(id), parJour = uneJourneeDe(id)*2;
+        const note = elem('<div class="reapproNote"></div>');
+        note.textContent =
+          "L'atelier en consomme environ " + mesure(id, parJour) + " par jour" +
+          (isFinite(auto) ? " — il y a de quoi tenir " + nb(auto,1) + " " + pluriel(auto,"jour") + "." : ".") +
+          " Le lot coûtera " + euros(rp.lot * prixAchat(id)) + ".";
+        bloc.appendChild(note);
+        if (rp.prixMax > 0 && prixAchat(id) > rp.prixMax)
+          bloc.appendChild(elem('<div class="reapproNote alerte"></div>')).textContent =
+            "Le cours est au-dessus de votre limite : rien ne sera commandé tant qu'il n'aura pas baissé.";
+        const br = document.createElement("div");
+        br.className = "btRang";
+        br.appendChild(bouton("Régler sur la consommation", () => {
+          reglerSurConsommation(id); majPanneau();
+        }));
+        bloc.appendChild(br);
       }
       bm.appendChild(bloc);
     }
@@ -6820,6 +7199,24 @@ function panneauPersonnel(z){
   }
 
   // Une prime à tout le monde : cher, mais ça remonte l'atelier d'un coup.
+  if (u.ouvriers.length && machinesAOperer().length){
+    const ba = blocTitre("Placer l'équipe");
+    const postes = machinesAOperer().length;
+    const tenus = u.ouvriers.filter(o => o.posteAssigne != null).length;
+    ba.appendChild(elem('<div style="font-size:12.5px;color:var(--texte-doux);margin-bottom:7px"></div>'))
+      .textContent = postes + " " + pluriel(postes,"machine") + " à tenir, " + u.ouvriers.length + " " +
+        pluriel(u.ouvriers.length,"personne") + " · " + tenus + " " + pluriel(tenus,"poste") +
+        " " + pluriel(tenus,"fixe") + " pour l'instant. L'affectation place chacun là où il se " +
+        "débrouille le mieux, sans lui faire traverser l'atelier.";
+    ba.appendChild(bouton("Affecter tout le monde", () => {
+      affecterAutomatiquement(); majPanneau(); majBandeau();
+    }, "large plein"));
+    ba.appendChild(bouton("Libérer les postes", () => {
+      libererTousLesPostes(); majPanneau();
+    }, "large"));
+    z.appendChild(ba);
+  }
+
   if (u.ouvriers.length > 1){
     const bp = blocTitre("Toute l'équipe");
     const total = u.ouvriers.length * 200;
@@ -7857,6 +8254,10 @@ function SECTIONS_GUIDE(){
     "<p>Les machines <b>manuelles</b> ne tournent que si quelqu'un est dessus. Les automatiques tournent "+
     "seules. Entre les deux, il faut porter la marchandise — c'est là que part le temps, tant qu'il n'y a "+
     "pas de convoyeur.</p>"+
+    "<p>Le bouton <b>Affecter tout le monde</b>, dans l'onglet Équipe, place chacun sur le poste où "+
+    "il se débrouille le mieux sans lui faire traverser l'atelier, une machine par personne. Ceux "+
+    "qui restent passent au portage — c'est souvent ce qui manque le plus. « Libérer les postes » "+
+    "rend tout le monde à son jugement.</p>"+
     "<p>Un ouvrier choisit tout seul le poste le plus utile. Il lâche une machine dont la sortie s'entasse "+
     "pour aller nourrir un poste qui attend. On peut lui <b>assigner un poste fixe</b> depuis la fiche de "+
     "la machine : il y restera.</p>"+
@@ -7903,6 +8304,12 @@ function SECTIONS_GUIDE(){
     "les pistes d'amélioration disent quoi changer la prochaine fois.</p>" },
 
   { titre:"Les convoyeurs", corps:
+    "<p><b>Se brancher ou croiser.</b> Le bouton à côté de l'outil Convoyeur — ou la touche "+
+    "<kbd>X</kbd> — décide de ce qui se passe quand le tracé rencontre une autre bande. "+
+    "En <b>Se brancher</b>, il la contourne, et cliquer dessus s'y raccorde. En <b>Croiser</b>, il "+
+    "l'enjambe sur une passerelle : les deux marchandises se croisent sans jamais se mélanger. Un "+
+    "passage coûte un supplément. Dans les deux modes, c'est <b>là où l'on s'arrête</b> qui décide "+
+    "d'un raccord : un croisement au milieu du trajet ne relie jamais rien.</p>"+
     "<p>Une bande peut ne faire qu'<b>une seule tuile</b> : une case libre entre deux machines suffit "+
     "à les relier, et le sens suit ce que vous avez cliqué — le départ alimente, l'arrivée est servie.</p>"+
     "<p>Un <b>premier clic</b> pose le départ — directement sur une machine, un bac, un quai ou une autre "+
@@ -7926,6 +8333,20 @@ function SECTIONS_GUIDE(){
     "à deux ingrédients a besoin des deux.</p>"+
     "<p>Si la marchandise s'accumule au bout de la bande, c'est que l'aval ne suit pas. Ça se voit à l'œil "+
     "nu : les pièces s'entassent.</p>" },
+
+  { titre:"Les stocks et le réapprovisionnement", corps:
+    "<p>Onglet <b>Stocks</b>. Chaque matière peut se recommander toute seule, et le réglage s'écrit "+
+    "comme une phrase : <i>dès qu'il en reste moins de tant, en faire livrer tant, sans jamais "+
+    "dépasser tant, et jamais au-dessus de tel prix.</i></p>"+
+    "<p>Les deux derniers réglages comptent autant que les deux premiers. Le <b>plafond</b> évite "+
+    "d'immobiliser de la trésorerie dans un stock dormant. Le <b>prix maximum</b> laisse passer les "+
+    "coups de chaud du marché : la commande attend que le cours redescende — et le contremaître "+
+    "prévient s'il ne reste pas une journée d'avance.</p>"+
+    "<p>Chaque matière affiche son <b>autonomie</b> : combien de jours l'atelier tient avec ce qu'il "+
+    "y a. C'est le seul chiffre à regarder. « Régler sur la consommation » cale tout d'un coup : deux "+
+    "jours de marge, six jours de lot, quinze jours de plafond.</p>"+
+    "<p>Un réapprovisionnement automatique ne met jamais la maison en faillite : il s'arrête avant "+
+    "le découvert et le dit.</p>" },
 
   { titre:"La qualité", corps:
     "<p>À partir de la PME, tout ce qui sort de la <b>friteuse</b> et de l'<b>ensacheuse</b> n'est pas bon à "+
@@ -8062,13 +8483,20 @@ function verifierPartie(){
     const bat = (MACHINES[m.type]||{}).batiment;
     if (bat ? !rectDansCour(u,m.x,m.y,m.l,m.h) : !rectDansAtelier(u,m.x,m.y,m.l,m.h)) horsZone++;
   }
+  let pontsFaux = 0;
   for (const c of u.convoyeurs)
     for (const t of c.chemin){
-      if (u.grille[indexCase(u,t.x,t.y)] !== c.id) tuilesManquantes++;
+      // Une tuile de pont laisse la grille à la bande du dessous : c'est normal
+      // qu'elle n'y soit pas. En revanche il doit vraiment y avoir une bande.
+      if (estPont(c,t.x,t.y)){
+        if (!surBande(u,t.x,t.y)) pontsFaux++;
+      } else if (u.grille[indexCase(u,t.x,t.y)] !== c.id) tuilesManquantes++;
       if (!dansAtelier(u,t.x,t.y)) horsZone++;
     }
   ok("Grille cohérente", tuilesOrphelines === 0 && tuilesManquantes === 0,
       tuilesOrphelines + " tuiles orphelines, " + tuilesManquantes + " tuiles manquantes");
+  ok("Les ponts enjambent quelque chose", pontsFaux === 0,
+      pontsFaux ? pontsFaux + " ponts au-dessus du vide" : "aucun pont en l'air");
   ok("Chacun de son côté du mur", horsZone === 0,
       horsZone ? horsZone + " éléments du mauvais côté" : "machines dedans, bâtiments dehors");
 
@@ -8923,6 +9351,121 @@ function majSuivi(){
   }
 }
 
+
+/* ============================================================ La sortie
+   Une étude qui aboutit mérite mieux qu'une notification qui passe : c'est le
+   moment où l'on découvre ce que le public en pense. On arrête tout, on montre
+   la note, les avis et les pistes, et on propose de la mettre en production
+   dans la foulée. */
+function ouvrirSortieRecette(r){
+  const z = $("#ecranSortieRecette");
+  const coul = couleurGout(r.traits.gout);
+  const teinte = r.note >= 82 ? "var(--vert)" : r.note >= 65 ? "#8fd39b"
+               : r.note >= 48 ? "var(--or)" : "var(--rouge)";
+  z.innerHTML = `
+    <div class="feuille" style="max-width:620px;margin-top:6vh;text-align:center">
+      <div style="font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--texte-faible)">
+        L'étude est terminée</div>
+      <div class="sachetApercu" id="sachetSortie"></div>
+      <h1 style="font-size:30px;font-weight:400;margin:2px 0 2px">« <span id="nomSortie"></span> »</h1>
+      <p style="color:var(--texte-faible);font-size:12.5px;margin-bottom:16px" id="compoSortie"></p>
+
+      <div class="volet" style="margin-bottom:16px">
+        <div class="noteGeante" id="noteSortie" style="color:${teinte}"></div>
+        <div class="jaugeNote"><i id="jaugeSortie" style="background:${teinte};width:0%"></i></div>
+        <div style="font-size:14px;color:var(--texte-doux);margin-top:8px" id="motSortie"></div>
+        <div style="font-size:12.5px;color:var(--texte-faible);margin-top:6px" id="prixSortie"></div>
+      </div>
+
+      <div class="volet" style="text-align:left;margin-bottom:14px">
+        <h2>Ce qu'en disent les gens</h2>
+        <div id="avisSortie"></div>
+      </div>
+
+      <div class="volet" style="text-align:left;margin-bottom:18px" id="voletPistes">
+        <h2>Pour la prochaine fois</h2>
+        <div id="pistesSortie"></div>
+      </div>
+
+      <div id="prodSortie"></div>
+      <button class="bt large" id="btPlusTard" style="margin-top:9px">Plus tard</button>
+    </div>`;
+
+  $("#sachetSortie").style.background = "linear-gradient(160deg," + coul + ",rgba(0,0,0,.55))";
+  $("#nomSortie").textContent = r.nom;
+  $("#compoSortie").textContent = resumeTraits(r.traits);
+  $("#noteSortie").innerHTML = r.note + '<small> sur 100</small>';
+  $("#motSortie").textContent = motNote(r.note) + ".";
+  $("#prixSortie").textContent =
+    "Le sachet de " + grammageDe(r.traits) + " g se vendra " + euros(r.prixUnite) + ".";
+  requestAnimationFrame(() => { $("#jaugeSortie").style.width = r.note + "%"; });
+
+  const za = $("#avisSortie");
+  for (const a of (r.avis || [])){
+    const l = document.createElement("div");
+    l.className = "avisClient";
+    const c = document.createElement("canvas");
+    c.width = c.height = 68;
+    dessinerTete(c.getContext("2d"), (a.qui || "").length * 137 + r.note);
+    l.appendChild(c);
+    const t = document.createElement("div");
+    t.innerHTML = '<div class="qui"></div><div class="dit"></div>';
+    t.querySelector(".qui").textContent = a.qui;
+    t.querySelector(".dit").textContent = "« " + a.dit + " »";
+    l.appendChild(t);
+    za.appendChild(l);
+  }
+  if (!za.children.length) za.textContent = "Personne n'a encore réagi.";
+
+  const zp = $("#pistesSortie");
+  for (const p of (r.pistes || [])){
+    const l = document.createElement("div");
+    l.className = "pisteAmelio";
+    l.appendChild(document.createTextNode(p));
+    zp.appendChild(l);
+  }
+  if (!zp.children.length) $("#voletPistes").remove();
+
+  // Mettre en production tout de suite : c'est la suite naturelle du geste.
+  const zprod = $("#prodSortie");
+  const rid = "ensacher_" + r.id;
+  const ens = U().machines.filter(m => m.type === "ensacheuse");
+  if (!ens.length){
+    zprod.appendChild(elem('<div style="font-size:12.5px;color:var(--texte-faible);margin-bottom:8px"></div>'))
+      .textContent = "Il faudra une ensacheuse pour la produire.";
+  } else {
+    const bt = document.createElement("button");
+    bt.className = "bt plein large";
+    bt.textContent = ens.length > 1
+      ? "Lancer la production sur " + ens.length + " ensacheuses"
+      : "Lancer la production sur l'ensacheuse";
+    bt.onclick = () => {
+      let n = 0;
+      for (const m of ens){
+        if (!MACHINES.ensacheuse.recettes.includes(rid)) continue;
+        m.recetteId = rid; m.enCycle = false; m.progression = 0; n++;
+      }
+      notif("En production", "« " + r.nom + " » sort maintenant de " + n + " " +
+            pluriel(n,"ensacheuse") + ". Les ventes se suivent dans l'onglet Labo.", "ok");
+      son("valide");
+      fermerSortieRecette();
+      vue.ongletActif = "labo"; majOnglets(); majPanneau();
+    };
+    zprod.appendChild(bt);
+  }
+  $("#btPlusTard").onclick = fermerSortieRecette;
+
+  etat.meta.vitesse = 0;
+  ouvrir("#ecranSortieRecette");
+  son(r.note >= 65 ? "age" : "refus");
+}
+
+function fermerSortieRecette(){
+  fermer("#ecranSortieRecette");
+  etat.meta.vitesse = 1;
+  majBandeau(); majPanneau();
+}
+
 /* ============================================================================
    AUDIO — tout est synthétisé à la volée, aucun fichier (§13)
    ========================================================================== */
@@ -9360,6 +9903,7 @@ function initClavier(){
     if (e.code === "Escape"){
       if ($("#panneauDev").classList.contains("visible")) return basculerDev();
       if (vue.convDepart){ annulerTrace(); return; }
+      if ($("#ecranSortieRecette").classList.contains("visible")) return fermerSortieRecette();
       if (unEcranOuvert() && $("#ecranStats").classList.contains("visible")) fermer("#ecranStats");
       else if (unEcranOuvert() && $("#ecranRecherche").classList.contains("visible")) fermer("#ecranRecherche");
       else if (unEcranOuvert() && $("#ecranMenu").classList.contains("visible")) fermer("#ecranMenu");
@@ -9376,7 +9920,9 @@ function initClavier(){
         break;
       case "KeyR":
         if (vue.outil?.type === "machine") vue.rotation = (vue.rotation+1)%4;
+        else if (etat.meta.age >= 4 || mode().toutDebloque) ouvrirRecherche();
         break;
+      case "KeyX": basculerCroisement(); break;
       case "Digit1": reglerVitesse(1); break;
       case "Digit2": reglerVitesse(2); break;
       case "Digit3": reglerVitesse(4); break;
@@ -9384,7 +9930,6 @@ function initClavier(){
       case "KeyC": $("#cadenceHud").classList.toggle("hidden"); break;
       case "F2": e.preventDefault(); basculerDev(); break;
       case "KeyS": if (!e.ctrlKey && !e.metaKey) ouvrirStats(); break;
-      case "KeyR": if (!vue.outil && (etat.meta.age >= 4 || mode().toutDebloque)) ouvrirRecherche(); break;
       case "Digit4": reglerVitesse(8); break;
       case "ArrowLeft":  vue.camX -= 1.2; bornerCamera(); break;
       case "ArrowRight": vue.camX += 1.2; bornerCamera(); break;
