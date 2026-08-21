@@ -375,10 +375,12 @@ table.tab tr:hover td{background:rgba(255,255,255,.028)}
    = 12 ticks » ; les deux sont incompatibles (12 ticks/min à 4 Hz donnerait
    24 min réelles par journée). On garde 40 s/journée, qui est la contrainte
    de rythme du §14 — soit 3 minutes de jeu par tick.
-   De même, les durées machine du §14 (« 1 vélo / 5 min ») donneraient 96
-   vélos par jour et par établi, contre l'objectif de ~1 vélo/jour/ouvrier du
-   §5.3. Les PRIX du §14 sont conservés tels quels (c'est ce que le joueur
-   lit) ; les DURÉES sont recalées ici pour tenir le rythme visé.
+   Les durées machine sont calées pour tenir le rythme visé au §14 : sortir
+   de l'âge 1 en 20 à 30 minutes réelles.
+   ----------------------------------------------------------------------------
+   Unités : tout ce qui se transforme est en kilos, comme dans le métier.
+   Seuls les sachets se comptent à l'unité. C'est le champ `unite` de ITEMS
+   qui tranche, et `quantiteItem()` qui l'écrit correctement à l'écran.
    ========================================================================== */
 
 const CONFIG = {
@@ -391,8 +393,8 @@ const CONFIG = {
   zoomMin: 0.4, zoomMax: 2.0, zoomDefaut: 1,
   seuilDetail: 0.6,            // en dessous : rendu simplifié
   seuilSchema: 0.5,            // en dessous : vue schématique
-  capaciteEntree: 20,          // tampon d'entrée par défaut d'une machine
-  capaciteSortie: 20,
+  capaciteEntree: 260,         // tampon d'entrée par défaut, en kilos
+  capaciteSortie: 200,
   vitesseOuvrier: 0.30,        // tuiles par minute de jeu
   decouvertMax: -5000,
   faillite: -15000,
@@ -416,129 +418,185 @@ CONFIG.ticksParJour   = CONFIG.secondesParJour * CONFIG.hz;                     
    DONNÉES — tout l'équilibrage est ici, sans logique.
    ========================================================================== */
 
-/* ---------------------------------------------------------------- Matières */
-// forme : 'tube' | 'barre' | 'cadre' | 'rond' | 'boite' | 'produit' | 'pot'
+/* ---------------------------------------------------------------- Matières
+   forme : 'tubercule' | 'tubercule_pele' | 'rondelle' | 'chips' | 'sachet'
+           | 'bidon' | 'sac' | 'bobine'
+   unite : "kg" pour tout ce qui se pèse, null pour ce qui se compte.       */
 const ITEMS = {
-  tube_acier:     { nom:"Tube d'acier", nomP:"Tubes d'acier", court:"Tube", courtP:"Tubes",      couleur:"#8e969f", forme:"tube",   achat:1.2,  parLot:10, portee:6, cat:"matiere" },
-  roue:           { nom:"Roue", nomP:"Roues", court:"Roue", courtP:"Roues",      couleur:"#2f3338", forme:"rond",   achat:20,   parLot:1,  portee:6, cat:"matiere" },
-  kit_composants: { nom:"Kit de composants", nomP:"Kits de composants", court:"Kit", courtP:"Kits",       couleur:"#b08a4a", forme:"boite",  achat:35,   parLot:1,  portee:6, cat:"matiere" },
-  pot_peinture:   { nom:"Pot de peinture", nomP:"Pots de peinture", court:"Peinture", courtP:"Peintures",  couleur:"#9b6dc9", forme:"pot",    achat:6,    parLot:1,  portee:8, cat:"matiere", ageMin:2 },
+  pdt_brutes: {
+    nom:"Pommes de terre", nomP:"Pommes de terre", court:"Patates", courtP:"Patates",
+    couleur:"#a8834e", forme:"tubercule", unite:"kg",
+    achat:0.30, portee:90, cat:"matiere"
+  },
+  huile: {
+    nom:"Huile de friture", nomP:"Huile de friture", court:"Huile", courtP:"Huile",
+    couleur:"#d9b23c", forme:"bidon", unite:"kg",
+    achat:1.60, portee:45, cat:"matiere"
+  },
+  sel: {
+    nom:"Sel", nomP:"Sel", court:"Sel", courtP:"Sel",
+    couleur:"#e8ecf0", forme:"sac", unite:"kg",
+    achat:0.55, portee:40, cat:"matiere", ageMin:2
+  },
+  arome: {
+    nom:"Arôme paprika", nomP:"Arôme paprika", court:"Arôme", courtP:"Arôme",
+    couleur:"#c9502e", forme:"sac", unite:"kg",
+    achat:5.20, portee:30, cat:"matiere", ageMin:2
+  },
+  film: {
+    nom:"Film d'emballage", nomP:"Film d'emballage", court:"Film", courtP:"Film",
+    couleur:"#7f95a8", forme:"bobine", unite:"kg",
+    achat:3.40, portee:30, cat:"matiere", ageMin:2
+  },
 
-  tube_coupe:     { nom:"Tube coupé", nomP:"Tubes coupés", court:"Tube coupé", courtP:"Tubes coupés",couleur:"#a8b0b8", forme:"barre",  portee:8,  cat:"piece" },
-  tube_cintre:    { nom:"Tube cintré", nomP:"Tubes cintrés", court:"Cintré", courtP:"Cintrés",    couleur:"#96a2ae", forme:"barre",  portee:6,  cat:"piece", ageMin:2 },
-  cadre_soude:    { nom:"Cadre soudé", nomP:"Cadres soudés", court:"Cadre", courtP:"Cadres",     couleur:"#c8763a", forme:"cadre",  portee:2,  cat:"piece" },
-  cadre_peint:    { nom:"Cadre peint", nomP:"Cadres peints", court:"Cadre peint", courtP:"Cadres peints",couleur:"#7a55b8",forme:"cadre",  portee:2,  cat:"piece", ageMin:2 },
+  pdt_lavees: {
+    nom:"Pomme de terre épluchée", nomP:"Pommes de terre épluchées",
+    court:"Épluchée", courtP:"Épluchées",
+    couleur:"#e3d9a8", forme:"tubercule_pele", unite:"kg",
+    portee:75, cat:"piece"
+  },
+  rondelles: {
+    nom:"Rondelle crue", nomP:"Rondelles crues", court:"Rondelle", courtP:"Rondelles",
+    couleur:"#efe6bd", forme:"rondelle", unite:"kg",
+    portee:75, cat:"piece"
+  },
+  chips_assaisonnees: {
+    nom:"Chips assaisonnées", nomP:"Chips assaisonnées",
+    court:"Assaisonnées", courtP:"Assaisonnées",
+    couleur:"#d98b2c", forme:"chips", unite:"kg",
+    portee:40, cat:"piece", ageMin:2
+  },
 
-  velo_classique: { nom:"Vélo classique", nomP:"Vélos classiques", court:"Vélo", courtP:"Vélos",      couleur:"#5cba6b", forme:"produit",vente:320,  portee:1, cat:"produit" },
-  vtc:            { nom:"VTC", nomP:"VTC", court:"VTC", courtP:"VTC",       couleur:"#3fb8c4", forme:"produit",vente:680,  portee:1, cat:"produit", ageMin:2 }
+  chips_vrac: {
+    nom:"Chips nature", nomP:"Chips nature", court:"Chips", courtP:"Chips",
+    couleur:"#e8b04a", forme:"chips", unite:"kg",
+    vente:13.50, portee:40, cat:"produit"
+  },
+  sachet: {
+    nom:"Sachet de chips", nomP:"Sachets de chips", court:"Sachet", courtP:"Sachets",
+    couleur:"#c9502e", forme:"sachet", unite:null,
+    vente:1.30, portee:320, capacite:2400, cat:"produit", ageMin:2
+  }
 };
 
-/* ----------------------------------------------------------------- Recettes */
+/* ----------------------------------------------------------------- Recettes
+   Le rendement est explicite : 30 kg de patates brutes donnent 25 kg
+   d'épluchées, et il faut 4 kg de rondelles pour 1 kg de chips (l'eau part
+   à la friture). Environ 4,8 kg de patates pour 1 kg de chips. */
 const RECETTES = {
-  scier: {
-    id:"scier", nom:"Couper des tubes", machine:"scie",
-    entrees:[{id:"tube_acier", qte:1}], sortie:{id:"tube_coupe", qte:3},
+  laver: {
+    id:"laver", nom:"Laver et éplucher", machine:"laveuse",
+    entrees:[{id:"pdt_brutes", qte:30}], sortie:{id:"pdt_lavees", qte:25},
+    duree:8, ageMin:1
+  },
+  trancher: {
+    id:"trancher", nom:"Trancher en rondelles", machine:"trancheuse",
+    entrees:[{id:"pdt_lavees", qte:25}], sortie:{id:"rondelles", qte:25},
+    duree:12, ageMin:1
+  },
+  frire: {
+    id:"frire", nom:"Frire les chips", machine:"friteuse",
+    entrees:[{id:"rondelles", qte:24},{id:"huile", qte:3.5}],
+    sortie:{id:"chips_vrac", qte:6},
     duree:15, ageMin:1
   },
-  souder: {
-    id:"souder", nom:"Souder un cadre", machine:"soudeuse",
-    entrees:[{id:"tube_coupe", qte:4}], sortie:{id:"cadre_soude", qte:1},
-    duree:50, ageMin:1
+  assaisonner: {
+    id:"assaisonner", nom:"Assaisonner au paprika", machine:"tambour",
+    entrees:[{id:"chips_vrac", qte:20},{id:"sel", qte:0.8},{id:"arome", qte:0.5}],
+    sortie:{id:"chips_assaisonnees", qte:20},
+    duree:10, ageMin:2
   },
-  cintrer: {
-    id:"cintrer", nom:"Cintrer un tube", machine:"cintreuse",
-    entrees:[{id:"tube_coupe", qte:2}], sortie:{id:"tube_cintre", qte:1},
-    duree:22, ageMin:2
-  },
-  peindre: {
-    id:"peindre", nom:"Peindre un cadre", machine:"cabine",
-    entrees:[{id:"cadre_soude", qte:1},{id:"pot_peinture", qte:1}], sortie:{id:"cadre_peint", qte:1},
-    duree:28, ageMin:2
-  },
-  monter_velo: {
-    id:"monter_velo", nom:"Monter un vélo", machine:"etabli",
-    entrees:[{id:"cadre_soude",qte:1},{id:"roue",qte:2},{id:"kit_composants",qte:1}],
-    sortie:{id:"velo_classique", qte:1},
-    duree:60, ageMin:1
-  },
-  monter_vtc: {
-    id:"monter_vtc", nom:"Monter un VTC", machine:"etabli",
-    entrees:[{id:"cadre_peint",qte:1},{id:"tube_cintre",qte:1},{id:"roue",qte:2},{id:"kit_composants",qte:1}],
-    sortie:{id:"vtc", qte:1},
-    duree:95, ageMin:2
+  ensacher: {
+    id:"ensacher", nom:"Ensacher (sachets de 125 g)", machine:"ensacheuse",
+    entrees:[{id:"chips_assaisonnees", qte:10},{id:"film", qte:0.4}],
+    sortie:{id:"sachet", qte:80},
+    duree:10, ageMin:2
   }
 };
 
 /* ----------------------------------------------------------------- Machines */
 const MACHINES = {
-  scie: {
-    id:"scie", nom:"Scie", cout:1200, l:2, h:2, couleur:"#4b7fd4", accent:"#7fb0f0",
-    recettes:["scier"], auto:false, usureParJour:0.045, ageMin:1, cat:"machines",
-    resume:"Coupe un tube d'acier en trois morceaux.",
-    besoinOperateur:"Un ouvrier doit tenir la scie."
+  laveuse: {
+    id:"laveuse", nom:"Laveuse-éplucheuse", cout:1100, l:2, h:2,
+    couleur:"#3f9fd4", accent:"#7fd0f0",
+    recettes:["laver"], auto:false, usureParJour:0.045, ageMin:1, cat:"machines",
+    resume:"Lave les pommes de terre et enlève la peau.",
+    besoinOperateur:"Quelqu'un doit surveiller le bac."
   },
-  soudeuse: {
-    id:"soudeuse", nom:"Poste à souder", cout:2500, l:2, h:2, couleur:"#e8863c", accent:"#ffb571",
-    recettes:["souder"], auto:false, usureParJour:0.055, ageMin:1, cat:"machines",
-    resume:"Assemble quatre tubes coupés en un cadre.",
-    besoinOperateur:"Un ouvrier doit tenir le chalumeau."
+  trancheuse: {
+    id:"trancheuse", nom:"Trancheuse", cout:800, l:2, h:2,
+    couleur:"#5b7fd4", accent:"#94b4f5",
+    recettes:["trancher"], auto:false, usureParJour:0.05, ageMin:1, cat:"machines",
+    resume:"Débite les pommes de terre en rondelles fines.",
+    besoinOperateur:"Quelqu'un doit alimenter la trancheuse."
   },
-  etabli: {
-    id:"etabli", nom:"Établi de montage", cout:600, l:3, h:2, couleur:"#5cba6b", accent:"#8fe09c",
-    recettes:["monter_velo","monter_vtc"], auto:false, usureParJour:0.02, ageMin:1, cat:"machines",
-    resume:"Monte le vélo fini à partir du cadre, des roues et du kit.",
-    besoinOperateur:"Un ouvrier monte le vélo à la main."
+  friteuse: {
+    id:"friteuse", nom:"Friteuse", cout:2400, l:3, h:2,
+    couleur:"#e8863c", accent:"#ffb571",
+    recettes:["frire"], auto:false, usureParJour:0.06, ageMin:1, cat:"machines",
+    resume:"Cuit les rondelles dans le bain d'huile. Quatre kilos de rondelles font un kilo de chips.",
+    besoinOperateur:"Quelqu'un doit tenir le bain d'huile à l'œil."
   },
-  cintreuse: {
-    id:"cintreuse", nom:"Cintreuse", cout:3200, l:2, h:2, couleur:"#4b8fd4", accent:"#86c0f5",
-    recettes:["cintrer"], auto:true, usureParJour:0.06, ageMin:2, cat:"machines",
-    resume:"Plie les tubes. Tourne toute seule, sans ouvrier.",
+  tambour: {
+    id:"tambour", nom:"Tambour d'assaisonnement", cout:3200, l:2, h:2,
+    couleur:"#d9a53c", accent:"#f5cd7a",
+    recettes:["assaisonner"], auto:true, usureParJour:0.05, ageMin:2, cat:"machines",
+    resume:"Fait tourner les chips avec le sel et l'arôme. Tourne toute seule.",
     besoinOperateur:"Tourne sans personne."
   },
-  cabine: {
-    id:"cabine", nom:"Cabine de peinture", cout:4200, l:3, h:3, couleur:"#9b6dc9", accent:"#c49ef0",
-    recettes:["peindre"], auto:true, usureParJour:0.05, ageMin:2, cat:"machines",
-    resume:"Peint les cadres. Tourne toute seule, sans ouvrier.",
+  ensacheuse: {
+    id:"ensacheuse", nom:"Ensacheuse", cout:4200, l:3, h:3,
+    couleur:"#9b6dc9", accent:"#c49ef0",
+    recettes:["ensacher"], auto:true, usureParJour:0.055, ageMin:2, cat:"machines",
+    resume:"Pèse, remplit et soude les sachets. Tourne toute seule.",
     besoinOperateur:"Tourne sans personne."
   },
   caisse: {
-    id:"caisse", nom:"Caisse de stockage", cout:300, l:2, h:2, couleur:"#7d685094", accent:"#b09068",
-    recettes:[], auto:true, usureParJour:0, ageMin:2, cat:"stockage", stockage:true, capacite:200,
-    resume:"Met les pièces de côté entre deux machines.",
+    id:"caisse", nom:"Bac de stockage", cout:300, l:2, h:2,
+    couleur:"#7d6850", accent:"#b09068",
+    recettes:[], auto:true, usureParJour:0, ageMin:2, cat:"stockage",
+    stockage:true, capacite:1200,
+    resume:"Met la marchandise de côté entre deux postes.",
     besoinOperateur:"—"
   }
 };
 
 /* ----------------------------------------------------------------- Les âges */
 const AGES = [
-  { n:1, nom:"Le garage",  largeur:12, hauteur:10,
-    objectif:{ texte:"Livrer 50 vélos", type:"vendus", produit:"velo_classique", cible:50, secours:{type:"argent", cible:25000} },
+  { n:1, nom:"La friterie", largeur:12, hauteur:10,
+    objectif:{ texte:"Livrer 1 500 kg de chips", type:"vendus", produit:"chips_vrac",
+               cible:1500, secours:{type:"argent", cible:25000} },
     debloque:[],
-    intro:"Ton garage. Trois machines, un ouvrier, et de quoi souder des cadres." },
-  { n:2, nom:"L'atelier",  largeur:20, hauteur:16,
-    objectif:{ texte:"Produire 30 VTC en une semaine", type:"produitsSemaine", produit:"vtc", cible:30 },
-    debloque:["convoyeur","caisse","cintreuse","cabine","vtc","reappro"],
-    intro:"On casse le mur du fond. Convoyeurs, peinture, et un vélo qu'on vend le double." },
-  { n:3, nom:"La PME",     largeur:32, hauteur:24,
-    objectif:{ texte:"Honorer un contrat de 500 VAE", type:"aVenir", cible:1 },
+    intro:"Ton atelier. Une laveuse, une trancheuse, un bain d'huile — et l'odeur qui prend dans tout le quartier." },
+
+  { n:2, nom:"La fabrique", largeur:20, hauteur:16,
+    objectif:{ texte:"Sortir 8 000 sachets en une semaine", type:"produitsSemaine",
+               produit:"sachet", cible:8000 },
+    debloque:["convoyeur","caisse","tambour","ensacheuse","sachet","reappro"],
+    intro:"On casse le mur du fond. Convoyeurs, assaisonnement, ensacheuse — et le sachet, qui rapporte bien plus que le vrac." },
+
+  { n:3, nom:"La PME", largeur:32, hauteur:24,
+    objectif:{ texte:"Passer un contrôle sanitaire sans un seul lot rappelé", type:"aVenir", cible:1 },
     debloque:[], intro:"" },
-  { n:4, nom:"L'industrie",largeur:48, hauteur:36,
-    objectif:{ texte:"Produire une batterie maison rentable", type:"aVenir", cible:1 },
+
+  { n:4, nom:"L'industrie", largeur:48, hauteur:36,
+    objectif:{ texte:"Tenir la saison avec ses propres silos", type:"aVenir", cible:1 },
     debloque:[], intro:"" },
-  { n:5, nom:"Le groupe",  largeur:48, hauteur:36,
+
+  { n:5, nom:"Le groupe", largeur:48, hauteur:36,
     objectif:{ texte:"Ouvrir un deuxième site", type:"aVenir", cible:1 },
     debloque:[], intro:"" }
 ];
 
 /* ------------------------------------------------------------------ Clients */
 const CLIENTS = [
-  { nom:"Cycles Ferrand",       ton:"régulier",  ageMin:1, marge:1.00 },
-  { nom:"Le Guidon d'Or",       ton:"exigeant",  ageMin:1, marge:1.08 },
-  { nom:"Vélocité Sarl",        ton:"pressé",    ageMin:1, marge:1.12 },
-  { nom:"Mairie de Villebourg", ton:"lent",      ageMin:1, marge:0.96 },
-  { nom:"Roulib' Location",     ton:"volume",    ageMin:2, marge:0.92 },
-  { nom:"Chaîne Décasport",     ton:"volume",    ageMin:2, marge:0.88 },
-  { nom:"Comité d'entreprise",  ton:"régulier",  ageMin:2, marge:1.05 }
+  { nom:"Épicerie Vidal",        ton:"régulier",  ageMin:1, marge:1.00 },
+  { nom:"Le Panier Gourmand",    ton:"exigeant",  ageMin:1, marge:1.09 },
+  { nom:"Halles de Villebourg",  ton:"pressé",    ageMin:1, marge:1.12 },
+  { nom:"Supérette Marceau",     ton:"lent",      ageMin:1, marge:0.96 },
+  { nom:"Chaîne Prixbon",        ton:"volume",    ageMin:2, marge:0.88 },
+  { nom:"Grossiste Delaunay",    ton:"volume",    ageMin:2, marge:0.92 },
+  { nom:"Comité d'entreprise",   ton:"régulier",  ageMin:2, marge:1.05 }
 ];
 
 /* -------------------------------------------------- Prénoms et noms d'atelier */
@@ -632,7 +690,7 @@ function nomItem(id, n, court, minuscule){
   if (!it) return id;
   let t = court ? (n > 1 ? (it.courtP || it.court) : it.court)
                 : (n > 1 ? (it.nomP   || it.nom)   : it.nom);
-  // « vtc » resterait « VTC » : on ne décapitalise pas un sigle.
+  // un sigle ne se décapitalise pas.
   const sigle = t.length > 1 && t[1] === t[1].toUpperCase() && t[1] !== t[1].toLowerCase();
   return (minuscule && !sigle) ? t.charAt(0).toLowerCase() + t.slice(1) : t;
 }
@@ -646,6 +704,31 @@ function U(){ return etat.usines[etat.usineActive]; }
 function debloque(cle){
   for (let i=0;i<etat.meta.age;i++) if (AGES[i].debloque.includes(cle)) return true;
   return false;
+}
+
+/** Écrit une quantité avec son unité : « 1 200 kg de chips », « 620 sachets ».
+ *  Les kilos et les pièces ne se disent pas de la même façon (§3.1). */
+function quantiteItem(id, q, court){
+  const it = ITEMS[id];
+  if (!it) return nb(q);
+  if (it.unite === "kg"){
+    const arrondi = Math.abs(q) < 10 ? 1 : 0;
+    const n = nomItem(id, 2, court, true);
+    return nb(q, arrondi) + " kg " + deDe(n) + n;
+  }
+  return nb(Math.round(q)) + " " + nomItem(id, q, court, true);
+}
+
+/** « de » ou « d' » selon l'initiale. Un h muet compte comme une voyelle. */
+function deDe(mot){
+  return /^[aeiouyéèêàâîïôûùh]/i.test(mot) ? "d'" : "de ";
+}
+
+/** Version courte, sans le nom : « 1 200 kg » ou « 620 ». */
+function mesure(id, q){
+  const it = ITEMS[id];
+  if (it && it.unite === "kg") return nb(q, Math.abs(q) < 10 ? 1 : 0) + " kg";
+  return nb(Math.round(q));
 }
 
 /* ------------------------------------------------------------------- Temps */
@@ -671,7 +754,7 @@ function nouvellePartie(nomEntreprise){
   etat = {
     version: CONFIG.version,
     meta: {
-      nomEntreprise: nomEntreprise || "Cycles Cadence",
+      nomEntreprise: nomEntreprise || "Chips Cadence",
       tempsJeu: 0,
       vitesse: 0,
       age: 1,
@@ -687,7 +770,7 @@ function nouvellePartie(nomEntreprise){
       totalAchats: 0,
       totalSalaires: 0
     },
-    usines: [ creerUsine("Le garage", age.largeur, age.hauteur) ],
+    usines: [ creerUsine(age.nom, age.largeur, age.hauteur) ],
     usineActive: 0,
     contrats: { proposes:[], acceptes:[], termines:[] },
     marche: { prix:{}, tendances:{}, dernierJour:-1 },
@@ -703,7 +786,8 @@ function nouvellePartie(nomEntreprise){
   };
 
   // Un premier ouvrier : celui qui était là avant même les machines.
-  const o = creerOuvrier("Marcel","Boivin",{ soudure:0.55, decoupe:0.6, assemblage:0.65, peinture:0.4 }, 120, "ancien");
+  const o = creerOuvrier("Marcel","Boivin",
+    { lavage:0.65, decoupe:0.6, friture:0.7, assaisonnement:0.45, emballage:0.4 }, 120, "ancien");
   o.id = nouvelId();                       // jamais 0 : un id nul passerait pour « personne »
   o.x = U().quai.x + U().quai.l + 0.5;     // sur le sol, pas sur le quai
   o.y = U().quai.y + 1.5;
@@ -739,7 +823,7 @@ function creerOuvrier(prenom, nom, competences, salaire, traitId){
     id: 0,                       // attribué à l'embauche
     prenom, nom,
     x: 2, y: 2, cible: null, chemin: null,
-    competences: Object.assign({ decoupe:0.5, soudure:0.5, assemblage:0.5, peinture:0.5 }, competences||{}),
+    competences: Object.assign({ lavage:0.5, decoupe:0.5, friture:0.5, assaisonnement:0.5, emballage:0.5 }, competences||{}),
     trait: traitId || "debutant",
     posteAssigne: null,
     charge: null,                // { item, qte }
@@ -824,7 +908,12 @@ function itemsAcceptes(n){
    ========================================================================== */
 
 // Quelle compétence sert sur quelle machine
-const COMP_MACHINE = { scie:"decoupe", soudeuse:"soudure", etabli:"assemblage", cabine:"peinture", cintreuse:"decoupe" };
+const COMP_MACHINE = { laveuse:"lavage", trancheuse:"decoupe", friteuse:"friture",
+                       tambour:"assaisonnement", ensacheuse:"emballage" };
+
+/** Capacité d'un tampon pour une matière donnée : un sachet ne s'entasse pas
+ *  comme un kilo de rondelles. */
+function capaciteItem(id, defaut){ return (ITEMS[id] && ITEMS[id].capacite) || defaut; }
 
 /* ---------------------------------------------------- Accès générique aux nœuds
    Un nœud est une machine, une caisse ou le quai. Les convoyeurs et les
@@ -850,7 +939,7 @@ function placeEntree(n, item){
   if (d.stockage) return Math.max(0, d.capacite - contenuTotal(n.sortie));
   const r = recetteDe(n);
   if (!r || !r.entrees.some(e => e.id === item)) return 0;
-  return Math.max(0, CONFIG.capaciteEntree - (n.entree[item]||0));
+  return Math.max(0, capaciteItem(item, CONFIG.capaciteEntree) - (n.entree[item]||0));
 }
 function livrer(n, item, q){
   if (estQuai(n)){ ajouterStock(item, q); return; }
@@ -861,7 +950,7 @@ function livrer(n, item, q){
 /** Reste-t-il de la place en sortie pour un cycle complet ? */
 function placeSortie(n, item, q){
   const d = MACHINES[n.type];
-  const cap = d.stockage ? d.capacite : CONFIG.capaciteSortie;
+  const cap = d.stockage ? d.capacite : capaciteItem(item, CONFIG.capaciteSortie);
   const total = d.stockage ? contenuTotal(n.sortie) : (n.sortie[item]||0);
   return total + q <= cap;
 }
@@ -1100,7 +1189,7 @@ function manqueRelatif(n, item){
   if (estQuai(n)) return 1;
   const d = MACHINES[n.type];
   if (d.stockage) return contenuTotal(n.sortie) / d.capacite;
-  return (n.entree[item]||0) / CONFIG.capaciteEntree;
+  return (n.entree[item]||0) / capaciteItem(item, CONFIG.capaciteEntree);
 }
 
 /** Ce qu'un convoyeur donné est capable d'apporter à son aval : une machine
@@ -1293,7 +1382,7 @@ function meilleurTransport(o){
       const q = m.sortie[it];
       if (q < 1) continue;
       const estProduit = ITEMS[it].cat === "produit";
-      const remplissage = q / CONFIG.capaciteSortie;
+      const remplissage = q / capaciteItem(it, CONFIG.capaciteSortie);
       if (!estProduit && remplissage < 0.45) continue;
       // destination : le quai pour un produit fini, sinon une caisse qui a de la place
       let dest = null;
@@ -1338,7 +1427,9 @@ function meilleureMachineAOperer(o){
     if (!acces) continue;
     const dist = Math.hypot(acces.x-o.x, acces.y-o.y);
     const comp = o.competences[COMP_MACHINE[m.type]] ?? 0.5;
-    let score = 7 + 3*comp - dist*0.22;
+    // Produire dans un tampon déjà plein ne sert à rien : ça compte contre.
+    const encombre = contenuTotal(m.sortie) / CONFIG.capaciteSortie;
+    let score = 7 + 3*comp - dist*0.22 - 6*clamp(encombre,0,1);
     if (o.posteAssigne === m.id) score += 12;
     else if (o.posteAssigne) score -= 8;                    // il a un poste, il y reste
     if (score > bs){ bs = score; best = m; }
@@ -1458,8 +1549,20 @@ function tacheOpere(o, dt){
 
   o.etat = "travaille";
   m.operateurId = o.id;
+
   // La machine ne peut plus tourner et ça dure : on va voir ailleurs.
-  if (m.etat !== "produit" && o.minuteur <= 0 && m.minuteBloquee > 12) libererTache(o);
+  if (m.etat !== "produit" && o.minuteur <= 0 && m.minuteBloquee > 12){ libererTache(o); return; }
+
+  // Fin de vacation : on relève la tête. Si un poste en aval crie famine
+  // pendant qu'on produit tranquillement, on lâche la machine et on va porter.
+  if (o.minuteur <= 0){
+    o.minuteur = 12;                       // on ne se repose pas la question à chaque tick
+    const comp = o.competences[COMP_MACHINE[m.type]] ?? 0.5;
+    const encombre = contenuTotal(m.sortie) / CONFIG.capaciteSortie;
+    const scoreIci = 7 + 3*comp - 6*clamp(encombre,0,1) + (o.posteAssigne === m.id ? 12 : 0);
+    const t = meilleurTransport(o);
+    if (t && t.score > scoreIci + 2) libererTache(o);
+  }
 }
 
 function flaner(o, dt){
@@ -1540,7 +1643,7 @@ function finJournee(){
       c.joursRetard = (c.joursRetard||0) + 1;
       etat.stats.semaineCourante.retards++;
       if (c.joursRetard === 1){
-        notif("Retard", c.client + " attend toujours " + Math.ceil(c.quantite-c.livre) + " " + nomItem(c.produitId, c.quantite-c.livre, true, true) + ". " + euros(c.penaliteRetard) + " par jour.", "ko");
+        notif("Retard", c.client + " attend toujours " + quantiteItem(c.produitId, c.quantite-c.livre, true) + ". " + euros(c.penaliteRetard) + " par jour.", "ko");
         etat.reputation = clamp(etat.reputation - 3, 0, 100);
         paroleContexte("retard", { client:c.client });
       }
@@ -1567,6 +1670,19 @@ function finJournee(){
   else majBandeau();
 }
 
+/** Ce que l'atelier consomme d'une matière en une journée pleine : sert à
+ *  prévenir avant la rupture, pas après. */
+function uneJourneeDe(id){
+  let parJour = 0;
+  for (const m of U().machines){
+    const r = recetteDe(m);
+    if (!r) continue;
+    for (const e of r.entrees)
+      if (e.id === id) parJour += e.qte * (CONFIG.minutesParJour / r.duree) * 0.3;
+  }
+  return Math.max(5, parJour * 0.5);
+}
+
 /** Prévient quand une matière achetée va manquer, une fois par jour au plus. */
 function alerterRupture(){
   const u = U();
@@ -1577,12 +1693,12 @@ function alerterRupture(){
     for (const e of r.entrees) if (ITEMS[e.id].achat) besoins.add(e.id);
   }
   const court = [];
-  for (const id of besoins) if (stockDe(id) < 8) court.push(id);
+  for (const id of besoins) if (stockDe(id) < uneJourneeDe(id)) court.push(id);
   if (!court.length) return;
   const noms = court.map(id => nomItem(id, 2, true, true)).join(", ");
-  notif("Bientôt à court", "Il ne reste presque plus de " + noms + ". Onglet Stocks pour en recommander.", "att");
+  notif("Bientôt à court", "Il ne reste presque plus " + deDe(noms) + noms + ". Onglet Stocks pour en recommander.", "att");
   if (court.some(id => stockDe(id) < 1))
-    parle("On n'a plus de " + noms + ", patron. Les machines vont s'arrêter.", 11000);
+    parle("On n'a plus " + deDe(noms) + noms + ", patron. Les machines vont s'arrêter.", 11000);
 }
 
 function majMoral(){
@@ -1670,7 +1786,7 @@ function acheter(id, qte){
   ajouterStock(id, qte);
   son("argent");
   flottant(U().quai.x+1, U().quai.y+1, "−" + Math.round(prix) + " €", "#e0574a");
-  notif("Livraison", nb(qte) + " " + nomItem(id, qte, true, true) + " pour " + euros(prix) + ".", "");
+  notif("Livraison", quantiteItem(id, qte, true) + " pour " + euros(prix) + ".", "");
   tutoEvenement("achat");
   return true;
 }
@@ -1687,7 +1803,7 @@ function reapprovisionner(){
 function vendreComptant(id, qte){
   const it = ITEMS[id];
   if (!it.vente) return;
-  qte = Math.min(qte, stockDe(id));
+  qte = Math.min(Math.floor(qte), Math.floor(stockDe(id)));
   if (qte < 1) return;
   const prix = it.vente * 0.88 * qte;
   ajouterStock(id, -qte);
@@ -1696,7 +1812,7 @@ function vendreComptant(id, qte){
   compter(etat.stats.semaineCourante.livres, id, qte);
   son("argent");
   flottant(U().quai.x+1, U().quai.y+1, "+" + Math.round(prix) + " €", "#5cba6b");
-  notif("Vendu", nb(qte) + " " + nomItem(id, qte, true) + " au comptant : " + euros(prix) + ".", "ok");
+  notif("Vendu", quantiteItem(id, qte, true) + " au comptant : " + euros(prix) + ".", "ok");
 }
 
 /* ------------------------------------------------------------- Commandes */
@@ -1709,11 +1825,13 @@ function capaciteHebdoEstimee(produitId){
     const q = h[i].produits[produitId] || 0;
     if (q > 0) return q;
   }
+  // Sinon : le poste qui sort ce produit, à cadence réduite par le portage.
   const u = U();
-  const etablis = u.machines.filter(m => m.type === "etabli").length;
-  const r = produitId === "vtc" ? RECETTES.monter_vtc : RECETTES.monter_velo;
-  const parJour = etablis * (CONFIG.minutesParJour / r.duree) * 0.42;   // 0.42 : temps de portage
-  return Math.max(3, Math.round(parJour * CONFIG.joursParSemaine));
+  const r = Object.values(RECETTES).find(x => x.sortie.id === produitId);
+  if (!r) return 10;
+  const postes = u.machines.filter(m => m.type === r.machine).length;
+  const parJour = postes * r.sortie.qte * (CONFIG.minutesParJour / r.duree) * 0.42;
+  return Math.max(ITEMS[produitId].unite === "kg" ? 30 : 200, Math.round(parJour * CONFIG.joursParSemaine));
 }
 
 function creerContrat(produitId){
@@ -1722,7 +1840,10 @@ function creerContrat(produitId){
   const cap = capaciteHebdoEstimee(produitId);
   const semaines = hasardInt(1,3);
   const facteur = hasard(0.5, 1.35);
-  const quantite = Math.max(5, Math.round(cap * semaines * facteur));
+  // On arrondit à quelque chose qu'un client dirait vraiment : 250 kg, 4 000 sachets.
+  const brut = Math.max(5, cap * semaines * facteur);
+  const pas = ITEMS[produitId].unite === "kg" ? (brut > 800 ? 100 : 25) : (brut > 4000 ? 500 : 100);
+  const quantite = Math.max(pas, Math.round(brut / pas) * pas);
   const base = ITEMS[produitId].vente;
   const prixUnitaire = Math.round(base * cl.marge * (0.9 + etat.reputation/100*0.18) * hasard(0.97,1.06));
   return {
@@ -1746,17 +1867,18 @@ function avisContremaitre(c){
   const besoin = c.quantite / semaines;
   const ratio = besoin / Math.max(1,cap);
   const n = nomItem(c.produitId, 2, true, true);
-  if (ratio < 0.55) return "On tient largement : " + Math.ceil(besoin) + " " + n + " par semaine, et on en sort " + cap + ".";
-  if (ratio < 0.9)  return "Ça passe, sans traîner. Il faut " + Math.ceil(besoin) + " " + n + " par semaine, on en sort " + cap + ".";
-  if (ratio < 1.25) return "Ça va être juste : " + Math.ceil(besoin) + " par semaine et on plafonne à " + cap + ". Aucune panne, sinon c'est mort.";
-  return "On n'y arrivera jamais. " + Math.ceil(besoin) + " par semaine, on en fait " + cap + " au mieux. À moins d'embaucher.";
+  const b = mesure(c.produitId, Math.ceil(besoin)), capT = mesure(c.produitId, cap);
+  if (ratio < 0.55) return "On tient largement : " + b + " de " + n + " par semaine, et on en sort " + capT + ".";
+  if (ratio < 0.9)  return "Ça passe, sans traîner. Il faut " + b + " par semaine, on en sort " + capT + ".";
+  if (ratio < 1.25) return "Ça va être juste : " + b + " par semaine et on plafonne à " + capT + ". Aucune panne, sinon c'est mort.";
+  return "On n'y arrivera jamais. " + b + " par semaine, on en fait " + capT + " au mieux. À moins d'embaucher.";
 }
 
 function accepterContrat(c){
   c.accepteLe = jourCourant();
   etat.contrats.acceptes.push(c);
   etat.contrats.proposes = etat.contrats.proposes.filter(x => x.id !== c.id);
-  notif("Commande signée", c.client + " : " + c.quantite + " " + nomItem(c.produitId, c.quantite, true, true) + " à " + euros(c.prixUnitaire) + " pièce.", "ok");
+  notif("Commande signée", c.client + " : " + quantiteItem(c.produitId, c.quantite, true) + " à " + euros(c.prixUnitaire) + " pièce.", "ok");
   son("signature");
 }
 function refuserContrat(c){
@@ -1796,7 +1918,7 @@ function livrerContrats(){
       son("valide");
       fait(aLheure ? ("Commande " + c.client + " livrée dans les temps") : ("Commande " + c.client + " livrée en retard"));
     } else {
-      notif("Expédition", q + " " + nomItem(c.produitId, q, true, true) + " partis chez " + c.client + " : " + euros(montant) + ".", "ok");
+      notif("Expédition", quantiteItem(c.produitId, q, true) + " partis chez " + c.client + " : " + euros(montant) + ".", "ok");
     }
   }
 }
@@ -1825,7 +1947,7 @@ function vendreSurplus(){
     compter(etat.progression.vendus, id, surplus);
     compter(etat.stats.semaineCourante.livres, id, surplus);
     total += prix;
-    detail.push(surplus + " " + nomItem(id, surplus, true, true));
+    detail.push(quantiteItem(id, surplus, true));
   }
   if (total > 0){
     flottant(U().quai.x+1, U().quai.y+1, "+" + Math.round(total) + " €", "#5cba6b");
@@ -1887,7 +2009,7 @@ function passerAgeSuivant(){
   const ancien = AGES[etat.meta.age-1];
   if (etat.meta.age >= 2){
     // Les âges 3 à 5 sont décrits au document mais pas encore construits.
-    notif("Bravo", "Vous avez bouclé « " + ancien.nom + " ». La suite (la PME, l'industrie, le groupe) reste à bâtir : la partie continue en mode libre.", "ok");
+    notif("Bravo", "Vous avez bouclé « " + ancien.nom + " ». La suite (l'hygiène, la saison, les autres sites) reste à bâtir : la partie continue en mode libre.", "ok");
     paroleContexte("fin_contenu", {});
     etat.meta.age = Math.min(etat.meta.age, AGES.length);
     return;
@@ -1977,12 +2099,10 @@ function demolir(n, remboursementForce){
 function creerCandidat(){
   const t = choix(TRAITS);
   const base = hasard(0.35, 0.85);
-  const c = creerOuvrier(
-    choix(PRENOMS), choix(NOMS),
-    { decoupe:clamp(base+hasard(-0.2,0.2),0.1,1), soudure:clamp(base+hasard(-0.2,0.2),0.1,1),
-      assemblage:clamp(base+hasard(-0.2,0.2),0.1,1), peinture:clamp(base+hasard(-0.2,0.2),0.1,1) },
-    Math.round(hasard(100,165)/5)*5, t.id
-  );
+  const comp = {};
+  for (const k of ["lavage","decoupe","friture","assaisonnement","emballage"])
+    comp[k] = clamp(base + hasard(-0.2,0.2), 0.1, 1);
+  const c = creerOuvrier(choix(PRENOMS), choix(NOMS), comp, Math.round(hasard(100,165)/5)*5, t.id);
   return c;
 }
 
@@ -2172,50 +2292,93 @@ function dessinerItem(x, y, s, itemId, alpha){
   ctx.lineWidth = Math.max(0.012, s*0.07);
 
   switch (it.forme){
-    case "tube":
-      ctx.fillRect(-s*0.55, -s*0.16, s*1.1, s*0.32);
-      ctx.strokeRect(-s*0.55, -s*0.16, s*1.1, s*0.32);
-      ctx.fillStyle = "rgba(255,255,255,.28)";
-      ctx.fillRect(-s*0.55, -s*0.16, s*1.1, s*0.1);
-      break;
-    case "barre":
-      ctx.fillRect(-s*0.42, -s*0.13, s*0.84, s*0.26);
-      ctx.strokeRect(-s*0.42, -s*0.13, s*0.84, s*0.26);
-      break;
-    case "cadre":
+
+    case "tubercule": {              // pomme de terre brute, avec ses yeux
       ctx.beginPath();
-      ctx.moveTo(-s*0.45, s*0.3); ctx.lineTo(0,-s*0.36); ctx.lineTo(s*0.45,s*0.3);
-      ctx.lineTo(s*0.2,s*0.3); ctx.lineTo(0,-s*0.02); ctx.lineTo(-s*0.2,s*0.3);
+      ctx.ellipse(0, 0, s*0.44, s*0.32, 0.4, 0, 7);
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "rgba(70,48,26,.55)";
+      ctx.beginPath(); ctx.arc(-s*0.14, -s*0.06, s*0.05, 0, 7); ctx.fill();
+      ctx.beginPath(); ctx.arc( s*0.16,  s*0.08, s*0.04, 0, 7); ctx.fill();
+      break;
+    }
+
+    case "tubercule_pele": {         // épluchée : plus claire, plus lisse
+      ctx.beginPath();
+      ctx.ellipse(0, 0, s*0.42, s*0.3, 0.4, 0, 7);
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "rgba(255,255,255,.35)";
+      ctx.beginPath(); ctx.ellipse(-s*0.1, -s*0.09, s*0.16, s*0.08, 0.4, 0, 7); ctx.fill();
+      break;
+    }
+
+    case "rondelle": {               // rondelle crue vue de dessus
+      ctx.beginPath(); ctx.arc(0, 0, s*0.36, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = "rgba(190,180,130,.7)";
+      ctx.lineWidth = Math.max(0.008, s*0.04);
+      ctx.beginPath(); ctx.arc(0, 0, s*0.2, 0, 7); ctx.stroke();
+      break;
+    }
+
+    case "chips": {                  // chips : disque gondolé, doré
+      ctx.beginPath();
+      for (let i=0; i<=12; i++){
+        const a = i/12*Math.PI*2;
+        const r = s*0.36 * (1 + 0.16*Math.sin(a*3));
+        const px = Math.cos(a)*r, py = Math.sin(a)*r*0.86;
+        if (i === 0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+      }
       ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "rgba(255,240,190,.4)";
+      ctx.beginPath(); ctx.ellipse(-s*0.08, -s*0.08, s*0.12, s*0.07, 0.5, 0, 7); ctx.fill();
       break;
-    case "rond":
-      ctx.beginPath(); ctx.arc(0,0,s*0.42,0,7); ctx.fill(); ctx.stroke();
-      ctx.strokeStyle = "rgba(200,205,210,.55)";
-      ctx.lineWidth = Math.max(0.008, s*0.05);
-      ctx.beginPath(); ctx.arc(0,0,s*0.24,0,7); ctx.stroke();
-      break;
-    case "boite":
-      ctx.fillRect(-s*0.36,-s*0.3, s*0.72, s*0.6);
-      ctx.strokeRect(-s*0.36,-s*0.3, s*0.72, s*0.6);
-      ctx.strokeStyle = "rgba(0,0,0,.3)";
-      ctx.beginPath(); ctx.moveTo(-s*0.36,0); ctx.lineTo(s*0.36,0); ctx.stroke();
-      break;
-    case "pot":
-      ctx.fillRect(-s*0.26,-s*0.3, s*0.52, s*0.6);
-      ctx.strokeRect(-s*0.26,-s*0.3, s*0.52, s*0.6);
-      ctx.fillStyle = "rgba(255,255,255,.3)";
-      ctx.fillRect(-s*0.26,-s*0.3, s*0.52, s*0.12);
-      break;
-    case "produit": {
-      // silhouette de vélo, très simplifiée mais reconnaissable
-      const r = s*0.24;
-      ctx.strokeStyle = it.couleur; ctx.lineWidth = Math.max(0.02, s*0.1);
-      ctx.beginPath(); ctx.arc(-s*0.32,s*0.1,r,0,7); ctx.stroke();
-      ctx.beginPath(); ctx.arc( s*0.32,s*0.1,r,0,7); ctx.stroke();
+    }
+
+    case "sachet": {                 // sachet gonflé, avec sa soudure
       ctx.beginPath();
-      ctx.moveTo(-s*0.32,s*0.1); ctx.lineTo(-s*0.05,-s*0.22); ctx.lineTo(s*0.28,-s*0.2);
-      ctx.lineTo(s*0.32,s*0.1); ctx.lineTo(-s*0.05,s*0.1); ctx.closePath();
-      ctx.stroke();
+      ctx.moveTo(-s*0.26, -s*0.36);
+      ctx.quadraticCurveTo(-s*0.4, 0, -s*0.26, s*0.36);
+      ctx.lineTo(s*0.26, s*0.36);
+      ctx.quadraticCurveTo(s*0.4, 0, s*0.26, -s*0.36);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "rgba(255,255,255,.3)";
+      ctx.fillRect(-s*0.28, -s*0.38, s*0.56, s*0.09);
+      ctx.fillRect(-s*0.28,  s*0.29, s*0.56, s*0.09);
+      ctx.fillStyle = "rgba(255,225,150,.85)";
+      ctx.beginPath(); ctx.arc(0, 0, s*0.13, 0, 7); ctx.fill();
+      break;
+    }
+
+    case "bidon": {                  // bidon d'huile
+      ctx.fillRect(-s*0.26, -s*0.3, s*0.52, s*0.6);
+      ctx.strokeRect(-s*0.26, -s*0.3, s*0.52, s*0.6);
+      ctx.fillStyle = "rgba(60,45,15,.5)";
+      ctx.fillRect(-s*0.1, -s*0.42, s*0.2, s*0.13);
+      ctx.fillStyle = "rgba(255,255,255,.28)";
+      ctx.fillRect(-s*0.2, -s*0.2, s*0.12, s*0.4);
+      break;
+    }
+
+    case "sac": {                    // sac de sel ou d'arôme
+      ctx.beginPath();
+      ctx.moveTo(-s*0.3, s*0.34);
+      ctx.lineTo(-s*0.22, -s*0.24);
+      ctx.lineTo( s*0.22, -s*0.24);
+      ctx.lineTo( s*0.3,  s*0.34);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = "rgba(0,0,0,.35)";
+      ctx.lineWidth = Math.max(0.01, s*0.06);
+      ctx.beginPath(); ctx.moveTo(-s*0.22,-s*0.24); ctx.lineTo(s*0.22,-s*0.24); ctx.stroke();
+      break;
+    }
+
+    case "bobine": {                 // bobine de film
+      ctx.beginPath(); ctx.arc(0, 0, s*0.36, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "rgba(30,36,42,.75)";
+      ctx.beginPath(); ctx.arc(0, 0, s*0.12, 0, 7); ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,.25)";
+      ctx.lineWidth = Math.max(0.008, s*0.035);
+      ctx.beginPath(); ctx.arc(0, 0, s*0.24, 0, 7); ctx.stroke();
       break;
     }
   }
@@ -2476,105 +2639,141 @@ function detailMachine(m, d, x, y, l, h, produit){
   const cx = x+l/2, cy = y+h/2;
   switch (m.type){
 
-    case "scie": {
-      // table + lame circulaire qui tourne quand ça coupe
-      ctx.fillStyle = "#3b4149";
-      coinsArrondis(x+0.28, y+0.42, l-0.56, h-0.78, 0.06); ctx.fill();
-      const a = produit ? vue.temps*22 : 0;
+    case "laveuse": {
+      // bac d'eau, tambour qui brasse, clapotis
+      ctx.fillStyle = "#2e3a44";
+      coinsArrondis(x+0.24, y+0.4, l-0.48, h-0.74, 0.08); ctx.fill();
+      const eau = ctx.createLinearGradient(0, y+0.4, 0, y+h-0.34);
+      eau.addColorStop(0, produit ? "rgba(80,175,225,.75)" : "rgba(70,120,150,.4)");
+      eau.addColorStop(1, produit ? "rgba(40,120,180,.75)" : "rgba(50,90,120,.4)");
+      ctx.fillStyle = eau;
+      coinsArrondis(x+0.3, y+0.46, l-0.6, h-0.86, 0.06); ctx.fill();
+      if (produit){
+        // rides à la surface, phase déterministe : pas de scintillement
+        ctx.strokeStyle = "rgba(255,255,255,.35)";
+        ctx.lineWidth = 0.035;
+        for (let i=0;i<3;i++){
+          const o = Math.sin(vue.temps*2.2 + i*1.7)*0.09;
+          ctx.beginPath();
+          ctx.moveTo(x+0.36, y+0.66+i*0.28+o);
+          ctx.lineTo(x+l-0.36, y+0.66+i*0.28-o);
+          ctx.stroke();
+        }
+        // patates qui tournent dans le bac
+        for (let i=0;i<3;i++){
+          const a = vue.temps*1.6 + i*2.1;
+          dessinerItem(cx + Math.cos(a)*(l*0.2), cy + Math.sin(a)*(h*0.16), 0.34, "pdt_brutes");
+        }
+      }
+      break;
+    }
+
+    case "trancheuse": {
+      // capot, lame circulaire, rondelles qui tombent
+      ctx.fillStyle = "#39404a";
+      coinsArrondis(x+0.26, y+0.42, l-0.52, h-0.76, 0.06); ctx.fill();
+      const a = produit ? vue.temps*19 : 0;
       ctx.save();
-      ctx.translate(cx, cy+0.05);
-      ctx.rotate(a);
-      ctx.strokeStyle = "#cfd6de"; ctx.lineWidth = 0.055;
-      ctx.beginPath(); ctx.arc(0,0,0.34,0,7); ctx.stroke();
-      ctx.strokeStyle = "#9aa4ae"; ctx.lineWidth = 0.04;
-      for (let i=0;i<10;i++){
-        const t = i/10*Math.PI*2;
+      ctx.translate(cx, cy+0.02); ctx.rotate(a);
+      ctx.fillStyle = "#c2cad3";
+      ctx.beginPath(); ctx.arc(0,0,0.3,0,7); ctx.fill();
+      ctx.strokeStyle = "#8d959e"; ctx.lineWidth = 0.035;
+      for (let i=0;i<6;i++){
+        const t = i/6*Math.PI*2;
         ctx.beginPath();
-        ctx.moveTo(Math.cos(t)*0.28, Math.sin(t)*0.28);
-        ctx.lineTo(Math.cos(t)*0.38, Math.sin(t)*0.38);
+        ctx.moveTo(Math.cos(t)*0.09, Math.sin(t)*0.09);
+        ctx.lineTo(Math.cos(t)*0.3, Math.sin(t)*0.3);
+        ctx.stroke();
+      }
+      ctx.restore();
+      if (produit)
+        for (let i=0;i<3;i++){
+          const p = ((vue.temps*1.5 + i*0.33) % 1);
+          dessinerItem(cx + 0.2 + i*0.12, cy + 0.1 + p*0.5, 0.26, "rondelles", 1-p*0.7);
+        }
+      break;
+    }
+
+    case "friteuse": {
+      // bain d'huile chaude : bouillonnement et buée
+      ctx.fillStyle = "#2f3238";
+      coinsArrondis(x+0.2, y+0.4, l-0.4, h-0.72, 0.07); ctx.fill();
+      const hu = ctx.createLinearGradient(0, y+0.44, 0, y+h-0.34);
+      hu.addColorStop(0, produit ? "rgba(240,185,60,.9)" : "rgba(150,120,55,.55)");
+      hu.addColorStop(1, produit ? "rgba(190,125,35,.9)" : "rgba(110,85,40,.55)");
+      ctx.fillStyle = hu;
+      coinsArrondis(x+0.28, y+0.48, l-0.56, h-0.88, 0.05); ctx.fill();
+      if (produit){
+        // bulles : position et taille dérivées de l'index, donc stables
+        ctx.fillStyle = "rgba(255,240,190,.6)";
+        for (let i=0;i<9;i++){
+          const bx = x+0.42 + bruit(i*5+m.id)*(l-0.84);
+          const mont = ((vue.temps*0.9 + bruit(i*11)) % 1);
+          const by = y+h-0.42 - mont*(h-0.95);
+          const r = 0.025 + bruit(i*7)*0.035;
+          ctx.beginPath(); ctx.arc(bx, by, r*(0.5+mont), 0, 7); ctx.fill();
+        }
+        // chips qui flottent
+        for (let i=0;i<4;i++){
+          const d2 = ((vue.temps*0.35 + i*0.25) % 1);
+          dessinerItem(x+0.5 + d2*(l-1), cy+0.05 + Math.sin(vue.temps*2+i)*0.06, 0.3, "chips_vrac", 0.9);
+        }
+        // reflet de chaleur
+        ctx.fillStyle = "rgba(255,190,90,.12)";
+        coinsArrondis(x+0.2, y+0.4, l-0.4, h-0.72, 0.07); ctx.fill();
+      }
+      // hotte
+      ctx.fillStyle = "#4c525a";
+      ctx.fillRect(x+l*0.5-0.3, y+0.1, 0.6, 0.24);
+      break;
+    }
+
+    case "tambour": {
+      // tambour incliné qui tourne, nuage d'arôme
+      ctx.fillStyle = "#3a3428";
+      coinsArrondis(x+0.24, y+0.42, l-0.48, h-0.76, 0.1); ctx.fill();
+      ctx.save();
+      ctx.translate(cx, cy+0.02);
+      const g2 = ctx.createLinearGradient(0,-0.3,0,0.3);
+      g2.addColorStop(0,"#c9a55e"); g2.addColorStop(1,"#8a7038");
+      ctx.fillStyle = g2;
+      ctx.beginPath(); ctx.ellipse(0,0,l*0.3,h*0.2,0,0,7); ctx.fill();
+      // cerclages qui défilent = rotation lisible
+      ctx.strokeStyle = "rgba(40,32,18,.6)"; ctx.lineWidth = 0.05;
+      for (let i=0;i<4;i++){
+        const p = ((vue.temps*(produit?0.8:0) + i*0.25) % 1);
+        const dx = (p-0.5)*l*0.56;
+        ctx.beginPath();
+        ctx.ellipse(dx, 0, 0.05, h*0.19, 0, 0, 7);
         ctx.stroke();
       }
       ctx.restore();
       if (produit){
-        ctx.fillStyle = "rgba(255,240,190,.20)";
-        ctx.beginPath(); ctx.arc(cx,cy+0.05,0.5,0,7); ctx.fill();
+        ctx.fillStyle = "rgba(201,80,46,.16)";
+        ctx.beginPath(); ctx.arc(cx, cy, 0.55+Math.abs(Math.sin(vue.temps*2))*0.12, 0, 7); ctx.fill();
       }
       break;
     }
 
-    case "soudeuse": {
-      ctx.fillStyle = "#33383f";
-      coinsArrondis(x+0.24, y+0.44, l-0.48, h-0.8, 0.06); ctx.fill();
-      // bras du chalumeau
-      ctx.strokeStyle = "#8d939b"; ctx.lineWidth = 0.11; ctx.lineCap = "round";
-      ctx.beginPath();
-      ctx.moveTo(x+l-0.34, y+0.5);
-      ctx.lineTo(cx+0.1, cy+0.06);
-      ctx.stroke();
-      if (produit){
-        // l'arc bat : intensité variable, sans allocation
-        const i = 0.35 + Math.abs(Math.sin(vue.temps*17))*0.65;
-        ctx.fillStyle = "rgba(255,238,190," + (i*0.85).toFixed(2) + ")";
-        ctx.beginPath(); ctx.arc(cx+0.1, cy+0.08, 0.13+i*0.07, 0, 7); ctx.fill();
-        ctx.fillStyle = "rgba(255,170,60," + (i*0.22).toFixed(2) + ")";
-        ctx.beginPath(); ctx.arc(cx+0.1, cy+0.08, 0.55+i*0.2, 0, 7); ctx.fill();
-      }
-      break;
-    }
-
-    case "etabli": {
-      ctx.fillStyle = "#6b5334";
-      coinsArrondis(x+0.2, y+0.4, l-0.4, h-0.72, 0.05); ctx.fill();
-      ctx.strokeStyle = "rgba(0,0,0,.22)"; ctx.lineWidth = 0.03;
-      for (let i=1;i<4;i++){
-        ctx.beginPath(); ctx.moveTo(x+0.2, y+0.4+i*(h-0.72)/4); ctx.lineTo(x+l-0.2, y+0.4+i*(h-0.72)/4); ctx.stroke();
-      }
-      // le vélo se monte sous les yeux du joueur
-      if (m.enCycle && m.recetteId){
-        const p = clamp(m.progression,0,1);
-        const it = RECETTES[m.recetteId].sortie.id;
-        ctx.save(); ctx.globalAlpha = 0.35 + p*0.65;
-        dessinerItem(cx, cy+0.05, 0.55+p*0.35, it);
-        ctx.restore();
-      }
-      // outils accrochés
-      ctx.strokeStyle = "#aeb6bf"; ctx.lineWidth = 0.045;
-      ctx.beginPath(); ctx.moveTo(x+0.34,y+0.36); ctx.lineTo(x+0.34,y+0.16); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(x+0.5,y+0.36); ctx.lineTo(x+0.5,y+0.2); ctx.stroke();
-      break;
-    }
-
-    case "cintreuse": {
-      ctx.fillStyle = "#333a42";
-      coinsArrondis(x+0.26, y+0.42, l-0.52, h-0.76, 0.06); ctx.fill();
-      const a = produit ? vue.temps*5 : 0;
-      for (const s of [-1,1]){
-        ctx.save();
-        ctx.translate(cx + s*0.24, cy+0.05); ctx.rotate(a*s);
-        ctx.fillStyle = "#7d868f";
-        ctx.beginPath(); ctx.arc(0,0,0.19,0,7); ctx.fill();
-        ctx.strokeStyle = "#454b52"; ctx.lineWidth = 0.04;
-        ctx.beginPath(); ctx.moveTo(-0.19,0); ctx.lineTo(0.19,0); ctx.stroke();
-        ctx.restore();
-      }
-      break;
-    }
-
-    case "cabine": {
-      // cabine fermée : on voit par la vitre
+    case "ensacheuse": {
+      // colonne verticale : le film descend, le sachet tombe
       ctx.fillStyle = "#2e3238";
-      coinsArrondis(x+0.18, y+0.36, l-0.36, h-0.66, 0.08); ctx.fill();
-      const gl = ctx.createLinearGradient(x, y+0.4, x, y+h-0.3);
-      gl.addColorStop(0, produit ? "rgba(150,105,205,.36)" : "rgba(120,130,150,.2)");
-      gl.addColorStop(1, produit ? "rgba(100,60,155,.24)" : "rgba(90,100,120,.14)");
-      ctx.fillStyle = gl;
-      coinsArrondis(x+0.32, y+0.5, l-0.64, h-0.94, 0.06); ctx.fill();
-      ctx.strokeStyle = "#586069"; ctx.lineWidth = 0.05;
-      coinsArrondis(x+0.32, y+0.5, l-0.64, h-0.94, 0.06); ctx.stroke();
+      coinsArrondis(x+0.18, y+0.34, l-0.36, h-0.62, 0.08); ctx.fill();
+      ctx.fillStyle = "#454c56";
+      ctx.fillRect(cx-0.28, y+0.42, 0.56, h-0.9);
+      // bobine de film
+      dessinerItem(x+0.55, y+0.72, 0.5, "film");
       if (produit){
-        ctx.fillStyle = "rgba(190,150,240," + (0.05+Math.abs(Math.sin(vue.temps*3))*0.07).toFixed(2) + ")";
-        coinsArrondis(x+0.18, y+0.36, l-0.36, h-0.66, 0.08); ctx.fill();
+        ctx.fillStyle = "rgba(196,158,240,.16)";
+        coinsArrondis(x+0.18, y+0.34, l-0.36, h-0.62, 0.08); ctx.fill();
+        for (let i=0;i<3;i++){
+          const p = ((vue.temps*1.1 + i*0.34) % 1);
+          dessinerItem(cx, y+0.7 + p*(h-1.15), 0.42, "sachet", 1-p*0.45);
+        }
       }
+      // mâchoire de soudure
+      ctx.fillStyle = "#5a6270";
+      ctx.fillRect(cx-0.34, y+h-0.62, 0.68, 0.12);
       break;
     }
 
@@ -2590,7 +2789,7 @@ function detailMachine(m, d, x, y, l, h, produit){
       const items = Object.keys(m.sortie).filter(k=>m.sortie[k]>0.5);
       if (items.length){
         const total = contenuTotal(m.sortie);
-        const n = Math.min(6, Math.ceil(total/25));
+        const n = Math.min(6, Math.ceil(total/120));
         for (let i=0;i<n;i++)
           dessinerItem(x+0.4+bruit(i*5+m.id)*(l-0.8), y+0.4+bruit(i*11+m.id)*(h-0.8), 0.4, items[i%items.length]);
       }
@@ -2735,7 +2934,7 @@ function dessinerOuvrier(o){
     ctx.fillStyle = "rgba(255,255,255,.75)";
     ctx.font = "0.16px Segoe UI, sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("×"+Math.round(o.charge.qte), x, y-0.62);
+    ctx.fillText(mesure(o.charge.item, o.charge.qte), x, y-0.62);
   }
 
   // sueur quand il court partout (§3.2)
@@ -2774,6 +2973,15 @@ function particule(x, y, sorte){
     case "poussiere":
       p.vx = hasard(-0.8,0.8); p.vy = hasard(-0.8,-0.1);
       p.max = p.vie = hasard(0.4,0.9); p.taille = hasard(0.05,0.13); break;
+    case "goutte":
+      p.vx = hasard(-1.1,1.1); p.vy = hasard(-1.5,-0.3);
+      p.max = p.vie = hasard(0.3,0.6); p.taille = hasard(0.02,0.05); break;
+    case "poudre":
+      p.vx = hasard(-0.5,0.5); p.vy = hasard(-0.45,-0.1);
+      p.max = p.vie = hasard(0.6,1.2); p.taille = hasard(0.04,0.1); break;
+    case "souffle":
+      p.vx = hasard(-1.4,1.4); p.vy = hasard(-0.3,0.3);
+      p.max = p.vie = hasard(0.2,0.45); p.taille = hasard(0.08,0.18); break;
     case "eclat":
       p.vx = hasard(-1.2,1.2); p.vy = hasard(-1.4,-0.2);
       p.max = p.vie = hasard(0.3,0.7); p.taille = hasard(0.03,0.07); break;
@@ -2819,11 +3027,20 @@ function dessinerParticules(){
         ctx.fillStyle = "rgba(150,152,156," + (a*0.32).toFixed(2) + ")";
         ctx.beginPath(); ctx.arc(p.x,p.y,p.taille*(2-a),0,7); ctx.fill(); break;
       case "vapeur":
-        ctx.fillStyle = "rgba(180,140,225," + (a*0.3).toFixed(2) + ")";
+        ctx.fillStyle = "rgba(232,236,240," + (a*0.26).toFixed(2) + ")";
         ctx.beginPath(); ctx.arc(p.x,p.y,p.taille*(2-a),0,7); ctx.fill(); break;
       case "poussiere":
         ctx.fillStyle = "rgba(140,132,118," + (a*0.4).toFixed(2) + ")";
         ctx.beginPath(); ctx.arc(p.x,p.y,p.taille,0,7); ctx.fill(); break;
+      case "goutte":
+        ctx.fillStyle = "rgba(150,205,240," + (a*0.7).toFixed(2) + ")";
+        ctx.beginPath(); ctx.arc(p.x,p.y,p.taille,0,7); ctx.fill(); break;
+      case "poudre":
+        ctx.fillStyle = "rgba(201,110,60," + (a*0.38).toFixed(2) + ")";
+        ctx.beginPath(); ctx.arc(p.x,p.y,p.taille*(1.6-a),0,7); ctx.fill(); break;
+      case "souffle":
+        ctx.fillStyle = "rgba(220,225,235," + (a*0.22).toFixed(2) + ")";
+        ctx.beginPath(); ctx.arc(p.x,p.y,p.taille*(2-a),0,7); ctx.fill(); break;
     }
   }
 }
@@ -2852,13 +3069,15 @@ function dessinerFlottants(){
 
 /** Effets déclenchés par la simulation, pas par le rendu. */
 function effetProduction(m, r){
-  if (m.type === "soudeuse") for (let i=0;i<7;i++) particule(m.x+m.l/2+hasard(-0.2,0.2), m.y+m.h/2, "etincelle");
-  if (m.type === "scie")     for (let i=0;i<5;i++) particule(m.x+m.l/2+hasard(-0.2,0.2), m.y+m.h/2, "eclat");
-  if (m.type === "cabine")   for (let i=0;i<6;i++) particule(m.x+m.l/2+hasard(-0.5,0.5), m.y+m.h/2, "vapeur");
-  if (m.type === "cintreuse")for (let i=0;i<3;i++) particule(m.x+m.l/2, m.y+m.h/2, "eclat");
+  const cx = m.x+m.l/2, cy = m.y+m.h/2;
+  if (m.type === "friteuse")   for (let i=0;i<8;i++) particule(cx+hasard(-0.6,0.6), cy-0.1, "vapeur");
+  if (m.type === "laveuse")    for (let i=0;i<5;i++) particule(cx+hasard(-0.3,0.3), cy, "goutte");
+  if (m.type === "trancheuse") for (let i=0;i<4;i++) particule(cx+hasard(-0.2,0.2), cy, "eclat");
+  if (m.type === "tambour")    for (let i=0;i<5;i++) particule(cx+hasard(-0.3,0.3), cy, "poudre");
+  if (m.type === "ensacheuse") for (let i=0;i<3;i++) particule(cx, cy, "souffle");
   son(m.type);
   if (ITEMS[r.sortie.id].cat === "produit"){
-    flottant(m.x+m.l/2, m.y-0.2, "+1 " + ITEMS[r.sortie.id].court, "#8fe09c");
+    flottant(m.x+m.l/2, m.y-0.2, "+" + mesure(r.sortie.id, r.sortie.qte), "#8fe09c");
     son("valide");
   }
 }
@@ -3078,7 +3297,7 @@ function majBandeau(){
   // Commande en cours : la plus urgente
   const acc = etat.contrats.acceptes.slice().sort((a,b)=>a.dateLimite-b.dateLimite)[0];
   $("#indCommande .val").textContent = acc
-    ? Math.max(0, Math.ceil(acc.quantite-acc.livre)) + " " + nomItem(acc.produitId, acc.quantite-acc.livre, true) + " · " + resteJours(acc)
+    ? mesure(acc.produitId, Math.max(0, acc.quantite-acc.livre)) + " " + nomItem(acc.produitId, 2, true, true) + " · " + resteJours(acc)
     : "aucune";
 
   // Le bandeau grandit avec le joueur (§3.3)
@@ -3088,9 +3307,11 @@ function majBandeau(){
   basculer("#indPerso", age >= 2);
   if (age >= 2){
     const u = U();
-    const finis = Object.keys(u.stocks).filter(k => ITEMS[k].cat === "produit")
-                        .reduce((t,k)=>t+u.stocks[k],0);
-    $("#indStock .val").textContent = Math.floor(finis) + " " + pluriel(finis,"produit");
+    // On montre le produit fini le plus abondant, avec sa vraie unité.
+    const finis = Object.keys(u.stocks).filter(k => ITEMS[k].cat === "produit" && u.stocks[k] >= 1)
+                        .sort((a,b) => u.stocks[b]-u.stocks[a]);
+    $("#indStock .val").textContent = finis.length
+      ? quantiteItem(finis[0], u.stocks[finis[0]], true) : "rien de prêt";
     $("#indReput .val").textContent = Math.round(etat.reputation) + " / 100";
     $("#indPerso .val").textContent = u.ouvriers.length + " " + pluriel(u.ouvriers.length,"personne");
   }
@@ -3133,12 +3354,12 @@ function parle(texte, duree){
 /** Répliques contextuelles. Trois phrases maximum, jamais de jargon (§9.3). */
 function paroleContexte(cle, d){
   const p = {
-    debut:      "Patron, on démarre. Faut poser une scie, un poste à souder et un établi, et on pourra sortir des vélos.",
+    debut:      "Patron, on démarre. Une laveuse, une trancheuse, une friteuse, et on sort nos premiers kilos.",
     panne:      d.machine + " vient de lâcher. Un clic dessus et je vais la remettre en route.",
     retard:     "On est en retard chez " + d.client + ". Chaque jour qui passe nous coûte de l'argent.",
     banque:     "La banque nous a pris une machine. Faut redresser la caisse, patron.",
-    age2:       "On a cassé le mur du fond. Convoyeurs, cabine de peinture — et le VTC, qui se vend le double d'un vélo.",
-    fin_contenu:"Voilà, on a fait le tour de ce qui est bâti. La PME, l'usine, le groupe : ça viendra. En attendant, faites tourner."
+    age2:       "On a cassé le mur du fond. Convoyeurs, tambour d'assaisonnement, ensacheuse — et le sachet, qui rapporte bien plus que le vrac.",
+    fin_contenu:"Voilà, on a fait le tour de ce qui est bâti. L'hygiène, la saison, les autres sites : ça viendra. En attendant, faites tourner."
   }[cle];
   if (p) parle(p, 12000);
 }
@@ -3148,7 +3369,7 @@ function conseil(){
   const u = U();
   const c = [];
 
-  if (!u.machines.length) return parle("On n'a rien posé. Une scie, un poste à souder, un établi — dans cet ordre.");
+  if (!u.machines.length) return parle("On n'a rien posé. Une laveuse, une trancheuse, une friteuse — dans cet ordre.");
 
   const enPanne = u.machines.find(m => m.enPanne);
   if (enPanne) return parle(MACHINES[enPanne.type].nom + " est en panne. Cliquez dessus, je m'en occupe tout de suite.");
@@ -3168,7 +3389,7 @@ function conseil(){
         c.push(MACHINES[m.type].nom + " attend des " + nomItem(manque.id, 2, true, true) + ". " +
                MACHINES[fournisseur.type].nom + " n'arrive pas à suivre — il en faudrait une deuxième.");
       else if (ITEMS[manque.id].achat)
-        c.push("On n'a plus de " + nomItem(manque.id, 2, true, true) + ". Faut en racheter, sinon " + MACHINES[m.type].nom + " tourne dans le vide.");
+        c.push("On n'a plus " + deDe(nomItem(manque.id,2,true,true)) + nomItem(manque.id, 2, true, true) + ". Faut en racheter, sinon " + MACHINES[m.type].nom + " tourne dans le vide.");
       else
         c.push(MACHINES[m.type].nom + " attend des " + nomItem(manque.id, 2, true, true) + ", et personne n'en fait.");
     }
@@ -3273,19 +3494,20 @@ function majInfobulle(){
   if (estQuai(n)){
     t = "Quai";
     d = "Les matières arrivent ici, les vélos en repartent.";
-    const finis = Object.keys(U().stocks).filter(k=>ITEMS[k].cat==="produit").reduce((s,k)=>s+U().stocks[k],0);
-    e = Math.floor(finis) + " " + pluriel(finis,"produit") + " prêts à partir";
+    const finis = Object.keys(U().stocks).filter(k=>ITEMS[k].cat==="produit" && U().stocks[k]>=1)
+                        .sort((a,b)=>U().stocks[b]-U().stocks[a]);
+    e = finis.length ? quantiteItem(finis[0], U().stocks[finis[0]], true) + " prêts à partir" : "rien de prêt à partir";
   } else if (n.type === "convoyeur"){
     t = "Convoyeur";
     d = n.chemin.length + " tuiles";
     e = n.etat === "non_relie" ? "Ne relie rien : il manque une machine à un bout."
-      : (n.debitActuel > 0.5 ? "Fait passer " + Math.round(n.debitActuel) + " pièces par jour" : "Rien ne passe pour le moment");
+      : (n.debitActuel > 0.5 ? "Il passe " + Math.round(n.debitActuel) + " par jour" : "Rien ne passe pour le moment");
   } else {
     const def = MACHINES[n.type];
     t = def.nom;
     const r = recetteDe(n);
-    d = def.stockage ? "Contient " + Math.round(contenuTotal(n.sortie)) + " pièces"
-                     : (r ? r.nom + " · " + Math.round(n.debitReel) + " par jour" : "Rien de programmé");
+    d = def.stockage ? "Contient " + Math.round(contenuTotal(n.sortie)) + " unités"
+                     : (r ? r.nom + " · " + mesure(r.sortie.id, n.debitReel) + " par jour" : "Rien de programmé");
     e = phraseEtat(n);
   }
   ib.innerHTML = '<div class="t"></div><div class="d"></div><div class="e"></div>';
@@ -3566,13 +3788,18 @@ function detailUsine(z){
   const j = elem('<div class="jauge vert"><i></i></div>');
   j.querySelector("i").style.width = Math.round(p.part*100)+"%";
   b.appendChild(j);
-  b.appendChild(elem('<div style="font-size:11.5px;color:var(--texte-faible)">'+Math.floor(p.valeur)+' sur '+p.cible+'</div>'));
+  const uObj = AGES[etat.meta.age-1].objectif.produit;
+  b.appendChild(elem('<div style="font-size:11.5px;color:var(--texte-faible)">'+
+    (uObj ? mesure(uObj,p.valeur)+' sur '+mesure(uObj,p.cible) : Math.floor(p.valeur)+' sur '+p.cible)+'</div>'));
   z.appendChild(b);
 
   const b2 = blocTitre("Aujourd'hui");
-  let produits = 0;
-  for (const m of u.machines) if (ITEMS[recetteDe(m)?.sortie.id]?.cat === "produit") produits += m.produitAujourdhui;
-  b2.appendChild(ligne("Produits finis sortis", Math.floor(produits)));
+  let produits = 0, idProduit = null;
+  for (const m of u.machines){
+    const s = recetteDe(m)?.sortie.id;
+    if (ITEMS[s]?.cat === "produit"){ produits += m.produitAujourdhui; idProduit = s; }
+  }
+  b2.appendChild(ligne("Sorti aujourd'hui", idProduit ? quantiteItem(idProduit, produits, true) : "rien"));
   b2.appendChild(ligne("Machines", u.machines.length));
   b2.appendChild(ligne("Équipe", u.ouvriers.length + " " + pluriel(u.ouvriers.length,"personne")));
   b2.appendChild(ligne("Propreté de l'atelier", u.salete < 0.25 ? "correcte" : u.salete < 0.6 ? "ça se salit" : "il faudrait nettoyer"));
@@ -3632,15 +3859,17 @@ function detailQuai(z){
     l.innerHTML = '<span class="puce"></span><span class="nom"></span><span class="qte"></span>';
     l.querySelector(".puce").style.background = ITEMS[it].couleur;
     l.querySelector(".nom").textContent = ITEMS[it].nom;
-    l.querySelector(".qte").textContent = Math.floor(u.stocks[it]);
+    l.querySelector(".qte").textContent = mesure(it, u.stocks[it]);
     b.appendChild(l);
+    const lot = ITEMS[it].unite === "kg" ? 25 : 200;
     const r = document.createElement("div");
     r.className = "btRang";
-    r.appendChild(bouton("Vendre 1 au comptant", () => { vendreComptant(it,1); majPanneau(); }));
+    r.appendChild(bouton("Vendre " + mesure(it, lot), () => { vendreComptant(it, lot); majPanneau(); }));
     r.appendChild(bouton("Tout vendre", () => { vendreComptant(it, Math.floor(u.stocks[it])); majPanneau(); }));
     b.appendChild(r);
+    const par = ITEMS[it].unite === "kg" ? "le kg" : "pièce";
     b.appendChild(elem('<div style="font-size:11px;color:var(--texte-faible);margin-top:4px">'+
-      'Au comptant : '+euros(ITEMS[it].vente*0.88)+' pièce, contre '+euros(ITEMS[it].vente)+' sur commande.</div>'));
+      'Au comptant : '+euros(ITEMS[it].vente*0.88)+' '+par+', contre '+euros(ITEMS[it].vente)+' sur commande.</div>'));
   }
   z.appendChild(b);
 }
@@ -3706,7 +3935,7 @@ function detailMachinePanneau(z, m){
     }
     const r = recetteDe(m);
     if (r){
-      bf.appendChild(ligne("Sort", Math.round(m.debitReel) + " " + nomItem(r.sortie.id, Math.round(m.debitReel), true, true) + " par jour"));
+      bf.appendChild(ligne("Sort", quantiteItem(r.sortie.id, m.debitReel, true) + " par jour"));
       bf.appendChild(elem('<div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--texte-faible);margin:8px 0 4px">Il lui faut</div>'));
       for (const e of r.entrees){
         const l = document.createElement("div");
@@ -3714,16 +3943,16 @@ function detailMachinePanneau(z, m){
         l.innerHTML = '<span class="puce"></span><span class="nom"></span><span class="qte"></span>';
         l.querySelector(".puce").style.background = ITEMS[e.id].couleur;
         l.querySelector(".nom").textContent = ITEMS[e.id].nom;
-        const q = Math.floor(m.entree[e.id]||0);
+        const q = m.entree[e.id]||0;
         const el = l.querySelector(".qte");
-        el.textContent = q + " en réserve";
+        el.textContent = mesure(e.id, q) + " en réserve";
         el.style.color = q < e.qte ? "var(--rouge)" : "var(--texte)";
         bf.appendChild(l);
       }
       const sorties = Object.keys(m.sortie).filter(k=>m.sortie[k]>0.01);
       if (sorties.length){
         bf.appendChild(elem('<div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--texte-faible);margin:8px 0 4px">En attente de ramassage</div>'));
-        for (const it of sorties) bf.appendChild(ligne(ITEMS[it].nom, Math.floor(m.sortie[it])));
+        for (const it of sorties) bf.appendChild(ligne(ITEMS[it].nom, mesure(it, m.sortie[it])));
       }
     }
     z.appendChild(bf);
@@ -3765,7 +3994,7 @@ function detailMachinePanneau(z, m){
     const bc = blocTitre("Contenu");
     const items = Object.keys(m.sortie).filter(k => m.sortie[k] > 0.01);
     if (!items.length) bc.appendChild(elem('<div class="vide">Vide.</div>'));
-    for (const it of items) bc.appendChild(ligne(ITEMS[it].nom, Math.floor(m.sortie[it])));
+    for (const it of items) bc.appendChild(ligne(ITEMS[it].nom, mesure(it, m.sortie[it])));
     bc.appendChild(ligne("Place restante", Math.floor(d.capacite - contenuTotal(m.sortie))));
     z.appendChild(bc);
   }
@@ -3819,24 +4048,29 @@ function panneauStocks(z){
     l.innerHTML = '<span class="puce"></span><span class="nom"></span><span class="qte"></span>';
     l.querySelector(".puce").style.background = it.couleur;
     l.querySelector(".nom").innerHTML = it.nom + '<br><span class="sub">' +
-      '<span class="'+tend+'">'+ nb(p,2) +' € pièce</span></span>';
-    l.querySelector(".qte").textContent = Math.floor(stockDe(id));
+      '<span class="'+tend+'">'+ nb(p,2) + ' € ' + (it.unite === "kg" ? 'le kg' : 'pièce') + '</span></span>';
+    l.querySelector(".qte").textContent = mesure(id, stockDe(id));
     bm.appendChild(l);
     const r = document.createElement("div");
     r.className = "btRang";
-    for (const q of [10,50,100])
-      r.appendChild(bouton("+"+q, () => { acheter(id,q); majPanneau(); majBandeau(); }));
+    // On achète par lots qui ont un sens : des centaines de kilos, ou des pièces.
+    const lots = it.unite === "kg" ? [50,200,500] : [10,50,100];
+    for (const q of lots)
+      r.appendChild(bouton("+"+nb(q), () => { acheter(id,q); majPanneau(); majBandeau(); }));
     bm.appendChild(r);
 
     if (debloque("reappro")){
-      const rp = etat.reappro[id] || (etat.reappro[id] = { actif:false, seuil:40, lot:80 });
+      const defaut = it.unite === "kg" ? { actif:false, seuil:150, lot:400 }
+                                       : { actif:false, seuil:40, lot:80 };
+      const rp = etat.reappro[id] || (etat.reappro[id] = defaut);
       const lab = document.createElement("label");
       lab.style.cssText = "display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--texte-faible);margin-top:5px";
       const cb = document.createElement("input");
       cb.type = "checkbox"; cb.checked = rp.actif;
       cb.onchange = () => { rp.actif = cb.checked; };
       lab.appendChild(cb);
-      lab.appendChild(document.createTextNode("Recommander " + rp.lot + " dès qu'il en reste moins de " + rp.seuil));
+      lab.appendChild(document.createTextNode(
+        "Recommander " + mesure(id, rp.lot) + " dès qu'il en reste moins de " + mesure(id, rp.seuil)));
       bm.appendChild(lab);
     }
   }
@@ -3845,7 +4079,7 @@ function panneauStocks(z){
   const bp = blocTitre("Pièces en circulation");
   const pieces = Object.keys(u.stocks).filter(k => u.stocks[k] >= 1 && ITEMS[k].cat !== "matiere");
   if (!pieces.length) bp.appendChild(elem('<div class="vide">Rien au quai.</div>'));
-  for (const it of pieces) bp.appendChild(ligne(ITEMS[it].nom, Math.floor(u.stocks[it])));
+  for (const it of pieces) bp.appendChild(ligne(ITEMS[it].nom, mesure(it, u.stocks[it])));
   z.appendChild(bp);
 }
 
@@ -3890,8 +4124,8 @@ function panneauPersonnel(z){
     const comps = document.createElement("div");
     comps.style.marginTop = "8px";
     for (const c in o.competences){
-      const nomC = { decoupe:"Découpe", soudure:"Soudure", assemblage:"Montage", peinture:"Peinture" }[c];
-      comps.appendChild(ligne(nomC, motCompetence(o.competences[c])));
+      const nomC = NOM_COMPETENCE[c];
+      if (nomC) comps.appendChild(ligne(nomC, motCompetence(o.competences[c])));
     }
     b.appendChild(comps);
 
@@ -3935,11 +4169,14 @@ function motCompetence(c){
   if (c < 0.85) return "très bon";
   return "expert";
 }
+const NOM_COMPETENCE = { lavage:"Lavage", decoupe:"Tranchage", friture:"Friture",
+                         assaisonnement:"Assaisonnement", emballage:"Emballage" };
+
 function resumeCompetences(o){
-  const noms = { decoupe:"découpe", soudure:"soudure", assemblage:"montage", peinture:"peinture" };
   const best = Object.keys(o.competences).sort((a,b)=>o.competences[b]-o.competences[a]);
-  return "Surtout " + noms[best[0]] + " (" + motCompetence(o.competences[best[0]]) + "), " +
-         noms[best[1]] + " (" + motCompetence(o.competences[best[1]]) + ").";
+  const mot = k => (NOM_COMPETENCE[k]||k).toLowerCase();
+  return "Surtout " + mot(best[0]) + " (" + motCompetence(o.competences[best[0]]) + "), " +
+         mot(best[1]) + " (" + motCompetence(o.competences[best[1]]) + ").";
 }
 function texteEtatOuvrier(o){
   switch (o.etat){
@@ -3969,12 +4206,12 @@ function panneauCommandes(z){
       '<b style="font-size:13px">'+c.client+'</b>'+
       '<span class="pastille '+(retard?"ko":"")+'">'+resteJours(c)+'</span></div>'+
       '<div style="font-size:12px;color:var(--texte-doux);margin:3px 0">'+
-      c.quantite+' '+nomItem(c.produitId,c.quantite,true,true)+' à '+euros(c.prixUnitaire)+' pièce</div>';
+      quantiteItem(c.produitId,c.quantite,true)+' à '+euros(c.prixUnitaire)+(ITEMS[c.produitId].unite==="kg"?' le kg':' pièce')+'</div>';
     const j = elem('<div class="jauge vert"><i></i></div>');
     j.querySelector("i").style.width = Math.round(c.livre/c.quantite*100)+"%";
     d.appendChild(j);
     d.appendChild(elem('<div style="font-size:11px;color:var(--texte-faible)">'+
-      Math.floor(c.livre)+' livrés sur '+c.quantite+
+      mesure(c.produitId,c.livre)+' livrés sur '+mesure(c.produitId,c.quantite)+
       (retard ? ' · '+euros(c.penaliteRetard)+' de pénalité par jour' : '')+'</div>'));
     ba.appendChild(d);
   }
@@ -3986,7 +4223,7 @@ function panneauCommandes(z){
       'On décide vendredi soir.</div>'));
     for (const c of etat.contrats.proposes)
       bp.appendChild(elem('<div class="ligne"><span class="k">'+c.client+'</span><span class="v">'+
-        c.quantite+' '+nomItem(c.produitId,c.quantite,true)+'</span></div>'));
+        quantiteItem(c.produitId,c.quantite,true)+'</span></div>'));
     z.appendChild(bp);
   }
 
@@ -4086,10 +4323,10 @@ function ouvrirTitre(){
     <div class="feuille">
       <h1>CADENCE</h1>
       <div class="accroche">
-        Un garage, une scie, un poste à souder.<br>
+        Un hangar, un bain d'huile, cinquante kilos de pommes de terre.<br>
         Trente ans plus tard, on verra bien.
       </div>
-      <input class="champTexte" id="champNom" maxlength="28" placeholder="Nom de l'entreprise" value="Cycles Cadence">
+      <input class="champTexte" id="champNom" maxlength="28" placeholder="Nom de l'entreprise" value="Chips Cadence">
       <button class="bt plein" id="btNouvelle">Nouvelle partie</button>
       <button class="bt" id="btContinuer">Reprendre la dernière partie</button>
       <button class="bt" id="btImporter">Charger un fichier de sauvegarde</button>
@@ -4099,7 +4336,7 @@ function ouvrirTitre(){
       </div>
     </div>`;
   $("#btNouvelle").onclick = () => {
-    nouvellePartie($("#champNom").value.trim() || "Cycles Cadence");
+    nouvellePartie($("#champNom").value.trim() || "Chips Cadence");
     fermer("#ecranTitre");
     demarrer();
   };
@@ -4155,9 +4392,9 @@ function ouvrirVendredi(bilan){
   ajLigne(tbl, "Dépenses", "−" + euros(bilan.depenses).replace("−",""));
   ajLigne(tbl, "En caisse", euros(etat.finances.solde));
   if (produits.length) ajLigne(tbl, "Fabriqué",
-    produits.map(k => Math.floor(bilan.produits[k]) + " " + nomItem(k, bilan.produits[k], true, true)).join(", "));
+    produits.map(k => quantiteItem(k, bilan.produits[k], true)).join(", "));
   if (livres.length) ajLigne(tbl, "Livré",
-    livres.map(k => Math.floor(bilan.livres[k]) + " " + nomItem(k, bilan.livres[k], true, true)).join(", "));
+    livres.map(k => quantiteItem(k, bilan.livres[k], true)).join(", "));
   if (bilan.pannes) ajLigne(tbl, "Pannes", bilan.pannes);
   vb.appendChild(tbl);
 
@@ -4193,7 +4430,10 @@ function ouvrirVendredi(bilan){
     '<div class="objMot"></div></div>';
   vo.querySelector(".objTitre").textContent = p.texte;
   vo.querySelector(".jauge i").style.width = Math.round(p.part*100)+"%";
-  vo.querySelector(".objChiffre").textContent = Math.floor(p.valeur)+" sur "+p.cible+" — "+Math.round(p.part*100)+" %";
+  const uObj = AGES[etat.meta.age-1].objectif.produit;
+  vo.querySelector(".objChiffre").textContent =
+    (uObj ? mesure(uObj, p.valeur) + " sur " + mesure(uObj, p.cible) : Math.floor(p.valeur)+" sur "+p.cible)
+    + " — " + Math.round(p.part*100) + " %";
   vo.querySelector(".objMot").textContent = motDeFin(p);
 
   $("#btLancer").onclick = () => {
@@ -4230,8 +4470,11 @@ function faitMarquant(b){
   if (b.retards > 0) return "On a livré en retard. Ça finit par se savoir.";
   if (r < 0) return "On a perdu de l'argent cette semaine.";
   if (b.faits.length) return b.faits[b.faits.length-1] + ".";
-  const tot = Object.values(b.produits).reduce((s,v)=>s+v,0);
-  if (tot > 0) return Math.floor(tot) + " pièces sont sorties de l'atelier.";
+  const cles = Object.keys(b.produits);
+  if (cles.length){
+    const gros = cles.sort((x,y) => b.produits[y]-b.produits[x])[0];
+    return quantiteItem(gros, b.produits[gros], true) + " sont sortis de l'atelier.";
+  }
   return null;
 }
 
@@ -4289,7 +4532,7 @@ function construireDecisions(){
   if (d.length < CONFIG.decisionsMax){
     const achetables = Object.keys(ITEMS).filter(k => ITEMS[k].achat && (ITEMS[k].ageMin||1) <= etat.meta.age);
     const it = choix(achetables);
-    const qte = hasardInt(4,12)*20;
+    const qte = ITEMS[it].unite === "kg" ? hasardInt(4,15)*50 : hasardInt(4,12)*20;
     const remise = hasard(0.14,0.28);
     const prix = Math.round(prixAchat(it)*qte*(1-remise));
     d.push({ sorte:"achat", item:it, qte, prix, remise });
@@ -4312,8 +4555,9 @@ function carteDecision(d){
     const k = d.contrat;
     type = "Commande"; c.classList.add();
     titre = k.client;
-    corps = k.quantite + " " + nomItem(k.produitId, k.quantite, false, true) +
-            " à " + euros(k.prixUnitaire) + " pièce, soit " + euros(k.quantite*k.prixUnitaire) + ". " +
+    corps = quantiteItem(k.produitId, k.quantite, false) +
+            " à " + euros(k.prixUnitaire) + (ITEMS[k.produitId].unite === "kg" ? " le kg" : " pièce") +
+            ", soit " + euros(k.quantite*k.prixUnitaire) + ". " +
             "À livrer sous " + (k.dateLimite - jourCourant()) + " jours ouvrés. " +
             "Pénalité de " + euros(k.penaliteRetard) + " par jour de retard.";
     avis = avisContremaitre(k);
@@ -4331,14 +4575,14 @@ function carteDecision(d){
   }
   else if (d.sorte === "achat"){
     type = "Matière";
-    titre = "Lot de " + d.qte + " " + nomItem(d.item, d.qte, true, true);
+    titre = "Lot de " + quantiteItem(d.item, d.qte, true);
     corps = "Un fournisseur solde son stock : " + euros(d.prix) + " au lieu de " +
             euros(prixAchat(d.item)*d.qte) + ", soit " + Math.round(d.remise*100) + " % de moins.";
     avis = etat.finances.solde > d.prix*3 ? "À ce prix-là, on prend." : "C'est une bonne affaire, mais la caisse est courte.";
     actions = [["Acheter", () => {
       if (etat.finances.solde - d.prix < CONFIG.faillite) return notif("Refusé","La caisse ne suit pas.","ko");
       depenser(d.prix,"achat"); ajouterStock(d.item, d.qte); son("argent");
-      notif("Livraison", d.qte + " " + nomItem(d.item, d.qte, true, true) + " au quai.", "ok");
+      notif("Livraison", quantiteItem(d.item, d.qte, true) + " au quai.", "ok");
     }, "plein"], ["Laisser", () => {}, ""]];
   }
   else if (d.sorte === "banque"){
@@ -4388,11 +4632,11 @@ function ouvrirAnnonceAge(age){
     </div>`;
   const l = $("#listeDebloque");
   const noms = {
-    convoyeur:"Les convoyeurs — les ouvriers ne portent plus tout à la main",
-    caisse:"Les caisses de stockage",
-    cintreuse:"La cintreuse, qui tourne toute seule",
-    cabine:"La cabine de peinture",
-    vtc:"Le VTC, qui se vend le double d'un vélo",
+    convoyeur:"Les convoyeurs — l'équipe ne porte plus tout à bout de bras",
+    caisse:"Les bacs de stockage",
+    tambour:"Le tambour d'assaisonnement, qui tourne tout seul",
+    ensacheuse:"L'ensacheuse, qui pèse et soude les sachets",
+    sachet:"Le sachet de chips, qui rapporte bien plus que le vrac",
     reappro:"Le réapprovisionnement automatique"
   };
   for (const d of age.debloque)
@@ -4501,17 +4745,17 @@ function ouvrirAide(){
 /* ---------------------------------------------------------- Didacticiel
    Le contremaître porte tout le tutoriel : pas une seule fenêtre d'aide (§9.3). */
 const TUTO = [
-  { texte:"Patron, on démarre. Prenez une scie en bas de l'écran et posez-la dans le garage.",
-    attend:"pose_scie" },
-  { texte:"Bien. Maintenant un poste à souder — c'est là que les tubes deviennent des cadres.",
-    attend:"pose_soudeuse" },
-  { texte:"Et un établi pour monter le vélo. Après ça, on aura une chaîne complète.",
-    attend:"pose_etabli" },
-  { texte:"Il nous faut de la matière. Onglet Stocks, à droite : des tubes d'acier, des roues et des kits.",
+  { texte:"Patron, on démarre. Prenez la laveuse en bas de l'écran et posez-la dans l'atelier.",
+    attend:"pose_laveuse" },
+  { texte:"Bien. Maintenant la trancheuse — c'est elle qui débite les patates en rondelles.",
+    attend:"pose_trancheuse" },
+  { texte:"Et la friteuse au bout. Quatre kilos de rondelles font un kilo de chips, ne l'oubliez jamais.",
+    attend:"pose_friteuse" },
+  { texte:"Il nous faut de la marchandise. Onglet Stocks, à droite : des pommes de terre et de l'huile.",
     attend:"achat" },
   { texte:"Parfait. Lancez la semaine — le bouton ×1 en haut. Je m'occupe du reste avec Marcel.",
     attend:"premier_produit" },
-  { texte:"Premier vélo sorti. Il part au quai, et on le vend. Vendredi soir, on fera les comptes.",
+  { texte:"Premiers kilos sortis. Ça part au quai, et les épiceries du coin nous les prennent. Vendredi soir, on fera les comptes.",
     attend:null }
 ];
 
@@ -4692,16 +4936,22 @@ function souffle(duree, freq, q, vol, type){
 function son(nom){
   if (!audio.pret || !etat || etat.reglages.muet) return;
   const t = audio.ac.currentTime;
-  const mini = { scie:0.12, soudeuse:0.15, etabli:0.2, cintreuse:0.2, cabine:0.25, prise:0.18, depot:0.18 }[nom] || 0.04;
+  const mini = { laveuse:0.2, trancheuse:0.12, friteuse:0.25, tambour:0.25, ensacheuse:0.18, prise:0.18, depot:0.18 }[nom] || 0.04;
   if (audio.dernierSon[nom] && t - audio.dernierSon[nom] < mini) return;
   audio.dernierSon[nom] = t;
 
   switch (nom){
-    case "scie":       souffle(0.22, 2600, 6, 0.16); break;
-    case "soudeuse":   souffle(0.3, 1400, 2.4, 0.13); break;
-    case "cintreuse":  ton(180, 0.14, "square", 0.07, 120); break;
-    case "cabine":     souffle(0.45, 700, 1.2, 0.09, "lowpass"); break;
-    case "etabli":     ton(420, 0.07, "square", 0.06); break;
+    // l'eau qui brasse : bruit large et grave
+    case "laveuse":    souffle(0.5, 480, 0.7, 0.1, "lowpass"); break;
+    // la lame : court et net
+    case "trancheuse": souffle(0.09, 3200, 9, 0.13); break;
+    // le grésillement de l'huile : long, médium, un peu sale
+    case "friteuse":   souffle(0.75, 2100, 1.1, 0.11); break;
+    // le tambour : roulement sourd
+    case "tambour":    souffle(0.4, 240, 1.6, 0.09, "lowpass"); break;
+    // l'ensacheuse : chuintement pneumatique puis clac de la soudure
+    case "ensacheuse": souffle(0.13, 1800, 2.2, 0.1);
+                       setTimeout(()=>ton(150,0.05,"square",0.08), 130); break;
     case "caisse":     break;
     case "prise":      ton(320, 0.05, "triangle", 0.05); break;
     case "depot":      ton(190, 0.09, "triangle", 0.07, 150); break;
