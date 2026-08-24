@@ -1205,6 +1205,109 @@ cas("quai-de-sortie", async (nav) => {
   return { echecs: v.echecs.concat(erreurs), note: flux.arrive + " sachets livrés au quai" };
 });
 
+cas("marque-et-marches", async (nav) => {
+  const { page, jeu, sim, erreurs } = await contexte(nav);
+  const v = verif();
+
+  // Les trois jauges existent et se lisent au même endroit.
+  const j = await jeu(`({ notoriete: notoriete(), confiance: confiance(), standing: standing(),
+                          reputation: etat.reputation, depart: CONFIG.standingDepart })`);
+  v.egal("la confiance est bien la réputation", j.confiance, j.reputation);
+  v.egal("le standing démarre au milieu", Math.round(j.standing), j.depart);
+  v.egal("et la notoriété à zéro", Math.round(j.notoriete), 0);
+
+  // Le sachet et le logo pilotent le standing visé, dans le bon sens.
+  const st = await jeu(`(() => {
+    const m = etat.marque;
+    const pose = (logo,fond,motif,style) => { m.logo=logo; m.fond=fond; m.motif=motif; m.styleNom=style;
+                                              return Math.round(cibleStanding()); };
+    const chic = pose('blason','bordeaux','kraft','serif');
+    const discount = pose('eclair','orange','eclats','pochoir');
+    const neutre = pose('etoile','jaune','uni','batons');
+    return { chic, discount, neutre };
+  })()`);
+  v("un sachet chic vise le haut de gamme", st.chic >= 85, String(st.chic));
+  v("un sachet criard vise le bas", st.discount <= 20, String(st.discount));
+  v("et un sachet neutre reste au milieu", st.neutre > 25 && st.neutre < 60, String(st.neutre));
+
+  // Le standing ne saute pas : il met des semaines.
+  const lent = await jeu(`(() => {
+    const m = etat.marque;
+    m.logo='blason'; m.fond='bordeaux'; m.motif='kraft'; m.styleNom='serif';
+    m.standing = 40;
+    const suite = [];
+    for (let i=0;i<6;i++){ majStanding(semaineVierge()); suite.push(Math.round(m.standing)); }
+    return { suite, cible: Math.round(cibleStanding()) };
+  })()`);
+  v("il monte progressivement", lent.suite[0] < lent.suite[1] && lent.suite[1] < lent.suite[3],
+    lent.suite.join(" → "));
+  v("sans jamais dépasser sa cible", Math.max(...lent.suite) <= lent.cible + 1,
+    lent.suite.join(" → ") + " pour une cible de " + lent.cible);
+
+  // Les marchés lisent les jauges chacun à leur façon — et se contredisent.
+  const mar = await jeu(`(() => {
+    sauterAge(4);
+    const m = etat.marque;
+    const test = (not, conf, sta) => {
+      etat.recherche.notoriete = not; etat.reputation = conf; m.standing = sta;
+      return paliersOuverts().map(p => p.id);
+    };
+    return { debut:   test(0, 50, 42),
+             chic:    test(30, 70, 92),
+             volume:  test(60, 80, 45),
+             raisons: { national: motPalier(palierParId('national')),
+                        fine: motPalier(palierParId('fine')) } };
+  })()`);
+  v("au départ, seul le coin est ouvert", mar.debut.join(",") === "local", mar.debut.join(","));
+  v("en haut de gamme, l'épicerie fine s'ouvre", mar.chic.includes("fine"));
+  v("et le national se ferme — on ne peut pas être les deux",
+    !mar.chic.includes("national"), mar.chic.join(","));
+  v("en gamme moyenne et connu, le national s'ouvre", mar.volume.includes("national"));
+  v("mais l'épicerie fine se ferme", !mar.volume.includes("fine"), mar.volume.join(","));
+  v("et le refus s'explique en français", /gamme/.test(mar.raisons.fine), mar.raisons.fine);
+
+  // Un palier ouvert paie selon ce à quoi il tient.
+  const prix = await jeu(`(() => {
+    etat.recherche.notoriete = 30; etat.reputation = 70; etat.marque.standing = 92;
+    const fine = primePalier(palierParId('fine'));
+    etat.recherche.notoriete = 60; etat.reputation = 80; etat.marque.standing = 45;
+    const nat = primePalier(palierParId('national'));
+    return { fine, nat };
+  })()`);
+  v("l'épicerie fine paie au-dessus du courant", prix.fine > 1.05, prix.fine.toFixed(2));
+  v("la centrale paie moins", prix.nat < prix.fine, prix.nat.toFixed(2));
+
+  // Les clients viennent du palier ouvert, jamais d'un autre.
+  const cl = await jeu(`(() => {
+    etat.recherche.notoriete = 0; etat.reputation = 50; etat.marque.standing = 42;
+    const paliers = new Set();
+    for (let i=0;i<40;i++) paliers.add(creerContrat('sachet').palier);
+    return [...paliers];
+  })()`);
+  v.egal("au départ, tous les clients sont locaux", cl.join(","), "local");
+
+  // Le logo et le sachet se dessinent sans erreur, pour toutes les formes.
+  const dess = await jeu(`(() => {
+    const c = document.createElement('canvas'); c.width = 200; c.height = 240;
+    const g = c.getContext('2d');
+    let n = 0;
+    for (const l of LOGOS)
+      for (const f of FONDS_SACHET.slice(0,2))
+        for (const mo of MOTIFS_SACHET){
+          const m = Object.assign({}, etat.marque, { logo:l.id, fond:f.id, motif:mo.id });
+          dessinerSachet(g, m, 10, 10, 120, 160, "Une recette au nom très long");
+          n++;
+        }
+    return n;
+  })()`);
+  v.aumoins("tous les sachets se dessinent", dess, 90);
+
+  const inv = await jeu("verifierPartie()");
+  for (const t of inv) v("invariant : " + t.nom, t.ok, t.detail);
+  await page.close();
+  return { echecs: v.echecs.concat(erreurs), note: 5 + " marchés, " + dess + " sachets dessinés" };
+});
+
 /* ============================================================== Exécution ==*/
 const filtre = process.argv.slice(2);
 const choisis = filtre.length ? CAS.filter(c => filtre.some(f => c.nom.includes(f))) : CAS;

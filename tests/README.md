@@ -36,6 +36,7 @@ La suite sort en code 1 si un cas échoue.
 | `croiser-ou-brancher` | contourner ou enjamber, au choix, et un croisement ne relie jamais rien |
 | `equipe-et-stocks` | l'affectation d'un coup, et les quatre réglages du réapprovisionnement |
 | `quai-de-sortie` | on l'accroche, on trace jusqu'à lui, et la marchandise y arrive |
+| `marque-et-marches` | les trois jauges se contredisent, et chaque marché les lit à sa façon |
 
 ## Les invariants, aussi dans le jeu
 

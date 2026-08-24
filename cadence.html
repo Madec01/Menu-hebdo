@@ -358,6 +358,33 @@ table.tab tr:hover td{background:rgba(255,255,255,.028)}
 .reapproNote{margin-top:5px;font-size:10.5px;color:var(--texte-faible);line-height:1.4}
 .reapproNote.alerte{color:var(--or)}
 
+/* ---------- La marque ---------- */
+.jaugeMarque{margin-bottom:11px}
+.jmTete{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}
+.jmNom{font-size:12.5px;color:var(--texte-doux);font-weight:600}
+.jmVal{font-size:11.5px;color:var(--texte-faible);font-variant-numeric:tabular-nums}
+.jmPhrase{font-size:11px;color:var(--texte-faible);margin-top:4px;line-height:1.35}
+.palier{
+  padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05);opacity:.5;
+}
+.palier:last-child{border-bottom:none}
+.palier.ouvert{opacity:1}
+.palTete{display:flex;justify-content:space-between;align-items:baseline}
+.palNom{font-size:13px;font-weight:600;color:var(--texte-doux)}
+.palEtat{
+  font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--texte-faible);
+}
+.palier.ouvert .palEtat{color:var(--vert)}
+.palResume{font-size:11px;color:var(--texte-faible);line-height:1.4;margin:3px 0}
+.palCond{font-size:11px;color:var(--or);line-height:1.4}
+.palCond.ferme{color:var(--texte-faible);font-style:italic}
+.apercuSachet{display:block;margin:0 auto;width:260px;height:300px}
+.couleurMarque{
+  display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--texte-doux);
+  background:var(--fond3);border:1px solid var(--bord);border-radius:var(--r);padding:4px 8px;
+}
+.couleurMarque input{width:26px;height:22px;border:none;background:none;padding:0;cursor:pointer}
+
 /* ---------- La sortie d'une recette ---------- */
 .noteGeante{
   font-size:64px;font-weight:200;line-height:1;font-variant-numeric:tabular-nums;
@@ -564,6 +591,7 @@ table.tab tr:hover td{background:rgba(255,255,255,.028)}
         <button data-o="perso">Équipe</button>
         <button data-o="commandes">Commandes</button>
         <button data-o="finances">Argent</button>
+        <button data-o="marque">Marque</button>
         <button data-o="labo" class="hidden">Labo</button>
         <button data-o="guide">Guide</button>
       </nav>
@@ -631,6 +659,7 @@ const CONFIG = {
   loyerParJour: [40, 110, 260, 520, 900],   // par âge
   energieParMachineJour: 9,
   reputationDepart: 50,
+  standingDepart: 42,          // ni bas de gamme ni chic : un atelier de bourg
   decisionsMax: 4,
   // Qualité (âge 3) : l'huile perd sa fraîcheur en cuisant, et une friteuse
   // à l'huile fatiguée sort de la marchandise ratée.
@@ -639,7 +668,7 @@ const CONFIG = {
   arretChangementHuile: 45,    // minutes de jeu, friteuse à l'arrêt
   rebutMax: 0.5,
   sauvegarde: "cadence_save_v1",
-  version: 3
+  version: 4
 };
 
 // minutes de jeu écoulées par tick de simulation
@@ -899,16 +928,96 @@ const AGES = [
 ];
 
 /* ------------------------------------------------------------------ Clients */
+/* ------------------------------------------------------------------ La marque
+   Trois jauges disent qui vous êtes, et elles ne vont pas dans le même sens :
+     notoriété — combien de gens vous connaissent
+     confiance — est-ce qu'on peut compter sur vous (c'est `etat.reputation`)
+     standing  — bas de gamme ou haut de gamme
+   Chaque marché les lit à sa façon. On ne peut pas plaire à tout le monde, et
+   c'est là qu'est le jeu : brader fait connaître et fait descendre en gamme. */
+
+/* Le logo : une forme dessinée au code, deux couleurs. `standing` dit ce que
+   la forme raconte — un blason fait maison de campagne, un éclair fait discount. */
+const LOGOS = [
+  { id:"patate",     nom:"La patate",       standing:  2 },
+  { id:"blason",     nom:"Le blason",       standing: 14 },
+  { id:"epi",        nom:"L'épi",           standing: 10 },
+  { id:"moulin",     nom:"Le moulin",       standing: 12 },
+  { id:"monogramme", nom:"Le monogramme",   standing:  8 },
+  { id:"etoile",     nom:"L'étoile",        standing:  0 },
+  { id:"soleil",     nom:"Le soleil",       standing: -2 },
+  { id:"eclair",     nom:"L'éclair",        standing:-10 }
+];
+
+const MOTIFS_SACHET = [
+  { id:"uni",      nom:"Uni",             standing:  0 },
+  { id:"kraft",    nom:"Papier kraft",    standing: 16 },
+  { id:"rayures",  nom:"Rayures",         standing:  5 },
+  { id:"vagues",   nom:"Vagues",          standing:  2 },
+  { id:"damier",   nom:"Damier",          standing: -5 },
+  { id:"eclats",   nom:"Éclats",          standing:-12 }
+];
+
+const FONDS_SACHET = [
+  { id:"creme",   nom:"Crème",        couleur:"#e8dfc6", standing: 12, sombre:false },
+  { id:"olive",   nom:"Vert olive",   couleur:"#5d6b3f", standing: 10, sombre:true },
+  { id:"bordeaux",nom:"Bordeaux",     couleur:"#6d2733", standing: 11, sombre:true },
+  { id:"nuit",    nom:"Bleu nuit",    couleur:"#25314a", standing:  9, sombre:true },
+  { id:"rouge",   nom:"Rouge vif",    couleur:"#c8362b", standing: -6, sombre:true },
+  { id:"jaune",   nom:"Jaune",        couleur:"#e6b52c", standing: -3, sombre:false },
+  { id:"orange",  nom:"Orange",       couleur:"#e07a2a", standing: -5, sombre:false },
+  { id:"turquoise",nom:"Turquoise",   couleur:"#2fa8a0", standing: -2, sombre:true }
+];
+
+const STYLES_NOM = [
+  { id:"serif",     nom:"Empattements",  standing: 11 },
+  { id:"manuscrit", nom:"Manuscrit",     standing:  8 },
+  { id:"batons",    nom:"Bâtons",        standing:  0 },
+  { id:"pochoir",   nom:"Pochoir",       standing: -7 }
+];
+
+/* Les paliers de marché. Chacun lit les trois jauges à sa façon : le seuil est
+   ce qu'il exige, le poids ce à quoi il tient dans le prix qu'il propose.
+   `standingMax` est la porte que ferme le haut de gamme : une centrale d'achat
+   ne veut pas d'une marque trop chic, elle veut du volume. */
+const PALIERS = [
+  { id:"local", n:1, nom:"Le coin",
+    resume:"Les commerces d'à côté. Petits volumes, aucune exigence — c'est là qu'on commence.",
+    notoriete:0,  confiance:0,  standingMin:0, standingMax:100,
+    poids:{ notoriete:0.1, confiance:0.3, standing:0.2 }, volume:1.0 },
+  { id:"regional", n:2, nom:"La région",
+    resume:"Supérettes et grossistes. Il faut qu'on vous connaisse un peu, et qu'on puisse compter sur vous.",
+    notoriete:18, confiance:55, standingMin:0, standingMax:100,
+    poids:{ notoriete:0.4, confiance:0.5, standing:0.3 }, volume:2.6 },
+  { id:"national", n:3, nom:"Le national",
+    resume:"Les centrales d'achat. Gros volumes, prix serrés, paiement à 30 jours — et elles ne pardonnent pas une rupture.",
+    notoriete:45, confiance:70, standingMin:0, standingMax:72,
+    poids:{ notoriete:0.6, confiance:0.9, standing:-0.3 }, volume:7.0 },
+  { id:"fine", n:3, nom:"L'épicerie fine",
+    resume:"Petits volumes, prix élevés. On se moque de savoir si on vous connaît : on regarde ce que vous êtes.",
+    notoriete:0,  confiance:65, standingMin:70, standingMax:100,
+    poids:{ notoriete:0.05, confiance:0.5, standing:1.1 }, volume:0.7 },
+  { id:"export", n:4, nom:"L'export",
+    resume:"Très gros volumes, longs délais. Il faut un nom, une réputation sans tache, et un atelier certifié.",
+    notoriete:65, confiance:80, standingMin:0, standingMax:100,
+    poids:{ notoriete:0.8, confiance:1.0, standing:0.3 }, volume:14.0 }
+];
+
 const CLIENTS = [
-  { nom:"Épicerie Vidal",        ton:"régulier",  ageMin:1, marge:1.00 },
-  { nom:"Le Panier Gourmand",    ton:"exigeant",  ageMin:1, marge:1.09 },
-  { nom:"Halles de Villebourg",  ton:"pressé",    ageMin:1, marge:1.12 },
-  { nom:"Supérette Marceau",     ton:"lent",      ageMin:1, marge:0.96 },
-  { nom:"Chaîne Prixbon",        ton:"volume",    ageMin:2, marge:0.88 },
-  { nom:"Grossiste Delaunay",    ton:"volume",    ageMin:2, marge:0.92 },
-  { nom:"Centrale Ouest-Achat",  ton:"gros",      ageMin:3, marge:0.84, gros:true, paiement:30 },
-  { nom:"Enseigne Bonprix",      ton:"gros",      ageMin:3, marge:0.86, gros:true, paiement:30 },
-  { nom:"Comité d'entreprise",   ton:"régulier",  ageMin:2, marge:1.05 }
+  { nom:"Épicerie Vidal",        ton:"régulier",  ageMin:1, marge:1.00, palier:"local" },
+  { nom:"Le Panier Gourmand",    ton:"exigeant",  ageMin:1, marge:1.09, palier:"local" },
+  { nom:"Halles de Villebourg",  ton:"pressé",    ageMin:1, marge:1.12, palier:"local" },
+  { nom:"Supérette Marceau",     ton:"lent",      ageMin:1, marge:0.96, palier:"local" },
+  { nom:"Comité d'entreprise",   ton:"régulier",  ageMin:2, marge:1.05, palier:"local" },
+  { nom:"Chaîne Prixbon",        ton:"volume",    ageMin:2, marge:0.88, palier:"regional" },
+  { nom:"Grossiste Delaunay",    ton:"volume",    ageMin:2, marge:0.92, palier:"regional" },
+  { nom:"Marché de Villebourg",  ton:"régulier",  ageMin:2, marge:1.02, palier:"regional" },
+  { nom:"Centrale Ouest-Achat",  ton:"gros",      ageMin:3, marge:0.84, palier:"national", gros:true, paiement:30 },
+  { nom:"Enseigne Bonprix",      ton:"gros",      ageMin:3, marge:0.86, palier:"national", gros:true, paiement:30 },
+  { nom:"Maison Perreau",        ton:"exigeant",  ageMin:3, marge:1.55, palier:"fine" },
+  { nom:"Comptoir des Saveurs",  ton:"exigeant",  ageMin:3, marge:1.62, palier:"fine" },
+  { nom:"Import Van Dijk",       ton:"gros",      ageMin:4, marge:0.95, palier:"export", gros:true, paiement:30 },
+  { nom:"Nordic Snacks",         ton:"gros",      ageMin:4, marge:0.98, palier:"export", gros:true, paiement:30 }
 ];
 
 /* -------------------------------------------------- Prénoms et noms d'atelier */
@@ -1444,7 +1553,8 @@ function nouvellePartie(nomEntreprise, modeChoisi){
     usineActive: 0,
     contrats: { proposes:[], acceptes:[], termines:[] },
     marche: { prix:{}, tendances:{}, dernierJour:-1 },
-    reputation: CONFIG.reputationDepart,
+    reputation: CONFIG.reputationDepart,     // c'est la « confiance » des trois jauges
+    marque: marqueParDefaut(nomEntreprise),
     recherche: { recettes:[], enCours:null, notoriete:0, tendance:0, tendanceSemaine:0, prochain:1 },
     progression: { age:1, objectifsCompletes:[], jaugeObjectif:0, vendus:{}, produits:{}, produitsSemaine:{}, compteurs:{} },
     stats: { historiqueSemaines:[], semaineCourante: semaineVierge(), clients:{} },
@@ -1470,6 +1580,39 @@ function nouvellePartie(nomEntreprise, modeChoisi){
   reindexer();
   return etat;
 }
+
+/* -------------------------------------------------------------- La marque
+   Trois jauges, et deux existaient déjà : la notoriété vit dans la recherche,
+   la confiance est `etat.reputation`. On les lit toujours par ces fonctions,
+   pour que le reste du code n'ait pas à savoir où elles habitent. */
+function notoriete(){ return etat.recherche ? etat.recherche.notoriete : 0; }
+function confiance(){ return etat.reputation; }
+function standing(){ return etat.marque ? etat.marque.standing : CONFIG.standingDepart; }
+
+function marqueParDefaut(nom){
+  return {
+    nom: nom || "Chips Cadence",
+    logo: "patate", c1:"#e2b62c", c2:"#3a2c14",
+    fond:"jaune", motif:"uni", styleNom:"batons",
+    standing: CONFIG.standingDepart,
+    primePrix: 1,        // ce qu'on vend rapporté au prix de référence
+    dessinee: false      // le joueur a-t-il ouvert l'atelier de la marque
+  };
+}
+
+/** Ce vers quoi le standing tend, d'après ce que la marque montre et ce
+ *  qu'elle vend. Il ne saute jamais : la perception met des semaines. */
+function cibleStanding(){
+  const m = etat.marque;
+  const p = id => (LOGOS.find(x=>x.id===m.logo)||{}).standing || 0;
+  const q = (t,id) => (t.find(x=>x.id===id)||{}).standing || 0;
+  let c = 40 + p() + q(MOTIFS_SACHET,m.motif) + q(FONDS_SACHET,m.fond) + q(STYLES_NOM,m.styleNom);
+  // Vendre au-dessus du prix de référence vous classe en haut, brader vous classe en bas.
+  c += clamp((m.primePrix - 1) * 90, -22, 22);
+  c += bonusStandingLabels();
+  return clamp(c, 0, 100);
+}
+function bonusStandingLabels(){ return 0; }   // rempli par les labels, plus tard
 
 function semaineVierge(){
   return { produits:{}, livres:{}, ca:0, depenses:0, depensesParMotif:{}, pannes:0, retards:0, rebuts:0, reclamations:0, faits:[] };
@@ -3134,13 +3277,57 @@ function capaciteHebdoEstimee(produitId){
   return Math.max(ITEMS[produitId].unite === "kg" ? 30 : 200, Math.round(parJour * CONFIG.joursParSemaine));
 }
 
+/* -------------------------------------------------------- Les paliers
+   Un marché ne s'achète pas : il s'ouvre quand la marque a ce qu'il demande.
+   Le local ne demande rien, l'épicerie fine veut du standing, la centrale veut
+   de la confiance et ne veut surtout pas d'une marque trop chic. */
+function palierParId(id){ return PALIERS.find(p => p.id === id) || PALIERS[0]; }
+
+function palierOuvert(p){
+  if (p.n > etat.meta.age) return false;
+  if (mode().toutDebloque) return true;
+  return notoriete() >= p.notoriete && confiance() >= p.confiance &&
+         standing() >= p.standingMin && standing() <= p.standingMax;
+}
+
+/** Ce qui manque pour l'ouvrir, en une phrase. Jamais de verrou muet. */
+function motPalier(p){
+  if (p.n > etat.meta.age) return "à l'âge " + p.n;
+  const m = [];
+  if (notoriete() < p.notoriete)
+    m.push("être connu à " + p.notoriete + " (" + Math.round(notoriete()) + " aujourd'hui)");
+  if (confiance() < p.confiance)
+    m.push("une confiance de " + p.confiance + " (" + Math.round(confiance()) + ")");
+  if (standing() < p.standingMin)
+    m.push("monter en gamme jusqu'à " + p.standingMin + " (" + Math.round(standing()) + ")");
+  if (standing() > p.standingMax)
+    m.push("redescendre en gamme sous " + p.standingMax + " (" + Math.round(standing()) + ") — " +
+           "ils cherchent du volume, pas du luxe");
+  return m.length ? "il faut " + m.join(", et ") : "ouvert";
+}
+
+function paliersOuverts(){ return PALIERS.filter(palierOuvert); }
+
+/** Ce que ce palier consent à payer, d'après ce à quoi il tient. */
+function primePalier(p){
+  const w = p.poids;
+  const prime = (notoriete()/100 - 0.4) * w.notoriete +
+                (confiance()/100 - 0.5) * w.confiance +
+                (standing()/100 - 0.45) * w.standing;
+  return clamp(1 + prime * 0.5, 0.72, 1.55);
+}
+
 function creerContrat(produitId){
-  // Les gros clients ne viennent qu'une fois la maison connue.
-  const dispo = CLIENTS.filter(c => c.ageMin <= etat.meta.age && (!c.gros || etat.reputation >= 55));
+  // Le client vient d'un palier ouvert : c'est la marque qui décide de qui frappe
+  // à la porte, pas le hasard seul.
+  const ouverts = paliersOuverts().map(p => p.id);
+  let dispo = CLIENTS.filter(c => c.ageMin <= etat.meta.age && ouverts.includes(c.palier || "local"));
+  if (!dispo.length) dispo = CLIENTS.filter(c => (c.palier || "local") === "local");
   const cl = choix(dispo);
+  const pal = palierParId(cl.palier || "local");
   const cap = capaciteHebdoEstimee(produitId);
   const semaines = cl.gros ? hasardInt(2,4) : hasardInt(1,3);
-  const facteur = cl.gros ? hasard(1.1, 1.6) : hasard(0.5, 1.35);
+  const facteur = (cl.gros ? hasard(1.1, 1.6) : hasard(0.5, 1.35)) * pal.volume;
   // On arrondit à quelque chose qu'un client dirait vraiment : 250 kg, 4 000 sachets.
   const brut = Math.max(5, cap * semaines * facteur);
   const pas = ITEMS[produitId].unite === "kg" ? (brut > 800 ? 100 : 25) : (brut > 4000 ? 500 : 100);
@@ -3148,11 +3335,11 @@ function creerContrat(produitId){
   const base = ITEMS[produitId].vente;
   // Une maison connue vend ses propres recettes plus cher.
   const renom = ITEMS[produitId].maison ? (0.88 + etat.recherche.notoriete/100 * 0.34) : 1;
-  const prixUnitaire = Math.round(base * cl.marge * mode().prixClient * renom *
+  const prixUnitaire = Math.round(base * cl.marge * mode().prixClient * renom * primePalier(pal) *
                                   (0.9 + etat.reputation/100*0.18) * hasard(0.97,1.06)) || 1;
   return {
     id: nouvelId(),
-    client: cl.nom, ton: cl.ton,
+    client: cl.nom, ton: cl.ton, palier: cl.palier || "local",
     produitId, quantite, livre:0,
     prixUnitaire,
     dateLimite: jourCourant() + semaines*CONFIG.joursParSemaine,
@@ -3317,6 +3504,7 @@ function finSemaine(){
 
   etat.stats.semaineCourante = semaineVierge();
   etat.progression.produitsSemaine = {};
+  majStanding(s);
 
   // Nouvelles propositions de commande
   const produits = Object.keys(ITEMS).filter(id => ITEMS[id].vente && (ITEMS[id].ageMin||1) <= etat.meta.age);
@@ -3327,6 +3515,37 @@ function finSemaine(){
   etat.meta.vitesse = 0;
   sauvegardeAuto();
   ouvrirVendredi(s);
+}
+
+/** Le standing suit ce que la marque montre et ce qu'elle vend, avec du retard :
+ *  une réputation de gamme met des semaines à bouger, dans les deux sens. */
+function majStanding(semaine){
+  const m = etat.marque;
+  if (!m) return;
+  // Ce qu'on a vendu cette semaine, rapporté au prix de référence des mêmes
+  // marchandises : au-dessus de 1 on est cher, en dessous on brade.
+  let reference = 0;
+  for (const id in (semaine.livres || {}))
+    if (ITEMS[id]) reference += semaine.livres[id] * (ITEMS[id].vente || 0);
+  if (reference > 0){
+    const reel = semaine.ca / reference;
+    m.primePrix = m.primePrix * 0.7 + clamp(reel, 0.5, 2) * 0.3;
+  }
+  const avant = m.standing;
+  m.standing = clamp(m.standing + (cibleStanding() - m.standing) * 0.28, 0, 100);
+  const d = m.standing - avant;
+  if (Math.abs(d) >= 3)
+    fait(d > 0 ? "La marque est montée en gamme" : "La marque est descendue en gamme");
+  // Un palier qui s'ouvre est une nouvelle qui mérite d'être dite.
+  const ouverts = paliersOuverts().map(p => p.id);
+  m.paliersConnus = m.paliersConnus || [];
+  const neufs = ouverts.filter(id => !m.paliersConnus.includes(id));
+  m.paliersConnus = ouverts;
+  for (const id of neufs){
+    const p = palierParId(id);
+    notif("Un marché s'ouvre", "« " + p.nom + " » vous accepte désormais. " + p.resume, "ok");
+    fait("Le marché « " + p.nom + " » s'ouvre");
+  }
 }
 
 /* ------------------------------------------------------- Progression */
@@ -4460,6 +4679,8 @@ function dessinerSol(){
   ctx.lineWidth = 0.08;
   ctx.strokeRect(0,0,u.largeur,u.hauteur);
 
+  dessinerEnseigne();
+
   // Les portes : là où l'on sort dans la cour. Un trou dans le mur, un paillasson.
   for (const p of portesAtelier(u)){
     const nord = p.y === 0, sud = p.y === u.hauteur-1, ouest = p.x === 0;
@@ -4475,6 +4696,52 @@ function dessinerSol(){
     ctx.strokeRect(p.x+0.14, p.y+0.14, 0.72, 0.72);
     ctx.setLineDash([]);
   }
+}
+
+/* --------------------------------------------------------- L'enseigne
+   Le nom et le logo peints sur le mur nord, en grand. C'est ce qui fait que
+   l'usine est la vôtre et pas une usine quelconque. Peint une fois dans une
+   image : ça ne bouge que si le joueur change la marque. */
+let cacheEnseigne = null, cacheEnseigneCle = "";
+function dessinerEnseigne(){
+  const u = U(), m = etat.marque;
+  if (!m) return;
+  const l = Math.min(u.largeur * 0.62, 22), h = 2.6;
+  const cle = m.nom + "|" + m.logo + "|" + m.c1 + "|" + m.c2 + "|" + m.styleNom + "|" + Math.round(l*10);
+  if (!cacheEnseigne || cle !== cacheEnseigneCle){
+    cacheEnseigneCle = cle;
+    const T = 64;                       // pixels par tuile dans l'image
+    if (!cacheEnseigne) cacheEnseigne = document.createElement("canvas");
+    cacheEnseigne.width = Math.round(l*T); cacheEnseigne.height = Math.round(h*T);
+    const g = cacheEnseigne.getContext("2d");
+    g.clearRect(0,0,cacheEnseigne.width,cacheEnseigne.height);
+    const H = cacheEnseigne.height;
+    dessinerLogo(g, m, H*0.62, H*0.5, H*0.36);
+    g.fillStyle = m.c1;
+    g.textAlign = "left"; g.textBaseline = "middle";
+    let taille = Math.round(H*0.52);
+    const nom = (m.nom||"").toUpperCase().slice(0,20), dispo = cacheEnseigne.width - H*1.3;
+    g.font = policeMarque(m.styleNom, taille);
+    while (taille > 8 && g.measureText(nom).width > dispo){
+      taille -= 2; g.font = policeMarque(m.styleNom, taille);
+    }
+    g.fillText(nom, H*1.12, H*0.53);
+    // peinture usée : quelques manques, sinon ça fait autocollant
+    g.globalCompositeOperation = "destination-out";
+    for (let i=0;i<90;i++){
+      g.globalAlpha = 0.05 + bruit(i*3.7)*0.22;
+      g.beginPath();
+      g.ellipse(bruit(i*1.9)*cacheEnseigne.width, bruit(i*5.3)*H,
+                2+bruit(i*7.1)*9, 1+bruit(i*11.3)*5, bruit(i*2.3)*3, 0, 7);
+      g.fill();
+    }
+    g.globalAlpha = 1; g.globalCompositeOperation = "source-over";
+  }
+  const x = (u.largeur - l)/2;
+  ctx.save();
+  ctx.globalAlpha = 0.88;
+  ctx.drawImage(cacheEnseigne, x, 0.55, l, h);
+  ctx.restore();
 }
 
 /* ------------------------------------------------------------- Les quais */
@@ -6508,6 +6775,7 @@ function majPanneau(){
     case "perso":     panneauPersonnel(z); break;
     case "commandes": panneauCommandes(z); break;
     case "finances":  panneauFinances(z); break;
+    case "marque":    panneauMarque(z); break;
     case "labo":      panneauRecherche(z); break;
     case "guide":     panneauGuide(z); break;
   }
@@ -8370,6 +8638,26 @@ function SECTIONS_GUIDE(){
     "<p>Si la marchandise s'accumule au bout de la bande, c'est que l'aval ne suit pas. Ça se voit à l'œil "+
     "nu : les pièces s'entassent.</p>" },
 
+  { titre:"La marque et les marchés", corps:
+    "<p>Trois jauges disent qui vous êtes, et <b>elles ne vont pas dans le même sens</b> :</p>"+
+    "<p><b>La notoriété</b> — combien de gens vous connaissent. Elle monte avec les volumes vendus et "+
+    "les recettes réussies.<br>"+
+    "<b>La confiance</b> — est-ce qu'on peut compter sur vous. Elle monte en livrant à l'heure, et "+
+    "chute vite à la moindre réclamation.<br>"+
+    "<b>Le standing</b> — bas de gamme ou haut de gamme. Il suit votre sachet, votre logo, et surtout "+
+    "le prix auquel vous vendez.</p>"+
+    "<p>Le standing ne saute jamais : une réputation de gamme met des semaines à bouger, dans les deux "+
+    "sens. L'onglet Marque vous dit toujours vers quoi il tend.</p>"+
+    "<p><b>Chaque marché les lit à sa façon</b>, et c'est là qu'est le choix. L'épicerie fine veut du "+
+    "standing et se moque qu'on vous connaisse. La centrale d'achat veut de la confiance et du volume — "+
+    "et une marque trop chic lui ferme la porte. <b>On ne peut pas être les deux.</b> Brader pour "+
+    "écouler vous fait connaître et vous descend en gamme ; monter en gamme vous ferme la grande "+
+    "surface.</p>"+
+    "<p>Un marché fermé dit toujours ce qui lui manque. Un marché ouvert dit ce qu'il paie, au-dessus "+
+    "ou en dessous du prix courant.</p>"+
+    "<p>Le nom, le logo et le sachet se règlent dans l'onglet Marque. Le nom et le logo sont peints "+
+    "en grand sur le mur de l'atelier — c'est votre usine, ça se voit.</p>" },
+
   { titre:"Les stocks et le réapprovisionnement", corps:
     "<p>Onglet <b>Stocks</b>. Chaque matière peut se recommander toute seule, et le réglage s'écrit "+
     "comme une phrase : <i>dès qu'il en reste moins de tant, en faire livrer tant, sans jamais "+
@@ -9503,6 +9791,389 @@ function fermerSortieRecette(){
 }
 
 /* ============================================================================
+   UI — LA MARQUE
+   Trois jauges, un logo, un sachet. Tout est dessiné au code : le jeu reste un
+   fichier autonome, sans une seule image à charger.
+   ========================================================================== */
+
+/* --------------------------------------------------------------- Le logo
+   Un dessin par forme, en coordonnées normalisées (-1..1), centré sur (0,0).
+   Sert au panneau, au sachet, à l'enseigne sur le mur de l'atelier. */
+function dessinerLogo(g, m, cx, cy, r){
+  const c1 = m.c1 || "#e2b62c", c2 = m.c2 || "#3a2c14";
+  g.save();
+  g.translate(cx, cy);
+  g.scale(r, r);
+  g.lineJoin = "round"; g.lineCap = "round";
+
+  switch (m.logo){
+    case "blason": {
+      g.fillStyle = c1;
+      g.beginPath();
+      g.moveTo(-0.72,-0.82); g.lineTo(0.72,-0.82); g.lineTo(0.72,0.18);
+      g.quadraticCurveTo(0.72,0.72, 0,0.95);
+      g.quadraticCurveTo(-0.72,0.72, -0.72,0.18);
+      g.closePath(); g.fill();
+      g.strokeStyle = c2; g.lineWidth = 0.13; g.stroke();
+      g.fillStyle = c2;
+      g.beginPath(); g.ellipse(0,-0.18,0.3,0.24,0.5,0,7); g.fill();
+      g.beginPath(); g.moveTo(-0.34,0.34); g.lineTo(0.34,0.34); g.lineTo(0,0.6);
+      g.closePath(); g.fill();
+      break;
+    }
+    case "epi": {
+      g.strokeStyle = c2; g.lineWidth = 0.14;
+      g.beginPath(); g.moveTo(0,0.92); g.lineTo(0,-0.5); g.stroke();
+      g.fillStyle = c1;
+      for (let i=0;i<5;i++){
+        const y = -0.5 + i*0.29;
+        for (const s of [-1,1]){
+          g.beginPath();
+          g.ellipse(s*0.26, y, 0.3, 0.14, s*0.7, 0, 7);
+          g.fill();
+        }
+      }
+      g.fillStyle = c1;
+      g.beginPath(); g.ellipse(0,-0.68,0.15,0.3,0,0,7); g.fill();
+      break;
+    }
+    case "moulin": {
+      g.fillStyle = c2;
+      g.beginPath();
+      g.moveTo(-0.5,0.92); g.lineTo(-0.28,-0.3); g.lineTo(0.28,-0.3); g.lineTo(0.5,0.92);
+      g.closePath(); g.fill();
+      g.fillStyle = c1;
+      for (let i=0;i<4;i++){
+        g.save(); g.rotate(i*Math.PI/2 + 0.42);
+        g.beginPath(); g.moveTo(0,-0.42); g.lineTo(0.16,-0.5); g.lineTo(0.06,-1.0);
+        g.lineTo(-0.06,-1.0); g.closePath(); g.fill();
+        g.restore();
+      }
+      g.fillStyle = c1;
+      g.beginPath(); g.arc(0,-0.42,0.13,0,7); g.fill();
+      break;
+    }
+    case "monogramme": {
+      g.fillStyle = c1;
+      g.beginPath(); g.arc(0,0,0.9,0,7); g.fill();
+      g.strokeStyle = c2; g.lineWidth = 0.1;
+      g.beginPath(); g.arc(0,0,0.74,0,7); g.stroke();
+      g.fillStyle = c2;
+      g.font = "700 1.05px Georgia, serif";
+      g.textAlign = "center"; g.textBaseline = "middle";
+      g.fillText(((m.nom||"C").trim()[0] || "C").toUpperCase(), 0, 0.06);
+      break;
+    }
+    case "etoile": {
+      g.fillStyle = c1;
+      g.beginPath();
+      for (let i=0;i<10;i++){
+        const a = -Math.PI/2 + i*Math.PI/5, r2 = i%2 ? 0.42 : 0.95;
+        i ? g.lineTo(Math.cos(a)*r2, Math.sin(a)*r2) : g.moveTo(Math.cos(a)*r2, Math.sin(a)*r2);
+      }
+      g.closePath(); g.fill();
+      g.strokeStyle = c2; g.lineWidth = 0.1; g.stroke();
+      break;
+    }
+    case "soleil": {
+      g.strokeStyle = c1; g.lineWidth = 0.14;
+      for (let i=0;i<10;i++){
+        const a = i*Math.PI/5;
+        g.beginPath();
+        g.moveTo(Math.cos(a)*0.6, Math.sin(a)*0.6);
+        g.lineTo(Math.cos(a)*0.98, Math.sin(a)*0.98);
+        g.stroke();
+      }
+      g.fillStyle = c1; g.beginPath(); g.arc(0,0,0.46,0,7); g.fill();
+      g.fillStyle = c2; g.beginPath(); g.arc(0,0,0.24,0,7); g.fill();
+      break;
+    }
+    case "eclair": {
+      g.fillStyle = c1;
+      g.beginPath();
+      g.moveTo(0.3,-0.95); g.lineTo(-0.55,0.12); g.lineTo(-0.06,0.12);
+      g.lineTo(-0.3,0.95); g.lineTo(0.58,-0.16); g.lineTo(0.07,-0.16);
+      g.closePath(); g.fill();
+      g.strokeStyle = c2; g.lineWidth = 0.09; g.stroke();
+      break;
+    }
+    default: {           // la patate
+      g.fillStyle = c1;
+      g.beginPath();
+      g.ellipse(0, 0, 0.92, 0.68, -0.28, 0, 7);
+      g.fill();
+      g.strokeStyle = c2; g.lineWidth = 0.1; g.stroke();
+      g.fillStyle = c2;
+      for (const [x,y,s] of [[-0.3,-0.16,0.1],[0.18,0.12,0.13],[0.34,-0.3,0.08]]){
+        g.beginPath(); g.ellipse(x,y,s,s*0.72,0.4,0,7); g.fill();
+      }
+    }
+  }
+  g.restore();
+}
+
+/* ------------------------------------------------------------- Le sachet */
+function policeMarque(style, taille){
+  switch (style){
+    case "serif":     return "700 " + taille + "px Georgia, 'Times New Roman', serif";
+    case "manuscrit": return "italic 700 " + taille + "px 'Segoe Script', 'Brush Script MT', cursive";
+    case "pochoir":   return "800 " + taille + "px 'Arial Black', Impact, sans-serif";
+    default:          return "700 " + taille + "px 'Segoe UI', sans-serif";
+  }
+}
+
+/** Écrit un texte en le rétrécissant juste ce qu'il faut pour qu'il tienne.
+ *  Un nom de marque long ne doit jamais déborder de son sachet. */
+function texteAjuste(g, texte, cx, cy, largeurMax, style, taille){
+  let t = taille;
+  g.font = policeMarque(style, t);
+  while (t > 6 && g.measureText(texte).width > largeurMax){
+    t -= 1;
+    g.font = policeMarque(style, t);
+  }
+  g.fillText(texte, cx, cy);
+  return t;
+}
+
+/** Le sachet, dessiné comme on le verrait en rayon. `l` et `h` en pixels. */
+function dessinerSachet(g, m, x, y, l, h, nomRecette){
+  const fond = (FONDS_SACHET.find(f => f.id === m.fond) || FONDS_SACHET[0]);
+  g.save();
+  g.beginPath();
+  const r = Math.min(l,h)*0.09;
+  g.moveTo(x+r,y); g.lineTo(x+l-r,y); g.quadraticCurveTo(x+l,y,x+l,y+r);
+  g.lineTo(x+l,y+h-r); g.quadraticCurveTo(x+l,y+h,x+l-r,y+h);
+  g.lineTo(x+r,y+h); g.quadraticCurveTo(x,y+h,x,y+h-r);
+  g.lineTo(x,y+r); g.quadraticCurveTo(x,y,x+r,y);
+  g.closePath();
+  g.clip();
+
+  g.fillStyle = fond.couleur;
+  g.fillRect(x,y,l,h);
+
+  // le motif
+  const clair = "rgba(255,255,255,.16)", sombre = "rgba(0,0,0,.16)";
+  switch (m.motif){
+    case "rayures":
+      g.fillStyle = clair;
+      for (let i=-h; i<l+h; i+=l*0.16) { g.save(); g.translate(x+i,y); g.rotate(0.4);
+        g.fillRect(0,0,l*0.07,h*1.9); g.restore(); }
+      break;
+    case "kraft":
+      g.fillStyle = "rgba(196,164,110,.55)"; g.fillRect(x,y,l,h);
+      g.fillStyle = "rgba(120,92,52,.20)";
+      for (let i=0;i<60;i++)
+        g.fillRect(x + bruit(i*3.1)*l, y + bruit(i*5.7)*h, 1.5, 1.5);
+      break;
+    case "damier":
+      g.fillStyle = sombre;
+      for (let a=0;a<6;a++) for (let b=0;b<8;b++)
+        if ((a+b)%2) g.fillRect(x+a*l/6, y+b*h/8, l/6, h/8);
+      break;
+    case "vagues":
+      g.strokeStyle = clair; g.lineWidth = Math.max(1.5, h*0.02);
+      for (let i=0;i<6;i++){
+        g.beginPath();
+        for (let t=0;t<=10;t++)
+          g[t?"lineTo":"moveTo"](x + t*l/10, y + h*(0.12+i*0.16) + Math.sin(t*0.9+i)*h*0.025);
+        g.stroke();
+      }
+      break;
+    case "eclats":
+      for (let i=0;i<14;i++){
+        g.fillStyle = i%2 ? clair : sombre;
+        g.save(); g.translate(x + bruit(i*2.3)*l, y + bruit(i*4.1)*h); g.rotate(bruit(i*7.7)*3);
+        g.fillRect(-l*0.16,-h*0.02, l*0.32, h*0.045);
+        g.restore();
+      }
+      break;
+  }
+
+  // la soudure du haut et du bas
+  g.fillStyle = "rgba(0,0,0,.22)";
+  g.fillRect(x, y, l, h*0.07);
+  g.fillRect(x, y+h-h*0.07, l, h*0.07);
+
+  // le logo et le nom
+  const encre = fond.sombre ? "#f5f1e6" : "#2a2418";
+  const gl = { logo:m.logo, c1:m.c1, c2:m.c2, nom:m.nom };
+  dessinerLogo(g, gl, x+l/2, y+h*0.32, Math.min(l,h)*0.20);
+  g.fillStyle = encre;
+  g.textAlign = "center"; g.textBaseline = "middle";
+  texteAjuste(g, (m.nom || "").toUpperCase().slice(0,20), x+l/2, y+h*0.60,
+              l*0.84, m.styleNom, Math.round(h*0.115));
+  if (nomRecette){
+    g.font = "600 " + Math.round(h*0.072) + "px 'Segoe UI', sans-serif";
+    g.globalAlpha = 0.8;
+    g.fillText(nomRecette.slice(0,22), x+l/2, y+h*0.73);
+    g.globalAlpha = 1;
+  }
+  g.restore();
+}
+
+/* ------------------------------------------------------------ L'onglet */
+function panneauMarque(z){
+  const m = etat.marque;
+  z.appendChild(elem('<h2 class="titrePan">La marque</h2>'));
+  z.appendChild(elem('<p class="sousTitre">Ce que le public sait de vous, et ce que vous lui montrez.</p>'));
+
+  /* --- les trois jauges --- */
+  const bj = blocTitre("Où vous en êtes");
+  const jauge = (nom, val, phrase, teinte) => {
+    const l = document.createElement("div");
+    l.className = "jaugeMarque";
+    l.innerHTML = '<div class="jmTete"><span class="jmNom"></span><span class="jmVal"></span></div>'+
+                  '<div class="jauge" style="height:8px"><i></i></div>'+
+                  '<div class="jmPhrase"></div>';
+    l.querySelector(".jmNom").textContent = nom;
+    l.querySelector(".jmVal").textContent = Math.round(val) + " / 100";
+    const i = l.querySelector("i");
+    i.style.width = clamp(val,0,100) + "%";
+    i.style.background = teinte;
+    l.querySelector(".jmPhrase").textContent = phrase;
+    bj.appendChild(l);
+  };
+  jauge("Notoriété", notoriete(), motNotoriete(notoriete()), "#e2b62c");
+  jauge("Confiance", confiance(), motConfiance(confiance()), "#5cba6b");
+  jauge("Standing", standing(), motStanding(standing()), "#9b6dc9");
+  const cible = cibleStanding();
+  if (Math.abs(cible - standing()) > 2)
+    bj.appendChild(elem('<div class="reapproNote"></div>')).textContent =
+      cible > standing()
+        ? "Ce que vous montrez et ce que vous vendez tirent le standing vers " + Math.round(cible) +
+          ". Il montera semaine après semaine."
+        : "Attention : vos choix tirent le standing vers " + Math.round(cible) + ". Il va redescendre.";
+  z.appendChild(bj);
+
+  /* --- les marchés --- */
+  const bm = blocTitre("Les marchés");
+  for (const p of PALIERS){
+    const ouvert = palierOuvert(p);
+    const l = document.createElement("div");
+    l.className = "palier" + (ouvert ? " ouvert" : "");
+    l.innerHTML = '<div class="palTete"><span class="palNom"></span><span class="palEtat"></span></div>'+
+                  '<div class="palResume"></div><div class="palCond"></div>';
+    l.querySelector(".palNom").textContent = p.nom;
+    l.querySelector(".palEtat").textContent = ouvert ? "ouvert" : "fermé";
+    l.querySelector(".palResume").textContent = p.resume;
+    const cond = l.querySelector(".palCond");
+    if (ouvert){
+      const pr = primePalier(p);
+      cond.textContent = pr >= 1.02 ? "Ils paient " + Math.round((pr-1)*100) + " % au-dessus du prix courant."
+                       : pr <= 0.98 ? "Ils paient " + Math.round((1-pr)*100) + " % en dessous du prix courant."
+                       : "Ils paient le prix courant.";
+    } else {
+      cond.textContent = motPalier(p);
+      cond.classList.add("ferme");
+    }
+    bm.appendChild(l);
+  }
+  z.appendChild(bm);
+
+  /* --- l'atelier de la marque --- */
+  const ba = blocTitre("Le sachet");
+  const apercu = document.createElement("canvas");
+  apercu.className = "apercuSachet";
+  apercu.width = 260; apercu.height = 300;
+  ba.appendChild(apercu);
+  const g = apercu.getContext("2d");
+  g.clearRect(0,0,260,300);
+  dessinerSachet(g, m, 55, 15, 150, 200, derniereRecetteNom());
+  g.font = "600 12px 'Segoe UI', sans-serif";
+  g.fillStyle = "#8b929c"; g.textAlign = "center";
+  g.fillText(motStanding(cibleStanding()), 130, 258);
+
+  const champ = document.createElement("input");
+  champ.className = "champTexte";
+  champ.style.cssText = "text-align:left;margin:10px 0 4px";
+  champ.maxLength = 20;
+  champ.placeholder = "Le nom de la marque";
+  champ.value = m.nom;
+  champ.oninput = () => { m.nom = champ.value; etat.meta.nomEntreprise = champ.value || "Chips Cadence";
+                          redessinerMarque(); majBandeau(); };
+  ba.appendChild(champ);
+
+  const choix2 = (titre, table, cle) => {
+    const bloc = document.createElement("div");
+    bloc.className = "rechAxe";
+    bloc.innerHTML = '<div class="rechAxeNom"></div><div class="rechOpts"></div>';
+    bloc.querySelector(".rechAxeNom").textContent = titre;
+    const zo = bloc.querySelector(".rechOpts");
+    for (const o of table){
+      const b = document.createElement("button");
+      b.className = "rechOpt" + (m[cle] === o.id ? " actif" : "");
+      b.textContent = o.nom;
+      b.title = o.standing > 4 ? "Fait plutôt haut de gamme"
+              : o.standing < -3 ? "Fait plutôt bas de gamme" : "Neutre";
+      b.onclick = () => { m[cle] = o.id; marqueTouchee(); };
+      zo.appendChild(b);
+    }
+    ba.appendChild(bloc);
+  };
+  choix2("Le logo", LOGOS, "logo");
+  choix2("Le fond du sachet", FONDS_SACHET, "fond");
+  choix2("Le motif", MOTIFS_SACHET, "motif");
+  choix2("Le nom", STYLES_NOM, "styleNom");
+
+  // Les deux couleurs du logo
+  const bc = document.createElement("div");
+  bc.className = "rechAxe";
+  bc.innerHTML = '<div class="rechAxeNom">Les couleurs du logo</div><div class="rechOpts"></div>';
+  const zc = bc.querySelector(".rechOpts");
+  for (const [cle, lib] of [["c1","Principale"],["c2","Contraste"]]){
+    const w = document.createElement("label");
+    w.className = "couleurMarque";
+    const inp = document.createElement("input");
+    inp.type = "color"; inp.value = m[cle];
+    inp.oninput = () => { m[cle] = inp.value; marqueTouchee(); };
+    w.appendChild(inp);
+    w.appendChild(document.createTextNode(lib));
+    zc.appendChild(w);
+  }
+  bc.appendChild(zc);
+  ba.appendChild(bc);
+  z.appendChild(ba);
+}
+
+/** Un changement de marque se voit tout de suite, partout. */
+function marqueTouchee(){
+  etat.marque.dessinee = true;
+  redessinerMarque();
+  majPanneau();
+  son("cle");
+}
+function redessinerMarque(){
+  cacheEnseigne = null;      // l'enseigne peinte sur le mur est refaite
+}
+
+function derniereRecetteNom(){
+  const r = etat.recherche && etat.recherche.recettes;
+  return r && r.length ? r[r.length-1].nom : "";
+}
+
+function motNotoriete(v){
+  if (v >= 80) return "Tout le monde connaît la maison.";
+  if (v >= 55) return "On vous voit dans les rayons.";
+  if (v >= 30) return "On commence à vous connaître.";
+  if (v >= 12) return "Quelques-uns savent qui vous êtes.";
+  return "Personne ne vous connaît encore.";
+}
+function motConfiance(v){
+  if (v >= 85) return "On peut compter sur vous les yeux fermés.";
+  if (v >= 70) return "Vous livrez, on le sait.";
+  if (v >= 50) return "Correct, sans plus.";
+  if (v >= 30) return "Vos retards commencent à se dire.";
+  return "Plus personne ne vous fait confiance.";
+}
+function motStanding(v){
+  if (v >= 80) return "Une marque de maison de luxe.";
+  if (v >= 65) return "Une belle marque, qu'on offre.";
+  if (v >= 45) return "Une marque honnête, de tous les jours.";
+  if (v >= 28) return "Une marque de premier prix.";
+  return "Une marque discount.";
+}
+
+/* ============================================================================
    AUDIO — tout est synthétisé à la volée, aucun fichier (§13)
    ========================================================================== */
 
@@ -9756,6 +10427,12 @@ function migrer(o){
     }
     o.version = 3;
   }
+  if (o.version < 4){
+    // Version 4 : la marque. La confiance existait déjà sous le nom de
+    // réputation ; on ajoute le standing et l'identité visuelle.
+    o.marque = marqueParDefaut(o.meta && o.meta.nomEntreprise);
+    o.version = 4;
+  }
   return o;
 }
 
@@ -9787,6 +10464,8 @@ function appliquer(o){
   etat.reglages = Object.assign({ volAmbiance:0.5, volEffets:0.6, volMusique:0.35, muet:false }, etat.reglages||{});
   etat.reappro = etat.reappro || {};
   etat.formations = etat.formations || [];
+  etat.marque = Object.assign(marqueParDefaut(etat.meta.nomEntreprise), etat.marque || {});
+  cacheEnseigne = null;
   etat.finances.creances = etat.finances.creances || [];
   etat.progression.compteurs = etat.progression.compteurs || {};
   etat.stats.clients = etat.stats.clients || {};

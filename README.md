@@ -132,6 +132,19 @@ sachets se comptent à l'unité.
 - **Des outils de développement** (<kbd>F2</kbd>) : sauter à n'importe quel âge,
   changer de mode, remplir le quai, user ou réviser le matériel, avancer d'une
   semaine, et lancer les **auto-vérifications** de la partie.
+- **La marque, et trois jauges qui se contredisent** : la *notoriété* (combien
+  de gens vous connaissent), la *confiance* (est-ce qu'on peut compter sur vous)
+  et le *standing* (bas ou haut de gamme). Le standing suit le sachet, le logo
+  et surtout le prix auquel on vend — et il met des semaines à bouger.
+- **Cinq marchés qui lisent ces jauges chacun à leur façon** : le coin, la
+  région, le national, l'épicerie fine, l'export. L'épicerie fine veut du
+  standing ; la centrale d'achat veut du volume et **se ferme si la marque est
+  trop chic**. On ne peut pas être les deux, et c'est tout le jeu. Un marché
+  fermé dit toujours ce qui lui manque, un marché ouvert ce qu'il paie.
+- **Le nom, le logo et le sachet** se dessinent dans l'onglet Marque : huit
+  logos tracés au code, huit fonds, six motifs, quatre styles de nom, deux
+  couleurs. Le tout est **peint en grand sur le mur de l'atelier** — l'usine
+  devient la vôtre.
 - **Un garde-manger de 97 ingrédients** répartis sur **sept axes** (le goût, la
   coupe, la cuisson, la texture, le sel, la touche en plus, le sachet) et **91
   accords** entre eux. Presque tout est fermé au départ : un ingrédient s'ouvre
@@ -235,12 +248,12 @@ réelles** à la vitesse ×1.
 
 ## Tests
 
-`node tests/suite.mjs` pilote le jeu dans un vrai navigateur : vingt-et-un cas qui
+`node tests/suite.mjs` pilote le jeu dans un vrai navigateur : vingt-deux cas qui
 couvrent le didacticiel, la chaîne, la conservation de la matière, le réseau de
 convoyeurs, la qualité, les modes, les cinq âges, les auto-vérifications, la
 sauvegarde, le rythme, la performance, la recherche, le raccord entre bandes,
 les quais et rangements, les bâtiments d'équipe, la cour, le garde-manger du
-labo, les raccords courts, les croisements, l'équipe et les stocks. Voir [`tests/README.md`](tests/README.md).
+labo, les raccords courts, les croisements, l'équipe, les stocks et la marque. Voir [`tests/README.md`](tests/README.md).
 
 ## Organisation du code
 
