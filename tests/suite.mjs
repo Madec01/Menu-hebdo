@@ -1488,6 +1488,121 @@ cas("le-concurrent", async (nav) => {
   return { echecs: v.echecs.concat(erreurs), note: r0.nom + ", " + c.n + " coups en 60 semaines" };
 });
 
+cas("clients-et-cadres", async (nav) => {
+  const { page, jeu, erreurs } = await contexte(nav);
+  const v = verif();
+
+  // Un client se souvient : la série monte, la fidélité avec.
+  const f = await jeu(`(() => {
+    sauterAge(3); etat.finances.solde = 300000;
+    const n = "Épicerie Vidal";
+    const suite = [];
+    for (let i=0;i<7;i++){ ficheClient(n).serie = i; suite.push(fidelite(n)); }
+    ficheClient(n).serie = 6;
+    return { suite, mot: motFidelite(n), plafond: fidelite(n) };
+  })()`);
+  v.egal("la fidélité monte par paliers", f.suite.join(","), "0,0,1,1,2,2,3");
+  v.egal("et plafonne", f.plafond, 3);
+  v("elle se dit en français", /fidèle/.test(f.mot), f.mot);
+
+  // Un client fidèle propose plus gros et paie mieux.
+  const gros = await jeu(`(() => {
+    const n = "Épicerie Vidal";
+    const moyenne = () => {
+      let q = 0, p = 0, k = 0;
+      for (let i=0;i<400;i++){
+        const c = creerContrat('chips_vrac');
+        if (c.client !== n) continue;
+        q += c.quantite; p += c.prixUnitaire; k++;
+      }
+      return { q: q/Math.max(1,k), p: p/Math.max(1,k), k };
+    };
+    for (const x in etat.stats.clients) etat.stats.clients[x].serie = 0;
+    const froid = moyenne();
+    ficheClient(n).serie = 6;
+    const chaud = moyenne();
+    return { froid, chaud };
+  })()`);
+  v("un client fidèle commande plus gros", gros.chaud.q > gros.froid.q * 1.3,
+    Math.round(gros.froid.q) + " → " + Math.round(gros.chaud.q));
+  v("et il revient plus souvent", gros.chaud.k > gros.froid.k, gros.froid.k + " → " + gros.chaud.k);
+  v("il paie un peu mieux", gros.chaud.p >= gros.froid.p, gros.froid.p + " → " + gros.chaud.p);
+
+  // Déçu deux fois, il s'en va — et ne repropose plus rien.
+  const parti = await jeu(`(() => {
+    const n = "Halles de Villebourg";
+    const fc = ficheClient(n);
+    fc.serie = 5; fc.ratees = 1;
+    fc.serie = 0; fc.ratees = 2; fc.bouderie = 6;
+    let vu = 0;
+    for (let i=0;i<300;i++) if (creerContrat('chips_vrac').client === n) vu++;
+    const apres = (() => { for (let k=0;k<6;k++) majClients(); return ficheClient(n).bouderie; })();
+    let revenu = 0;
+    for (let i=0;i<300;i++) if (creerContrat('chips_vrac').client === n) revenu++;
+    return { vu, apres, revenu, mot: (fc.bouderie = 3, motFidelite(n)) };
+  })()`);
+  v.egal("un client fâché ne propose plus rien", parti.vu, 0);
+  v.egal("la fâcherie s'apaise avec le temps", parti.apres, 0);
+  v.aumoins("et il revient", parti.revenu, 1);
+  v("le panneau le dit", /fâché/.test(parti.mot), parti.mot);
+
+  // Les cadres : un bureau chacun, et un effet mesurable.
+  const c = await jeu(`(() => {
+    const u = U();
+    for (const m of u.machines.filter(m => m.type === 'bureau')) demolir(m, true);
+    const sansBureau = { libres: bureauxLibres() };
+    poserMachine('bureau',-4,2,0); poserMachine('bureau',-4,7,0);
+    const avant = bureauxLibres();
+    etat.cadres = ['commercial'];
+    const apres = bureauxLibres();
+    // le commercial pèse sur le nombre d'offres et sur les prix
+    const prixSans = (() => { etat.cadres = []; let p=0; for (let i=0;i<200;i++) p += creerContrat('chips_vrac').prixUnitaire; return p/200; })();
+    etat.cadres = ['commercial'];
+    const prixAvec = (() => { let p=0; for (let i=0;i<200;i++) p += creerContrat('chips_vrac').prixUnitaire; return p/200; })();
+    return { sansBureau, avant, apres, prixSans, prixAvec };
+  })()`);
+  v.egal("sans bureau, aucun n'est libre", c.sansBureau.libres, 0);
+  v.egal("deux bureaux, deux libres", c.avant, 2);
+  v.egal("un cadre en occupe un", c.apres, 1);
+  v("le commercial fait monter les prix signés", c.prixAvec > c.prixSans,
+    c.prixSans.toFixed(1) + " → " + c.prixAvec.toFixed(1));
+
+  // Le responsable qualité fait vraiment baisser le rebut.
+  const q = await jeu(`(() => {
+    poserMachine('friteuse',8,4,0);
+    const m = U().machines.find(x => x.type === 'friteuse');
+    m.fraicheurHuile = 0.3; m.usure = 0.5;
+    etat.cadres = [];
+    const sans = tauxRebut(m, null);
+    etat.cadres = ['qualite'];
+    const avec = tauxRebut(m, null);
+    return { sans, avec };
+  })()`);
+  v("le responsable qualité écarte un quart du rebut",
+    q.avec < q.sans * 0.8, (q.sans*100).toFixed(1) + " % → " + (q.avec*100).toFixed(1) + " %");
+
+  // Un cadre coûte tous les jours, et le marketing travaille tout seul.
+  const s2 = await jeu(`(() => {
+    etat.cadres = ['commercial','qualite'];
+    const avant = etat.finances.solde;
+    finJournee();
+    document.querySelector('#ecranVendredi')?.classList.remove('visible');
+    const coutJour = avant - etat.finances.solde;
+    etat.cadres = ['marketing'];
+    etat.recherche.notoriete = 10;
+    majCadres();
+    const n1 = etat.recherche.notoriete;
+    return { coutJour, monte: n1 > 10 };
+  })()`);
+  v.aumoins("deux cadres coûtent leur salaire chaque jour", s2.coutJour, 440);
+  v("le marketing fait monter la notoriété tout seul", s2.monte);
+
+  const inv = await jeu("verifierPartie()");
+  for (const t of inv) v("invariant : " + t.nom, t.ok, t.detail);
+  await page.close();
+  return { echecs: v.echecs.concat(erreurs), note: "fidélité, bouderie, 3 cadres" };
+});
+
 /* ============================================================== Exécution ==*/
 const filtre = process.argv.slice(2);
 const choisis = filtre.length ? CAS.filter(c => filtre.some(f => c.nom.includes(f))) : CAS;

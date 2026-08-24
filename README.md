@@ -141,6 +141,14 @@ sachets se comptent à l'unité.
   standing ; la centrale d'achat veut du volume et **se ferme si la marque est
   trop chic**. On ne peut pas être les deux, et c'est tout le jeu. Un marché
   fermé dit toujours ce qui lui manque, un marché ouvert ce qu'il paie.
+- **Des clients qui se souviennent** : livré à l'heure et sans réclamation
+  plusieurs fois de suite, un client devient fidèle — il revient plus souvent,
+  commande plus gros, paie mieux. Déçu deux fois, il part chez le concurrent et
+  ne repropose rien pendant six semaines. La régularité vaut mieux que la
+  puissance.
+- **Trois cadres** — commercial, responsable qualité, directeur marketing. Chacun
+  occupe un bureau d'études, donc en embaucher un ralentit la recherche, et
+  chacun coûte son salaire tous les jours.
 - **Un concurrent qui réagit** : une marque rivale, avec son nom et son sachet,
   se partage le rayon avec vous. Ce que vous n'y prenez pas, elle le prend —
   moins de propositions de commande, et les commerces du coin paient moins bien.
@@ -260,12 +268,12 @@ réelles** à la vitesse ×1.
 
 ## Tests
 
-`node tests/suite.mjs` pilote le jeu dans un vrai navigateur : vingt-quatre cas qui
+`node tests/suite.mjs` pilote le jeu dans un vrai navigateur : vingt-cinq cas qui
 couvrent le didacticiel, la chaîne, la conservation de la matière, le réseau de
 convoyeurs, la qualité, les modes, les cinq âges, les auto-vérifications, la
 sauvegarde, le rythme, la performance, la recherche, le raccord entre bandes,
 les quais et rangements, les bâtiments d'équipe, la cour, le garde-manger du
-labo, les raccords courts, les croisements, l'équipe, les stocks, la marque, les labels et le concurrent. Voir [`tests/README.md`](tests/README.md).
+labo, les raccords courts, les croisements, l'équipe, les stocks, la marque, les labels, le concurrent, les clients et les cadres. Voir [`tests/README.md`](tests/README.md).
 
 ## Organisation du code
 

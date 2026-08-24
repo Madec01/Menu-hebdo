@@ -39,6 +39,7 @@ La suite sort en code 1 si un cas échoue.
 | `marque-et-marches` | les trois jauges se contredisent, et chaque marché les lit à sa façon |
 | `labels` | un label se tient plusieurs semaines, se demande, se paie, et se perd |
 | `le-concurrent` | il se démarque de vous, fait ses coups, et prend le rayon qu'on lui laisse |
+| `clients-et-cadres` | la fidélité monte et se casse, et chaque cadre a un effet mesurable |
 
 ## Les invariants, aussi dans le jeu
 

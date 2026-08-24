@@ -393,6 +393,19 @@ table.tab tr:hover td{background:rgba(255,255,255,.028)}
 .label.obtenu .labEtat{color:var(--vert)}
 .label.enCours .labEtat{color:var(--or)}
 .label.pret .labEtat{color:var(--or);font-weight:700}
+.cadre{padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.cadre:last-child{border-bottom:none}
+.cadre.enPoste .labEtat{color:var(--vert)}
+.cadre .bt{margin-top:6px}
+.clientFid{padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05);opacity:.75}
+.clientFid:last-child{border-bottom:none}
+.clientFid.fidele{opacity:1}
+.clientFid.fache{opacity:1}
+.cfTete{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.cfNom{font-size:12.5px;font-weight:600;color:var(--texte-doux)}
+.cfEtoiles{font-size:11px;color:var(--or);letter-spacing:.05em}
+.clientFid.fache .cfEtoiles{color:var(--rouge)}
+.cfMot{font-size:11px;color:var(--texte-faible);line-height:1.35;margin-top:2px}
 .labResume{font-size:11px;color:var(--texte-faible);line-height:1.4;margin:3px 0}
 .labCond{font-size:11px;color:var(--texte-doux);line-height:1.4}
 .label.obtenu .labCond{color:var(--vert)}
@@ -701,7 +714,7 @@ const CONFIG = {
   arretChangementHuile: 45,    // minutes de jeu, friteuse à l'arrêt
   rebutMax: 0.5,
   sauvegarde: "cadence_save_v1",
-  version: 6
+  version: 7
 };
 
 // minutes de jeu écoulées par tick de simulation
@@ -1371,6 +1384,21 @@ const LABELS = [
   }
 ];
 
+/* ---------------------------------------------------------------- Les cadres
+   Trois postes de bureau. Chacun coûte cher tous les jours et occupe un bureau
+   d'études — donc embaucher un cadre, c'est renoncer à une étude plus rapide. */
+const CADRES = [
+  { id:"commercial", nom:"Commercial", salaire:210, ageMin:3,
+    resume:"Il décroche les rendez-vous et négocie mieux que vous.",
+    effet:"Une commande de plus proposée chaque semaine, et 6 % sur les prix signés." },
+  { id:"qualite", nom:"Responsable qualité", salaire:230, ageMin:3,
+    resume:"Il regarde ce qui sort, et il le dit avant que le client le voie.",
+    effet:"Un quart de rebut en moins sur toute la chaîne." },
+  { id:"marketing", nom:"Directeur marketing", salaire:250, ageMin:4,
+    resume:"Il fait parler de la maison, même les semaines creuses.",
+    effet:"La notoriété monte toute seule, semaine après semaine." }
+];
+
 /* ------------------------------------------------------------ Le concurrent
    Une seule marque rivale, mais elle réagit : quand vous montez en gamme, elle
    descend et inonde le volume ; quand vous bradez, elle passe au-dessus. C'est
@@ -1647,6 +1675,7 @@ function nouvellePartie(nomEntreprise, modeChoisi){
     marque: marqueParDefaut(nomEntreprise),
     labels: { obtenus:[], suite:{}, local:false },
     rival: creerRival(),
+    cadres: [],            // ids des postes de bureau pourvus
     recherche: { recettes:[], enCours:null, notoriete:0, tendance:0, tendanceSemaine:0, prochain:1 },
     progression: { age:1, objectifsCompletes:[], jaugeObjectif:0, vendus:{}, produits:{}, produitsSemaine:{}, compteurs:{} },
     stats: { historiqueSemaines:[], semaineCourante: semaineVierge(), clients:{} },
@@ -1711,6 +1740,11 @@ function creerRival(){
     notoriete: 34, confiance: 62, part: 0.5, dernierCoup: null, semainesCoup: 0
   });
 }
+
+function aCadre(id){ return !!etat.cadres && etat.cadres.indexOf(id) >= 0; }
+function cadresEnPoste(){ return CADRES.filter(c => aCadre(c.id)); }
+/** Les bureaux servent aux études et aux cadres : ce qui reste pour la recherche. */
+function bureauxLibres(){ return bureauxDisponibles() - cadresEnPoste().length; }
 
 function labelObtenu(id){ return !!etat.labels && etat.labels.obtenus.indexOf(id) >= 0; }
 function labelsObtenus(){ return LABELS.filter(l => labelObtenu(l.id)); }
@@ -2192,7 +2226,9 @@ function qualiteMachine(m, op){
  *  un sujet, c'est-à-dire avant l'âge 3 (§3.3). */
 function tauxRebut(m, op){
   if (etat.meta.age < 3) return 0;
-  return clamp(0.90 - qualiteMachine(m, op), 0, CONFIG.rebutMax);
+  // Un responsable qualité voit passer ce qui sort avant le client.
+  const veille = aCadre("qualite") ? 0.75 : 1;
+  return clamp((0.90 - qualiteMachine(m, op)) * veille, 0, CONFIG.rebutMax);
 }
 
 /** La même chose, en français d'atelier. */
@@ -3027,6 +3063,7 @@ function finJournee(){
   // 2. Charges
   let salaires = 0;
   for (const o of u.ouvriers) salaires += o.salaire;
+  for (const c of cadresEnPoste()) salaires += c.salaire;
   const loyer = CONFIG.loyerParJour[etat.meta.age-1];
   const energie = u.machines.length * CONFIG.energieParMachineJour;
   depenser(salaires, "salaires");
@@ -3392,6 +3429,43 @@ function capaciteHebdoEstimee(produitId){
   return Math.max(ITEMS[produitId].unite === "kg" ? 30 : 200, Math.round(parJour * CONFIG.joursParSemaine));
 }
 
+/* ------------------------------------------------------ Les clients qui durent
+   Un client se souvient. Livré proprement plusieurs fois, il revient plus gros
+   et paie mieux ; déçu deux fois, il va voir en face et ne repropose rien
+   pendant un moment. C'est ce qui donne du poids à la régularité. */
+function ficheClient(nom){
+  const c = etat.stats.clients;
+  return c[nom] || (c[nom] = { ca:0, commandes:0, reclamations:0, serie:0, ratees:0, bouderie:0 });
+}
+function fidelite(nom){ return Math.min(3, Math.floor(ficheClient(nom).serie / 2)); }
+function boude(nom){ return ficheClient(nom).bouderie > 0; }
+
+function motFidelite(n){
+  const f = fidelite(n), fc = ficheClient(n);
+  if (fc.bouderie > 0) return "fâché — il ne repropose rien avant " + fc.bouderie +
+                               " " + pluriel(fc.bouderie,"semaine");
+  if (f >= 3) return "fidèle : il vous réserve ses gros volumes";
+  if (f >= 2) return "content : il revient plus souvent";
+  if (f >= 1) return "satisfait";
+  if (fc.commandes) return "il vous observe";
+  return "il ne vous connaît pas encore";
+}
+
+/** Ce que les cadres font tout seuls, une fois par semaine. */
+function majCadres(){
+  // Le marketing travaille même les semaines creuses.
+  if (aCadre("marketing"))
+    etat.recherche.notoriete = clamp(etat.recherche.notoriete + 1.1, 0, 100);
+}
+
+/** Chaque fin de semaine, les fâcheries s'apaisent. */
+function majClients(){
+  for (const n in etat.stats.clients){
+    const f = etat.stats.clients[n];
+    if (f.bouderie > 0) f.bouderie--;
+  }
+}
+
 /* -------------------------------------------------------- Les paliers
    Un marché ne s'achète pas : il s'ouvre quand la marque a ce qu'il demande.
    Le local ne demande rien, l'épicerie fine veut du standing, la centrale veut
@@ -3443,13 +3517,19 @@ function creerContrat(produitId){
   // Le client vient d'un palier ouvert : c'est la marque qui décide de qui frappe
   // à la porte, pas le hasard seul.
   const ouverts = paliersOuverts().map(p => p.id);
-  let dispo = CLIENTS.filter(c => c.ageMin <= etat.meta.age && ouverts.includes(c.palier || "local"));
+  let dispo = CLIENTS.filter(c => c.ageMin <= etat.meta.age && ouverts.includes(c.palier || "local")
+                                  && !boude(c.nom));
+  if (!dispo.length) dispo = CLIENTS.filter(c => (c.palier || "local") === "local" && !boude(c.nom));
   if (!dispo.length) dispo = CLIENTS.filter(c => (c.palier || "local") === "local");
-  const cl = choix(dispo);
+  // Un client fidèle revient plus souvent : on met son nom plusieurs fois dans le chapeau.
+  const chapeau = [];
+  for (const c of dispo){ chapeau.push(c); for (let k=0;k<fidelite(c.nom);k++) chapeau.push(c); }
+  const cl = choix(chapeau);
+  const fid = fidelite(cl.nom);
   const pal = palierParId(cl.palier || "local");
   const cap = capaciteHebdoEstimee(produitId);
   const semaines = cl.gros ? hasardInt(2,4) : hasardInt(1,3);
-  const facteur = (cl.gros ? hasard(1.1, 1.6) : hasard(0.5, 1.35)) * pal.volume;
+  const facteur = (cl.gros ? hasard(1.1, 1.6) : hasard(0.5, 1.35)) * pal.volume * (1 + fid*0.22);
   // On arrondit à quelque chose qu'un client dirait vraiment : 250 kg, 4 000 sachets.
   const brut = Math.max(5, cap * semaines * facteur);
   const pas = ITEMS[produitId].unite === "kg" ? (brut > 800 ? 100 : 25) : (brut > 4000 ? 500 : 100);
@@ -3458,10 +3538,11 @@ function creerContrat(produitId){
   // Une maison connue vend ses propres recettes plus cher.
   const renom = ITEMS[produitId].maison ? (0.88 + etat.recherche.notoriete/100 * 0.34) : 1;
   const prixUnitaire = Math.round(base * cl.marge * mode().prixClient * renom * primePalier(pal) *
+                                  (aCadre("commercial") ? 1.06 : 1) * (1 + fid*0.035) *
                                   (0.9 + etat.reputation/100*0.18) * hasard(0.97,1.06)) || 1;
   return {
     id: nouvelId(),
-    client: cl.nom, ton: cl.ton, palier: cl.palier || "local",
+    client: cl.nom, ton: cl.ton, palier: cl.palier || "local", fidelite: fid,
     produitId, quantite, livre:0,
     prixUnitaire,
     dateLimite: jourCourant() + semaines*CONFIG.joursParSemaine,
@@ -3558,8 +3639,30 @@ function livrerContrats(){
       son("valide");
       fait(aLheure ? ("Commande " + c.client + " livrée dans les temps") : ("Commande " + c.client + " livrée en retard"));
       // L'objectif de l'âge 3 : une grosse commande, sans une seule réclamation.
-      const fic = etat.stats.clients[c.client];
-      if (fic){ fic.commandes++; if (c.reclamations > 0) fic.reclamations++; }
+      const fic = ficheClient(c.client);
+      fic.commandes++;
+      if (c.reclamations > 0) fic.reclamations++;
+      // Propre et à l'heure : la série continue. Sinon elle casse, et à la
+      // deuxième déception le client va voir en face.
+      if (aLheure && !(c.reclamations > 0)){
+        fic.serie++;
+        fic.ratees = 0;
+        if (fic.serie === 4)
+          notif("Un client fidèle", c.client + " ne travaille plus qu'avec vous. " +
+                "Attendez-vous à de plus gros volumes.", "ok");
+      } else {
+        fic.serie = 0;
+        fic.ratees = (fic.ratees||0) + 1;
+        if (fic.ratees >= 2){
+          fic.bouderie = 6;
+          fic.ratees = 0;
+          if (etat.rival) etat.rival.avance = clamp((etat.rival.avance||0) + 0.05, -0.15, 0.2);
+          notif("Un client s'en va", c.client + " part chez " + (etat.rival ? etat.rival.nom : "la concurrence") +
+                ". Il ne reproposera rien avant six semaines.", "ko");
+          fait(c.client + " est parti chez le concurrent");
+          son("refus");
+        }
+      }
       if (c.gros && aLheure && !(c.reclamations > 0))
         compter(etat.progression.compteurs, "grosseCommande", 1);
     }
@@ -3569,6 +3672,7 @@ function livrerContrats(){
 /** Le client a trouvé de la marchandise ratée dans ses cartons. */
 function reclamation(c, qMauvais){
   c.reclamations = (c.reclamations||0) + qMauvais;
+  ficheClient(c.client).serie = 0;
   const geste = qMauvais * c.prixUnitaire * 2;
   depenser(geste, "reclamation");
   etat.reputation = clamp(etat.reputation - clamp(1 + qMauvais/Math.max(1,c.quantite)*40, 1, 7), 0, 100);
@@ -3630,12 +3734,14 @@ function finSemaine(){
   majLabels();
   majStanding(s);
   majRival();
+  majCadres();
+  majClients();
 
   // Nouvelles propositions de commande
   const produits = Object.keys(ITEMS).filter(id => ITEMS[id].vente && (ITEMS[id].ageMin||1) <= etat.meta.age);
   etat.contrats.proposes = [];
   // Moins on pèse, moins on nous propose : le concurrent prend les places.
-  const base = etat.meta.age >= 2 ? 3 : 2;
+  const base = (etat.meta.age >= 2 ? 3 : 2) + (aCadre("commercial") ? 1 : 0);
   const n = Math.max(1, Math.round(base * (0.55 + partMarche() * 0.9)));
   for (let i=0;i<n;i++) etat.contrats.proposes.push(creerContrat(choix(produits)));
 
@@ -4280,7 +4386,7 @@ function bureauxDisponibles(){
 
 function lancerEtude(nom, traits){
   if (etat.recherche.enCours){ notif("Une étude est déjà en route", "Une seule à la fois.", "ko"); return false; }
-  if (bureauxDisponibles() < 1){
+  if (bureauxLibres() < 1){
     notif("Pas de bureau", "Une recette se met au point dans un bureau d'études. Il faut en bâtir un.", "ko");
     parle("On ne va pas inventer une recette au milieu des friteuses, patron. Il nous faut un bureau.", 10000);
     return false;
@@ -4312,7 +4418,7 @@ function avancerRecherche(){
   const e = etat.recherche.enCours;
   if (!e) return;
   // Chaque bureau fait avancer l'étude d'une journée par jour.
-  e.restant -= Math.max(1, bureauxDisponibles());
+  e.restant -= Math.max(1, bureauxLibres());
   if (e.restant <= 0) finaliserRecette();
 }
 
@@ -7771,6 +7877,47 @@ function panneauPersonnel(z){
   }
 
   // Une prime à tout le monde : cher, mais ça remonte l'atelier d'un coup.
+  // Les cadres : des postes de bureau, pas des postes d'atelier.
+  const dispoCadres = CADRES.filter(c => (c.ageMin||1) <= etat.meta.age);
+  if (dispoCadres.length){
+    const bc2 = blocTitre("Les bureaux");
+    const libres = bureauxLibres();
+    bc2.appendChild(elem('<div style="font-size:11.5px;color:var(--texte-faible);line-height:1.4;margin-bottom:8px"></div>'))
+      .textContent = "Un cadre occupe un bureau d'études : " + bureauxDisponibles() + " " +
+        pluriel(bureauxDisponibles(),"bureau","bureaux") + " bâti" + (bureauxDisponibles()>1?"s":"") +
+        ", " + Math.max(0,libres) + " " + pluriel(Math.max(0,libres),"libre") + " pour la recherche.";
+    for (const c of dispoCadres){
+      const enPoste = aCadre(c.id);
+      const b2 = document.createElement("div");
+      b2.className = "cadre" + (enPoste ? " enPoste" : "");
+      b2.innerHTML = '<div class="labTete"><span class="labNom"></span><span class="labEtat"></span></div>'+
+                     '<div class="labResume"></div><div class="labCond"></div>';
+      b2.querySelector(".labNom").textContent = c.nom;
+      b2.querySelector(".labEtat").textContent = enPoste ? "en poste" : euros(c.salaire) + "/jour";
+      b2.querySelector(".labResume").textContent = c.resume;
+      b2.querySelector(".labCond").textContent = c.effet;
+      if (enPoste){
+        b2.appendChild(bouton("Se séparer de " + c.nom.toLowerCase(), () => {
+          etat.cadres = etat.cadres.filter(x => x !== c.id);
+          notif("Départ", c.nom + " quitte la maison.", "att");
+          majPanneau(); majBandeau();
+        }, "large"));
+      } else if (libres < 1){
+        b2.appendChild(elem('<div class="labGain"></div>')).textContent =
+          "Il faut un bureau d'études libre — bâtissez-en un dans la cour.";
+      } else {
+        b2.appendChild(bouton("Embaucher · " + euros(c.salaire) + " par jour", () => {
+          etat.cadres.push(c.id);
+          notif("Embauche", c.nom + " prend son bureau. " + euros(c.salaire) + " par jour.", "ok");
+          son("signature");
+          majPanneau(); majBandeau();
+        }, "large plein"));
+      }
+      bc2.appendChild(b2);
+    }
+    z.appendChild(bc2);
+  }
+
   if (u.ouvriers.length && machinesAOperer().length){
     const ba = blocTitre("Placer l'équipe");
     const postes = machinesAOperer().length;
@@ -7917,6 +8064,30 @@ function panneauCommandes(z){
     ba.appendChild(d);
   }
   z.appendChild(ba);
+
+  // Les clients se souviennent : qui revient, qui boude.
+  const connus = Object.keys(etat.stats.clients).filter(n => CLIENTS.some(c => c.nom === n));
+  if (connus.length){
+    const bf = blocTitre("Vos clients");
+    bf.appendChild(elem('<div style="font-size:11.5px;color:var(--texte-faible);line-height:1.4;margin-bottom:7px">'+
+      "Un client livré proprement revient plus souvent et plus gros. Déçu deux fois, il va voir "+
+      "en face.</div>"));
+    connus.sort((a,b) => fidelite(b) - fidelite(a) || etat.stats.clients[b].ca - etat.stats.clients[a].ca);
+    for (const n of connus){
+      const f = etat.stats.clients[n], fid = fidelite(n);
+      const l = document.createElement("div");
+      l.className = "clientFid" + (f.bouderie > 0 ? " fache" : fid >= 2 ? " fidele" : "");
+      l.innerHTML = '<div class="cfTete"><span class="cfNom"></span><span class="cfEtoiles"></span></div>'+
+                    '<div class="cfMot"></div>';
+      l.querySelector(".cfNom").textContent = n;
+      l.querySelector(".cfEtoiles").textContent = f.bouderie > 0 ? "✕" : "★".repeat(fid) + "☆".repeat(3-fid);
+      l.querySelector(".cfMot").textContent = motFidelite(n) + " · " +
+        f.commandes + " " + pluriel(f.commandes,"commande") + ", " + euros(f.ca) +
+        (f.reclamations ? ", " + f.reclamations + " " + pluriel(f.reclamations,"réclamation") : "");
+      bf.appendChild(l);
+    }
+    z.appendChild(bf);
+  }
 
   if (etat.contrats.proposes.length){
     const bp = blocTitre("Sur le bureau");
@@ -8797,6 +8968,24 @@ function SECTIONS_GUIDE(){
     "<p>La banque tolère un découvert jusqu'à "+euros(CONFIG.decouvertMax)+". En dessous, elle fait vendre "+
     "une machine. À "+euros(CONFIG.faillite)+", c'est le dépôt de bilan.</p>"+
     "<p>Démolir une machine en rend <b>60 %</b>. Réviser coûte 20 % de son prix, réparer une panne 12 %.</p>" },
+
+  { titre:"Les clients qui durent", corps:
+    "<p>Un client se souvient. Livré <b>à l'heure et sans réclamation</b> plusieurs fois de suite, il "+
+    "devient fidèle : il revient plus souvent, commande plus gros, et paie un peu mieux. Trois "+
+    "étoiles au maximum, et ça se voit dans l'onglet Commandes.</p>"+
+    "<p>À l'inverse, <b>deux commandes ratées</b> — en retard, ou avec du raté dans les cartons — et "+
+    "il part chez le concurrent. Il ne repropose plus rien pendant six semaines, et le rival y gagne "+
+    "du rayon. Une réclamation seule casse déjà la série.</p>"+
+    "<p>C'est ce qui fait qu'une usine régulière vaut mieux qu'une usine puissante mais capricieuse.</p>" },
+
+  { titre:"Les cadres", corps:
+    "<p>Trois postes de bureau, à embaucher depuis l'onglet Équipe. Chacun <b>occupe un bureau "+
+    "d'études</b> : prendre un cadre, c'est ralentir la recherche, à moins de bâtir un bureau de "+
+    "plus. Et chacun coûte son salaire tous les jours, comme n'importe qui.</p>"+
+    "<p><b>Le commercial</b> fait proposer une commande de plus chaque semaine, et négocie 6 % de "+
+    "mieux.<br>"+
+    "<b>Le responsable qualité</b> écarte un quart du rebut sur toute la chaîne.<br>"+
+    "<b>Le directeur marketing</b> fait monter la notoriété toute seule, semaine après semaine.</p>" },
 
   { titre:"Les gros clients", corps:
     "<p>Passé une certaine réputation, les <b>centrales d'achat</b> se présentent. Gros volumes, prix au "+
@@ -9699,18 +9888,22 @@ function panneauRecherche(z){
   z.appendChild(elem('<p class="sousTitre"></p>')).textContent =
     "On connaît la maison à " + Math.round(etat.recherche.notoriete) + " sur 100.";
 
-  const nb = bureauxDisponibles();
+  const nb = bureauxLibres();
   if (!nb){
     const b = blocTitre("Il manque un bureau");
     b.appendChild(elem('<div style="font-size:12.5px;color:var(--texte-doux);line-height:1.5">'+
       "Une recette ne se met pas au point au milieu des friteuses. Bâtissez un "+
       "<b>bureau d'études</b> — onglet Bâtiments, en bas — et l'équipe pourra s'y mettre. "+
+      "Attention : un cadre occupe un bureau, il en faut donc un de plus par cadre. "+
       "Chaque bureau supplémentaire fait avancer les études d'autant plus vite.</div>"));
     z.appendChild(b);
   } else {
+    const pris = cadresEnPoste().length;
     z.appendChild(elem('<div class="rechBureaux"></div>')).textContent =
-      nb + " " + pluriel(nb,"bureau","bureaux") + " — une étude avance de " + nb +
-      " " + pluriel(nb,"jour") + " par jour.";
+      nb + " " + pluriel(nb,"bureau","bureaux") + " pour la recherche — une étude avance de " + nb +
+      " " + pluriel(nb,"jour") + " par jour." +
+      (pris ? " (" + pris + " " + pluriel(pris,"bureau","bureaux") + " " +
+              pluriel(pris,"occupé") + " par un cadre.)" : "");
   }
 
   const composer = document.createElement("div");
@@ -9792,7 +9985,7 @@ function majComposer(){
     v.appendChild(bloc);
   }
 
-  const nbB = Math.max(1, bureauxDisponibles());
+  const nbB = Math.max(1, bureauxLibres());
   const cout = coutEtude(brouillon.traits), jours = Math.ceil(joursEtude(brouillon.traits)/nbB);
   const g = grammageDe(brouillon.traits);
   const info = document.createElement("div");
@@ -10834,6 +11027,10 @@ function migrer(o){
     o.rival = null;          // recréé au chargement
     o.version = 6;
   }
+  if (o.version < 7){
+    o.cadres = [];
+    o.version = 7;
+  }
   return o;
 }
 
@@ -10868,6 +11065,7 @@ function appliquer(o){
   etat.marque = Object.assign(marqueParDefaut(etat.meta.nomEntreprise), etat.marque || {});
   etat.labels = Object.assign({ obtenus:[], suite:{}, local:false }, etat.labels || {});
   if (!etat.rival || !etat.rival.nom) etat.rival = creerRival();
+  if (!Array.isArray(etat.cadres)) etat.cadres = [];
   cacheEnseigne = null;
   etat.finances.creances = etat.finances.creances || [];
   etat.progression.compteurs = etat.progression.compteurs || {};
