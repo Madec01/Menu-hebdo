@@ -2836,6 +2836,46 @@ T('T149 deux ateliers : la palette se filtre en électronique ou en process', ()
   setAppMode('tout');
 });
 
+T('T150 les exemples hydrauliques tournent vraiment', () => {
+  const charge = nom => {
+    board();
+    const ex = EXAMPLES.find(e => e.name === nom);
+    ok(!!ex, 'exemple « ' + nom + ' » présent');
+    return spawnGroup(ex.data, 0, 0, true).made;
+  };
+  // réseau : la répartition du té remplit deux cuves à des vitesses différentes
+  let m = charge('Circuit hydraulique');
+  const te = m[2], cA = m[3], cB = m[4];
+  applyInspector(te, fld('o_rep', 75));
+  for (let i = 0; i < 40; i++){ __advance(150); sim(); }
+  ok(cA.niv > 10, 'la cuve A se remplit (' + cA.niv.toFixed(1) + ' %)');
+  ok(cA.niv > cB.niv * 1.8, 'trois fois plus vite que la B (' + cB.niv.toFixed(1) + ' %)');
+  // cuve A pleine : le débit se reporte entièrement sur la B
+  cA.niv = 100;
+  const avant = cB.niv;
+  for (let i = 0; i < 10; i++){ __advance(150); sim(); }
+  const reporte = cB.niv - avant;
+  cA.niv = 100; cB.niv = 50;
+  ok(reporte > 0, 'la branche restante continue de recevoir (' + reporte.toFixed(1) + ' %)');
+  // remplissage automatique : la mémoire SR tient la décision entre les deux seuils
+  m = charge('Remplissage automatique');
+  const cuve = m[0], vanne = m[1], sr = m[2];
+  cuve.niv = 10;                                   // sous le seuil bas
+  for (let i = 0; i < 4; i++){ __advance(120); sim(); }
+  eq(sr.outPins[0].state, 1, 'sous le seuil bas : la mémoire ouvre la vanne');
+  ok(vanne.open === 1, 'la vanne est ouverte');
+  for (let i = 0; i < 12; i++){ __advance(150); sim(); }
+  ok(cuve.niv > 12, 'la cuve se remplit par le tuyau (' + cuve.niv.toFixed(1) + ' %)');
+  cuve.niv = 50; sim();                            // dans la zone morte
+  eq(sr.outPins[0].state, 1, 'entre les deux seuils : elle ne change pas d’avis');
+  cuve.niv = 90;
+  for (let i = 0; i < 3; i++){ __advance(120); sim(); }
+  eq(sr.outPins[0].state, 0, 'au seuil haut : arrêt');
+  eq(vanne.open, 0, 'la vanne se referme');
+  cuve.niv = 50; sim();
+  eq(sr.outPins[0].state, 0, 'et reste fermée en redescendant dans la zone morte');
+});
+
 /* ===================== bilan ===================== */
 console.log('\n' + (__fail ? '✗' : '✓') + ' ' + __pass + ' test(s) réussi(s), ' +
             __fail + ' échec(s)' + (__fail ? ' : ' + __failures.join(', ') : '') + '\n');
