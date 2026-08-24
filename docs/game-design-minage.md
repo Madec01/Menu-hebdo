@@ -1,314 +1,348 @@
-# Deep Vein — Game Design Document
+# CORE — Game Design Document (v2)
 
-> Jeu de minage 2D en vue de coupe. On commence au sol avec une pioche minable ;
-> on creuse, on revend, on s'équipe, on descend plus profond.
-> Titres alternatifs : *Filon*, *Descente*, *Le Puits*, *Carotte d'Or*.
+> Jeu de minage 2D en vue de coupe. **Objectif : atteindre le centre de la planète le plus
+> vite possible.** Pas de gestion d'énergie, pas de gestion de survie : on creuse, on
+> ramasse des bonus, on choisit des passifs, on va de plus en plus vite.
+> Titres alternatifs : *Core*, *6000*, *Plein Centre*, *Vers le Noyau*.
 
 ---
 
 ## 1. Pitch
 
-Vous héritez d'une concession minière épuisée. Une pioche en bois, un sac troué, une
-lampe à huile. Sous vos pieds : 1 000 mètres de roche et, quelque part là-dedans, des
-**filons d'or** capables de vous rendre riche.
+6 000 mètres de roche vous séparent du cœur de la planète. Vous avez une pioche et un
+chrono qui tourne.
 
-Chaque descente est un pari : plus vous allez bas, plus la roche est dure, plus votre
-énergie fond vite — mais plus le minerai vaut cher. Remonter trop tôt, c'est perdre son
-temps. Remonter trop tard, c'est tout perdre.
+Chaque couche est plus dure que la précédente — mais chaque couche cache aussi des
+**surprises** : géodes, cristaux de puissance, cavités, marchands, filons-mères. Vous
+montez en niveau en descendant, et à chaque niveau vous **choisissez un passif** parmi
+trois. À la fin d'une bonne partie, vous ne creusez plus la roche : vous la **traversez**,
+en détruisant 5 blocs de large sur 3 de profondeur à chaque coup, en chute libre, aimant
+l'or à travers la pierre.
 
-**Fantasme du joueur** : le moment où la lampe éclaire une paroi et révèle une veine
-dorée qui s'enfonce dans le noir.
-
----
-
-## 2. Boucle de jeu principale
-
-```
-        ┌──────────────────────────────────────────────┐
-        │                                              │
-   [SURFACE] ──► [DESCENDRE] ──► [MINER / EXPLORER] ──►│
-        ▲                              │              │
-        │                              ▼              │
-   [ACHETER] ◄── [VENDRE] ◄──── [REMONTER] ◄──────────┘
-```
-
-1. **Préparer** — acheter/équiper, prendre des consommables, choisir une profondeur de départ.
-2. **Descendre** — via le puits ; les paliers d'ascenseur déjà débloqués sont accessibles directement.
-3. **Miner** — casser des blocs, suivre les veines, gérer énergie / sac / lumière.
-4. **Remonter** — avant la panne d'énergie, avant que le sac soit plein pour rien.
-5. **Vendre** — au comptoir, à un cours qui fluctue.
-6. **Améliorer** — pioche, sac, lampe, énergie, mobilité, automatisation.
-7. Retour en 1, **une strate plus bas**.
-
-**Durée d'une descente** : 3–6 min au début, 8–15 min en fin de partie.
-**Durée d'une session** : 20–40 min (3 à 5 descentes).
-**Durée de vie visée** : 8–12 h pour atteindre le fond du premier puits.
+**Fantasme du joueur** : partir avec une pioche ridicule et finir en foreuse vivante qui
+perce une planète en 12 minutes.
 
 ---
 
-## 3. Le monde : la carte
+## 2. Le principe fondateur : tout se paie en secondes
 
-### 3.1 Structure
+Il n'y a **qu'une seule ressource : le temps.** C'est ce qui rend le jeu simple à
+comprendre et facile à équilibrer.
 
-- Grille 2D en **vue de coupe** (side view), un bloc = 1 m.
-- Largeur du puits : **40 blocs** (fini, bords infranchissables — c'est une concession).
-- Profondeur : **1 000 m** pour le puits n°1, générée procéduralement à la création de la partie (seed sauvegardée : la mine est *votre* mine, on la re-creuse au fil des descentes).
-- Les blocs cassés **restent cassés** : le joueur creuse son propre réseau de galeries, ce qui donne un sentiment d'appropriation et rend les descentes suivantes plus rapides.
-- Gravité : le joueur tombe dans les vides. Chute > 4 blocs = dégâts (perte d'énergie).
+- Un bloc plus dur = plus de secondes.
+- Un bonus de vitesse = des secondes gagnées.
+- Un piège = des secondes perdues (jamais une mort, jamais un game over).
+- Un détour pour ramasser de l'or = des secondes investies, à rentabiliser.
 
-### 3.2 Strates (le cœur de la difficulté)
+**Formule unique du jeu :**
 
-| Profondeur | Strate | Dureté | Minerais dominants | Particularité |
+```
+temps_pour_casser_un_bloc = ceil(dureté / force) / vitesse
+blocs_détruits_par_coup   = largeur × longueur
+```
+
+Tout le reste — passifs, buffs, équipement, surprises — n'est qu'une façon d'agir sur
+`force`, `vitesse`, `largeur`, `longueur`. Quatre chiffres. C'est tout le jeu.
+
+**Il n'y a pas de mort.** On ne peut pas perdre une partie, seulement la finir lentement.
+C'est ce qui autorise la prise de risque permanente et supprime toute frustration.
+
+---
+
+## 3. Boucle de jeu
+
+```
+   [DESCENDRE en creusant]
+            │
+            ├─► surprise dans un bloc ──► BUFF temporaire (10–30 s de folie)
+            ├─► minerai ──────────────► or + XP
+            ├─► palier franchi ───────► NIVEAU ──► choix d'1 passif parmi 3
+            ├─► marchand rencontré ───► dépenser l'or (permanent)
+            ▼
+      [CENTRE DE LA PLANÈTE] ──► temps final + récompenses méta
+```
+
+Boucle de seconde en seconde : *creuser → un truc brille → l'attraper → aller plus vite*.
+Boucle de minute en minute : *palier → level-up → nouvelle build qui se dessine*.
+Boucle de partie en partie : *battre son chrono avec une build différente*.
+
+**Durée d'une partie : 15 à 30 min.** Une partie = une descente complète, sans interruption.
+
+---
+
+## 4. Les couches de la planète
+
+8 couches, 6 000 m. La dureté monte par paliers nets, avec une identité visuelle et
+sonore forte pour chacune : le joueur doit savoir où il est d'un coup d'œil.
+
+| Couche | Profondeur | Dureté | Identité | Surprises typiques |
 |---|---|---|---|---|
-| 0–25 m | Terre meuble | 1–2 | Cailloux, charbon (rare) | Tutoriel, tout se casse vite |
-| 25–75 m | Roche sédimentaire | 3–6 | Charbon, cuivre | Premières veines à suivre |
-| 75–150 m | Calcaire humide | 7–12 | Cuivre, fer, argent | Poches d'eau (noient la galerie) |
-| 150–300 m | Granite | 13–22 | Fer, argent, **premier or** | Blocs de granite pur infranchissables sans pioche fer+ |
-| 300–500 m | Basalte | 23–40 | **Or**, quartz, gemmes | Poches de gaz (explosives près de la lampe) |
-| 500–750 m | Roche volcanique | 41–65 | Or riche, obsidienne | Chaleur : coût d'énergie ×1.5 sans combinaison |
-| 750–1000 m | Abysse | 66–100 | Mithril, cristaux, artefacts | Obscurité totale, lampe indispensable |
+| 1. **Terre** | 0–500 m | 1–3 | Brun, racines, vers | Coffres de jardin, tunnels de taupe |
+| 2. **Roche sédimentaire** | 500–1200 m | 4–8 | Gris strié, fossiles | Fossiles, veines de charbon explosives |
+| 3. **Grottes de cristal** | 1200–2000 m | 9–16 | Violet lumineux | Géodes, cristaux de puissance, grands vides |
+| 4. **Ruines englouties** | 2000–3000 m | 17–28 | Pierre taillée, eau | Autels, salles au trésor, marchands |
+| 5. **Manteau supérieur** | 3000–4000 m | 29–45 | Basalte noir, braises | Filons-mères d'or, roche vivante |
+| 6. **Rivières de magma** | 4000–5000 m | 46–65 | Orange incandescent | Toboggans de lave, cœurs de magma |
+| 7. **Noyau externe** | 5000–5800 m | 66–90 | Métal liquide, doré | Mithril, forge ancienne |
+| 8. **Le Cœur** | 5800–6000 m | 100 | Blanc aveuglant | Ligne d'arrivée |
 
-**Règle de dureté** : `dureté(p) = 1 + (p / 12)^1.4`, arrondie, ±20 % de bruit local.
-Courbe volontairement **super-linéaire** : sans upgrade, descendre de 100 m double
-quasiment le nombre de coups par bloc. C'est ce qui force l'achat d'équipement.
+**Dureté** : `dureté(p) = 1 + (p / 60)^1.55`, arrondie, ±15 % de bruit.
+Elle est calibrée pour qu'**une build correcte progresse à vitesse constante** : la roche
+durcit à peu près au même rythme que le joueur monte en puissance. Le joueur ne ralentit
+pas — il a juste l'impression de courir de plus en plus vite dans du sirop de plus en plus
+épais. Quand il rate ses choix, il le sent immédiatement : ça freine.
 
-**Coups nécessaires** : `ceil(dureté_bloc / dégâts_pioche)`.
-**Coût énergie d'un coup** : `1 + dureté_bloc / 20` (arrondi au dixième).
-
-Conséquence de design : une pioche trop faible ne bloque pas seulement la vitesse, elle
-**vide l'énergie**. Un palier de pioche franchi, c'est une descente qui passe de « 3 blocs
-et demi-tour » à « 40 blocs et un filon ».
-
-### 3.3 Les filons d'or (mécanique signature)
-
-Le minerai précieux n'est **jamais un bloc isolé**. Il est généré en **veines** :
-
-- Point de départ aléatoire dans la strate, puis propagation en marche aléatoire
-  **orientée** (direction dominante + serpentement) sur 5 à 20 blocs.
-- Une veine d'or est **majoritairement horizontale ou diagonale**.
-  → Creuser tout droit vers le bas ne trouve presque jamais d'or.
-  → Le joueur doit **explorer latéralement**, ce qui crée des choix (énergie vs curiosité).
-- Chaque veine a une **richesse** (blocs pauvres en bordure, cœur riche au centre).
-- **Indices environnementaux** : quartz blanc, veines de pyrite, roche décolorée sont
-  générés autour d'une veine d'or à 3–6 blocs. Le joueur apprend à lire la roche —
-  compétence de joueur, pas de personnage.
-- Le **détecteur** (équipement) ajoute un signal sonore + une pulsation à l'écran dont la
-  fréquence augmente avec la proximité d'un filon non miné, dans un rayon donné.
-
-C'est le vrai contenu du jeu : la lecture de terrain, pas le clic sur le bloc.
+**Largeur du puits : 60 blocs.** Bords infranchissables. Assez large pour explorer
+latéralement, assez étroit pour ne pas se perdre.
 
 ---
 
-## 4. Ressources et économie
+## 5. Les surprises (le cœur du fun)
 
-### 4.1 Minerais
+Chaque bloc a une petite chance de cacher quelque chose. La fréquence est calibrée pour
+**une surprise toutes les 15–25 secondes** — assez souvent pour que le joueur creuse en se
+disant « le prochain, peut-être ».
 
-| Minerai | Poids (kg) | Prix base | Profondeur d'apparition |
+### 5.1 Surprises « puissance » — donnent un buff temporaire
+
+| Surprise | Effet |
+|---|---|
+| **Cristal de frénésie** | Vitesse de minage ×2 |
+| **Cœur de titan** | Force ×3 — tout casse en un coup |
+| **Charge d'expansion** | Largeur de taille : 1 → 3 → 5 blocs |
+| **Foret perforant** | Longueur de taille : 1 → 2 → 3 blocs de profondeur |
+| **Sablier fêlé** | **Le chrono se fige 10 secondes** (le graal) |
+| **Plume de gravité** | Chute libre contrôlée + traverse la roche tendre |
+| **Aimant** | Attire tout le loot dans un grand rayon |
+| **Fièvre de l'or** | Valeur des minerais ×2 |
+
+### 5.2 Surprises « valeur » — se revendent cher
+
+| Surprise | Rareté | Valeur | Note |
 |---|---|---|---|
-| Cailloux | 2 | 1 | 0 m+ (déchet, à jeter) |
-| Charbon | 3 | 6 | 20 m+ |
-| Cuivre | 4 | 15 | 50 m+ |
-| Fer | 5 | 35 | 110 m+ |
-| Argent | 5 | 90 | 140 m+ |
-| **Or** | 8 | **300** | 180 m+ |
-| Quartz / gemmes | 2 | 250 | 320 m+ |
-| Obsidienne | 7 | 500 | 520 m+ |
-| Mithril | 6 | 1 200 | 780 m+ |
-| Artefact | 1 | 2 000–8 000 | 800 m+ (unique, très rare) |
+| Géode | Fréquente | 150–400 | S'ouvre en 2 coups, contenu aléatoire |
+| Fossile | Fréquente | 200 | Collection : compléter une série donne un bonus permanent |
+| Coffre abandonné | Moyenne | 500 + 1 buff | |
+| **Filon-mère** | Rare | 2 000–5 000 | Grosse veine dorée, visible de loin, vaut le détour |
+| Artefact ancien | Rare | 3 000 | Débloque un passif définitivement (méta) |
+| Cœur de magma | Très rare | 8 000 | Entouré de lave — vrai pari sur le temps |
 
-Le **poids** est le vrai régulateur : l'or est lourd. Un sac de départ (30 kg) ne contient
-que 3 pépites. Le joueur doit **jeter** du minerai commun pour faire de la place — décision
-active, souvent douloureuse, toujours intéressante.
+### 5.3 Surprises « terrain » — modifient la descente
 
-### 4.2 Cours du marché
+- **Grande caverne** — plusieurs centaines de mètres de chute libre gratuite. Le jackpot du speedrun.
+- **Rivière souterraine / toboggan de lave** — transport rapide vers le bas, direction imposée.
+- **Wagonnet et rails** — une ligne toute tracée, très rapide, mais horizontale.
+- **Champignons rebondissants** — renvoient vers le haut (piège… ou raccourci latéral).
+- **Tunnel de ver de roche** — galerie déjà creusée qui serpente vers le bas.
+- **Marchand nain** — boutique en pleine descente, dépense ton or maintenant ou jamais.
+- **Autel ancien** — choix cornélien : « un passif rare contre 45 secondes de chrono ».
 
-Le prix de chaque minerai fluctue de **±25 %** selon un cycle de quelques descentes,
-affiché à la surface. Deux conséquences :
+### 5.4 Surprises « pièges » — coûtent des secondes, jamais la partie
 
-- On peut **stocker** dans un coffre à la surface (capacité limitée, améliorable) et vendre au bon moment.
-- Un « pic de l'or » est un événement qui donne envie de relancer une descente immédiatement.
+- **Nid de chauves-souris** — 2 s d'étourdissement, l'écran part en vrille.
+- **Sables mouvants** — vitesse divisée par 2 tant qu'on n'en sort pas.
+- **Roche vivante** — les blocs repoussent derrière vous.
+- **Éboulement** — la galerie du dessus se rebouche.
+- **Poche de gaz** — explosion : projette vers le haut de 10 m.
 
-### 4.3 Sources de revenus secondaires
+Design : un piège doit être **drôle et lisible**, pas punitif. On doit avoir envie de dire
+« ah, l'enfoiré », pas de fermer le jeu.
 
-- **Contrats de la guilde** : « 40 charbon en 3 descentes → 500 $ + plan de pioche ».
-  Renouvelés à chaque retour en surface, 3 disponibles.
-- **Découvertes** : première fois qu'on atteint −100 / −250 / −500 m → prime.
-- **Fossiles / artefacts** : revendus au musée, débloquent des bonus permanents.
+### 5.5 Règles des buffs (là où naît le pic de fun)
 
----
-
-## 5. Équipement et progression
-
-### 5.1 Pioches (dégâts par coup)
-
-| Niveau | Pioche | Dégâts | Prix | Débloque en pratique |
-|---|---|---|---|---|
-| 1 | Bois | 2 | — (départ) | 0–40 m |
-| 2 | Pierre | 5 | 250 | 40–90 m |
-| 3 | Cuivre | 10 | 900 | 90–160 m |
-| 4 | Fer | 20 | 3 000 | 160–280 m |
-| 5 | Acier | 38 | 9 000 | 280–430 m |
-| 6 | Diamant | 70 | 26 000 | 430–620 m |
-| 7 | Foreuse à vapeur | 120 | 70 000 | 620–820 m |
-| 8 | Foreuse mithril | 200 | 180 000 | 820–1000 m |
-
-Chaque palier est un **saut ressenti** (× ~2), pas un +5 %. On veut le « ah enfin ».
-
-### 5.2 Autres axes d'amélioration
-
-| Axe | Effet | Pourquoi c'est intéressant |
-|---|---|---|
-| **Sac** (30 → 400 kg) | Capacité de transport | Rentabilité par descente |
-| **Batterie / énergie** (100 → 600) | Nombre de coups par descente | Durée de descente |
-| **Lampe** (rayon 3 → 12) | Vision dans le noir | Sécurité + lecture des indices |
-| **Bottes** | Réduit dégâts de chute, permet de sauter plus haut | Mobilité verticale |
-| **Combinaison** | Résistance chaleur / gaz / eau | Accès aux strates 500 m+ |
-| **Détecteur** (rayon 5 → 20) | Repère les filons non minés | Change la façon d'explorer |
-| **Ascenseur** | Débloque un palier tous les 50 m | Supprime le trajet de retour |
-| **Treuil / monte-charge** | Envoie du minerai en surface sans remonter | Prolonge la descente |
-
-### 5.3 Consommables
-
-- **Dynamite** — détruit un rayon de 3 blocs, quelle que soit la dureté. Bruyante : risque d'effondrement.
-- **Échelle / plateforme** — remonter à la verticale, poser un chemin.
-- **Ration** — restaure 30 % d'énergie.
-- **Fusée de rappel** — téléportation instantanée à la surface, garde la cargaison. Chère, c'est l'assurance.
-- **Charge de forage dirigée** — creuse un tunnel horizontal de 8 blocs.
-
-### 5.4 Camp de base (méta-progression)
-
-À la surface, on améliore des bâtiments qui bénéficient à **toutes** les descentes :
-
-- **Comptoir** : meilleur prix de vente (+2 % par niveau).
-- **Atelier** : débloque le craft (fer + charbon → acier) au lieu d'acheter.
-- **Dortoir des mineurs** : recruter des PNJ qui minent automatiquement les strates
-  déjà maîtrisées et déposent du minerai commun pendant que vous êtes en bas ou hors-jeu
-  *(couche « idle » optionnelle, voir §9)*.
-- **Cartographie** : la carte des galeries déjà creusées reste visible.
-- **Infirmerie** : réduit la pénalité d'évanouissement.
+- Durée de base **20 s**, affichée par des icônes avec compte à rebours.
+- Ramasser un buff déjà actif le **relance et le monte d'un niveau** (I → II → III).
+- Les buffs **différents se cumulent multiplicativement**.
+- Le pic recherché : Frénésie III + Titan II + Expansion III + Perforation II →
+  **écran qui tremble, roche pulvérisée sur 5×3, 300 m avalés en 20 secondes.**
+  C'est le moment que le joueur voudra reproduire. Tout le jeu est construit pour le rendre
+  possible sans le rendre garanti.
+- Un compteur de **combo** monte quand on enchaîne les blocs sans pause : plus la build
+  est bonne, plus le combo tient, plus il rapporte.
 
 ---
 
-## 6. Tension et risque
+## 6. Niveaux et passifs (la build)
 
-Sans risque, miner est une corvée. Sources de tension, par ordre d'introduction :
+### 6.1 Rythme
 
-1. **Énergie** (dès 0 m) — jauge principale. À 0 : évanouissement → réveil à la surface,
-   **perte de 50 % de la cargaison**, pas de perte d'équipement. Jamais de game over sec.
-2. **Poids du sac** (dès 30 m) — plein = on ne ramasse plus ; surcharge volontaire possible
-   (jusqu'à +20 %) au prix d'un coût d'énergie doublé par déplacement.
-3. **Chutes** (60 m+) — creuser sous ses pieds sans échelle est une erreur classique.
-4. **Poches d'eau** (100 m+) — inondent la galerie, ralentissent, coupent la lampe.
-5. **Effondrements** (200 m+) — creuser trop large sans étai fait tomber le plafond ; blocs
-   de soutènement à poser.
-6. **Poches de gaz** (350 m+) — s'enflamment près d'une lampe à flamme ; force à passer
-   à la lampe électrique ou à ventiler.
-7. **Chaleur / lave** (550 m+) — drain d'énergie continu, zones à traverser vite.
-8. **Le noir** (800 m+) — au-delà du rayon de lampe, on ne voit littéralement rien.
+- **Choix de départ** : avant la partie, 1 métier parmi 3 (tirés aléatoirement) — définit la
+  première orientation.
+- **XP** : gagnée en profondeur (constante) **et** en minerai (bonus). Ramasser de l'or fait
+  donc monter de niveau plus vite → l'exploration n'est jamais du temps pur perdu.
+- **Niveau tous les ~250 m** au rythme de base, soit **~24 niveaux** pour une partie complète.
+- À chaque niveau : **le jeu se met en pause**, 3 cartes de passifs, on en choisit une.
+  Pause volontaire : c'est un moment de respiration et de décision, pas de stress.
+- **Reroll** : 1 gratuit par partie, puis payable en or.
 
-**Anti-frustration (non négociable)** : sauvegarde automatique à chaque remontée,
-l'équipement acheté n'est jamais perdu, et une fusée de rappel est toujours achetable pour
-une somme modique. Le joueur perd du **temps** et du **butin**, jamais sa progression.
+### 6.2 Métiers de départ (exemples)
+
+| Métier | Départ |
+|---|---|
+| **Le Bourrin** | Force ×2, vitesse −20 % |
+| **Le Furieux** | Vitesse ×1.5 |
+| **Le Chanceux** | +50 % de surprises, stats de base |
+| **Le Prospecteur** | Voit les minerais à travers la roche, or ×1.5 |
+| **Le Parieur** | Commence 500 m plus bas, mais aucun passif au niveau 1 |
+
+### 6.3 Arbre de passifs — 6 familles + légendaires
+
+**VITESSE**
+- *Poignets d'acier* — +12 % vitesse (cumulable à l'infini)
+- *Métronome* — chaque bloc miné sans pause : +2 % vitesse, max +50 %, remis à zéro après 2 s d'inactivité
+- *Second souffle* — quand un buff expire, +30 % vitesse pendant 5 s
+
+**FORCE**
+- *Bras de fer* — +2 force
+- *Brise-roche* — 15 % de chance de casser un bloc d'un seul coup, quelle que soit sa dureté
+- *Sismique* — la force compte double contre la couche actuelle
+
+**ZONE**
+- *Élargisseur* — +1 largeur de taille en permanence (max 5)
+- *Perforateur* — +1 longueur de taille en permanence (max 3)
+- *Onde de choc* — tous les 10 blocs, détruit un cercle de rayon 2
+
+**MOBILITÉ**
+- *Plume* — chutes sans pénalité, chute plus rapide
+- *Foreuse gravitationnelle* — **en tombant, on creuse les blocs traversés** (si la force suffit)
+- *Rebond* — traverser un vide relance l'élan vers le bas
+
+**BUTIN**
+- *Filon élargi* — les veines de minerai contiennent 50 % de blocs en plus
+- *Aimant permanent* — ramassage à distance, plus besoin de toucher le loot
+- *Prospecteur* — les minerais brillent à travers la roche dans un rayon de 10
+- *Cupidité* — valeur +40 %, vitesse −10 %
+
+**CHANCE**
+- *Flair* — +25 % de surprises générées
+- *Porte-bonheur* — les buffs durent +40 %
+- *Collectionneur* — les buffs peuvent monter jusqu'au niveau IV
+- *Poussière d'étoile* — 8 % de chance qu'un bloc banal lâche un mini-buff
+
+**LÉGENDAIRES** (rares dans le tirage, changent la partie)
+- *Ver de roche* — traverse la roche la plus tendre de la couche sans la miner
+- *Noyau instable* — tous les 100 m, une explosion creuse 5 m automatiquement
+- *Pacte du magma* — immunité à la lave, et la lave devient un toboggan ultra-rapide
+- *Cascade* — chaque buff ramassé en déclenche un second, aléatoire, au niveau I
+- *Chronophage* — chaque filon-mère miné retire 20 s au chrono final
+
+**Intention de design** : les familles doivent se **combiner** de façon lisible.
+Zone + Force = tout pulvériser. Vitesse + Métronome = fondre la roche tendre.
+Chance + Porte-bonheur + Cascade = buffs quasi permanents. Le joueur doit pouvoir dire,
+au niveau 10, « ok, ma build c'est **ça** » — et jouer les 14 niveaux suivants pour elle.
 
 ---
 
-## 7. Commandes et ergonomie
+## 7. L'or et l'équipement
 
-**Clavier / souris (desktop)**
+L'or ne sert plus à préparer la descente suivante : il se dépense **pendant** la descente.
 
-- `Z/Q/S/D` ou flèches : déplacement, `Espace` : saut.
-- Clic ou direction maintenue : miner le bloc visé (le personnage mine automatiquement le bloc adjacent dans la direction regardée).
-- `E` : poser une échelle, `1–4` : consommables, `Tab` : carte, `M` : détecteur.
-
-**Tactile (mobile)**
-
-- Joystick virtuel à gauche, bouton miner à droite, appui sur un bloc adjacent pour cibler.
-- Priorité : une seule main doit suffire pour une descente tranquille.
-
-**HUD**
-
-- Haut-gauche : énergie (barre), sac (kg / max), profondeur (grand chiffre, c'est le score).
-- Haut-droite : argent, cargaison résumée par icônes.
-- Bas : consommables.
-- Le reste de l'écran : la mine. Pas de menus pendant la descente.
-
-**Feedback (là où se joue le « juice »)**
-
-- Fissures progressives sur le bloc en cours de minage.
-- Écran qui tremble légèrement sur les gros coups, particules à la couleur du minerai.
-- Son distinct par matériau ; **son unique et jubilatoire pour l'or**.
-- Pulsation lumineuse quand un filon apparaît dans le champ de la lampe.
+- **Marchands nains** rencontrés dans les couches 2, 4, 6 (et parfois ailleurs).
+  Vendent des **améliorations permanentes pour la partie en cours** : pioche supérieure
+  (+force), gants (+vitesse), tête de foreuse (+largeur/longueur), potion de buff au choix,
+  reroll de niveau, ou une **téléportation de 200 m vers le bas**.
+- Arbitrage permanent : ramasser de l'or coûte des secondes maintenant, mais en fait gagner
+  beaucoup plus tard. Le joueur qui ignore totalement l'or finira lentement ; celui qui
+  ramasse tout aussi.
+- L'or non dépensé en fin de partie devient de la **monnaie méta**.
 
 ---
 
-## 8. Structure de la partie (courbe d'expérience)
+## 8. Progression méta (entre les parties)
 
-| Phase | Profondeur | Ce que le joueur apprend / vit |
-|---|---|---|
-| **Découverte** (0–30 min) | 0–100 m | Creuser, revendre, premier upgrade. Trouve son premier cuivre. |
-| **Le mur** (30–90 min) | 100–200 m | La roche devient dure, l'énergie ne suit plus. Comprend qu'il faut optimiser. Premier or → moment fort. |
-| **Le métier** (1–4 h) | 200–500 m | Lit les indices, planifie les descentes, joue avec le marché, débloque les ascenseurs. |
-| **L'industrie** (4–8 h) | 500–800 m | Automatise le haut, dynamite, monte-charge. La mine devient une usine. |
-| **L'abysse** (8 h+) | 800–1000 m | Zone dangereuse, artefacts, fin du puits n°1. |
+Légère et facultative — le jeu doit être complet dès la première partie.
 
-**Fin de partie / rejouabilité** : atteindre le socle à −1000 m ouvre une **nouvelle
-concession** (nouveau puits, nouvelle seed, strates plus dures, minerais inédits) en
-conservant une partie de l'équipement et un bonus permanent — un *New Game+* qui donne du
-sens au grind final.
+- **Débloquer de nouveaux passifs et métiers**, qui entreront ensuite dans les tirages.
+- **Collections** (fossiles, artefacts) → petits bonus permanents.
+- **Tableau des records** : meilleur temps global, meilleur temps par couche (comme les
+  *splits* d'un speedrun), meilleur temps par métier.
+- **Seed du jour** : tout le monde joue la même planète, classement quotidien.
+- **Modes** :
+  - *Course* — 0 → 6000 m, chrono, le mode principal.
+  - *Balade* — pas de chrono, on explore, on collectionne.
+  - *Sprint* — 1 000 m seulement, parties de 3 min.
 
 ---
 
-## 9. Périmètre : MVP puis extensions
+## 9. Commandes et interface
 
-### MVP (le jeu est déjà bon)
+**Desktop** — `Z/Q/S/D` pour se déplacer, `Espace` pour sauter. On mine **automatiquement**
+le bloc dans la direction où l'on va : pas de clic répété, pas de crampe. Se diriger = miner.
+`Tab` pour la carte.
 
-- Grille 2D, minage, gravité, blocs persistants.
-- 4 strates (0–300 m), 5 minerais dont l'or.
-- Génération de **veines** + indices visuels.
-- Énergie, sac avec poids, remontée manuelle.
-- Boutique : pioche, sac, énergie, lampe, échelles.
-- Vente à prix fixe, sauvegarde locale.
+**Mobile** — un pouce sur un joystick virtuel. Rien d'autre. Le jeu doit être jouable
+entièrement à une main.
+
+**HUD minimal**
+- En haut au centre : **la profondeur en gros** et **le chrono**. Ce sont les deux seules
+  informations vitales.
+- En haut à gauche : barre d'XP + niveau.
+- En haut à droite : or, et les icônes de buffs actifs avec leur compte à rebours.
+- Sur le côté : liste discrète des passifs acquis.
+- Rien d'autre. Pendant une partie, aucun menu ne s'ouvre à part le choix de niveau.
+
+**Feedback** — c'est là que se joue le fun :
+fissures progressives, éclats de roche à la couleur de la couche, écran qui tremble sous
+les gros coups, ralenti de 0,2 s quand un filon-mère apparaît, distorsion de l'écran en
+pleine frénésie, musique dont les couches d'instruments s'ajoutent quand le combo monte, et
+un **son unique et jubilatoire pour l'or**. La sensation de creuser doit être bonne au bout
+de trois secondes de jeu, avant même le premier bonus.
+
+---
+
+## 10. Périmètre
+
+### MVP — le jeu est déjà fun
+
+- Descente, gravité, minage automatique directionnel, chrono.
+- 3 couches (0–2000 m), dureté progressive.
+- 4 buffs : vitesse, force, largeur, longueur, avec cumul et niveaux I–III.
+- Level-up tous les 250 m, 12 passifs répartis dans 4 familles.
+- 6 surprises, dont la grande caverne et le coffre.
+- Or, minerai, un marchand.
+- Écran de fin : temps total + splits.
 
 ### V1
 
-- 7 strates jusqu'à 1000 m, tous les minerais.
-- Ascenseurs et paliers, détecteur, dynamite, fusée de rappel.
-- Dangers : eau, gaz, effondrement, chaleur.
-- Cours du marché fluctuant, contrats de guilde.
-- Camp de base et améliorations permanentes.
+- Les 8 couches jusqu'au Cœur, tous les buffs dont le Sablier.
+- ~30 passifs, 6 familles + légendaires, 5 métiers de départ.
+- Tout le bestiaire de surprises : autels, wagonnets, toboggans de lave, filons-mères, pièges.
+- Records, splits par couche, mode Sprint.
 
-### V2 et au-delà
+### V2
 
-- **Mineurs PNJ / couche idle** : production hors-ligne sur les strates maîtrisées.
-- **Craft** : fondre le minerai pour fabriquer soi-même l'équipement.
-- **Événements** : filon-mère, éboulement majeur, visite d'un acheteur qui surpaye l'argent.
-- **Deuxième concession** (New Game+), succès, statistiques de carrière.
-- **Mode défi** : seed partagée, meilleure valeur ramenée en 10 minutes → classement.
-- **Coop locale** : un mineur + un opérateur de treuil.
+- Seed du jour et classements.
+- Collections et progression méta.
+- Événements de couche (pluie de météores, ruée vers l'or, couche entièrement en cristal).
+- Deuxième planète : gravité, couches et surprises différentes.
+- Fantômes de course : le replay de son meilleur temps creuse à côté de soi.
 
 ---
 
-## 10. Notes de faisabilité technique
+## 11. Ce qui a changé depuis la v1, et pourquoi
 
-Rien à coder pour l'instant, mais pour cadrer les choix futurs :
-
-- Grille de blocs = simple tableau typé (`Uint8Array` de 40 × 1000 = 40 000 cases) : trivial en mémoire.
-- Rendu : canvas 2D avec culling (n'afficher que les ~30 × 20 blocs visibles) — pas besoin de moteur lourd.
-- Génération : bruit type Perlin/simplex pour les strates + marche aléatoire orientée pour les veines, à partir d'une seed stockée.
-- Sauvegarde : seed + liste des blocs modifiés + inventaire + upgrades → `localStorage` suffit au début.
-- Cible naturelle : **web (HTML/Canvas ou React + canvas)**, jouable desktop et mobile, sans installation.
+| v1 | v2 | Raison |
+|---|---|---|
+| Jauge d'énergie | **Supprimée** | Une seule ressource : le temps. Plus simple, plus nerveux. |
+| Gestion du poids du sac | **Supprimée** | De la logistique, pas du fun. |
+| Descentes / remontées répétées | **Une seule descente continue** | L'objectif est une course vers le centre, les allers-retours la cassent. |
+| Boutique en surface entre les runs | **Marchands en cours de descente** | Garde le joueur dans la mine. |
+| Progression par achats | **Progression par passifs choisis** | Des décisions, pas des paliers de prix. |
+| Dangers punitifs | **Pièges qui coûtent des secondes** | Aucun échec possible, donc prise de risque libre. |
+| Butin = argent | **Butin = argent + XP + buffs** | L'exploration doit toujours récompenser. |
 
 ---
 
-## 11. Décisions de design à trancher avant de coder
+## 12. Questions encore ouvertes
 
-1. **Run-based ou continu ?** — proposition retenue : run-based (descente → remontée), car
-   ça crée un rythme et rend chaque upgrade lisible.
-2. **Combats ou pas ?** — proposition : **non**. Les dangers sont environnementaux. Le jeu
-   parle de roche, de poids et de lumière, pas de créatures. (Réversible en V2.)
-3. **Idle/automatisation** — puissante pour la rétention, mais peut vider le cœur du jeu si
-   introduite trop tôt : à réserver aux strates **déjà maîtrisées**.
-4. **Perte à la mort** — 50 % de la cargaison seulement. Punir l'équipement casserait la
-   boucle d'amélioration.
-5. **Taille du puits** — 40 blocs de large : assez pour explorer latéralement, assez peu pour
-   qu'on ne se perde pas.
+1. **Faut-il des checkpoints ?** Proposition : non en mode Course (l'intérêt est le run
+   complet), oui en mode Balade.
+2. **Le chrono s'arrête-t-il pendant le choix de passif ?** Proposition : oui — sinon le
+   joueur choisit sous pression et prend toujours la même carte.
+3. **Descente strictement verticale ou exploration latérale ?** Proposition : le chemin le
+   plus court est vertical, mais les meilleures surprises sont sur les côtés. C'est
+   l'arbitrage central du jeu, à équilibrer finement.
+4. **Longueur cible d'une partie parfaite** : proposition 12–15 min pour un très bon joueur,
+   ~30 min pour une première partie.
+5. **Un boss au centre ?** Proposition : non — juste une ligne d'arrivée spectaculaire.
+   Le jeu ne parle pas de combat.
