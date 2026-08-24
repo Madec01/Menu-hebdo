@@ -2740,6 +2740,19 @@ T('T58 le guide documente les nouveautés v5 (inspecteur, analyseur, bus…)', (
     .forEach(([re, what]) => ok(new RegExp(re, 'i').test(html), 'le guide parle de ' + what));
 });
 
+T('T60 le guide documente les ateliers, les unités, les seuils et la tuyauterie', () => {
+  const html = __el('guide-body').innerHTML;
+  [['Deux ateliers', 'les deux modes de palette'],
+   ['unités réelles', 'les réglages en unité physique'],
+   ['% de l’échelle', 'le repli en pourcentage'],
+   ['seuil haut', 'le seuil haut des capteurs'],
+   ['seuil bas', 'le seuil bas des capteurs'],
+   ['raccord fluide', 'la tuyauterie'],
+   ['BRIDÉ', 'le bridage d’un tuyau trop étroit']]
+    .forEach(([txt, what]) => ok(html.includes(txt), 'le guide parle de ' + what));
+  ok(/TUYAU/.test(__el('guide-body').innerHTML), 'et présente le tuyau lui-même');
+});
+
 T('T59 le guide ne mentionne plus les anciens déblocages de mission', () => {
   const html = __el('guide-body').innerHTML;
   ok(!/récompense (de la )?mission/i.test(html), 'plus de « récompense mission » (déblocage total en v5)');
@@ -2799,6 +2812,28 @@ T('T148 les réglages se donnent dans l’unité de la mesure branchée', () => 
   applyInspector(four, fld('o_alerte', 200));
   eq(optTxt(four, 'alerte'), '200 °C', 'seuil « chaud » en °C');
   eq(optOf(four, 'alerte'), phys2raw(200, { min:0, max:250 }), 'stocké en brut');
+});
+
+T('T149 deux ateliers : la palette se filtre en électronique ou en process', () => {
+  const noms = () => modeTabs().map(t => t.key);
+  setAppMode('tout');
+  ok(noms().includes('gate') && noms().includes('act'), 'mode Tout : toute la palette');
+  setAppMode('elec');
+  ok(noms().includes('gate') && noms().includes('calc'), 'électronique : portes et calcul');
+  ok(!noms().includes('act') && !noms().includes('reg'),
+     'électronique : ni actionneurs ni régulation');
+  ok(noms().includes('sense') && noms().includes('in'), 'les entrées et capteurs restent partout');
+  setAppMode('proc');
+  ok(noms().includes('act') && noms().includes('reg'), 'process : actionneurs et régulation');
+  ok(!noms().includes('gate'), 'process : pas de portes dans la palette');
+  eq(localStorage.getItem('al2_mode'), 'proc', 'le choix est mémorisé');
+  // la recherche reste universelle : rien n'est jamais hors d'atteinte
+  ok(searchTypes('nand').includes('NAND'), 'la recherche traverse les deux ateliers');
+  ok(searchTypes('pompe').includes('PUMP'), 'et retrouve aussi le procédé');
+  // l'onglet courant est ramené dans le domaine du mode
+  toolbarTab = 99; buildToolbar();
+  ok(toolbarTab < modeTabs().length, 'onglet ramené dans le mode');
+  setAppMode('tout');
 });
 
 /* ===================== bilan ===================== */

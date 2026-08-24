@@ -152,6 +152,16 @@ table.tt tr.tt-fail td:first-child::before{content:'✗ ';color:var(--red)}
   background:rgba(5,9,18,.6);color:var(--text);font-family:var(--mono);font-size:10px;width:180px;outline:none}
 #tool-search:focus{border-color:var(--border-hi)}
 .tool-none{font-family:var(--mono);font-size:10.5px;color:var(--dim);padding:10px 4px}
+.mode-seg{display:flex;gap:2px;padding:2px;margin-right:8px;border-radius:9px;
+  border:1px solid var(--border);background:rgba(5,9,18,.55)}
+.mode-btn{display:flex;align-items:center;gap:4px;font-family:var(--mono);font-size:8.5px;
+  letter-spacing:.12em;text-transform:uppercase;padding:4px 9px;border-radius:7px;border:none;
+  background:transparent;color:var(--dim);cursor:pointer;transition:.15s;white-space:nowrap}
+.mode-btn span{font-size:11px;line-height:1}
+.mode-btn:hover{color:#c8d6ee;background:rgba(255,255,255,.05)}
+.mode-btn.active{color:#061018;background:linear-gradient(180deg,#9fe9ff,#38e1ff);font-weight:700}
+.mode-btn[data-mode="proc"].active{background:linear-gradient(180deg,#8effc6,#3dff9e)}
+.mode-btn[data-mode="tout"].active{background:linear-gradient(180deg,#d6c4ff,#b18cff)}
 .tool-tab{font-family:var(--mono);font-size:9px;letter-spacing:.16em;text-transform:uppercase;
   padding:5px 13px;border-radius:8px;border:1px solid transparent;background:transparent;
   color:var(--dim);cursor:pointer;transition:.15s}
@@ -5165,20 +5175,40 @@ function glyphIcon(g, size){
 
 /* Onglets de la barre d'outils : familles regroupées pour rester lisibles */
 const TABS = [
-  { key:'in',    name:'Entrées',  fams:['in'],
+  { key:'in',    name:'Entrées',  fams:['in'], mode:['elec','proc'],
     items:['SWITCH','BUTTON','CLOCK','RANDOM','NOISE','NIBBLE','KEY','SEQ','HIGH','LOW'] },
-  { key:'sense', name:'Capteurs', fams:['sense'], items:[] },
-  { key:'gate',  name:'Portes',   fams:['gate'],
+  { key:'sense', name:'Capteurs', fams:['sense'], mode:['elec','proc'], items:[] },
+  { key:'gate',  name:'Portes',   fams:['gate'], mode:['elec'],
     items:['NOT','AND','OR','XOR','NAND','NOR','XNOR','AND3','OR3'] },
-  { key:'mem',   name:'Mémoire',  fams:['mem'], chips:true, items:['DELAY','DFF'] },
-  { key:'calc',  name:'Calcul & bus', fams:['calc'],
+  { key:'mem',   name:'Mémoire',  fams:['mem'], chips:true, mode:['elec'], items:['DELAY','DFF'] },
+  { key:'calc',  name:'Calcul & bus', fams:['calc'], mode:['elec'],
     items:['MUX','ADD','SUB','COMP','DEMUX','CNT4','ROM','GROUP','UNGROUP'] },
-  { key:'time',  name:'Temps & automatisme', fams:['time'], items:[] },
-  { key:'reg',   name:'Régulation', fams:['reg'], items:[] },
-  { key:'out',   name:'Sorties', fams:['out'],
+  { key:'time',  name:'Temps & automatisme', fams:['time'], mode:['elec','proc'], items:[] },
+  { key:'reg',   name:'Régulation', fams:['reg'], mode:['proc'], items:[] },
+  { key:'out',   name:'Sorties', fams:['out'], mode:['elec','proc'],
     items:['LED','SEGMENT','DEC','OCTET','RGB','PROBE','MATRIX','SCOPE','BUZZER','NOTE'] },
-  { key:'act',   name:'Actionneurs', fams:['act'], items:['TRAFFIC','BARRIER'] }
+  { key:'act',   name:'Actionneurs & procédés', fams:['act'], mode:['proc'],
+    items:['TRAFFIC','BARRIER'] }
 ];
+/* Deux ateliers dans la même appli : l'électronique et le procédé.
+   Le mode ne filtre que la palette — un montage mixte reste possible. */
+const MODES = [
+  { k:'elec', ico:'⚡', name:'Électronique', tip:'Portes, mémoire, calcul, bus : le signal et la logique.' },
+  { k:'proc', ico:'🏭', name:'Process',     tip:'Capteurs, régulation, actionneurs, tuyauterie : l’installation.' },
+  { k:'tout', ico:'▦',  name:'Tout',        tip:'Toute la palette, sans filtre.' }
+];
+let appMode = 'tout';
+try { const m = localStorage.getItem('al2_mode'); if (m && MODES.some(x => x.k === m)) appMode = m; } catch(e){}
+function setAppMode(k){
+  appMode = k;
+  try { localStorage.setItem('al2_mode', k); } catch(e){}
+  toolbarTab = 0; toolFilter = '';
+  buildToolbar(); updateToolbar();
+}
+/* Les onglets réellement offerts dans le mode courant */
+function modeTabs(){
+  return TOOL_TABS.filter(t => appMode === 'tout' || !t.mode || t.mode.includes(appMode));
+}
 const FAM_LOGIC = ['gate','mem','calc','time','reg'];   // comptent comme logique (missions, puces)
 
 /* Publie tout le registre dans les tables du moteur */
@@ -5261,7 +5291,8 @@ function optOf(c, k){
 /* Sections de guide engendrées par le registre, dans cet ordre */
 const FAM_SECTIONS = [
   { key:'sense', t:'Les capteurs — mesurer le monde',
-    p:'Un capteur transforme une grandeur physique (lumière, chaleur, distance…) en signal. Chacun donne DEUX sorties : la <b>valeur</b> mesurée sur un bus, et un <b>seuil</b> booléen — « il fait plus chaud que la consigne ».<br><br>' +
+    p:'Un capteur transforme une grandeur physique (lumière, chaleur, distance…) en signal. Chacun donne TROIS sorties : la <b>valeur</b> mesurée sur un bus (<code>MES</code>), et deux contacts de seuil — <code>HAUT</code> passe à 1 au-dessus du seuil haut, <code>BAS</code> passe à 1 au-dessous du seuil bas. Entre les deux, les deux contacts sont au repos : c\u2019est la <b>plage normale</b> de fonctionnement.<br><br>' +
+      '<b>Pourquoi deux seuils ?</b> Parce que c\u2019est ainsi qu\u2019on surveille un procédé : un seuil de <i>manque</i> et un seuil de <i>trop</i>. Niveau bas → on remplit, niveau haut → on arrête ; température basse → on chauffe, température haute → alarme. Les deux seuils se règlent en unités réelles dans l\u2019inspecteur, et la valeur mesurée reste disponible sur <code>MES</code> pour une vraie régulation.<br><br>' +
       '<b>Deux façons de s\u2019en servir.</b> Laissé <b>libre</b>, il simule : tu fixes la valeur toi-même (glissière, clic ou double-clic) pour tester ta logique. <b>Branché</b> sur l\u2019entrée <code>PROC</code> à la sortie d\u2019un procédé — la température d\u2019un four, le niveau d\u2019une cuve, la vitesse d\u2019un moteur — il devient un <b>vrai instrument</b> : il mesure en direct ce que fait l\u2019installation, et la glissière disparaît puisque c\u2019est le procédé qui commande.<br><br>' +
       '<b>Attention à l\u2019étendue de mesure.</b> Un thermomètre gradué de −10 à 50 °C plongé dans un four à 200 °C sature : il affiche 50 et passe en ambre. C\u2019est le vrai piège du métier — choisir un capteur adapté à la plage du procédé.' },
   { key:'time', t:'Temps & automatisme — attendre, compter, séquencer',
@@ -5281,7 +5312,11 @@ const FAM_SECTIONS = [
     p:'Ce que le circuit commande vraiment : moteurs, vérins, vannes, pompes, relais — et de vrais procédés qui réagissent (four, cuve, réservoir d\u2019air, convoyeur).<br><br>' +
       '<b>Deux règles valent pour tous.</b> D\u2019abord la <b>commande</b> : une entrée à <code>1</code> (un simple interrupteur) veut dire pleine puissance, tandis qu\u2019une <code>valeur</code> de 2 à 255 venue d\u2019un PWM, d\u2019un CNA ou d\u2019un régulateur dose l\u2019effort. Le même actionneur se pilote donc en tout ou rien ou en analogique, sans rien changer au câblage.<br>' +
       'Ensuite la <b>mesure</b> : chacun renvoie ce qu\u2019il fait vraiment — vitesse et tours d\u2019un moteur, position d\u2019un vérin ou d\u2019un servo, débit d\u2019une vanne ou d\u2019une pompe, niveau et pression d\u2019une cuve, angle d\u2019une barrière. C\u2019est ce retour qui permet de fermer la boucle et de passer de « je commande » à « je vérifie ».' },
-  { key:'out', t:'Les sorties — voir et entendre (suite)', p:'D\u2019autres façons de lire ce que raconte le circuit.' }
+  { key:'out', t:'Les sorties — voir et entendre (suite)', p:'D\u2019autres façons de lire ce que raconte le circuit.' },
+  { key:'flu', ids:['TUYAU','TE'], t:'La tuyauterie — raccorder un procédé à l’autre',
+    p:'Un <b>raccord fluide</b> ne se câble pas comme un fil électrique : ses bornes sont <b>carrées</b>, et l\u2019appli refuse de relier un tuyau à une borne électrique — ou l\u2019inverse. C\u2019est volontaire : dans une installation, la matière et le signal ne circulent pas dans les mêmes conduites.<br><br>' +
+      '<b>Ce qui circule dedans, c\u2019est un débit.</b> La pompe pousse, la vanne dose, le tuyau limite selon son diamètre, le té réunit ou répartit, la cuve reçoit — et refuse d\u2019avaler quoi que ce soit une fois pleine. Chaque élément dit à son amont ce qu\u2019il peut accepter : c\u2019est ce dialogue qui rend l\u2019écoulement réaliste. Un tuyau trop étroit affiche <code>BRIDÉ</code> : la pompe a beau tourner à fond, la section commande.<br><br>' +
+      'À côté du raccord, chaque élément garde une <b>sortie de mesure</b> électrique (<code>DÉB</code>, <code>NIV</code>, <code>PRES</code>) : c\u2019est par là que la partie process rejoint la partie commande, exactement comme un capteur sur une conduite réelle.' }
 ];
 
 /* --------- Instanciation depuis des données sérialisées ---------
@@ -7244,7 +7279,20 @@ function buildToolbar(){
   bar.innerHTML = '';
   // Rangée d'onglets + recherche
   const tabs = document.createElement('div'); tabs.className = 'tool-tabs';
-  TOOL_TABS.forEach((g2, gi) => {
+  const seg = document.createElement('div'); seg.className = 'mode-seg';
+  MODES.forEach(m => {
+    const mb = document.createElement('button');
+    mb.className = 'mode-btn' + (appMode === m.k ? ' active' : '');
+    mb.innerHTML = '<span>' + m.ico + '</span>' + m.name;
+    mb.title = m.tip;
+    mb.dataset.mode = m.k;
+    mb.addEventListener('click', () => { AudioSys.click(); setAppMode(m.k); });
+    seg.appendChild(mb);
+  });
+  tabs.appendChild(seg);
+  const vis = modeTabs();
+  if (toolbarTab >= vis.length) toolbarTab = 0;
+  vis.forEach((g2, gi) => {
     const tb = document.createElement('button');
     tb.className = 'tool-tab' + (gi === toolbarTab && !toolFilter ? ' active' : '');
     tb.textContent = g2.name;
@@ -7268,7 +7316,8 @@ function buildToolbar(){
   tabs.appendChild(search);
   bar.appendChild(tabs);
   // Rangée d'outils : l'onglet courant, ou le résultat de la recherche
-  const g = toolFilter ? { items: searchTypes(toolFilter) } : TOOL_TABS[toolbarTab];
+  const g = toolFilter ? { items: searchTypes(toolFilter) }
+                      : (modeTabs()[toolbarTab] || { items: [] });
   const row = document.createElement('div'); row.className = 'tool-row';
   if (toolFilter && !g.items.length){
     const none = document.createElement('div');
@@ -8489,9 +8538,20 @@ function buildGuide(){
     'les pins de la puce. Le circuit disparaît dans un boîtier réutilisable — c’est la démarche même de ' +
     'l’ingénieur, et le meilleur remède à l’encombrement. Le <b>TUNNEL</b> joue le même rôle pour les signaux ' +
     'communs : deux tunnels de même nom sont reliés sans aucun fil.<br><br>' +
+    '<b>⚡🏭 Deux ateliers dans la même appli.</b> Le sélecteur en tête de la barre d’outils partage la palette ' +
+    'en deux métiers : <code>Électronique</code> (entrées, portes, mémoire, calcul, bus, sorties) et ' +
+    '<code>Process</code> (capteurs, temporisations, régulation, actionneurs, procédés et tuyauterie). ' +
+    'Il ne <b>filtre que la palette</b> : rien n’est verrouillé, un montage peut mélanger les deux, et la ' +
+    'recherche 🔍 traverse toujours l’ensemble du catalogue. <code>▦ Tout</code> remet la palette complète. ' +
+    'Ton choix est conservé d’une session à l’autre.<br><br>' +
+    '<b>📏 Les réglages parlent en unités réelles.</b> Une consigne se donne en <code>°C</code>, en ' +
+    '<code>bar</code>, en <code>%</code> ou en <code>tr/min</code>, jamais en valeur brute : le régulateur ' +
+    'reprend l’unité et l’étendue de la mesure branchée sur son entrée. Branche un four gradué de 0 à 250 °C ' +
+    'et le thermostat te demande une consigne <b>entre 0 et 250 °C</b>. Rien de branché ? Le réglage s’exprime ' +
+    'en <b>% de l’échelle</b> en attendant. Glissière, inspecteur et infobulle affichent tous la même valeur.<br><br>' +
     '<b>🔍 L’infobulle.</b> Survole n’importe quoi : un <b>composant</b> te donne l’état de chacune de ses ' +
     'entrées et sorties, ses réglages et son coût ; un <b>pin</b> dit à quoi il est relié ; un <b>câble</b> ' +
-    'affiche la valeur qu’il transporte. C’est le réflexe à prendre quand un circuit ne fait pas ce que tu crois.<br><br>' +
+    'affiche la valeur qu’il transporte, dans son unité quand il en a une. C’est le réflexe à prendre quand un circuit ne fait pas ce que tu crois.<br><br>' +
     '<b>⌨️ Les gestes qui font gagner du temps.</b> <code>Ctrl+Z</code> / <code>Ctrl+Y</code> annuler-refaire, ' +
     '<code>Ctrl+C</code> / <code>Ctrl+V</code> copier-coller, <code>Ctrl+D</code> dupliquer la sélection, ' +
     '<code>Suppr</code> effacer, glisser dans le vide pour sélectionner plusieurs boîtiers (puis ⇤ ⤒ ☰ pour les aligner), ' +
@@ -8663,7 +8723,9 @@ function buildGuide(){
   // Sections engendrées par le registre : chaque composant déclaré apporte
   // automatiquement son entrée de guide, impossible d'en oublier un.
   FAM_SECTIONS.forEach(fs => {
-    const items = Object.keys(REG).filter(id => REG[id].family === fs.key && REG[id].guide)
+    const items = Object.keys(REG).filter(id => REG[id].guide && (fs.ids
+        ? fs.ids.includes(id)
+        : REG[id].family === fs.key && !FAM_SECTIONS.some(o => o.ids && o.ids.includes(id))))
       .map(id => { const d = REG[id];
         return [id, d.guideTitle || d.name, d.guide.txt, d.guide.ex || null, d.guide.real || null, [id]]; });
     if (items.length) SECTIONS.push({ t: fs.t, p: fs.p, items });
