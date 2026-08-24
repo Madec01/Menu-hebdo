@@ -1037,23 +1037,27 @@ cas("equipe-et-stocks", async (nav) => {
   v.egal("et personne n'est mis deux fois", a.uniques, a.assignes);
   v.egal("le reste part au portage", a.auPortage, a.equipe - a.n);
 
-  // Le placement tient compte de la compétence : pas d'affectation au hasard.
+  // Le placement optimise vraiment ce qu'il annonce : la compétence, moins le
+  // trajet. On le compare à une affectation prise dans l'ordre, sur le même
+  // critère — sinon on mesure autre chose que ce que le code cherche.
   const comp = await jeu(`(() => {
     const u = U();
-    const somme = u.ouvriers.filter(o => o.posteAssigne != null).reduce((s,o) => {
-      const m = noeudParId(o.posteAssigne);
-      return s + (o.competences[COMP_MACHINE[m.type]] ?? 0.5);
-    }, 0);
-    // le même nombre de gens tirés au sort sur les mêmes postes
+    const note = (o,m) => {
+      const acces = tuileAcces(u, m, o.x, o.y);
+      if (!acces) return -99;
+      return 10*(o.competences[COMP_MACHINE[m.type]] ?? 0.5) -
+             Math.hypot(acces.x - o.x, acces.y - o.y)*0.12;
+    };
+    const choisi = u.ouvriers.filter(o => o.posteAssigne != null)
+                             .reduce((s,o) => s + note(o, noeudParId(o.posteAssigne)), 0);
     const postes = machinesAOperer();
-    let pire = 0;
-    for (let i=0;i<postes.length;i++)
-      pire += (u.ouvriers[i].competences[COMP_MACHINE[postes[i].type]] ?? 0.5);
-    return { choisi: somme, arbitraire: pire, n: postes.length };
+    let ordre = 0;
+    for (let i=0;i<postes.length;i++) ordre += note(u.ouvriers[i], postes[i]);
+    return { choisi, ordre, n: postes.length };
   })()`);
   v("l'affectation vaut mieux qu'un tirage dans l'ordre",
-    comp.choisi >= comp.arbitraire - 0.001,
-    comp.choisi.toFixed(2) + " contre " + comp.arbitraire.toFixed(2));
+    comp.choisi >= comp.ordre - 0.001,
+    comp.choisi.toFixed(2) + " contre " + comp.ordre.toFixed(2));
 
   const lib = await jeu(`(() => { const n = libererTousLesPostes();
     return { n, restants: U().ouvriers.filter(o => o.posteAssigne != null).length }; })()`);
@@ -1306,6 +1310,105 @@ cas("marque-et-marches", async (nav) => {
   for (const t of inv) v("invariant : " + t.nom, t.ok, t.detail);
   await page.close();
   return { echecs: v.echecs.concat(erreurs), note: 5 + " marchés, " + dess + " sachets dessinés" };
+});
+
+cas("labels", async (nav) => {
+  const { page, jeu, erreurs } = await contexte(nav);
+  const v = verif();
+
+  // Rien ne se déclenche tout seul, et rien ne coûte avant qu'on le demande.
+  const d0 = await jeu(`(() => {
+    const avant = etat.finances.solde;
+    for (let i=0;i<8;i++) majLabels();
+    return { obtenus: etat.labels.obtenus.length, depense: avant - etat.finances.solde,
+             dispoAge1: LABELS.filter(labelDisponible).length };
+  })()`);
+  v.egal("aucun label à l'âge 1", d0.dispoAge1, 0);
+  v.egal("donc aucun obtenu", d0.obtenus, 0);
+  v.egal("et rien de dépensé", Math.round(d0.depense), 0);
+
+  // La condition se mesure, et elle se tient dans le temps.
+  const t = await jeu(`(() => {
+    sauterAge(3); etat.finances.solde = 200000;
+    poserMachine('friteuse',5,4,0);
+    const u = U();
+    u.salete = 0.05;
+    const f = u.machines.find(m => m.type === 'friteuse');
+    f.fraicheurHuile = 0.95; f.usure = 0.1;
+    const suite = [];
+    for (let i=0;i<2;i++){ majLabels(); suite.push(labelEnCours('huile')); }
+    const pretAvant = demanderAudit('huile');   // deux semaines sur trois : trop tôt
+    const avant = etat.finances.solde;
+    majLabels();
+    const pret = labelEnCours('huile');
+    const ok = demanderAudit('huile');
+    return { suite, pret, ok, obtenu: labelObtenu('huile'),
+             cout: avant - etat.finances.solde, tropTot: pretAvant,
+             mesure: mesureLabel('huile') };
+  })()`);
+  v.egal("le compteur monte d'une semaine à la fois", t.suite.join(","), "1,2");
+  v("la condition se lit en clair", /%/.test(t.mesure.dit), t.mesure.dit);
+  v("l'audit est refusé avant l'heure", t.tropTot === false);
+  v("puis accepté", t.ok === true && t.obtenu === true);
+  v.aumoins("et il se paie", t.cout, 2800);
+
+  // Ce qu'un label rapporte, et ce qu'il coûte chaque semaine.
+  const eff = await jeu(`(() => {
+    const st = bonusStandingLabels(), cf = bonusConfianceLabels();
+    const avant = etat.finances.solde;
+    majLabels();
+    return { st, cf, hebdo: Math.round(avant - etat.finances.solde), prime: primeLabels() };
+  })()`);
+  v.aumoins("le standing en profite", eff.st, 10);
+  v.aumoins("la confiance aussi", eff.cf, 3);
+  v.aumoins("et l'entretien se prélève chaque semaine", eff.hebdo, 160);
+
+  // Il se perd le jour où on ne le tient plus.
+  const perdu = await jeu(`(() => {
+    const f = U().machines.find(m => m.type === 'friteuse');
+    f.fraicheurHuile = 0.2;
+    majLabels();
+    return { obtenu: labelObtenu('huile'), suite: labelEnCours('huile'), standing: bonusStandingLabels() };
+  })()`);
+  v("l'huile fatiguée fait perdre le label", !perdu.obtenu);
+  v.egal("et le compteur repart de zéro", perdu.suite, 0);
+  v.egal("le bonus de standing disparaît avec lui", perdu.standing, 0);
+
+  // Le local coûte vraiment plus cher.
+  const loc = await jeu(`(() => {
+    const nu = prixAchat('pdt_brutes');
+    etat.labels.local = true;
+    const cher = prixAchat('pdt_brutes');
+    etat.labels.local = false;
+    const film = { nu: prixAchat('film'), sel: prixAchat('sel') };
+    etat.labels.local = true;
+    film.cher = prixAchat('film'); film.selCher = prixAchat('sel');
+    etat.labels.local = false;
+    return { nu, cher, film };
+  })()`);
+  v("la matière locale coûte 12 % de plus", Math.abs(loc.cher/loc.nu - 1.12) < 0.01,
+    loc.nu.toFixed(2) + " → " + loc.cher.toFixed(2));
+  v.egal("mais pas l'emballage, qui ne pousse pas", loc.film.cher, loc.film.nu);
+  v.egal("ni le sel, qui se ramasse", loc.film.selCher, loc.film.sel);
+
+  // L'export exige l'atelier certifié, et le dit.
+  const exp = await jeu(`(() => {
+    sauterAge(4);
+    etat.recherche.notoriete = 90; etat.reputation = 95; etat.marque.standing = 50;
+    etat.labels.obtenus = [];
+    const sans = palierOuvert(palierParId('export'));
+    const dit = motPalier(palierParId('export'));
+    etat.labels.obtenus = ['atelier'];
+    return { sans, avec: palierOuvert(palierParId('export')), dit };
+  })()`);
+  v("sans atelier certifié, pas d'export", exp.sans === false);
+  v("avec, il s'ouvre", exp.avec === true);
+  v("et le refus le disait", /certifié/.test(exp.dit), exp.dit);
+
+  const inv = await jeu("verifierPartie()");
+  for (const t2 of inv) v("invariant : " + t2.nom, t2.ok, t2.detail);
+  await page.close();
+  return { echecs: v.echecs.concat(erreurs), note: 4 + " labels, gagnés et perdus" };
 });
 
 /* ============================================================== Exécution ==*/

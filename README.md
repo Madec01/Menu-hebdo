@@ -141,6 +141,12 @@ sachets se comptent à l'unité.
   standing ; la centrale d'achat veut du volume et **se ferme si la marque est
   trop chic**. On ne peut pas être les deux, et c'est tout le jeu. Un marché
   fermé dit toujours ce qui lui manque, un marché ouvert ce qu'il paie.
+- **Quatre labels qui ne s'achètent pas, qui se tiennent** : atelier certifié,
+  zéro gaspillage, huile fraîche garantie, fabriqué ici. Chacun impose une
+  condition dans l'atelier, tenue plusieurs semaines de suite ; c'est ensuite le
+  joueur qui fait venir l'auditeur et paie. Et le label se perd le jour où la
+  condition lâche. Sans **Atelier certifié**, l'export reste fermé — ce qui fait
+  du ménage et de l'entretien autre chose qu'une corvée.
 - **Le nom, le logo et le sachet** se dessinent dans l'onglet Marque : huit
   logos tracés au code, huit fonds, six motifs, quatre styles de nom, deux
   couleurs. Le tout est **peint en grand sur le mur de l'atelier** — l'usine
@@ -248,12 +254,12 @@ réelles** à la vitesse ×1.
 
 ## Tests
 
-`node tests/suite.mjs` pilote le jeu dans un vrai navigateur : vingt-deux cas qui
+`node tests/suite.mjs` pilote le jeu dans un vrai navigateur : vingt-trois cas qui
 couvrent le didacticiel, la chaîne, la conservation de la matière, le réseau de
 convoyeurs, la qualité, les modes, les cinq âges, les auto-vérifications, la
 sauvegarde, le rythme, la performance, la recherche, le raccord entre bandes,
 les quais et rangements, les bâtiments d'équipe, la cour, le garde-manger du
-labo, les raccords courts, les croisements, l'équipe, les stocks et la marque. Voir [`tests/README.md`](tests/README.md).
+labo, les raccords courts, les croisements, l'équipe, les stocks, la marque et les labels. Voir [`tests/README.md`](tests/README.md).
 
 ## Organisation du code
 

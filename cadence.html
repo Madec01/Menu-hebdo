@@ -384,6 +384,20 @@ table.tab tr:hover td{background:rgba(255,255,255,.028)}
   background:var(--fond3);border:1px solid var(--bord);border-radius:var(--r);padding:4px 8px;
 }
 .couleurMarque input{width:26px;height:22px;border:none;background:none;padding:0;cursor:pointer}
+.label{padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05);opacity:.62}
+.label:last-child{border-bottom:none}
+.label.enCours,.label.obtenu{opacity:1}
+.labTete{display:flex;justify-content:space-between;align-items:baseline}
+.labNom{font-size:13px;font-weight:600;color:var(--texte-doux)}
+.labEtat{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--texte-faible)}
+.label.obtenu .labEtat{color:var(--vert)}
+.label.enCours .labEtat{color:var(--or)}
+.labResume{font-size:11px;color:var(--texte-faible);line-height:1.4;margin:3px 0}
+.labCond{font-size:11px;color:var(--texte-doux);line-height:1.4}
+.label.obtenu .labCond{color:var(--vert)}
+.labGain{font-size:10.5px;color:var(--texte-faible);line-height:1.4;margin-top:4px;font-style:italic}
+.labLocal{display:flex;gap:7px;align-items:flex-start;font-size:11.5px;color:var(--texte-doux);
+  margin-top:6px;cursor:pointer}
 
 /* ---------- La sortie d'une recette ---------- */
 .noteGeante{
@@ -668,7 +682,7 @@ const CONFIG = {
   arretChangementHuile: 45,    // minutes de jeu, friteuse à l'arrêt
   rebutMax: 0.5,
   sauvegarde: "cadence_save_v1",
-  version: 4
+  version: 5
 };
 
 // minutes de jeu écoulées par tick de simulation
@@ -687,12 +701,12 @@ const ITEMS = {
   pdt_brutes: {
     nom:"Pommes de terre", nomP:"Pommes de terre", court:"Patates", courtP:"Patates",
     couleur:"#a8834e", forme:"tubercule", unite:"kg",
-    achat:0.30, portee:90, cat:"matiere"
+    achat:0.30, portee:90, cat:"matiere", agricole:true
   },
   huile: {
     nom:"Huile de friture", nomP:"Huile de friture", court:"Huile", courtP:"Huile",
     couleur:"#d9b23c", forme:"bidon", unite:"kg",
-    achat:1.60, portee:45, cat:"matiere"
+    achat:1.60, portee:45, cat:"matiere", agricole:true
   },
   sel: {
     nom:"Sel", nomP:"Sel", court:"Sel", courtP:"Sel",
@@ -702,7 +716,7 @@ const ITEMS = {
   arome: {
     nom:"Arôme", nomP:"Arômes", court:"Arôme", courtP:"Arômes",
     couleur:"#c9502e", forme:"sac", unite:"kg",
-    achat:5.20, portee:30, cat:"matiere", ageMin:2
+    achat:5.20, portee:30, cat:"matiere", ageMin:2, agricole:true
   },
   film: {
     nom:"Film d'emballage", nomP:"Film d'emballage", court:"Film", courtP:"Film",
@@ -1306,6 +1320,38 @@ const ACCORDS = [
   { a:"fantome",  b:"sans",         delta:-0.08, dit:"Piment fantôme sans sel : il n'y a plus que le feu." }
 ].filter(a => a.dit);
 
+/* --------------------------------------------------------------- Les labels
+   Une décision de bureau qui force un changement sur la dalle : c'est tout
+   l'intérêt. Chacun se mérite en tenant une condition plusieurs semaines de
+   suite, et se perd le jour où on ne la tient plus. `mesure` renvoie la valeur
+   du moment et son verdict, pour que le joueur sache toujours où il en est. */
+const LABELS = [
+  {
+    id:"atelier", nom:"Atelier certifié", ageMin:3, semaines:4, audit:6000, hebdo:220,
+    resume:"Un auditeur passe : l'atelier doit être propre en permanence et le matériel entretenu.",
+    exigence:"Propreté au-dessus de 75 % et aucune machine usée à plus de 80 %",
+    standing:4, confiance:8
+  },
+  {
+    id:"gaspillage", nom:"Zéro gaspillage", ageMin:3, semaines:4, audit:3500, hebdo:120,
+    resume:"On ne jette presque rien. Les clients le voient, et le paient.",
+    exigence:"Moins de 6 % de rebut sur l'ensemble de la chaîne",
+    standing:6, confiance:5, primePrix:0.04
+  },
+  {
+    id:"huile", nom:"Huile fraîche garantie", ageMin:3, semaines:3, audit:2800, hebdo:160,
+    resume:"Le bain d'huile est refait avant qu'il fatigue. Ça coûte, et ça se goûte.",
+    exigence:"Toutes les friteuses au-dessus de 50 % de fraîcheur",
+    standing:10, confiance:3
+  },
+  {
+    id:"local", nom:"Fabriqué ici", ageMin:2, semaines:4, audit:4200, hebdo:90,
+    resume:"Toute la matière vient des producteurs du bassin. Elle coûte 12 % de plus.",
+    exigence:"L'approvisionnement local activé, sans interruption",
+    standing:14, confiance:4, surcoutMatiere:0.12
+  }
+];
+
 /* Ce que le public cherche en ce moment. Change de temps en temps. */
 const TENDANCES = [
   { tag:"piquant",   texte:"Les gens cherchent du relevé en ce moment." },
@@ -1555,6 +1601,7 @@ function nouvellePartie(nomEntreprise, modeChoisi){
     marche: { prix:{}, tendances:{}, dernierJour:-1 },
     reputation: CONFIG.reputationDepart,     // c'est la « confiance » des trois jauges
     marque: marqueParDefaut(nomEntreprise),
+    labels: { obtenus:[], suite:{}, local:false },
     recherche: { recettes:[], enCours:null, notoriete:0, tendance:0, tendanceSemaine:0, prochain:1 },
     progression: { age:1, objectifsCompletes:[], jaugeObjectif:0, vendus:{}, produits:{}, produitsSemaine:{}, compteurs:{} },
     stats: { historiqueSemaines:[], semaineCourante: semaineVierge(), clients:{} },
@@ -1612,7 +1659,17 @@ function cibleStanding(){
   c += bonusStandingLabels();
   return clamp(c, 0, 100);
 }
-function bonusStandingLabels(){ return 0; }   // rempli par les labels, plus tard
+function labelObtenu(id){ return !!etat.labels && etat.labels.obtenus.indexOf(id) >= 0; }
+function labelsObtenus(){ return LABELS.filter(l => labelObtenu(l.id)); }
+function bonusStandingLabels(){ return labelsObtenus().reduce((s,l) => s + (l.standing||0), 0); }
+function bonusConfianceLabels(){ return labelsObtenus().reduce((s,l) => s + (l.confiance||0), 0); }
+/** Ce que les labels ajoutent au prix : un client paie ce qui est certifié. */
+function primeLabels(){ return 1 + labelsObtenus().reduce((s,l) => s + (l.primePrix||0), 0); }
+/** Le surcoût qu'on s'impose : s'approvisionner local, ça se paie. */
+function surcoutMatiere(){
+  return etat.labels && etat.labels.local
+    ? 1 + (LABELS.find(l => l.id === "local").surcoutMatiere || 0) : 1;
+}
 
 function semaineVierge(){
   return { produits:{}, livres:{}, ca:0, depenses:0, depensesParMotif:{}, pannes:0, retards:0, rebuts:0, reclamations:0, faits:[] };
@@ -3086,7 +3143,7 @@ function groupeDepense(motif){
   switch (motif){
     case "salaires":                                    return "salaires";
     case "achat":                                       return "matiere";
-    case "loyer": case "energie":                       return "loyer";
+    case "loyer": case "energie": case "labels":        return "loyer";
     case "investissement": case "reparation":
     case "revision": case "nettoyage":                  return "machines";
     case "emprunt":                                     return "emprunts";
@@ -3141,7 +3198,12 @@ function majMarche(){
     etat.marche.prix[id] = p;
   }
 }
-function prixAchat(id){ return etat.marche.prix[id] ?? ITEMS[id].achat ?? 0; }
+function prixAchat(id){
+  const base = etat.marche.prix[id] ?? ITEMS[id].achat ?? 0;
+  // Le local ne renchérit que ce qui pousse : la patate, l'huile, les arômes.
+  // Le sel se ramasse et le film se fabrique — un producteur du coin n'y peut rien.
+  return ITEMS[id].agricole ? base * surcoutMatiere() : base;
+}
 
 function acheter(id, qte){
   const it = ITEMS[id];
@@ -3286,9 +3348,15 @@ function palierParId(id){ return PALIERS.find(p => p.id === id) || PALIERS[0]; }
 function palierOuvert(p){
   if (p.n > etat.meta.age) return false;
   if (mode().toutDebloque) return true;
-  return notoriete() >= p.notoriete && confiance() >= p.confiance &&
+  // L'export ne s'ouvre qu'à un atelier certifié : c'est ce qui fait du ménage
+  // et de l'entretien autre chose qu'une corvée.
+  if (p.id === "export" && !labelObtenu("atelier")) return false;
+  return notoriete() >= p.notoriete && confianceEffective() >= p.confiance &&
          standing() >= p.standingMin && standing() <= p.standingMax;
 }
+
+/** La confiance telle que la voient les clients : les labels rassurent. */
+function confianceEffective(){ return clamp(confiance() + bonusConfianceLabels(), 0, 100); }
 
 /** Ce qui manque pour l'ouvrir, en une phrase. Jamais de verrou muet. */
 function motPalier(p){
@@ -3296,8 +3364,9 @@ function motPalier(p){
   const m = [];
   if (notoriete() < p.notoriete)
     m.push("être connu à " + p.notoriete + " (" + Math.round(notoriete()) + " aujourd'hui)");
-  if (confiance() < p.confiance)
-    m.push("une confiance de " + p.confiance + " (" + Math.round(confiance()) + ")");
+  if (p.id === "export" && !labelObtenu("atelier")) m.push("le label « Atelier certifié »");
+  if (confianceEffective() < p.confiance)
+    m.push("une confiance de " + p.confiance + " (" + Math.round(confianceEffective()) + ")");
   if (standing() < p.standingMin)
     m.push("monter en gamme jusqu'à " + p.standingMin + " (" + Math.round(standing()) + ")");
   if (standing() > p.standingMax)
@@ -3312,9 +3381,9 @@ function paliersOuverts(){ return PALIERS.filter(palierOuvert); }
 function primePalier(p){
   const w = p.poids;
   const prime = (notoriete()/100 - 0.4) * w.notoriete +
-                (confiance()/100 - 0.5) * w.confiance +
+                (confianceEffective()/100 - 0.5) * w.confiance +
                 (standing()/100 - 0.45) * w.standing;
-  return clamp(1 + prime * 0.5, 0.72, 1.55);
+  return clamp(1 + prime * 0.5, 0.72, 1.55) * primeLabels();
 }
 
 function creerContrat(produitId){
@@ -3504,6 +3573,7 @@ function finSemaine(){
 
   etat.stats.semaineCourante = semaineVierge();
   etat.progression.produitsSemaine = {};
+  majLabels();
   majStanding(s);
 
   // Nouvelles propositions de commande
@@ -3515,6 +3585,95 @@ function finSemaine(){
   etat.meta.vitesse = 0;
   sauvegardeAuto();
   ouvrirVendredi(s);
+}
+
+/* ---------------------------------------------------------- Les labels
+   Un label ne s'achète pas : il se tient. La condition se mesure chaque
+   semaine ; il faut la tenir plusieurs semaines de suite pour l'obtenir, et il
+   se perd le jour où on ne la tient plus. Le joueur voit toujours la valeur du
+   moment, pas un verdict opaque. */
+function mesureLabel(id){
+  const u = U();
+  switch (id){
+    case "atelier": {
+      const propre = 1 - clamp(u.salete, 0, 1);
+      const pire = u.machines.reduce((m,x) => Math.max(m, x.usure||0), 0);
+      return { ok: propre >= 0.75 && pire <= 0.8,
+               dit: "propreté " + Math.round(propre*100) + " %, machine la plus usée " +
+                    Math.round(pire*100) + " %" };
+    }
+    case "gaspillage": {
+      const r = rebutMoyenUsine();
+      return { ok: r <= 0.06, dit: Math.round(r*1000)/10 + " % de rebut" };
+    }
+    case "huile": {
+      const f = u.machines.filter(m => MACHINES[m.type].bainHuile);
+      if (!f.length) return { ok:false, dit:"aucune friteuse dans l'atelier" };
+      const pire = f.reduce((m,x) => Math.min(m, x.fraicheurHuile ?? 1), 1);
+      return { ok: pire >= 0.5, dit: "la plus fatiguée est à " + Math.round(pire*100) + " %" };
+    }
+    case "local":
+      return { ok: !!etat.labels.local,
+               dit: etat.labels.local ? "approvisionnement local activé" : "approvisionnement au marché" };
+  }
+  return { ok:false, dit:"" };
+}
+
+/** Le label est-il seulement à portée ? On ne fait pas payer un audit pour rien. */
+function labelEnCours(id){ return (etat.labels.suite || {})[id] || 0; }
+
+function labelDisponible(l){ return (l.ageMin||1) <= etat.meta.age; }
+
+/** Le suivi hebdomadaire. Il compte les semaines tenues et retire ce qui ne
+ *  l'est plus — mais il n'achète jamais rien : un audit se demande. */
+function majLabels(){
+  if (!etat.labels) return;
+  const L = etat.labels;
+  L.suite = L.suite || {};
+  for (const l of LABELS){
+    if (!labelDisponible(l)){ L.suite[l.id] = 0; continue; }
+    const m = mesureLabel(l.id);
+    if (m.ok){
+      L.suite[l.id] = (L.suite[l.id] || 0) + 1;
+      if (!labelObtenu(l.id) && L.suite[l.id] === l.semaines)
+        notif("Label à portée", "« " + l.nom + " » est tenu depuis " + l.semaines +
+              " semaines. L'auditeur peut passer — onglet Marque.", "ok");
+    } else {
+      L.suite[l.id] = 0;
+      if (labelObtenu(l.id)){
+        L.obtenus = L.obtenus.filter(x => x !== l.id);
+        notif("Label perdu", "« " + l.nom + " » ne tient plus : " + m.dit + ".", "ko");
+        fait("Label « " + l.nom + " » perdu");
+        son("refus");
+      }
+    }
+  }
+  const cout = labelsObtenus().reduce((s,l) => s + l.hebdo, 0);
+  if (cout > 0) depenser(cout, "labels");
+}
+
+/** Le joueur fait venir l'auditeur. C'est une dépense, donc c'est un choix. */
+function demanderAudit(id){
+  const l = LABELS.find(x => x.id === id);
+  if (!l || labelObtenu(id)) return false;
+  if (labelEnCours(id) < l.semaines){
+    notif("Pas encore", "Il faut tenir « " + l.nom + " » " + l.semaines + " semaines de suite.", "att");
+    return false;
+  }
+  if (!mesureLabel(id).ok){
+    notif("Pas aujourd'hui", "La condition n'est plus tenue en ce moment.", "ko"); return false;
+  }
+  if (!mode().argentInfini && etat.finances.solde - l.audit < CONFIG.faillite){
+    notif("Trop cher", "L'audit coûte " + euros(l.audit) + ".", "ko"); return false;
+  }
+  depenser(mode().argentInfini ? 0 : l.audit, "investissement");
+  etat.labels.obtenus.push(id);
+  notif("Label obtenu", "« " + l.nom + " » est décroché. Il coûtera " + euros(l.hebdo) +
+        " par semaine à entretenir, et se perdra le jour où vous ne le tiendrez plus.", "ok");
+  fait("Label « " + l.nom + " » obtenu");
+  son("age");
+  majPanneau(); majBandeau();
+  return true;
 }
 
 /** Le standing suit ce que la marque montre et ce qu'elle vend, avec du retard :
@@ -8655,6 +8814,13 @@ function SECTIONS_GUIDE(){
     "surface.</p>"+
     "<p>Un marché fermé dit toujours ce qui lui manque. Un marché ouvert dit ce qu'il paie, au-dessus "+
     "ou en dessous du prix courant.</p>"+
+    "<p><b>Les labels</b> ne s'achètent pas, ils se tiennent. Chacun demande une condition dans "+
+    "l'atelier — un sol propre, du matériel entretenu, peu de rebut, une huile jamais fatiguée, une "+
+    "matière achetée aux producteurs du bassin — tenue plusieurs semaines de suite. Quand c'est le "+
+    "cas, vous faites venir l'auditeur : c'est vous qui payez, quand vous voulez. Et le label se "+
+    "perd le jour où la condition ne tient plus.</p>"+
+    "<p>C'est ce qui fait du ménage et de l'entretien autre chose qu'une corvée : sans "+
+    "<b>Atelier certifié</b>, l'export reste fermé quoi qu'il arrive.</p>"+
     "<p>Le nom, le logo et le sachet se règlent dans l'onglet Marque. Le nom et le logo sont peints "+
     "en grand sur le mur de l'atelier — c'est votre usine, ça se voit.</p>" },
 
@@ -10070,6 +10236,61 @@ function panneauMarque(z){
   }
   z.appendChild(bm);
 
+  /* --- les labels --- */
+  const bl = blocTitre("Les labels");
+  if (!LABELS.some(labelDisponible))
+    bl.appendChild(elem('<div class="vide">Les labels viendront quand la maison sera plus grande.</div>'));
+  bl.appendChild(elem('<div style="font-size:11.5px;color:var(--texte-faible);line-height:1.4;margin-bottom:8px">'+
+    "Un label ne s'achète pas : il se tient. Tenez la condition assez longtemps et l'auditeur "+
+    "vient. Lâchez-la un jour, et il repart.</div>"));
+  for (const l of LABELS){
+    if (!labelDisponible(l)) continue;
+    const obtenu = labelObtenu(l.id);
+    const m = mesureLabel(l.id);
+    const suite = labelEnCours(l.id);
+    const b = document.createElement("div");
+    b.className = "label" + (obtenu ? " obtenu" : m.ok ? " enCours" : "");
+    b.innerHTML = '<div class="labTete"><span class="labNom"></span><span class="labEtat"></span></div>'+
+                  '<div class="labResume"></div><div class="labCond"></div>';
+    b.querySelector(".labNom").textContent = l.nom;
+    b.querySelector(".labEtat").textContent = obtenu ? "obtenu"
+      : m.ok ? suite + " / " + l.semaines + " semaines" : "non tenu";
+    b.querySelector(".labResume").textContent = l.resume;
+    const c = b.querySelector(".labCond");
+    c.textContent = l.exigence + " — " + m.dit + ".";
+    if (!obtenu){
+      const g = document.createElement("div");
+      g.className = "labGain";
+      g.textContent = "Audit " + euros(l.audit) + ", puis " + euros(l.hebdo) + " par semaine. " +
+        "Apporte " + [l.standing ? "+" + l.standing + " de standing" : null,
+                      l.confiance ? "+" + l.confiance + " de confiance" : null,
+                      l.primePrix ? "+" + Math.round(l.primePrix*100) + " % sur les prix" : null]
+          .filter(Boolean).join(", ") + ".";
+      b.appendChild(g);
+    }
+    if (!obtenu && suite >= l.semaines && m.ok){
+      b.appendChild(bouton("Faire venir l'auditeur — " + euros(l.audit),
+                           () => { demanderAudit(l.id); }, "large plein"));
+    }
+    if (l.id === "local"){
+      const lab = document.createElement("label");
+      lab.className = "labLocal";
+      const cb = document.createElement("input");
+      cb.type = "checkbox"; cb.checked = !!etat.labels.local;
+      cb.onchange = () => { etat.labels.local = cb.checked; majPanneau(); };
+      lab.appendChild(cb);
+      lab.appendChild(document.createTextNode(
+        "S'approvisionner chez les producteurs du bassin (+12 % sur la matière)"));
+      b.appendChild(lab);
+    }
+    bl.appendChild(b);
+  }
+  const totalHebdo = labelsObtenus().reduce((s2,l) => s2 + l.hebdo, 0);
+  if (totalHebdo)
+    bl.appendChild(elem('<div class="reapproNote"></div>')).textContent =
+      "Les labels coûtent " + euros(totalHebdo) + " par semaine à entretenir.";
+  z.appendChild(bl);
+
   /* --- l'atelier de la marque --- */
   const ba = blocTitre("Le sachet");
   const apercu = document.createElement("canvas");
@@ -10433,6 +10654,10 @@ function migrer(o){
     o.marque = marqueParDefaut(o.meta && o.meta.nomEntreprise);
     o.version = 4;
   }
+  if (o.version < 5){
+    o.labels = { obtenus:[], suite:{}, local:false };
+    o.version = 5;
+  }
   return o;
 }
 
@@ -10465,6 +10690,7 @@ function appliquer(o){
   etat.reappro = etat.reappro || {};
   etat.formations = etat.formations || [];
   etat.marque = Object.assign(marqueParDefaut(etat.meta.nomEntreprise), etat.marque || {});
+  etat.labels = Object.assign({ obtenus:[], suite:{}, local:false }, etat.labels || {});
   cacheEnseigne = null;
   etat.finances.creances = etat.finances.creances || [];
   etat.progression.compteurs = etat.progression.compteurs || {};

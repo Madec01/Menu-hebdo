@@ -37,6 +37,7 @@ La suite sort en code 1 si un cas échoue.
 | `equipe-et-stocks` | l'affectation d'un coup, et les quatre réglages du réapprovisionnement |
 | `quai-de-sortie` | on l'accroche, on trace jusqu'à lui, et la marchandise y arrive |
 | `marque-et-marches` | les trois jauges se contredisent, et chaque marché les lit à sa façon |
+| `labels` | un label se tient plusieurs semaines, se demande, se paie, et se perd |
 
 ## Les invariants, aussi dans le jeu
 
