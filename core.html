@@ -153,6 +153,26 @@
   .tier.no{opacity:.3;cursor:not-allowed}
   .linkbtn{background:none;border:0;color:var(--dim);font:inherit;font-size:12px;
     text-decoration:underline;cursor:pointer;padding:8px}
+  #scTest .box{width:min(880px,96vw)}
+  .lvlgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(122px,1fr));gap:6px}
+  .lvlbtn{background:var(--panel2);border:1px solid var(--line);border-radius:5px;
+    padding:9px 6px;font-size:11px;cursor:pointer;text-align:center;color:var(--txt)}
+  .lvlbtn:hover{border-color:var(--acc2)}
+  .lvlbtn b{display:block;font-size:13px}
+  .lvlbtn span{color:var(--dim)}
+  .toggles{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:6px}
+  .tg{background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:10px;
+    font-size:12px;cursor:pointer;display:flex;align-items:center;gap:9px}
+  .tg .box2{width:15px;height:15px;border:2px solid var(--line);border-radius:3px;flex:none}
+  .tg.on{border-color:#5ff0e0;color:#dff}
+  .tg.on .box2{background:#5ff0e0;border-color:#5ff0e0}
+  .gives{display:flex;gap:6px;flex-wrap:wrap}
+  .give{background:var(--panel2);border:1px solid var(--line);border-radius:5px;
+    padding:8px 12px;font-size:11px;cursor:pointer}
+  .give:hover{border-color:var(--or)}
+  #testBadge{position:absolute;top:14px;left:50%;transform:translateX(-50%) translateY(148px);
+    font-size:10px;letter-spacing:3px;color:#5ff0e0;border:1px solid #5ff0e0;
+    border-radius:3px;padding:2px 10px;display:none;background:rgba(10,20,22,.7)}
 </style>
 </head>
 <body>
@@ -167,6 +187,7 @@
   <div id="quota"></div>
   <div id="hp"></div>
   <div id="restartMsg">NIVEAU RELANCE</div>
+  <div id="testBadge">MODE TEST — T</div>
   <div id="dry">
     <div class="dbox">
       <div class="dt">PANNE SECHE</div>
@@ -214,7 +235,26 @@
   <h2 style="text-align:center">Profondeur</h2>
   <div class="tiers" id="tiers"></div>
   <div class="sub" id="bestTotal" style="margin-top:14px"></div>
-  <div style="text-align:center"><button class="linkbtn" id="openCarnet">CARNET DU MINEUR</button></div>
+  <div style="text-align:center">
+    <button class="linkbtn" id="openCarnet">CARNET DU MINEUR</button>
+    <button class="linkbtn" id="openTest">MODE TEST</button>
+  </div>
+</div></div>
+
+<div class="screen" id="scTest"><div class="box">
+  <h1 style="font-size:30px;letter-spacing:6px">MODE <span>TEST</span></h1>
+  <div class="sub">Bac a sable : rien n'est enregistre, ni records, ni carnet.<br>
+    En cours de partie, <b>T</b> ouvre ce panneau et met le jeu en pause.</div>
+  <h2>Aller a un niveau</h2>
+  <div class="lvlgrid" id="testLevels"></div>
+  <h2>Profondeur</h2>
+  <div class="tiers" id="testTiers"></div>
+  <h2>Options</h2>
+  <div class="toggles" id="testToggles"></div>
+  <h2>Donner</h2>
+  <div class="gives" id="testGives"></div>
+  <button class="btn" id="testGo">LANCER</button>
+  <button class="btn ghost" id="testBack">RETOUR AU MENU</button>
 </div></div>
 
 <div class="screen" id="scCarnet"><div class="box">
@@ -356,7 +396,7 @@ window.CORE = window.CORE || {};
       ore: '#d68b3f', oreName: 'cuivre', oreValue: 13,
       wSoft: 0.56, wMed: 0.26, wHard: 0.08,
       special: 'FRIABLE', wSpecial: 0.10,   // s'effondre en cascade
-      veins: 8, caves: 3, bonuses: 8, traps: 2, bidons: 5, coffres: 2, ingredients: 10
+      veins: 8, caves: 3, bonuses: 8, traps: 2, bidons: 5, coffres: 2, ingredients: 13
     },
     {
       id: 2, name: 'LES SEDIMENTS', from: 220, to: 880,
@@ -390,10 +430,10 @@ window.CORE = window.CORE || {};
   /* 14 niveaux courts. Une nouveaute par niveau, jamais de remplissage.
      faille : multiplicateur de vitesse de la Faille pour ce niveau. */
   CFG.LEVELS = [
-    { id: '1-1', layer: 1, name: 'Premiere coupe',   type: 'descente',     top: 0,    height: 100, gold: 22, silver: 32, bronze: 46, faille: 0.75 },
+    { id: '1-1', layer: 1, name: 'Premiere coupe',   type: 'descente',     top: 0,    height: 100, starter: true, gold: 22, silver: 32, bronze: 46, faille: 0.75 },
     { id: '1-2', layer: 1, name: 'La croute',        type: 'sceau',        top: 100,  height: 120, sealHard: 5, gold: 25, silver: 36, bronze: 52, faille: 0.85 },
 
-    { id: '2-1', layer: 2, name: 'Bancs de gres',    type: 'descente',     top: 220,  height: 110, gold: 18, silver: 26, bronze: 39, faille: 1.0 },
+    { id: '2-1', layer: 2, name: 'Bancs de gres',    type: 'descente',     top: 220,  height: 110, starter: true, gold: 18, silver: 26, bronze: 39, faille: 1.0 },
     { id: '2-2', layer: 2, name: 'La grande veine',  type: 'filon',        top: 330,  height: 110, gold: 21, silver: 30, bronze: 44, faille: 1.0 },
     { id: '2-3', layer: 2, name: 'Le gisement',      type: 'gisement',     top: 440,  height: 110, quota: 10, gold: 20, silver: 29, bronze: 43, faille: 0.9 },
     { id: '2-4', layer: 2, name: 'Effondrement',     type: 'effondrement', top: 550,  height: 110, gold: 18, silver: 25, bronze: 37, faille: 1.35 },
@@ -1096,6 +1136,25 @@ window.CORE = window.CORE || {};
     // lateral a faire, sinon un niveau peut se boucler en chute libre.
     var offs = rng.int(14, 26) * (world.exitX < W / 2 ? 1 : -1);
     world.startX = Math.max(3, Math.min(W - 5, world.exitX + offs));
+    // Sur un niveau de depart, on garantit de quoi fabriquer une dynamite tout
+    // de suite, et sur le chemin : le joueur doit en avoir une des la premiere
+    // minute, pas au bout de trois niveaux.
+    if (def.starter) {
+      ['salpetre', 'soufre', 'meche'].forEach(function (id, k) {
+        var ing = CFG.INGREDIENTS.filter(function (g) { return g.id === id; })[0];
+        if (!ing) return;
+        for (var tries = 0; tries < 300; tries++) {
+          var gx = Math.max(2, Math.min(W - 3, world.startX + rng.int(-6, 6)));
+          var gy = top + 5 + k * 7 + rng.int(0, 5);
+          if (gy >= top + def.height - 3) break;
+          var gi = gy * W + gx;
+          if (!DESTRUCTIBLE[world.type[gi]] || world.items.has(gi)) continue;
+          world.items.set(gi, { kind: KIND.INGREDIENT, ing: ing });
+          break;
+        }
+      });
+    }
+
     world.ceilingRow = top - 2;
     world.setRock = setRock;
 
@@ -1679,7 +1738,9 @@ window.CORE = window.CORE || {};
     fuel: 100, fuelMax: 100, reserve: false, lowWarned: false,
     hp: 3, iframes: 0, stun: 0, falls: [], failleCd: 0, sealBroken: false,
     justRestarted: 0, turboCharge: 0,
-    ing: {}, belt: [], bombs: [],
+    ing: {}, belt: [], bombs: [], paused: false,
+    test: { on: false, fuel: false, invincible: false, faille: false, reveal: false,
+            fast: false, belt: false },
     event: null, eventT: 0, eventNext: 0, marker: null,
     combo: 0, comboT: 0, comboMult: 1,
     challenges: [], st: null,
@@ -1730,6 +1791,9 @@ window.CORE = window.CORE || {};
     // panne seche : la foreuse est a l'arret, le joueur doit choisir
     if (G.reserve) { s.speed = 0; s.turboBlocked = true; }
 
+    if (G.test.fast) s.speed *= 3;
+    if (G.test.reveal) s.vision = 200;
+
     s.width = Math.max(1, Math.min(6, Math.round(s.width)));
     s.length = Math.max(1, Math.min(4, Math.round(s.length)));
     s.crit = Math.min(0.6, s.crit);
@@ -1746,7 +1810,7 @@ window.CORE = window.CORE || {};
       shopClosedFor: 0, restarts: 0, lost: 0, fuelCarry: undefined,
       seed: (Math.random() * 1e9) | 0
     };
-    CORE.SAVE.addStats({ runs: 1 });
+    if (!G.test.on) CORE.SAVE.addStats({ runs: 1 });
     G.meta.runs = 0;
     startLevel(job && job.skip ? job.skip : 0);
   }
@@ -1884,7 +1948,7 @@ window.CORE = window.CORE || {};
 
   function placeCharge() {
     if (!G.belt.length || G.dryChoice) return;
-    var rec = G.belt.shift();
+    var rec = G.test.belt ? G.belt[0] : G.belt.shift();
     var d = G.drill;
     G.bombs.push({
       def: rec, t: CFG.FUSE,
@@ -1941,6 +2005,7 @@ window.CORE = window.CORE || {};
 
   /* -------------------------------------------------------- INTEGRITE */
   function damage(n, label) {
+    if (G.test.invincible) return;
     if (G.iframes > 0 || G.state !== 'play') return;
     G.hp -= n;
     G.iframes = CFG.IFRAMES;
@@ -2089,6 +2154,7 @@ window.CORE = window.CORE || {};
     var F = CFG.FAILLE;
     var tok = G.levelToken;
     if (G.failleCd > 0) G.failleCd -= dt;
+    if (G.test.faille) return;
     if (G.levelTime < F.delay) return;
 
     var el = G.levelTime - F.delay;
@@ -2134,6 +2200,7 @@ window.CORE = window.CORE || {};
 
   /* ---------------------------------------------------------- CARBURANT */
   function burn(amount) {
+    if (G.test.fuel) return;
     if (G.fuel <= 0) return;
     G.fuel -= amount;
     if (G.fuel <= 0) {
@@ -2329,7 +2396,7 @@ window.CORE = window.CORE || {};
     if (G.state !== 'play') return;
 
     // en panne seche, tout s'arrete : le chrono aussi, le temps de decider
-    if (G.dryChoice) return;
+    if (G.dryChoice || G.paused) return;
     if (G.hitstop > 0) { G.hitstop -= dt; return; }
     if (G.slowmo > 0) { G.slowmo -= dt; dt *= 0.35; }
 
@@ -2565,17 +2632,19 @@ window.CORE = window.CORE || {};
     G.run.splits.push(t);
     G.run.medals.push(medal);
     G.run.total += t;
-    var isRecord = CORE.SAVE.record(def.id, t, medal);
+    var isRecord = G.test.on ? false : CORE.SAVE.record(def.id, t, medal);
 
     // On verse au carnet a chaque niveau : la progression survit meme si on
-    // quitte au milieu d'une expedition.
-    var neufs = CORE.SAVE.addStats(G.meta);
+    // quitte au milieu d'une expedition. Le mode test, lui, n'ecrit jamais.
+    var neufs = G.test.on ? [] : CORE.SAVE.addStats(G.meta);
     G.meta = { runs: 0, ore: 0, cans: 0, bonuses: 0, collapses: 0, buried: 0 };
-    if (medal === 'or') neufs = neufs.concat(CORE.SAVE.addStats({ medOr: 1 }));
-    neufs = neufs.concat(CORE.SAVE.setBest('bestDepth', def.top + def.height));
-    neufs = neufs.concat(CORE.SAVE.setBest('bestLayer', def.layer));
+    if (!G.test.on) {
+      if (medal === 'or') neufs = neufs.concat(CORE.SAVE.addStats({ medOr: 1 }));
+      neufs = neufs.concat(CORE.SAVE.setBest('bestDepth', def.top + def.height));
+      neufs = neufs.concat(CORE.SAVE.setBest('bestLayer', def.layer));
+    }
     G.unlocked = neufs;
-    if (isRecord) CORE.SAVE.saveGhost(def.id, t, G.ghostRec);
+    if (isRecord && !G.test.on) CORE.SAVE.saveGhost(def.id, t, G.ghostRec);
     SFX.drill(false, 0);
     SFX.level();
 
@@ -2645,22 +2714,56 @@ window.CORE = window.CORE || {};
 
   function nextLevel() {
     if (G.run.levelIndex >= CFG.LEVELS.length - 1) {
-      CORE.SAVE.recordTotal(G.run.total);
-      var fin = { finished: 1 };
-      if (G.run.restarts === 0) fin.cleanRuns = 1;
-      if ((G.run.depth || 0) >= 1) fin.deepWins = 1;
-      G.endUnlocked = CORE.SAVE.addStats(fin);
+      if (!G.test.on) {
+        CORE.SAVE.recordTotal(G.run.total);
+        var fin = { finished: 1 };
+        if (G.run.restarts === 0) fin.cleanRuns = 1;
+        if ((G.run.depth || 0) >= 1) fin.deepWins = 1;
+        G.endUnlocked = CORE.SAVE.addStats(fin);
+      } else { G.endUnlocked = []; }
       G.state = 'end';
       return;
     }
     startLevel(G.run.levelIndex + 1);
   }
 
+  /* -------------------------------------------------------- MODE TEST */
+  function startTest(levelIndex, depthTier, job) {
+    G.test.on = true;
+    startRun(job || C.JOBS[0], depthTier || 0);
+    if (levelIndex) startLevel(levelIndex);
+    G.run.gold = 5000;
+  }
+
+  function testJump(levelIndex) {
+    G.run.levelIndex = levelIndex;
+    startLevel(levelIndex);
+    G.paused = false;
+  }
+
+  function testGive(what) {
+    if (what === 'ing') {
+      CFG.INGREDIENTS.forEach(function (g) { G.ing[g.id] = (G.ing[g.id] || 0) + 2; });
+      craft();
+    } else if (what === 'gold') {
+      G.run.gold += 5000;
+    } else if (what === 'fuel') {
+      G.fuel = G.fuelMax;
+      G.reserve = false; G.dryChoice = false;
+    } else if (what === 'hp') {
+      G.hp = CFG.HP + 3;
+    } else {
+      var rec = CFG.RECIPES.filter(function (r) { return r.id === what; })[0];
+      if (rec && G.belt.length < CFG.BELT_MAX) G.belt.push(rec);
+    }
+  }
+
   CORE.GAME = {
     G: G, startRun: startRun, startLevel: startLevel, update: update,
     computeStats: computeStats, chooseCard: chooseCard, buyPart: buyPart,
     nextLevel: nextLevel, medalFor: medalFor, shopOpen: shopOpen, buyFuel: buyFuel, tier: tier,
-    dryRestart: dryRestart, dryBuy: dryBuy, placeCharge: placeCharge
+    dryRestart: dryRestart, dryBuy: dryBuy, placeCharge: placeCharge,
+    startTest: startTest, testJump: testJump, testGive: testGive
   };
 })(window.CORE);
 
@@ -3419,7 +3522,7 @@ window.CORE = window.CORE || {};
   }
 
   function show(id) {
-    ['scMenu', 'scStation', 'scEnd', 'scCarnet'].forEach(function (s) { $(s).classList.remove('on'); });
+    ['scMenu', 'scStation', 'scEnd', 'scCarnet', 'scTest'].forEach(function (s) { $(s).classList.remove('on'); });
     if (id) $(id).classList.add('on');
     $('hud').style.display = id ? 'none' : 'block';
   }
@@ -3468,6 +3571,89 @@ window.CORE = window.CORE || {};
         '<span class="pv">' + Math.min(v, u.but) + ' / ' + u.but + '</span></div>';
     }).join('');
     show('scCarnet');
+  }
+
+  /* ------------------------------------------------------------ MODE TEST */
+  var TOGGLES = [
+    { id: 'fuel', nom: 'Carburant infini' },
+    { id: 'invincible', nom: 'Invincible' },
+    { id: 'faille', nom: 'Faille desactivee' },
+    { id: 'reveal', nom: 'Tout reveler' },
+    { id: 'fast', nom: 'Forage x3' },
+    { id: 'belt', nom: 'Charges infinies' }
+  ];
+  var testTier = 0;
+
+  function buildTest() {
+    var enJeu = !!(G.run && G.state === 'play');
+
+    var lv = $('testLevels');
+    lv.innerHTML = '';
+    CFG.LEVELS.forEach(function (def, i) {
+      var el = document.createElement('div');
+      el.className = 'lvlbtn';
+      el.innerHTML = '<b>' + def.id + '</b><span>' + def.name + '<br>' + def.type + '</span>';
+      el.onclick = function () {
+        CORE.SFX.init();
+        if (enJeu) { GAME.testJump(i); }
+        else { GAME.startTest(i, testTier); }
+        G.paused = false;
+        show(null);
+      };
+      lv.appendChild(el);
+    });
+
+    var tr = $('testTiers');
+    tr.innerHTML = '';
+    CFG.DEPTHS.forEach(function (dp, i) {
+      var el = document.createElement('div');
+      el.className = 'tier' + (i === testTier ? ' on' : '');
+      el.textContent = dp.nom;
+      el.onclick = function () {
+        testTier = i;
+        if (G.run) G.run.depth = i;
+        buildTest();
+      };
+      tr.appendChild(el);
+    });
+
+    var tg = $('testToggles');
+    tg.innerHTML = '';
+    TOGGLES.forEach(function (t) {
+      var el = document.createElement('div');
+      el.className = 'tg' + (G.test[t.id] ? ' on' : '');
+      el.innerHTML = '<span class="box2"></span>' + t.nom;
+      el.onclick = function () { G.test[t.id] = !G.test[t.id]; buildTest(); };
+      tg.appendChild(el);
+    });
+
+    var gv = $('testGives');
+    gv.innerHTML = '';
+    var dons = [['ing', 'Tous les ingredients'], ['fuel', 'Plein de carburant'],
+                ['gold', '+5000 $'], ['hp', 'Integrite au max']];
+    CFG.RECIPES.forEach(function (r) { dons.push([r.id, r.icon + ' ' + r.nom]); });
+    dons.forEach(function (d) {
+      var el = document.createElement('div');
+      el.className = 'give';
+      el.textContent = d[1];
+      el.onclick = function () { if (G.run) { GAME.testGive(d[0]); buildTest(); } };
+      gv.appendChild(el);
+    });
+
+    $('testGo').textContent = enJeu ? 'REPRENDRE' : 'LANCER AU NIVEAU 1-1';
+    $('testGo').onclick = function () {
+      CORE.SFX.init();
+      if (!enJeu) GAME.startTest(0, testTier);
+      G.paused = false;
+      show(null);
+    };
+    show('scTest');
+  }
+
+  function toggleTest() {
+    if (G.state !== 'play') return;
+    if ($('scTest').classList.contains('on')) { G.paused = false; show(null); }
+    else { G.paused = true; buildTest(); }
   }
 
   function buildMenu() {
@@ -3713,6 +3899,7 @@ window.CORE = window.CORE || {};
     $('hp').innerHTML = pips;
     $('hp').style.opacity = G.iframes > 0 ? (0.4 + 0.6 * Math.abs(Math.sin(G.time * 20))) : 1;
     $('restartMsg').style.display = G.justRestarted > 0 ? 'block' : 'none';
+    $('testBadge').style.display = G.test.on ? 'block' : 'none';
 
     var dry = $('dry');
     if (G.dryChoice && !dry.classList.contains('on')) {
@@ -3748,6 +3935,7 @@ window.CORE = window.CORE || {};
   CORE.UI = {
     buildMenu: buildMenu, buildStation: buildStation, buildEnd: buildEnd,
     updateHud: updateHud, show: show, fmt: fmt, fmtLong: fmtLong,
+    buildTest: buildTest, toggleTest: toggleTest,
     bind: function () {
       $('stNext').onclick = function () {
         GAME.nextLevel();
@@ -3755,6 +3943,12 @@ window.CORE = window.CORE || {};
       };
       $('endAgain').onclick = function () { buildMenu(); };
       $('openCarnet').onclick = function () { buildCarnet(); };
+      $('openTest').onclick = function () { G.test.on = true; buildTest(); };
+      $('testBack').onclick = function () {
+        G.test.on = false; G.paused = false;
+        for (var k in G.test) if (k !== 'on') G.test[k] = false;
+        buildMenu();
+      };
       $('closeCarnet').onclick = function () { buildMenu(); };
       $('dryBuy').onclick = function () { GAME.dryBuy(); $('dry').classList.remove('on'); };
       $('dryRestart').onclick = function () { GAME.dryRestart(); $('dry').classList.remove('on'); };
@@ -3799,6 +3993,11 @@ window.CORE = window.CORE || {};
   window.addEventListener('keydown', function (e) {
     if (e.code === 'KeyM') { CORE.SFX.toggle(); return; }
     if ((e.code === 'KeyE' || e.code === 'KeyF') && !keys[e.code]) placeQueued = true;
+    if (e.code === 'KeyT' && !keys[e.code]) { UI.toggleTest(); return; }
+    if (e.code === 'KeyN' && G.test.on && G.state === 'play') {
+      GAME.testJump(Math.min(G.run.levelIndex + 1, CORE.CFG.LEVELS.length - 1));
+      return;
+    }
     if (e.code === 'KeyR' && G.state === 'play') { GAME.startLevel(G.run.levelIndex); return; }
     if (e.code === 'Escape' && G.state === 'play') { CORE.SFX.drill(false, 0); UI.buildMenu(); prevState = 'menu'; G.state = 'menu'; return; }
     keys[e.code] = true;

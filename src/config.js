@@ -102,7 +102,7 @@ window.CORE = window.CORE || {};
       ore: '#d68b3f', oreName: 'cuivre', oreValue: 13,
       wSoft: 0.56, wMed: 0.26, wHard: 0.08,
       special: 'FRIABLE', wSpecial: 0.10,   // s'effondre en cascade
-      veins: 8, caves: 3, bonuses: 8, traps: 2, bidons: 5, coffres: 2, ingredients: 10
+      veins: 8, caves: 3, bonuses: 8, traps: 2, bidons: 5, coffres: 2, ingredients: 13
     },
     {
       id: 2, name: 'LES SEDIMENTS', from: 220, to: 880,
@@ -136,10 +136,10 @@ window.CORE = window.CORE || {};
   /* 14 niveaux courts. Une nouveaute par niveau, jamais de remplissage.
      faille : multiplicateur de vitesse de la Faille pour ce niveau. */
   CFG.LEVELS = [
-    { id: '1-1', layer: 1, name: 'Premiere coupe',   type: 'descente',     top: 0,    height: 100, gold: 22, silver: 32, bronze: 46, faille: 0.75 },
+    { id: '1-1', layer: 1, name: 'Premiere coupe',   type: 'descente',     top: 0,    height: 100, starter: true, gold: 22, silver: 32, bronze: 46, faille: 0.75 },
     { id: '1-2', layer: 1, name: 'La croute',        type: 'sceau',        top: 100,  height: 120, sealHard: 5, gold: 25, silver: 36, bronze: 52, faille: 0.85 },
 
-    { id: '2-1', layer: 2, name: 'Bancs de gres',    type: 'descente',     top: 220,  height: 110, gold: 18, silver: 26, bronze: 39, faille: 1.0 },
+    { id: '2-1', layer: 2, name: 'Bancs de gres',    type: 'descente',     top: 220,  height: 110, starter: true, gold: 18, silver: 26, bronze: 39, faille: 1.0 },
     { id: '2-2', layer: 2, name: 'La grande veine',  type: 'filon',        top: 330,  height: 110, gold: 21, silver: 30, bronze: 44, faille: 1.0 },
     { id: '2-3', layer: 2, name: 'Le gisement',      type: 'gisement',     top: 440,  height: 110, quota: 10, gold: 20, silver: 29, bronze: 43, faille: 0.9 },
     { id: '2-4', layer: 2, name: 'Effondrement',     type: 'effondrement', top: 550,  height: 110, gold: 18, silver: 25, bronze: 37, faille: 1.35 },

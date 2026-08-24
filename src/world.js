@@ -269,6 +269,25 @@ window.CORE = window.CORE || {};
     // lateral a faire, sinon un niveau peut se boucler en chute libre.
     var offs = rng.int(14, 26) * (world.exitX < W / 2 ? 1 : -1);
     world.startX = Math.max(3, Math.min(W - 5, world.exitX + offs));
+    // Sur un niveau de depart, on garantit de quoi fabriquer une dynamite tout
+    // de suite, et sur le chemin : le joueur doit en avoir une des la premiere
+    // minute, pas au bout de trois niveaux.
+    if (def.starter) {
+      ['salpetre', 'soufre', 'meche'].forEach(function (id, k) {
+        var ing = CFG.INGREDIENTS.filter(function (g) { return g.id === id; })[0];
+        if (!ing) return;
+        for (var tries = 0; tries < 300; tries++) {
+          var gx = Math.max(2, Math.min(W - 3, world.startX + rng.int(-6, 6)));
+          var gy = top + 5 + k * 7 + rng.int(0, 5);
+          if (gy >= top + def.height - 3) break;
+          var gi = gy * W + gx;
+          if (!DESTRUCTIBLE[world.type[gi]] || world.items.has(gi)) continue;
+          world.items.set(gi, { kind: KIND.INGREDIENT, ing: ing });
+          break;
+        }
+      });
+    }
+
     world.ceilingRow = top - 2;
     world.setRock = setRock;
 

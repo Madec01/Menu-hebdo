@@ -74,6 +74,11 @@ trois blocs : on les pose, on ne les subit pas.
 Ingredients et charges **passent d'un niveau a l'autre**, mais pas d'une expedition a
 l'autre.
 
+Le premier niveau de chaque expedition **garantit le trio de la dynamite** (salpetre,
+soufre, meche) a portee immediate du point de depart : mesure sur six graines, les trois
+tombent toujours dans les vingt-cinq premiers metres et a moins de sept colonnes du
+depart. On doit avoir sa premiere charge dans la premiere minute, pas au troisieme niveau.
+
 ---
 
 ## 4. Ce qui manque encore : un climax

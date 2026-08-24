@@ -35,6 +35,8 @@ node build.js
 | Deux directions | Forer en diagonale (creuse un escalier) |
 | `Espace` | Turbo — 2 s a vitesse doublee, 15 s de recharge |
 | `E` | Poser une charge explosive |
+| `T` | Mode test : ouvre le panneau et met en pause |
+| `N` | Mode test : niveau suivant |
 | `R` | Recommencer le niveau |
 | `Echap` | Retour au menu |
 | `M` | Couper le son |
@@ -69,6 +71,16 @@ node build.js
   passifs dediee.
 - **3 defis optionnels par niveau**, un **combo** qui multiplie l'or, des **medailles**
   or/argent/bronze, et le **fantome** de ton meilleur passage qui creuse a cote de toi.
+
+## Mode test
+
+Un bac a sable accessible depuis le menu, ou en cours de partie avec `T` (qui met le jeu
+en pause). Il permet de sauter directement a n'importe lequel des 14 niveaux, de choisir
+le palier de profondeur, d'activer carburant infini, invincibilite, Faille desactivee,
+tout reveler, forage x3, charges infinies, et de se donner ingredients, charges, or,
+carburant ou integrite.
+
+**Rien n'y est enregistre** : ni records, ni fantomes, ni progression du carnet.
 
 ## Le Carnet du mineur
 

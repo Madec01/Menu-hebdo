@@ -13,7 +13,7 @@ window.CORE = window.CORE || {};
   }
 
   function show(id) {
-    ['scMenu', 'scStation', 'scEnd', 'scCarnet'].forEach(function (s) { $(s).classList.remove('on'); });
+    ['scMenu', 'scStation', 'scEnd', 'scCarnet', 'scTest'].forEach(function (s) { $(s).classList.remove('on'); });
     if (id) $(id).classList.add('on');
     $('hud').style.display = id ? 'none' : 'block';
   }
@@ -62,6 +62,89 @@ window.CORE = window.CORE || {};
         '<span class="pv">' + Math.min(v, u.but) + ' / ' + u.but + '</span></div>';
     }).join('');
     show('scCarnet');
+  }
+
+  /* ------------------------------------------------------------ MODE TEST */
+  var TOGGLES = [
+    { id: 'fuel', nom: 'Carburant infini' },
+    { id: 'invincible', nom: 'Invincible' },
+    { id: 'faille', nom: 'Faille desactivee' },
+    { id: 'reveal', nom: 'Tout reveler' },
+    { id: 'fast', nom: 'Forage x3' },
+    { id: 'belt', nom: 'Charges infinies' }
+  ];
+  var testTier = 0;
+
+  function buildTest() {
+    var enJeu = !!(G.run && G.state === 'play');
+
+    var lv = $('testLevels');
+    lv.innerHTML = '';
+    CFG.LEVELS.forEach(function (def, i) {
+      var el = document.createElement('div');
+      el.className = 'lvlbtn';
+      el.innerHTML = '<b>' + def.id + '</b><span>' + def.name + '<br>' + def.type + '</span>';
+      el.onclick = function () {
+        CORE.SFX.init();
+        if (enJeu) { GAME.testJump(i); }
+        else { GAME.startTest(i, testTier); }
+        G.paused = false;
+        show(null);
+      };
+      lv.appendChild(el);
+    });
+
+    var tr = $('testTiers');
+    tr.innerHTML = '';
+    CFG.DEPTHS.forEach(function (dp, i) {
+      var el = document.createElement('div');
+      el.className = 'tier' + (i === testTier ? ' on' : '');
+      el.textContent = dp.nom;
+      el.onclick = function () {
+        testTier = i;
+        if (G.run) G.run.depth = i;
+        buildTest();
+      };
+      tr.appendChild(el);
+    });
+
+    var tg = $('testToggles');
+    tg.innerHTML = '';
+    TOGGLES.forEach(function (t) {
+      var el = document.createElement('div');
+      el.className = 'tg' + (G.test[t.id] ? ' on' : '');
+      el.innerHTML = '<span class="box2"></span>' + t.nom;
+      el.onclick = function () { G.test[t.id] = !G.test[t.id]; buildTest(); };
+      tg.appendChild(el);
+    });
+
+    var gv = $('testGives');
+    gv.innerHTML = '';
+    var dons = [['ing', 'Tous les ingredients'], ['fuel', 'Plein de carburant'],
+                ['gold', '+5000 $'], ['hp', 'Integrite au max']];
+    CFG.RECIPES.forEach(function (r) { dons.push([r.id, r.icon + ' ' + r.nom]); });
+    dons.forEach(function (d) {
+      var el = document.createElement('div');
+      el.className = 'give';
+      el.textContent = d[1];
+      el.onclick = function () { if (G.run) { GAME.testGive(d[0]); buildTest(); } };
+      gv.appendChild(el);
+    });
+
+    $('testGo').textContent = enJeu ? 'REPRENDRE' : 'LANCER AU NIVEAU 1-1';
+    $('testGo').onclick = function () {
+      CORE.SFX.init();
+      if (!enJeu) GAME.startTest(0, testTier);
+      G.paused = false;
+      show(null);
+    };
+    show('scTest');
+  }
+
+  function toggleTest() {
+    if (G.state !== 'play') return;
+    if ($('scTest').classList.contains('on')) { G.paused = false; show(null); }
+    else { G.paused = true; buildTest(); }
   }
 
   function buildMenu() {
@@ -307,6 +390,7 @@ window.CORE = window.CORE || {};
     $('hp').innerHTML = pips;
     $('hp').style.opacity = G.iframes > 0 ? (0.4 + 0.6 * Math.abs(Math.sin(G.time * 20))) : 1;
     $('restartMsg').style.display = G.justRestarted > 0 ? 'block' : 'none';
+    $('testBadge').style.display = G.test.on ? 'block' : 'none';
 
     var dry = $('dry');
     if (G.dryChoice && !dry.classList.contains('on')) {
@@ -342,6 +426,7 @@ window.CORE = window.CORE || {};
   CORE.UI = {
     buildMenu: buildMenu, buildStation: buildStation, buildEnd: buildEnd,
     updateHud: updateHud, show: show, fmt: fmt, fmtLong: fmtLong,
+    buildTest: buildTest, toggleTest: toggleTest,
     bind: function () {
       $('stNext').onclick = function () {
         GAME.nextLevel();
@@ -349,6 +434,12 @@ window.CORE = window.CORE || {};
       };
       $('endAgain').onclick = function () { buildMenu(); };
       $('openCarnet').onclick = function () { buildCarnet(); };
+      $('openTest').onclick = function () { G.test.on = true; buildTest(); };
+      $('testBack').onclick = function () {
+        G.test.on = false; G.paused = false;
+        for (var k in G.test) if (k !== 'on') G.test[k] = false;
+        buildMenu();
+      };
       $('closeCarnet').onclick = function () { buildMenu(); };
       $('dryBuy').onclick = function () { GAME.dryBuy(); $('dry').classList.remove('on'); };
       $('dryRestart').onclick = function () { GAME.dryRestart(); $('dry').classList.remove('on'); };

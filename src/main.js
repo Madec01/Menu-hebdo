@@ -34,6 +34,11 @@
   window.addEventListener('keydown', function (e) {
     if (e.code === 'KeyM') { CORE.SFX.toggle(); return; }
     if ((e.code === 'KeyE' || e.code === 'KeyF') && !keys[e.code]) placeQueued = true;
+    if (e.code === 'KeyT' && !keys[e.code]) { UI.toggleTest(); return; }
+    if (e.code === 'KeyN' && G.test.on && G.state === 'play') {
+      GAME.testJump(Math.min(G.run.levelIndex + 1, CORE.CFG.LEVELS.length - 1));
+      return;
+    }
     if (e.code === 'KeyR' && G.state === 'play') { GAME.startLevel(G.run.levelIndex); return; }
     if (e.code === 'Escape' && G.state === 'play') { CORE.SFX.drill(false, 0); UI.buildMenu(); prevState = 'menu'; G.state = 'menu'; return; }
     keys[e.code] = true;

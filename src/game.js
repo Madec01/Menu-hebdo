@@ -15,7 +15,9 @@ window.CORE = window.CORE || {};
     fuel: 100, fuelMax: 100, reserve: false, lowWarned: false,
     hp: 3, iframes: 0, stun: 0, falls: [], failleCd: 0, sealBroken: false,
     justRestarted: 0, turboCharge: 0,
-    ing: {}, belt: [], bombs: [],
+    ing: {}, belt: [], bombs: [], paused: false,
+    test: { on: false, fuel: false, invincible: false, faille: false, reveal: false,
+            fast: false, belt: false },
     event: null, eventT: 0, eventNext: 0, marker: null,
     combo: 0, comboT: 0, comboMult: 1,
     challenges: [], st: null,
@@ -66,6 +68,9 @@ window.CORE = window.CORE || {};
     // panne seche : la foreuse est a l'arret, le joueur doit choisir
     if (G.reserve) { s.speed = 0; s.turboBlocked = true; }
 
+    if (G.test.fast) s.speed *= 3;
+    if (G.test.reveal) s.vision = 200;
+
     s.width = Math.max(1, Math.min(6, Math.round(s.width)));
     s.length = Math.max(1, Math.min(4, Math.round(s.length)));
     s.crit = Math.min(0.6, s.crit);
@@ -82,7 +87,7 @@ window.CORE = window.CORE || {};
       shopClosedFor: 0, restarts: 0, lost: 0, fuelCarry: undefined,
       seed: (Math.random() * 1e9) | 0
     };
-    CORE.SAVE.addStats({ runs: 1 });
+    if (!G.test.on) CORE.SAVE.addStats({ runs: 1 });
     G.meta.runs = 0;
     startLevel(job && job.skip ? job.skip : 0);
   }
@@ -220,7 +225,7 @@ window.CORE = window.CORE || {};
 
   function placeCharge() {
     if (!G.belt.length || G.dryChoice) return;
-    var rec = G.belt.shift();
+    var rec = G.test.belt ? G.belt[0] : G.belt.shift();
     var d = G.drill;
     G.bombs.push({
       def: rec, t: CFG.FUSE,
@@ -277,6 +282,7 @@ window.CORE = window.CORE || {};
 
   /* -------------------------------------------------------- INTEGRITE */
   function damage(n, label) {
+    if (G.test.invincible) return;
     if (G.iframes > 0 || G.state !== 'play') return;
     G.hp -= n;
     G.iframes = CFG.IFRAMES;
@@ -425,6 +431,7 @@ window.CORE = window.CORE || {};
     var F = CFG.FAILLE;
     var tok = G.levelToken;
     if (G.failleCd > 0) G.failleCd -= dt;
+    if (G.test.faille) return;
     if (G.levelTime < F.delay) return;
 
     var el = G.levelTime - F.delay;
@@ -470,6 +477,7 @@ window.CORE = window.CORE || {};
 
   /* ---------------------------------------------------------- CARBURANT */
   function burn(amount) {
+    if (G.test.fuel) return;
     if (G.fuel <= 0) return;
     G.fuel -= amount;
     if (G.fuel <= 0) {
@@ -665,7 +673,7 @@ window.CORE = window.CORE || {};
     if (G.state !== 'play') return;
 
     // en panne seche, tout s'arrete : le chrono aussi, le temps de decider
-    if (G.dryChoice) return;
+    if (G.dryChoice || G.paused) return;
     if (G.hitstop > 0) { G.hitstop -= dt; return; }
     if (G.slowmo > 0) { G.slowmo -= dt; dt *= 0.35; }
 
@@ -901,17 +909,19 @@ window.CORE = window.CORE || {};
     G.run.splits.push(t);
     G.run.medals.push(medal);
     G.run.total += t;
-    var isRecord = CORE.SAVE.record(def.id, t, medal);
+    var isRecord = G.test.on ? false : CORE.SAVE.record(def.id, t, medal);
 
     // On verse au carnet a chaque niveau : la progression survit meme si on
-    // quitte au milieu d'une expedition.
-    var neufs = CORE.SAVE.addStats(G.meta);
+    // quitte au milieu d'une expedition. Le mode test, lui, n'ecrit jamais.
+    var neufs = G.test.on ? [] : CORE.SAVE.addStats(G.meta);
     G.meta = { runs: 0, ore: 0, cans: 0, bonuses: 0, collapses: 0, buried: 0 };
-    if (medal === 'or') neufs = neufs.concat(CORE.SAVE.addStats({ medOr: 1 }));
-    neufs = neufs.concat(CORE.SAVE.setBest('bestDepth', def.top + def.height));
-    neufs = neufs.concat(CORE.SAVE.setBest('bestLayer', def.layer));
+    if (!G.test.on) {
+      if (medal === 'or') neufs = neufs.concat(CORE.SAVE.addStats({ medOr: 1 }));
+      neufs = neufs.concat(CORE.SAVE.setBest('bestDepth', def.top + def.height));
+      neufs = neufs.concat(CORE.SAVE.setBest('bestLayer', def.layer));
+    }
     G.unlocked = neufs;
-    if (isRecord) CORE.SAVE.saveGhost(def.id, t, G.ghostRec);
+    if (isRecord && !G.test.on) CORE.SAVE.saveGhost(def.id, t, G.ghostRec);
     SFX.drill(false, 0);
     SFX.level();
 
@@ -981,21 +991,55 @@ window.CORE = window.CORE || {};
 
   function nextLevel() {
     if (G.run.levelIndex >= CFG.LEVELS.length - 1) {
-      CORE.SAVE.recordTotal(G.run.total);
-      var fin = { finished: 1 };
-      if (G.run.restarts === 0) fin.cleanRuns = 1;
-      if ((G.run.depth || 0) >= 1) fin.deepWins = 1;
-      G.endUnlocked = CORE.SAVE.addStats(fin);
+      if (!G.test.on) {
+        CORE.SAVE.recordTotal(G.run.total);
+        var fin = { finished: 1 };
+        if (G.run.restarts === 0) fin.cleanRuns = 1;
+        if ((G.run.depth || 0) >= 1) fin.deepWins = 1;
+        G.endUnlocked = CORE.SAVE.addStats(fin);
+      } else { G.endUnlocked = []; }
       G.state = 'end';
       return;
     }
     startLevel(G.run.levelIndex + 1);
   }
 
+  /* -------------------------------------------------------- MODE TEST */
+  function startTest(levelIndex, depthTier, job) {
+    G.test.on = true;
+    startRun(job || C.JOBS[0], depthTier || 0);
+    if (levelIndex) startLevel(levelIndex);
+    G.run.gold = 5000;
+  }
+
+  function testJump(levelIndex) {
+    G.run.levelIndex = levelIndex;
+    startLevel(levelIndex);
+    G.paused = false;
+  }
+
+  function testGive(what) {
+    if (what === 'ing') {
+      CFG.INGREDIENTS.forEach(function (g) { G.ing[g.id] = (G.ing[g.id] || 0) + 2; });
+      craft();
+    } else if (what === 'gold') {
+      G.run.gold += 5000;
+    } else if (what === 'fuel') {
+      G.fuel = G.fuelMax;
+      G.reserve = false; G.dryChoice = false;
+    } else if (what === 'hp') {
+      G.hp = CFG.HP + 3;
+    } else {
+      var rec = CFG.RECIPES.filter(function (r) { return r.id === what; })[0];
+      if (rec && G.belt.length < CFG.BELT_MAX) G.belt.push(rec);
+    }
+  }
+
   CORE.GAME = {
     G: G, startRun: startRun, startLevel: startLevel, update: update,
     computeStats: computeStats, chooseCard: chooseCard, buyPart: buyPart,
     nextLevel: nextLevel, medalFor: medalFor, shopOpen: shopOpen, buyFuel: buyFuel, tier: tier,
-    dryRestart: dryRestart, dryBuy: dryBuy, placeCharge: placeCharge
+    dryRestart: dryRestart, dryBuy: dryBuy, placeCharge: placeCharge,
+    startTest: startTest, testJump: testJump, testGive: testGive
   };
 })(window.CORE);
