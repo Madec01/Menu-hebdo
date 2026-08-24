@@ -1,6 +1,10 @@
 # CORE — v3 : remettre du danger
 
-> Diagnostic et propositions. Aucun code.
+> Diagnostic et propositions.
+>
+> **Etat : les chantiers 1 a 6 sont implementes** (roche qui tombe, Faille, niveaux
+> courts, integrite, phare et parallaxe, turbo qui se merite, cartes qui changent les
+> regles). Restent les dangers pilotables du §6 — ver de roche, poches de gaz, liquides.
 > Reponse a trois symptomes — « on s'ennuie », « ca manque de challenge »,
 > « c'est long et c'est facile trop longtemps » — qui n'ont qu'une seule cause.
 

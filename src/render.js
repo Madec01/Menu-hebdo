@@ -61,7 +61,7 @@ window.CORE = window.CORE || {};
     g.cam.x += (tx - g.cam.x) * Math.min(1, dt * 9);
     g.cam.y += (ty - g.cam.y) * Math.min(1, dt * 9);
     g.cam.x = Math.max(0, Math.min(world.w * T - vw, g.cam.x));
-    g.cam.y = Math.max(-40, Math.min(world.h * T - vh, g.cam.y));
+    g.cam.y = Math.max(-vh * 0.32, Math.min(world.h * T - vh, g.cam.y));
 
     var sx = 0, sy = 0;
     if (g.shake > 0) {
@@ -71,12 +71,13 @@ window.CORE = window.CORE || {};
     }
     var camX = Math.round(g.cam.x + sx), camY = Math.round(g.cam.y + sy);
 
-    // --- fond ---------------------------------------------------------------
+    // --- fond en parallaxe : c'est lui qui donne la profondeur --------------
     var grd = ctx.createLinearGradient(0, 0, 0, vh);
     grd.addColorStop(0, layer.fog);
     grd.addColorStop(1, layer.bg);
     ctx.fillStyle = grd;
     ctx.fillRect(0, 0, vw, vh);
+    drawParallax(ctx, g, vw, vh, camX, camY, T);
 
     ctx.save();
     ctx.translate(-camX, -camY);
@@ -125,6 +126,49 @@ window.CORE = window.CORE || {};
         } else if (t === W.T.GLUANTE) {
           ctx.fillStyle = 'rgba(160,220,110,0.28)';
           ctx.beginPath(); ctx.arc(px + T / 2, py + T / 2, T * 0.34, 0, 6.284); ctx.fill();
+        }
+      }
+    }
+
+    // --- gravats au fond des galeries ---------------------------------------
+    world.debris.forEach(function (idx) {
+      var gx = idx % world.w, gy = (idx / world.w) | 0;
+      if (gx < c0 || gx > c1 || gy < r0 || gy > r1) return;
+      if (world.type[idx] !== W.T.EMPTY) return;
+      var bx = gx * T, by = gy * T + T;
+      ctx.fillStyle = 'rgba(0,0,0,0.45)';
+      ctx.fillRect(bx + 2, by - 4, T - 4, 3);
+      ctx.fillStyle = shade(layer.med, 0.55);
+      ctx.fillRect(bx + 3 + (hash(gx, gy) * 6 | 0), by - 6, 4, 3);
+      ctx.fillRect(bx + T - 8, by - 5, 3, 2);
+    });
+
+    // --- masses en train de lacher, puis de tomber ---------------------------
+    for (var fi = 0; fi < g.falls.length; fi++) {
+      var f = g.falls[fi];
+      if (f.state === 'shake') {
+        var jx = (Math.random() - 0.5) * 2.4, jy = (Math.random() - 0.5) * 2.4;
+        for (var si = 0; si < f.cells.length; si++) {
+          var sxx = f.cells[si][0] * T + jx, syy = f.cells[si][1] * T + jy;
+          ctx.fillStyle = 'rgba(255,90,70,' + (0.20 + 0.28 * Math.abs(Math.sin(g.time * 26))) + ')';
+          ctx.fillRect(sxx, syy, T, T);
+          ctx.strokeStyle = 'rgba(20,10,10,0.55)';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(sxx + 3, syy + T - 3);
+          ctx.lineTo(sxx + T * 0.6, syy + 3);
+          ctx.stroke();
+        }
+      } else {
+        var fr = Math.min(f.off, f.dy + 0.95);
+        for (var ci2 = 0; ci2 < f.cells.length; ci2++) {
+          var fx2 = f.cells[ci2][0] * T;
+          var fy2 = (f.cells[ci2][1] + fr) * T;
+          var ftype = f.types[ci2];
+          ctx.fillStyle = shade(TYPE_COLOR[ftype] || layer.med, 0.9);
+          ctx.fillRect(fx2, fy2, T, T);
+          ctx.fillStyle = 'rgba(0,0,0,0.2)';
+          ctx.fillRect(fx2, fy2 + T - 3, T, 3);
         }
       }
     }
@@ -178,11 +222,22 @@ window.CORE = window.CORE || {};
       }
     }
 
-    // --- plafond qui descend --------------------------------------------------
-    if ((world.def.ceiling || (g.event && g.event.id === 'eboulement')) && world.ceilingRow > world.top) {
-      var cyPx = world.ceilingRow * T;
-      ctx.fillStyle = 'rgba(200,70,70,' + (0.25 + pulse * 0.2) + ')';
-      ctx.fillRect(0, cyPx, world.w * T, 5);
+    // --- la Faille : un mur de gravats qui descend ---------------------------
+    if (world.failleRow > world.top - 2) {
+      var fyPx = world.failleRow * T;
+      var fg = ctx.createLinearGradient(0, fyPx - T * 5, 0, fyPx + T * 1.2);
+      fg.addColorStop(0, 'rgba(90,40,35,0)');
+      fg.addColorStop(0.7, 'rgba(120,50,42,0.65)');
+      fg.addColorStop(1, 'rgba(180,70,55,0.9)');
+      ctx.fillStyle = fg;
+      ctx.fillRect(0, fyPx - T * 5, world.w * T, T * 6.2);
+      ctx.fillStyle = 'rgba(255,120,90,' + (0.5 + pulse * 0.4) + ')';
+      ctx.fillRect(0, fyPx, world.w * T, 3);
+      for (var dp = 0; dp < 26; dp++) {
+        var dpx = ((dp * 137 + Math.floor(g.time * 40)) % (world.w * T));
+        ctx.fillStyle = 'rgba(200,110,80,0.5)';
+        ctx.fillRect(dpx, fyPx + ((dp * 53) % (T * 4)), 3, 3);
+      }
     }
 
     // --- passages du dedale : ils laissent filtrer la lumiere ----------------
@@ -254,18 +309,79 @@ window.CORE = window.CORE || {};
     drawDrill(ctx, g, T);
     ctx.restore();
 
-    // --- obscurite -------------------------------------------------------------
-    var dark = layer.dark + (g.event && g.event.id === 'coupure' ? 0.4 : 0);
-    if (dark > 0.01) {
-      var dx = (d.x + CFG.DRILL_W / 2) * T - camX;
-      var dy = (d.y + CFG.DRILL_H / 2) * T - camY;
-      var rad = g.stats.vision * T;
-      var vg = ctx.createRadialGradient(dx, dy, rad * 0.25, dx, dy, rad);
-      vg.addColorStop(0, 'rgba(0,0,0,0)');
-      vg.addColorStop(1, 'rgba(0,0,0,' + Math.min(0.94, dark * 3.6) + ')');
-      ctx.fillStyle = vg;
+    drawForeground(ctx, g, vw, vh, camX, camY, T);
+
+    // --- le phare : un vrai cone oriente dans le sens de la marche -----------
+    // On peint l'obscurite, puis on la RETIRE dans un cone. Le trace du cone
+    // passe par un clip et non par une transformation : sous 'destination-out',
+    // manipuler la matrice pendant le remplissage donne l'effet inverse.
+    var dark = Math.min(0.96, layer.dark + (g.event && g.event.id === 'coupure' ? 0.35 : 0));
+    var dxp = (d.x + CFG.DRILL_W / 2) * T - camX;
+    var dyp = (d.y + CFG.DRILL_H / 2) * T - camY;
+    var rad = g.stats.vision * T;
+    if (dark > 0.02) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,' + dark + ')';
       ctx.fillRect(0, 0, vw, vh);
+      ctx.globalCompositeOperation = 'destination-out';
+
+      var amb = ctx.createRadialGradient(dxp, dyp, 0, dxp, dyp, rad * 0.5);
+      amb.addColorStop(0, 'rgba(0,0,0,1)');
+      amb.addColorStop(0.6, 'rgba(0,0,0,0.75)');
+      amb.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = amb;
+      ctx.fillRect(dxp - rad, dyp - rad, rad * 2, rad * 2);
+
+      var ang2 = Math.atan2(d.fy, d.fx);
+      var len = rad * 2.2, spread = 0.52;
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(dxp, dyp);
+      ctx.lineTo(dxp + Math.cos(ang2 - spread) * len, dyp + Math.sin(ang2 - spread) * len);
+      ctx.lineTo(dxp + Math.cos(ang2) * len * 1.15, dyp + Math.sin(ang2) * len * 1.15);
+      ctx.lineTo(dxp + Math.cos(ang2 + spread) * len, dyp + Math.sin(ang2 + spread) * len);
+      ctx.closePath();
+      ctx.clip();
+      var cg = ctx.createRadialGradient(dxp, dyp, 0, dxp, dyp, len);
+      cg.addColorStop(0, 'rgba(0,0,0,1)');
+      cg.addColorStop(0.6, 'rgba(0,0,0,0.8)');
+      cg.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = cg;
+      ctx.fillRect(0, 0, vw, vh);
+      ctx.restore();
+      ctx.restore();
+
+      // le faisceau lui-meme, chaud, par-dessus
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.beginPath();
+      ctx.moveTo(dxp, dyp);
+      ctx.lineTo(dxp + Math.cos(ang2 - spread * 0.8) * len * 0.8, dyp + Math.sin(ang2 - spread * 0.8) * len * 0.8);
+      ctx.lineTo(dxp + Math.cos(ang2 + spread * 0.8) * len * 0.8, dyp + Math.sin(ang2 + spread * 0.8) * len * 0.8);
+      ctx.closePath();
+      ctx.clip();
+      var wg = ctx.createRadialGradient(dxp, dyp, 0, dxp, dyp, len * 0.8);
+      wg.addColorStop(0, 'rgba(255,232,170,0.13)');
+      wg.addColorStop(1, 'rgba(255,232,170,0)');
+      ctx.fillStyle = wg;
+      ctx.fillRect(0, 0, vw, vh);
+      ctx.restore();
     }
+
+    // --- alerte de proximite de la Faille -------------------------------------
+    var fdist = (d.y - world.failleRow);
+    if (fdist < CFG.FAILLE.warn && world.failleRow > world.top - 2) {
+      var near = Math.max(0, Math.min(1, 1 - fdist / CFG.FAILLE.warn));
+      ctx.fillStyle = 'rgba(180,30,30,' + (near * 0.22 * (0.6 + 0.4 * Math.sin(g.time * 9))) + ')';
+      ctx.fillRect(0, 0, vw, vh);
+      var tg = ctx.createLinearGradient(0, 0, 0, vh * 0.35);
+      tg.addColorStop(0, 'rgba(220,60,40,' + (near * 0.5) + ')');
+      tg.addColorStop(1, 'rgba(220,60,40,0)');
+      ctx.fillStyle = tg;
+      ctx.fillRect(0, 0, vw, vh * 0.35);
+    }
+
+    drawSideGauge(ctx, g, vw, vh);
 
     // --- reperage du filon revele ---------------------------------------------
     if (g.marker && g.marker.t > 0) drawMarker(ctx, g, camX, camY, vw, vh, T);
@@ -312,6 +428,94 @@ window.CORE = window.CORE || {};
     }
 
     drawToasts(ctx, g, vw, vh);
+  }
+
+  /* Deux plans de fond et un premier plan : la sensation d'etre DANS la mine. */
+  function drawParallax(ctx, g, vw, vh, camX, camY, T) {
+    var world = g.world, layer = world.layer;
+    var WW = world.w * T, WH = world.h * T;
+
+    // strates lointaines : tres discretes, juste de quoi sentir le mouvement
+    ctx.globalAlpha = 0.13;
+    for (var si = 0; si < world.strata.length; si++) {
+      var st = world.strata[si];
+      var sy = st.y * WH * st.d - camY * st.d;
+      if (sy < -40 || sy > vh + 40) continue;
+      ctx.fillStyle = shade(layer.med, 0.5 + st.d * 0.3);
+      ctx.fillRect(0, sy, vw, Math.max(1, st.h * WH * st.d * 0.6));
+    }
+    ctx.globalAlpha = 1;
+
+    // cavernes lointaines : des halos diffus, jamais de bord net
+    for (var bi = 0; bi < world.bg.length; bi++) {
+      var b = world.bg[bi];
+      var bx = b.x * WW - camX * b.d;
+      var by = b.y * WH * b.d - camY * b.d;
+      var rr = b.rx * WW * (b.kind === 'column' ? 0.5 : 1);
+      if (by < -rr * 2 || by > vh + rr * 2 || bx < -rr * 2 || bx > vw + rr * 2) continue;
+      var rg = ctx.createRadialGradient(bx, by, 0, bx, by, rr);
+      rg.addColorStop(0, shade(layer.fog, 1.35 + b.d * 0.5));
+      rg.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.globalAlpha = 0.16 + b.d * 0.18;
+      ctx.fillStyle = rg;
+      ctx.fillRect(bx - rr, by - rr, rr * 2, rr * 2);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  /* Premier plan flou : quelques rochers qui passent devant la camera. */
+  function drawForeground(ctx, g, vw, vh, camX, camY, T) {
+    var world = g.world;
+    var WW = world.w * T, WH = world.h * T;
+    for (var i = 0; i < world.fore.length; i++) {
+      var f = world.fore[i];
+      var fx = f.x * WW - camX * 1.18;
+      var fy = f.y * WH * 1.18 - camY * 1.18;
+      var fr = f.r * WW;
+      if (fy < -fr * 2 || fy > vh + fr * 2) continue;
+      var fg2 = ctx.createRadialGradient(fx, fy, 0, fx, fy, fr);
+      fg2.addColorStop(0, 'rgba(4,5,8,0.75)');
+      fg2.addColorStop(0.65, 'rgba(4,5,8,0.45)');
+      fg2.addColorStop(1, 'rgba(4,5,8,0)');
+      ctx.fillStyle = fg2;
+      ctx.fillRect(fx - fr, fy - fr, fr * 2, fr * 2);
+    }
+  }
+
+  /* Jauge de descente : le niveau entier, la foreuse, la sortie, la Faille. */
+  function drawSideGauge(ctx, g, vw, vh) {
+    var world = g.world, def = world.def;
+    var x = vw - 26, top = 96, h = vh - 210;
+    ctx.fillStyle = 'rgba(10,11,14,0.65)';
+    ctx.fillRect(x, top, 10, h);
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + 0.5, top + 0.5, 9, h);
+
+    function rowToY(row) {
+      var f = (row - world.top) / def.height;
+      return top + Math.max(0, Math.min(1, f)) * h;
+    }
+
+    // sortie
+    ctx.fillStyle = world.locked ? '#ff5a6e' : '#78ffb4';
+    ctx.fillRect(x - 3, rowToY(world.exitRow) - 2, 16, 4);
+
+    // faille
+    if (world.failleRow > world.top - 2) {
+      ctx.fillStyle = '#ff3b52';
+      ctx.fillRect(x - 4, rowToY(world.failleRow) - 1, 18, 3);
+    }
+
+    // foreuse
+    var dy = rowToY(g.drill.y);
+    ctx.fillStyle = '#ffcf5c';
+    ctx.beginPath();
+    ctx.moveTo(x - 6, dy);
+    ctx.lineTo(x - 1, dy - 4);
+    ctx.lineTo(x - 1, dy + 4);
+    ctx.closePath();
+    ctx.fill();
   }
 
   function drawMarker(ctx, g, camX, camY, vw, vh, T) {
@@ -405,6 +609,12 @@ window.CORE = window.CORE || {};
     ctx.save();
     ctx.translate(cx, cy);
 
+    var hl = ctx.createRadialGradient(0, 0, 0, 0, 0, T * 3);
+    hl.addColorStop(0, 'rgba(255,220,150,0.32)');
+    hl.addColorStop(1, 'rgba(255,220,150,0)');
+    ctx.fillStyle = hl;
+    ctx.fillRect(-T * 3, -T * 3, T * 6, T * 6);
+
     if (look.glow) {
       var rg = ctx.createRadialGradient(0, 0, 2, 0, 0, T * 2.2);
       rg.addColorStop(0, look.glow);
@@ -447,12 +657,16 @@ window.CORE = window.CORE || {};
     }
 
     var hw = T * 0.95 * look.width;
-    ctx.fillStyle = '#3a4048';
+    ctx.fillStyle = '#0e1013';
+    ctx.fillRect(-T * 1.02, -hw - T * 0.07, T * 2.04, hw * 2 + T * 0.14);
+    ctx.fillStyle = '#6b7684';
     ctx.fillRect(-T * 0.95, -hw, T * 1.9, hw * 2);
-    ctx.fillStyle = '#565f6b';
+    ctx.fillStyle = '#8e9bab';
     ctx.fillRect(-T * 0.85, -hw + T * 0.1, T * 1.5, hw * 2 - T * 0.2);
-    ctx.fillStyle = '#ffcf5c';
+    ctx.fillStyle = '#fff0a8';
     ctx.fillRect(-T * 0.5, -T * 0.35, T * 0.7, T * 0.7);
+    ctx.fillStyle = '#ffcf5c';
+    ctx.fillRect(-T * 0.42, -T * 0.27, T * 0.54, T * 0.54);
     ctx.fillStyle = '#22262c';
     ctx.fillRect(-T * 0.95, -hw, T * 1.9, T * 0.22);
     ctx.fillRect(-T * 0.95, hw - T * 0.22, T * 1.9, T * 0.22);

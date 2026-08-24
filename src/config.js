@@ -15,6 +15,36 @@ window.CORE = window.CORE || {};
     SURFACE_ROWS: 4,       // ciel au depart d'un niveau
     BEDROCK_ROWS: 3,       // socle en bas
 
+    // --- integrite : 3 coups, puis le NIVEAU redemarre (jamais la partie) --
+    HP: 3,
+    IFRAMES: 1.3,          // secondes d'invulnerabilite apres un coup
+
+    // --- la Faille : le chrono a enfin un visage ---------------------------
+    FAILLE: {
+      delay: 15,           // secondes avant qu'elle ne demarre
+      speed: 2.0,          // lignes par seconde au depart
+      accel: 0.06,         // acceleration, en lignes/s^2
+      sealBoost: 2.2,      // acceleration brutale une fois le Sceau perce
+      catchPush: 6,        // de combien elle enfonce la foreuse quand elle rattrape
+      warn: 14             // distance a laquelle l'ecran commence a alerter
+    },
+
+    // --- roche qui s'effondre ----------------------------------------------
+    FALL: {
+      shake: 0.4,          // duree du tremblement d'avertissement
+      maxMass: 150,        // au-dela, la masse est consideree comme portante
+      speed: 26,           // vitesse de chute d'une masse, en blocs/s
+      damage: 1            // integrite perdue si elle nous tombe dessus
+    },
+
+    // --- turbo : il ne se recharge qu'en jouant bien ------------------------
+    TURBO: {
+      ore: 0.14,           // par bloc de minerai perce
+      bonus: 0.30,         // par bonus ramasse
+      block: 0.010,        // par bloc casse pendant un combo
+      collapse: 0.05       // par masse effondree
+    },
+
     // --- carburant : il brule a l'action, jamais au temps ------------------
     FUEL: {
       burnPerBlock: 0.20,  // L par bloc reellement excave
@@ -60,31 +90,31 @@ window.CORE = window.CORE || {};
   /* ------------------------------------------------------------- COUCHES */
   CFG.LAYERS = [
     {
-      id: 1, name: 'LA TERRE', from: 0, to: 650,
-      bg: '#20150f', fog: '#2c1d13', dark: 0.0,
+      id: 1, name: 'LA TERRE', from: 0, to: 220,
+      bg: '#1a110c', fog: '#2c1d13', dark: 0.30,
       soft: '#6b4a2f', med: '#82603c', hard: '#77736c',
-      ore: '#d68b3f', oreName: 'cuivre', oreValue: 19,
+      ore: '#d68b3f', oreName: 'cuivre', oreValue: 13,
       wSoft: 0.56, wMed: 0.26, wHard: 0.08,
       special: 'FRIABLE', wSpecial: 0.10,   // s'effondre en cascade
-      veins: 13, caves: 4, bonuses: 13, traps: 3, bidons: 8, coffres: 3
+      veins: 8, caves: 3, bonuses: 8, traps: 2, bidons: 5, coffres: 2
     },
     {
-      id: 2, name: 'LES SEDIMENTS', from: 650, to: 1300,
-      bg: '#171a1d', fog: '#232a2f', dark: 0.18,
+      id: 2, name: 'LES SEDIMENTS', from: 220, to: 880,
+      bg: '#12151a', fog: '#232a2f', dark: 0.55,
       soft: '#8a8175', med: '#666158', hard: '#9ba3ab',
-      ore: '#e0b23c', oreName: 'fer', oreValue: 33,
+      ore: '#e0b23c', oreName: 'fer', oreValue: 22,
       wSoft: 0.44, wMed: 0.30, wHard: 0.14,
       special: 'CHARBON', wSpecial: 0.12,   // explose et enflamme ses voisines
-      veins: 15, caves: 5, bonuses: 15, traps: 5, bidons: 9, coffres: 3
+      veins: 9, caves: 4, bonuses: 9, traps: 3, bidons: 6, coffres: 2
     },
     {
-      id: 3, name: 'LES GROTTES DE CRISTAL', from: 1300, to: 1950,
-      bg: '#14101f', fog: '#241b3a', dark: 0.34,
+      id: 3, name: 'LES GROTTES DE CRISTAL', from: 880, to: 1600,
+      bg: '#0e0a18', fog: '#241b3a', dark: 0.68,
       soft: '#6d5aa0', med: '#4c3f78', hard: '#8fa0d8',
-      ore: '#c8e6ff', oreName: 'argent', oreValue: 58,
+      ore: '#c8e6ff', oreName: 'argent', oreValue: 38,
       wSoft: 0.38, wMed: 0.28, wHard: 0.16,
       special: 'CRISTAL', wSpecial: 0.18,   // reaction en chaine, et ca paye
-      veins: 16, caves: 7, bonuses: 16, traps: 6, bidons: 10, coffres: 4
+      veins: 10, caves: 4, bonuses: 10, traps: 4, bidons: 7, coffres: 3
     }
   ];
 
@@ -97,16 +127,25 @@ window.CORE = window.CORE || {};
 
   /* -------------------------------------------------------------- NIVEAUX */
   /* 3 couches x 3 niveaux. Les 7 variantes du game design sont couvertes. */
+  /* 14 niveaux courts. Une nouveaute par niveau, jamais de remplissage.
+     faille : multiplicateur de vitesse de la Faille pour ce niveau. */
   CFG.LEVELS = [
-    { id: '1-1', layer: 1, name: 'Premiere coupe',    type: 'descente',     top: 0,    height: 200, gold: 27, silver: 39, bronze: 55 },
-    { id: '1-2', layer: 1, name: 'Le gisement',       type: 'gisement',     top: 200,  height: 200, quota: 8, gold: 35, silver: 49, bronze: 70 },
-    { id: '1-3', layer: 1, name: 'Le Sceau d\'argile', type: 'sceau',       top: 400,  height: 250, sealHard: 6,  gold: 32, silver: 45, bronze: 64 },
-    { id: '2-1', layer: 2, name: 'La grande veine',   type: 'filon',        top: 650,  height: 200, gold: 24, silver: 34, bronze: 49 },
-    { id: '2-2', layer: 2, name: 'Effondrement',      type: 'effondrement', top: 850,  height: 200, ceiling: 3.4, gold: 22, silver: 31, bronze: 44 },
-    { id: '2-3', layer: 2, name: 'Le Sceau calcaire', type: 'sceau',        top: 1050, height: 250, sealHard: 16, gold: 26, silver: 37, bronze: 53 },
-    { id: '3-1', layer: 3, name: 'Le grand vide',     type: 'chute',        top: 1300, height: 200, gold: 12, silver: 17, bronze: 24 },
-    { id: '3-2', layer: 3, name: 'Le dedale',         type: 'dedale',       top: 1500, height: 200, gold: 64, silver: 91, bronze: 130 },
-    { id: '3-3', layer: 3, name: 'Le Sceau de quartz', type: 'sceau',       top: 1700, height: 250, sealHard: 30, gold: 24, silver: 33, bronze: 48 }
+    { id: '1-1', layer: 1, name: 'Premiere coupe',   type: 'descente',     top: 0,    height: 100, gold: 29, silver: 42, bronze: 59, faille: 0.75 },
+    { id: '1-2', layer: 1, name: 'La croute',        type: 'sceau',        top: 100,  height: 120, sealHard: 5, gold: 32, silver: 46, bronze: 64, faille: 0.85 },
+
+    { id: '2-1', layer: 2, name: 'Bancs de gres',    type: 'descente',     top: 220,  height: 110, gold: 24, silver: 34, bronze: 48, faille: 1.0 },
+    { id: '2-2', layer: 2, name: 'La grande veine',  type: 'filon',        top: 330,  height: 110, gold: 23, silver: 33, bronze: 46, faille: 1.0 },
+    { id: '2-3', layer: 2, name: 'Le gisement',      type: 'gisement',     top: 440,  height: 110, quota: 10, gold: 27, silver: 39, bronze: 55, faille: 0.9 },
+    { id: '2-4', layer: 2, name: 'Effondrement',     type: 'effondrement', top: 550,  height: 110, gold: 22, silver: 31, bronze: 44, faille: 1.35 },
+    { id: '2-5', layer: 2, name: 'Le grand vide',    type: 'chute',        top: 660,  height: 110, gold: 17, silver: 24, bronze: 33, faille: 1.1 },
+    { id: '2-6', layer: 2, name: 'Le Sceau calcaire', type: 'sceau',       top: 770,  height: 110, sealHard: 14, gold: 19, silver: 27, bronze: 38, faille: 1.1 },
+
+    { id: '3-1', layer: 3, name: 'Eclats',           type: 'descente',     top: 880,  height: 115, gold: 21, silver: 30, bronze: 41, faille: 1.15 },
+    { id: '3-2', layer: 3, name: 'Le dedale',        type: 'dedale',       top: 995,  height: 120, gold: 52, silver: 74, bronze: 104, faille: 0.8 },
+    { id: '3-3', layer: 3, name: 'Coeur de geode',   type: 'gisement',     top: 1115, height: 120, quota: 14, gold: 19, silver: 28, bronze: 39, faille: 1.0 },
+    { id: '3-4', layer: 3, name: 'La faille vive',   type: 'effondrement', top: 1235, height: 120, gold: 18, silver: 26, bronze: 36, faille: 1.5 },
+    { id: '3-5', layer: 3, name: 'Le puits',         type: 'chute',        top: 1355, height: 125, gold: 15, silver: 21, bronze: 29, faille: 1.25 },
+    { id: '3-6', layer: 3, name: 'Le Sceau de quartz', type: 'sceau',      top: 1480, height: 120, sealHard: 26, gold: 17, silver: 24, bronze: 34, faille: 1.3 }
   ];
 
   /* ---------------------------------------------------- EVENEMENTS DE COUCHE */
@@ -125,13 +164,13 @@ window.CORE = window.CORE || {};
   /* ---------------------------------------------------------------- DEFIS */
   /* check(st) ou st = { up, bonus, reserve, fuelEnd, straight, falls, ore, time } */
   CFG.CHALLENGES = [
-    { id: 'noup',     label: 'Ne jamais forer vers le haut',   gold: 220, check: function (st) { return st.up === 0; } },
-    { id: 'bonus3',   label: 'Ramasser 3 bonus',               gold: 180, check: function (st) { return st.bonus >= 3; } },
-    { id: 'noreserve', label: 'Ne jamais passer en reserve',   gold: 160, check: function (st) { return st.reserve === 0; } },
-    { id: 'fuel50',   label: 'Finir avec plus de 50 L',        gold: 200, check: function (st) { return st.fuelEnd > 50; } },
-    { id: 'straight', label: '25 blocs sans changer de sens',  gold: 200, check: function (st) { return st.straight >= 25; } },
-    { id: 'ore10',    label: 'Ramasser 10 minerais',           gold: 150, check: function (st) { return st.ore >= 10; } },
-    { id: 'fall30',   label: 'Chuter de 30 blocs d\'un coup',  gold: 180, check: function (st) { return st.bigFall >= 30; } }
+    { id: 'noup',     label: 'Ne jamais forer vers le haut',   gold: 120, check: function (st) { return st.up === 0; } },
+    { id: 'bonus3',   label: 'Ramasser 3 bonus',               gold: 100, check: function (st) { return st.bonus >= 3; } },
+    { id: 'noreserve', label: 'Ne jamais passer en reserve',   gold: 90, check: function (st) { return st.reserve === 0; } },
+    { id: 'fuel50',   label: 'Finir avec plus de 50 L',        gold: 110, check: function (st) { return st.fuelEnd > 50; } },
+    { id: 'straight', label: '25 blocs sans changer de sens',  gold: 110, check: function (st) { return st.straight >= 25; } },
+    { id: 'ore10',    label: 'Ramasser 10 minerais',           gold: 85, check: function (st) { return st.ore >= 10; } },
+    { id: 'fall30',   label: 'Chuter de 30 blocs d\'un coup',  gold: 100, check: function (st) { return st.bigFall >= 30; } }
   ];
 
   CORE.CFG = CFG;

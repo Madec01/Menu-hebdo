@@ -3,7 +3,9 @@
 Un jeu de minage 2D. Tu pilotes une foreuse, tu perces la planete couche par couche,
 et ton seul adversaire est le chrono.
 
-> Pas de vie, pas de game over. Un piege te coute des secondes, jamais la partie.
+> Trois points d'integrite. La roche non soutenue te tombe dessus, et une Faille
+> descend derriere toi en accelerant. Se faire ecraser relance le NIVEAU — jamais
+> la partie, jamais ta progression.
 > Le carburant, lui, ne brule qu'a l'action : creuser large coute cher, reflechir
 > ne coute rien.
 
@@ -49,7 +51,8 @@ node build.js
 
 ## Contenu
 
-- **3 couches, 9 niveaux** courts (12 a 90 s chacun), du sol aux grottes de cristal.
+- **3 couches, 14 niveaux** courts (100 a 125 lignes, 15 a 40 s chacun), du sol aux
+  grottes de cristal. Une nouveaute par niveau, jamais de remplissage.
 - **7 variantes de niveaux** : descente, gisement (sortie scellee par un quota), sceau
   de fin de couche, filon (une veine geante a suivre ou a quitter), effondrement (le
   plafond descend), chute (defouloir en caverne), dedale (murs infranchissables).
@@ -58,8 +61,9 @@ node build.js
 - **Des blocs a comportement**, un par couche : roche friable qui s'effondre en cascade,
   poches de charbon qui explosent en chaine, cristaux en reaction en chaine. Plus des
   coffres, des blocs rebond et de la roche gluante.
-- **8 bonus** cumulables en niveaux I a III, **3 pieges**, **25 passifs** dont trois
-  legendaires, **5 pactes** (gros gain, vrai prix), **4 metiers**, **6 pieces de foreuse**.
+- **8 bonus** cumulables en niveaux I a III, **3 pieges**, **31 passifs** dont trois
+  legendaires et une famille TERRAIN qui change les regles (Sismographe, Etayeur,
+  Charognard, Casse-cou), **5 pactes**, **4 metiers**, **6 pieces de foreuse**.
 - **Carburant** : reservoir, bidons enfouis, mode reserve, et toute une famille de
   passifs dediee.
 - **3 defis optionnels par niveau**, un **combo** qui multiplie l'or, des **medailles**
@@ -112,5 +116,7 @@ Le chrono punit la durete, le carburant punit la largeur : deux pressions distin
   19 bonus, 49 passifs, 10 legendaires, 6 pactes, 8 metiers, regles de tirage et
   archetypes de build.
 - [docs/v2-propositions.md](docs/v2-propositions.md) — le carburant, la variete des
-  niveaux et le ressenti des bonus : la conception de tout ce qui a ete ajoute apres
-  le premier jouable.
+  niveaux et le ressenti des bonus.
+- [docs/v3-challenge.md](docs/v3-challenge.md) — le diagnostic du manque de challenge
+  et sa reponse : roche qui tombe, Faille, niveaux courts, integrite. Avec les
+  references (Mr. Driller, Spelunky, Downwell) dont chaque mecanique est tiree.

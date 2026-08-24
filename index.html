@@ -35,15 +35,23 @@
   .buff .bar i{display:block;height:100%}
   #bars{position:absolute;bottom:16px;left:14px;width:210px;font-size:10px;color:var(--dim)}
   #bars .lab{display:flex;justify-content:space-between}
+  #hp{position:absolute;top:14px;left:50%;transform:translateX(-50%) translateY(-2px);
+    display:flex;gap:5px;margin-top:100px}
+  #hp i{width:16px;height:16px;border:2px solid #ff5a6e;border-radius:3px;display:block}
+  #hp i.on{background:#ff3b52;box-shadow:0 0 8px rgba(255,59,82,.7)}
+  #hp i.off{opacity:.3}
+  #restartMsg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    font-size:30px;font-weight:800;letter-spacing:6px;color:#ff5a6e;display:none;
+    text-shadow:0 3px 20px rgba(0,0,0,.9)}
   #fuelWrap.low #fuelLab{color:#ffb03d}
   #fuelWrap.dry #fuelLab{color:#ff3b52;font-weight:700}
   #combo{position:absolute;top:74px;right:14px;text-align:right;font-size:12px;
     color:var(--acc);font-weight:700;text-shadow:0 1px 6px rgba(0,0,0,.9)}
-  #eventBanner{position:absolute;top:128px;left:50%;transform:translateX(-50%);
+  #eventBanner{position:absolute;top:152px;left:50%;transform:translateX(-50%);
     text-align:center;font-size:14px;font-weight:700;letter-spacing:3px;
     padding:5px 16px;border:1px solid;border-radius:4px;background:rgba(10,11,14,.7);
     display:none}
-  #challenges{position:absolute;top:120px;left:14px;font-size:10px;line-height:1.9;
+  #challenges{position:absolute;top:132px;left:14px;font-size:10px;line-height:1.9;
     color:var(--dim)}
   #challenges .ok{color:#78ffb4}
   #challenges .ok:before{content:'[x] '}
@@ -53,7 +61,7 @@
   .meter i{display:block;height:100%;transition:width .06s linear}
   #passivelist{position:absolute;bottom:16px;right:14px;text-align:right;font-size:10px;
     color:var(--dim);line-height:1.6;max-width:230px}
-  #quota{position:absolute;top:112px;left:50%;transform:translateX(-50%);
+  #quota{position:absolute;top:182px;left:50%;transform:translateX(-50%);
     font-size:12px;color:#ff6a7d;text-align:center}
 
   /* ---------------- ECRANS ---------------- */
@@ -120,6 +128,8 @@
   <div id="right"><div id="gold">0 $</div><div id="oreCount"></div></div>
   <div id="buffs"></div>
   <div id="quota"></div>
+  <div id="hp"></div>
+  <div id="restartMsg">NIVEAU RELANCE</div>
   <div id="combo"></div>
   <div id="eventBanner"></div>
   <div id="challenges"></div>
@@ -129,7 +139,8 @@
       <div class="meter" style="height:11px"><i id="fuelBar" style="background:linear-gradient(90deg,#5f9c3a,#9be08a)"></i></div>
     </div>
     ELAN<div class="meter"><i id="elanBar" style="background:linear-gradient(90deg,#ff8a3d,#ffd24a)"></i></div>
-    TURBO<div class="meter"><i id="turboBar" style="background:linear-gradient(90deg,#5ff0e0,#7ec8ff)"></i></div>
+    <div class="lab"><span>TURBO</span><span id="turboLab"></span></div>
+    <div class="meter"><i id="turboBar" style="background:linear-gradient(90deg,#5ff0e0,#7ec8ff)"></i></div>
   </div>
   <div id="passivelist"></div>
 </div>

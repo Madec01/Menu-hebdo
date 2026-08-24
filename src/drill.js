@@ -8,7 +8,7 @@ window.CORE = window.CORE || {};
 
   function create(world) {
     return {
-      x: world.exitX + 1, y: 1,
+      x: world.startX !== undefined ? world.startX : world.exitX + 1, y: 1,
       vx: 0, vy: 0,
       fx: 0, fy: 1,          // direction de la tete
       rotT: 0, elan: 0,
@@ -77,8 +77,9 @@ window.CORE = window.CORE || {};
 
     // ---- turbo ------------------------------------------------------------
     if (d.turboCd > 0) d.turboCd -= dt;
-    if (input.turbo && !s.turboBlocked && d.turboT <= 0 && d.turboCd <= 0) {
-      d.turboT = s.turboDur; d.turboCd = s.turboCd + s.turboDur;
+    // le turbo ne part que s'il est charge : il se gagne en jouant bien
+    if (input.turbo && !s.turboBlocked && s.turboReady && d.turboT <= 0 && d.turboCd <= 0) {
+      d.turboT = s.turboDur; d.turboCd = 1.5 + s.turboDur;
       if (hooks.onTurbo) hooks.onTurbo();
     }
     if (d.turboT > 0) d.turboT -= dt;

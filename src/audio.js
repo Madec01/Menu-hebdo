@@ -92,6 +92,24 @@ window.CORE = window.CORE || {};
     },
     blast: function () { blip(120, 0.35, 'sawtooth', 0.2, 40); },
     bounce: function () { blip(400, 0.16, 'sine', 0.16, 1100); },
+    hurt: function () {
+      blip(220, 0.22, 'sawtooth', 0.22, 70);
+      setTimeout(function () { blip(140, 0.3, 'square', 0.16, 50); }, 60);
+    },
+    fail: function () {
+      [400, 320, 250, 180, 120].forEach(function (f, i) {
+        setTimeout(function () { blip(f, 0.22, 'sawtooth', 0.18); }, i * 110);
+      });
+    },
+    creak: function () { blip(90, 0.35, 'sawtooth', 0.09, 130); },
+    rockfall: function () {
+      blip(70, 0.4, 'sawtooth', 0.2, 35);
+      setTimeout(function () { blip(110, 0.25, 'square', 0.12, 45); }, 80);
+    },
+    faille: function (near) {
+      if (!ctx || !enabled) return;
+      blip(55 + near * 40, 0.5, 'sawtooth', 0.06 + near * 0.1, 40);
+    },
     event: function () {
       blip(180, 0.5, 'sawtooth', 0.13, 320);
       setTimeout(function () { blip(320, 0.4, 'triangle', 0.12, 240); }, 140);

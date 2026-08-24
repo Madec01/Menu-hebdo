@@ -13,6 +13,8 @@ window.CORE = window.CORE || {};
     time: 0, levelTime: 0, freeze: 0, souffle: 0, rescueT: 0,
     ore: 0, shake: 0, currentHard: 1,
     fuel: 100, fuelMax: 100, reserve: false, lowWarned: false,
+    hp: 3, iframes: 0, stun: 0, falls: [], failleCd: 0, sealBroken: false,
+    justRestarted: 0, turboCharge: 0,
     event: null, eventT: 0, eventNext: 0, marker: null,
     combo: 0, comboT: 0, comboMult: 1,
     challenges: [], st: null,
@@ -51,6 +53,7 @@ window.CORE = window.CORE || {};
     });
 
     if (G.souffle > 0) s.speed *= 1.3;
+    if (s.daredevil && G.world && G.world.failleRow > G.drill.y - 15) s.speed *= 1.4;
 
     // evenements de couche
     if (G.event) {
@@ -73,7 +76,7 @@ window.CORE = window.CORE || {};
     G.run = {
       job: job, parts: {}, passives: {}, gold: 0,
       levelIndex: 0, splits: [], medals: [], total: 0,
-      shopClosedFor: 0,
+      shopClosedFor: 0, restarts: 0, lost: 0,
       seed: (Math.random() * 1e9) | 0
     };
     startLevel(0);
@@ -92,6 +95,11 @@ window.CORE = window.CORE || {};
     G.combo = 0; G.comboT = 0; G.comboMult = 1;
     G.hitstop = 0; G.slowmo = 0; G.flash = null; G.desat = 0;
     G.lowWarned = false; G.reserve = false; G.rescueT = 0;
+    G.hp = CFG.HP + (pre.hpBonus || 0); G.iframes = 0; G.stun = 0; G.falls = [];
+    G.failleCd = 0; G.sealBroken = false; G.turboCharge = 0;
+    G.world.failleRow = G.world.top - 3;
+    G.fallSeen = new Set();
+    G.levelToken = (G.levelToken || 0) + 1;
     G.nextBlast = def.top + 60;
     G.st = { up: 0, bonus: 0, reserve: 0, straight: 0, ore: 0, bigFall: 0, fuelEnd: 0 };
 
@@ -162,6 +170,193 @@ window.CORE = window.CORE || {};
     }
   }
 
+  /* -------------------------------------------------------- INTEGRITE */
+  function damage(n, label) {
+    if (G.iframes > 0 || G.state !== 'play') return;
+    G.hp -= n;
+    G.iframes = CFG.IFRAMES;
+    G.shake = 18;
+    flash('#ff3b52', 0.45);
+    toast(label, '#ff3b52', true);
+    SFX.hurt();
+    if (G.hp <= 0) restartLevel();
+  }
+
+  /* On perd un niveau, jamais une partie : l'or, les passifs et les pieces
+     restent acquis. Seul le temps deja passe est perdu, et il compte. */
+  function restartLevel() {
+    G.run.lost += G.levelTime;
+    G.run.total += G.levelTime;
+    G.run.restarts++;
+    SFX.fail();
+    var idx = G.run.levelIndex;
+    startLevel(idx);
+    G.justRestarted = 2.6;
+  }
+
+  function addTurbo(x) {
+    G.turboCharge = Math.min(1, G.turboCharge + x);
+  }
+
+  /* ------------------------------------------------------- EFFONDREMENTS */
+  /* Une masse privee d'appui tremble, puis lache. Le danger est toujours
+     annonce : 0,4 s de fissures avant la chute. */
+  function checkCollapse(cx, cy) {
+    if (G.stats.propper && cy < G.drill.y - 3) return;
+    for (var ox = -3; ox <= 3; ox++) {
+      var x = cx + ox, y = cy - 1;
+      if (!G.world.inside(x, y)) continue;
+      if (G.fallSeen.has(y * G.world.w + x)) continue;
+      var mass = W.looseMass(G.world, x, y, 3, CFG.FALL.maxMass);
+      if (!mass) continue;
+      mass.forEach(function (c) { G.fallSeen.add(c[1] * G.world.w + c[0]); });
+      G.falls.push({ cells: mass, state: 'shake', t: CFG.FALL.shake, off: 0, dy: 0 });
+      SFX.creak();
+    }
+  }
+
+  function massCanOccupy(fall, dy) {
+    var world = G.world, d = G.drill;
+    for (var i = 0; i < fall.cells.length; i++) {
+      var x = fall.cells[i][0], y = fall.cells[i][1] + dy;
+      if (y >= world.h) return false;
+      if (world.at(x, y) !== W.T.EMPTY) return false;
+      // La foreuse fait obstacle : une masse s'arrete SUR elle, elle ne
+      // l'engloutit jamais — sinon on se retrouve emmure dans la roche.
+      if (x >= d.x - 0.95 && x <= d.x + CFG.DRILL_W - 0.05 &&
+          y >= d.y - 0.95 && y <= d.y + CFG.DRILL_H - 0.05) return false;
+    }
+    return true;
+  }
+
+  function liftMass(fall) {
+    var world = G.world;
+    fall.types = []; fall.hards = [];
+    fall.cells.forEach(function (c) {
+      var i = world.idx(c[0], c[1]);
+      fall.types.push(world.type[i]);
+      fall.hards.push(world.hard[i]);
+      world.type[i] = W.T.EMPTY;
+    });
+  }
+
+  function landMass(fall) {
+    var world = G.world, dy = fall.dy;
+    var d = G.drill;
+    fall.cells.forEach(function (c, k) {
+      var x = c[0], y = c[1] + dy;
+      if (!world.inside(x, y)) return;
+      var i = world.idx(x, y);
+      if (world.type[i] !== W.T.EMPTY) return;
+      // par securite : jamais de bloc pose dans la foreuse
+      if (x >= d.x - 0.95 && x <= d.x + CFG.DRILL_W - 0.05 &&
+          y >= d.y - 0.95 && y <= d.y + CFG.DRILL_H - 0.05) return;
+      world.type[i] = fall.types[k];
+      world.hard[i] = fall.hards[k];
+      G.fallSeen.delete(c[1] * world.w + c[0]);
+    });
+    burst(fall.cells[0][0], fall.cells[0][1] + dy, '#8a7a68', 12);
+    G.shake = Math.max(G.shake, 9);
+    addTurbo(CFG.TURBO.collapse * (G.stats.quakeTurbo || 1));
+    SFX.rockfall();
+  }
+
+  function updateFalls(dt) {
+    // Un degat peut relancer le niveau au milieu de la boucle : le jeton nous
+    // dit que G.falls et G.drill viennent d'etre remplaces.
+    var tok = G.levelToken;
+    var d = G.drill;
+    for (var i = G.falls.length - 1; i >= 0; i--) {
+      var f = G.falls[i];
+      if (!f) continue;
+      if (f.state === 'shake') {
+        f.t -= dt;
+        if (f.t <= 0) {
+          f.state = 'fall';
+          liftMass(f);
+          if (!massCanOccupy(f, 1)) { landMass(f); G.falls.splice(i, 1); continue; }
+        }
+        continue;
+      }
+
+      f.off += CFG.FALL.speed * dt;
+      var want = Math.floor(f.off);
+      while (f.dy < want) {
+        if (!massCanOccupy(f, f.dy + 1)) break;
+        f.dy++;
+      }
+      if (f.dy < want) { landMass(f); G.falls.splice(i, 1); continue; }
+
+      // ecrasement : la masse pousse la foreuse vers le bas
+      for (var k = 0; k < f.cells.length; k++) {
+        var mx = f.cells[k][0], my = f.cells[k][1] + f.dy;
+        if (mx >= d.x - 0.9 && mx <= d.x + CFG.DRILL_W - 0.1 &&
+            my >= d.y - 0.9 && my <= d.y + CFG.DRILL_H - 0.1) {
+          if (G.stats.scavenger) {
+            G.run.gold += Math.round(G.world.layer.oreValue * 3 * G.stats.value);
+            SFX.gold();
+          } else {
+            damage(CFG.FALL.damage, 'ECRASE');
+            if (G.levelToken !== tok) return;
+          }
+          d.vy = Math.max(d.vy, 16);
+          f.crushed = true;
+          break;
+        }
+      }
+      if (f.dy > 400) { landMass(f); G.falls.splice(i, 1); }
+    }
+  }
+
+  /* ------------------------------------------------------------ LA FAILLE */
+  /* Le chrono a un visage : un front d'effondrement qui descend en accelerant. */
+  function updateFaille(dt) {
+    var world = G.world, d = G.drill, def = world.def;
+    var F = CFG.FAILLE;
+    var tok = G.levelToken;
+    if (G.failleCd > 0) G.failleCd -= dt;
+    if (G.levelTime < F.delay) return;
+
+    var el = G.levelTime - F.delay;
+    var mult = (def.faille || 1) * (G.sealBroken ? F.sealBoost : 1);
+    world.failleRow += (F.speed + F.accel * el) * mult * dt;
+
+    var row = Math.min(Math.floor(world.failleRow), world.top + def.height - 1);
+    if (world.filledTo === undefined) world.filledTo = world.top - 1;
+    if (row > world.filledTo) {
+      var px0 = Math.floor(d.x) - 1, px1 = Math.floor(d.x + CFG.DRILL_W) + 1;
+      var py0 = Math.floor(d.y) - 1, py1 = Math.floor(d.y + CFG.DRILL_H) + 1;
+      for (var y = Math.max(world.top, world.filledTo + 1); y <= row; y++) {
+        for (var x = 1; x < world.w - 1; x++) {
+          if (x >= px0 && x <= px1 && y >= py0 && y <= py1) continue;
+          var i = world.idx(x, y);
+          if (world.type[i] === W.T.EMPTY) world.setRock(x, y, W.T.HARD);
+        }
+      }
+      world.filledTo = row;
+    }
+
+    // rattrapage : on est enseveli, pousse vers le bas, et ca coute cher
+    if (world.failleRow > d.y - 0.3 && G.failleCd <= 0) {
+      G.failleCd = 3;
+      G.stun = 0.7;
+      damage(1, 'ENSEVELI');
+      if (G.levelToken !== tok) return;
+      var push = CFG.FAILLE.catchPush;
+      for (var p = 0; p < push; p++) {
+        var ny = d.y + 1;
+        var bx0 = Math.floor(d.x), bx1 = Math.floor(d.x + CFG.DRILL_W - 1e-6);
+        var by = Math.floor(ny + CFG.DRILL_H - 1e-6);
+        for (var bx = bx0; bx <= bx1; bx++) {
+          if (W.DESTRUCTIBLE[world.at(bx, by)]) destroyAt(bx, by, true, { n: 6 });
+        }
+        if (!CORE.DRILL.overlapsSolid(world, d.x, ny)) d.y = ny;
+      }
+      world.failleRow = Math.max(world.top - 1, d.y - 11);
+      world.filledTo = Math.floor(world.failleRow);
+    }
+  }
+
   /* ---------------------------------------------------------- CARBURANT */
   function burn(amount) {
     if (G.fuel <= 0) return;
@@ -223,8 +418,17 @@ window.CORE = window.CORE || {};
     var world = G.world, layer = world.layer, stats = G.stats;
     var beh = W.BEHAVIOUR[type];
 
+    if (type === W.T.SEAL) G.sealBroken = true;
+    // gravats au fond des galeries : un tunnel doit avoir l'air creuse
+    if (world.at(cx, cy + 1) !== W.T.EMPTY && Math.random() < 0.55) {
+      world.debris.add(world.idx(cx, cy));
+    }
+    checkCollapse(cx, cy);
+    if (G.combo > 0) addTurbo(CFG.TURBO.block);
+
     if (type === W.T.ORE) {
       G.ore++; G.st.ore++;
+      addTurbo(CFG.TURBO.ore);
       bumpCombo();
       G.run.gold += Math.round(layer.oreValue * stats.value * G.comboMult);
       if (stats.oreFuel) refuel(1);
@@ -337,33 +541,6 @@ window.CORE = window.CORE || {};
     G.marker = null;
   }
 
-  function collapseCeiling(dt) {
-    var world = G.world, def = world.def, d = G.drill;
-    var speed = def.ceiling || 0;
-    var eboul = G.event && G.event.id === 'eboulement';
-    if (!speed && !eboul) return;
-    if (speed) world.ceilingRow += speed * dt;
-    if (eboul) world.ceilingRow = Math.max(world.ceilingRow, d.y - 26);
-
-    var row = Math.min(Math.floor(world.ceilingRow), world.top + def.height - 1);
-    if (world.filledTo === undefined) world.filledTo = world.top - 1;
-    if (row <= world.filledTo) return;
-
-    // On ne remplit que les lignes nouvellement franchies, et JAMAIS les cases
-    // occupees par la foreuse : sinon elle se retrouve emmuree, incapable de
-    // bouger comme de forer. Une partie ne doit jamais pouvoir se bloquer.
-    var px0 = Math.floor(d.x) - 1, px1 = Math.floor(d.x + CFG.DRILL_W) + 1;
-    var py0 = Math.floor(d.y) - 1, py1 = Math.floor(d.y + CFG.DRILL_H) + 1;
-    for (var y = world.filledTo + 1; y <= row; y++) {
-      for (var x = 1; x < world.w - 1; x++) {
-        if (x >= px0 && x <= px1 && y >= py0 && y <= py1) continue;
-        var i = world.idx(x, y);
-        if (world.type[i] === W.T.EMPTY) world.setRock(x, y, W.T.HARD);
-      }
-    }
-    world.filledTo = row;
-  }
-
   /* ------------------------------------------------------------ UPDATE */
   function update(dt, input) {
     if (G.state !== 'play') return;
@@ -378,6 +555,14 @@ window.CORE = window.CORE || {};
     G.fuelMax = stats.fuelMax;
     var world = G.world, d = G.drill;
 
+    if (G.iframes > 0) G.iframes -= dt;
+    if (G.justRestarted > 0) G.justRestarted -= dt;
+    if (G.stun > 0) {
+      G.stun -= dt;
+      input = { dx: 0, dy: 0, turbo: false };
+    }
+    stats.turboReady = G.turboCharge >= 1;
+
     var hooks = {
       onBreak: function (cx, cy, type, item) { onCellBroken(cx, cy, type, item, false, null); },
       onStall: function () { G.shake = Math.max(G.shake, 7); SFX.stall(); },
@@ -390,7 +575,7 @@ window.CORE = window.CORE || {};
         }
       },
       onBounce: function () { G.shake = Math.max(G.shake, 10); SFX.bounce(); flash('#7ec8ff', 0.15); },
-      onTurbo: function () { G.shake = Math.max(G.shake, 6); SFX.turbo(); },
+      onTurbo: function () { G.shake = Math.max(G.shake, 6); SFX.turbo(); G.turboCharge = 0; },
       onBurn: function (a) { burn(a); },
       onDrillUp: function () { G.st.up++; }
     };
@@ -465,7 +650,11 @@ window.CORE = window.CORE || {};
       fireEvent();
     }
     if (G.marker) G.marker.t -= dt;
-    collapseCeiling(dt);
+    var tok0 = G.levelToken;
+    updateFaille(dt);
+    if (G.levelToken !== tok0) return;
+    updateFalls(dt);
+    if (G.levelToken !== tok0) return;
 
     // --- chrono ------------------------------------------------------------
     var frozen = false;
@@ -531,6 +720,7 @@ window.CORE = window.CORE || {};
         flash(p.bonus.color, 0.3);
       } else {
         G.st.bonus++;
+        addTurbo(CFG.TURBO.bonus);
         bumpCombo();
         G.hitstop = 0.10;                       // arret sur image
         if (p.bonus.rar === 2 || lvl >= 3) G.slowmo = 0.3;
@@ -595,6 +785,7 @@ window.CORE = window.CORE || {};
     G.lastResult = {
       def: def, time: t, medal: medal, ore: G.ore, record: isRecord,
       challenges: G.challenges.slice(), bonusGold: bonusGold,
+      restarts: G.run.restarts, lost: G.run.lost,
       last: G.run.levelIndex >= CFG.LEVELS.length - 1
     };
     G.state = 'station';

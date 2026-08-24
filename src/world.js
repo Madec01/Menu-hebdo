@@ -57,7 +57,8 @@ window.CORE = window.CORE || {};
       type: new Uint8Array(W * H),
       hard: new Float32Array(W * H),
       items: new Map(),
-      oreTotal: 0, hardMul: 1, ceilingRow: 0,
+      debris: new Set(),
+      oreTotal: 0, hardMul: 1, ceilingRow: 0, failleRow: -99, filledTo: undefined,
       exitX: 0, exitW: 7, exitRow: top + def.height,
       idx: function (x, y) { return y * W + x; },
       inside: function (x, y) { return x >= 0 && y >= 0 && x < W && y < H; },
@@ -77,7 +78,7 @@ window.CORE = window.CORE || {};
     var noise = valueNoise(rng, W, H, 5);
     var chute = def.type === 'chute';
     var wSoft = layer.wSoft, wMed = layer.wMed, wHard = layer.wHard, wSp = layer.wSpecial;
-    if (chute) { wSoft *= 1.4; wHard *= 0.4; }
+    if (chute) { wSoft *= 1.25; wHard *= 0.5; }
 
     // Le bruit n'est pas uniforme : il se concentre autour de 0,5. On echantillonne
     // ses quantiles pour que les proportions de roche correspondent exactement aux
@@ -110,12 +111,12 @@ window.CORE = window.CORE || {};
     }
 
     // --- cavernes ----------------------------------------------------------
-    var caves = chute ? 22 : layer.caves;
+    var caves = chute ? 13 : layer.caves;
     for (var c = 0; c < caves; c++) {
       var cx = rng.int(6, W - 7);
       var cy = rng.int(top + 14, top + def.height - 10);
-      var rx = chute ? rng.int(8, 18) : rng.int(4, 11);
-      var ry = chute ? rng.int(7, 16) : rng.int(3, 8);
+      var rx = chute ? rng.int(6, 13) : rng.int(4, 11);
+      var ry = chute ? rng.int(5, 11) : rng.int(3, 8);
       for (var oy = -ry; oy <= ry; oy++) {
         for (var ox = -rx; ox <= rx; ox++) {
           if ((ox * ox) / (rx * rx) + (oy * oy) / (ry * ry) > 1) continue;
@@ -256,10 +257,83 @@ window.CORE = window.CORE || {};
       }
     }
     world.locked = (def.type === 'gisement');
+    // On ne demarre jamais au-dessus de la sortie : il y a toujours du chemin
+    // lateral a faire, sinon un niveau peut se boucler en chute libre.
+    var offs = rng.int(14, 26) * (world.exitX < W / 2 ? 1 : -1);
+    world.startX = Math.max(3, Math.min(W - 5, world.exitX + offs));
     world.ceilingRow = top - 2;
     world.setRock = setRock;
 
+    // Plans d'arriere-plan : cavernes lointaines, colonnes, strates.
+    // C'est ce qui donne la sensation d'etre DANS quelque chose.
+    world.bg = [];
+    for (var b = 0; b < 90; b++) {
+      world.bg.push({
+        x: rng.range(-0.15, 1.15), y: rng.range(0, 1),
+        rx: rng.range(0.03, 0.16), ry: rng.range(0.01, 0.05),
+        d: rng.pick([0.22, 0.38, 0.55]),
+        kind: rng.f() < 0.55 ? 'blob' : 'column'
+      });
+    }
+    world.strata = [];
+    for (var st = 0; st < 26; st++) {
+      world.strata.push({ y: rng.f(), h: rng.range(0.004, 0.02), d: rng.pick([0.3, 0.5]) });
+    }
+    world.fore = [];
+    for (var fo = 0; fo < 16; fo++) {
+      world.fore.push({ x: rng.range(0, 1), y: rng.range(0, 1), r: rng.range(0.02, 0.06) });
+    }
+
     return world;
+  }
+
+  /* ------------------------------------------------------ EFFONDREMENTS */
+  /* Largeur du vide sous une case : c'est elle qui decide si le plafond tient.
+     Creuser 2 de large ne fait rien tomber, creuser 4 fait ceder la voute. */
+  function emptySpanBelow(world, x, y) {
+    if (world.at(x, y + 1) !== T.EMPTY) return 0;
+    var span = 1, k;
+    for (k = 1; k < 12; k++) { if (world.at(x - k, y + 1) !== T.EMPTY) break; span++; }
+    for (k = 1; k < 12; k++) { if (world.at(x + k, y + 1) !== T.EMPTY) break; span++; }
+    return span;
+  }
+
+  /* La masse qui lache au-dessus d'un vide, ou null si la voute tient. */
+  function looseMass(world, x, y, minSpan, cap) {
+    var span = emptySpanBelow(world, x, y);
+    if (span < minSpan) return null;
+    if (!DESTRUCTIBLE[world.at(x, y)]) return null;
+
+    var spread = Math.min(7, Math.ceil(span / 2) + 1);
+    var height = Math.min(8, 2 + Math.floor(span / 2));
+    var seen = new Set(), cells = [], queue = [[x, y]];
+    while (queue.length && cells.length < cap) {
+      var c = queue.shift();
+      var cx = c[0], cy = c[1];
+      if (Math.abs(cx - x) > spread || y - cy > height || cy > y) continue;
+      var key = cy * world.w + cx;
+      if (seen.has(key)) continue;
+      if (!DESTRUCTIBLE[world.at(cx, cy)]) continue;
+      seen.add(key);
+      cells.push([cx, cy]);
+      queue.push([cx, cy - 1], [cx - 1, cy], [cx + 1, cy]);
+    }
+    if (cells.length >= cap) return null;   // trop gros : c'est le terrain, il porte
+
+    // On retire ce qui repose encore sur du solide exterieur a la masse, jusqu'a
+    // ne garder que ce qui pend vraiment dans le vide.
+    for (var pass = 0; pass < 4; pass++) {
+      var inMass = new Set();
+      cells.forEach(function (cc) { inMass.add(cc[1] * world.w + cc[0]); });
+      var kept = cells.filter(function (cc) {
+        var below = (cc[1] + 1) * world.w + cc[0];
+        if (inMass.has(below)) return true;
+        return world.at(cc[0], cc[1] + 1) === T.EMPTY;
+      });
+      if (kept.length === cells.length) break;
+      cells = kept;
+    }
+    return cells.length >= 2 ? cells : null;
   }
 
   function unlockExit(world) {
@@ -284,6 +358,7 @@ window.CORE = window.CORE || {};
 
   CORE.WORLD = {
     generate: generate, unlockExit: unlockExit, nearestItem: nearestItem,
+    emptySpanBelow: emptySpanBelow, looseMass: looseMass,
     T: T, KIND: KIND, DESTRUCTIBLE: DESTRUCTIBLE, BEHAVIOUR: BEHAVIOUR
   };
 })(window.CORE);

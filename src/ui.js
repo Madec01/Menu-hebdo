@@ -201,8 +201,18 @@ window.CORE = window.CORE || {};
     fw.className = G.reserve ? 'dry' : (G.fuel < CFG.FUEL.alertAt ? 'low' : '');
 
     $('elanBar').style.width = (d.elan * 100).toFixed(0) + '%';
-    var tb = d.turboT > 0 ? 100 : (d.turboCd > 0 ? (1 - d.turboCd / (s.turboCd + s.turboDur)) * 100 : 100);
+    var tb = d.turboT > 0 ? 100 : G.turboCharge * 100;
     $('turboBar').style.width = tb.toFixed(0) + '%';
+    $('turboBar').style.background = G.turboCharge >= 1
+      ? 'linear-gradient(90deg,#ffd24a,#fff2a8)' : 'linear-gradient(90deg,#5ff0e0,#7ec8ff)';
+    $('turboLab').textContent = d.turboT > 0 ? 'ACTIF' : (G.turboCharge >= 1 ? 'PRET' : '');
+
+    var pips = '';
+    var maxHp = CFG.HP + (s.hpBonus || 0);
+    for (var h = 0; h < maxHp; h++) pips += '<i class="' + (h < G.hp ? 'on' : 'off') + '"></i>';
+    $('hp').innerHTML = pips;
+    $('hp').style.opacity = G.iframes > 0 ? (0.4 + 0.6 * Math.abs(Math.sin(G.time * 20))) : 1;
+    $('restartMsg').style.display = G.justRestarted > 0 ? 'block' : 'none';
 
     var list = [];
     for (var id in G.run.passives) {

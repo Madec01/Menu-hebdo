@@ -117,6 +117,31 @@ window.CORE = window.CORE || {};
     { id: 'U-04', fam: 'RESERVOIR', name: 'Turbo sec', rar: 1, max: 1,
       desc: 'Le turbo ne consomme plus de carburant', flag: 'dryTurbo', apply: function () {} },
 
+    /* --- famille TERRAIN : des cartes qui changent les REGLES ------------- */
+    { id: 'T-01', fam: 'TERRAIN', name: 'Sismographe', rar: 0, max: 1,
+      desc: 'Les masses instables se colorent avant de lacher',
+      flag: 'seismo', apply: function () {} },
+
+    { id: 'T-02', fam: 'TERRAIN', name: 'Etayeur', rar: 1, max: 1,
+      desc: 'Plus rien ne s\'effondre derriere toi, seulement devant',
+      flag: 'propper', apply: function () {} },
+
+    { id: 'T-03', fam: 'TERRAIN', name: 'Charognard', rar: 1, max: 1,
+      desc: 'La roche qui te tombe dessus se transforme en minerai',
+      flag: 'scavenger', apply: function () {} },
+
+    { id: 'T-04', fam: 'TERRAIN', name: 'Casse-cou', rar: 1, max: 1,
+      desc: '+40 % de vitesse tant que la Faille est a moins de 15 lignes',
+      flag: 'daredevil', apply: function () {} },
+
+    { id: 'T-05', fam: 'TERRAIN', name: 'Onde sismique', rar: 1, max: 2,
+      desc: 'Chaque effondrement declenche recharge le turbo',
+      apply: function (s, n) { s.quakeTurbo = 3 * n; } },
+
+    { id: 'T-06', fam: 'TERRAIN', name: 'Casque renforce', rar: 1, max: 2,
+      desc: 'Integrite +1',
+      apply: function (s, n) { s.hpBonus = (s.hpBonus || 0) + n; } },
+
     { id: 'P-09', fam: 'PILOTAGE', name: 'Foreuse gravitationnelle', rar: 2, max: 1,
       desc: 'En chute, on fore vers le bas a pleine vitesse sans ralentir',
       flag: 'gravDrill', apply: function () {} },
@@ -156,15 +181,15 @@ window.CORE = window.CORE || {};
 
   /* --------------------------------------------------------- PIECES (shop) */
   var PARTS = [
-    { id: 'tete', name: 'Tete de forage', desc: 'Force +2,5', cost: 190, growth: 1.7, max: 10,
+    { id: 'tete', name: 'Tete de forage', desc: 'Force +2,5', cost: 170, growth: 1.62, max: 14,
       apply: function (s, n) { s.force += 2.5 * n; } },
-    { id: 'moteur', name: 'Moteur', desc: 'Vitesse +0,35', cost: 190, growth: 1.7, max: 10,
+    { id: 'moteur', name: 'Moteur', desc: 'Vitesse +0,35', cost: 170, growth: 1.62, max: 14,
       apply: function (s, n) { s.speed += 0.35 * n; } },
-    { id: 'reservoir', name: 'Reservoir', desc: 'Carburant +40 L', cost: 210, growth: 1.6, max: 8,
+    { id: 'reservoir', name: 'Reservoir', desc: 'Carburant +40 L', cost: 210, growth: 1.75, max: 6,
       apply: function (s, n) { s.fuelMax += 40 * n; } },
     { id: 'injection', name: 'Injection propre', desc: 'Consommation -15 %', cost: 280, growth: 1.8, max: 5,
       apply: function (s, n) { s.burn *= Math.pow(0.85, n); } },
-    { id: 'elargisseur', name: 'Elargisseur', desc: 'Largeur +1', cost: 700, growth: 2.3, max: 4,
+    { id: 'elargisseur', name: 'Elargisseur', desc: 'Largeur +1', cost: 620, growth: 2.4, max: 4,
       apply: function (s, n) { s.width += n; } },
     { id: 'chenilles', name: 'Chenilles', desc: 'Deplacement +2,5', cost: 160, growth: 1.6, max: 6,
       apply: function (s, n) { s.roll += 2.5 * n; s.climb += 1.5 * n; } }
