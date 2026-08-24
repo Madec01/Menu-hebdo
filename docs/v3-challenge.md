@@ -203,9 +203,12 @@ Par ordre d'impact :
 1. **Le parallaxe.** Deux ou trois plans d'arriere-plan qui defilent plus lentement :
    silhouettes de cavernes lointaines, strates, colonnes. C'est ce qui donne la sensation
    d'etre *dans* quelque chose. C'est le plus gros gain visuel pour le moins de travail.
-2. **La lumiere de la foreuse.** Un vrai cone de phare oriente dans le sens de la marche,
-   qui balaie la roche et projette des ombres portees simples. Aujourd'hui l'obscurite est
-   un disque centre ; un cone qui suit la tete, c'est immediatement plus vivant.
+2. **La lumiere de la foreuse.** Un vrai phare oriente dans le sens de la marche.
+   *Implemente, apres deux essais rates :* un cone en polygone efface par composition
+   donnait des artefacts, puis une chaine de halos doux donnait un rendu brumeux et
+   delave. La bonne reponse est un **eclairage par bloc** — chaque tuile est assombrie
+   selon sa distance a la foreuse et son angle par rapport au phare, au moment ou on la
+   dessine. Tuiles nettes, halo lisible, aucun voile par-dessus la scene.
 3. **La galerie doit avoir l'air creusee.** Bords irreguliers, gravats au fond, poussiere
    en suspension, trainees d'humidite. Aujourd'hui un tunnel est un rectangle noir.
 4. **Les premiers plans.** Des rochers et des stalactites qui passent devant la camera,

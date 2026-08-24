@@ -54,7 +54,10 @@ window.CORE = window.CORE || {};
       bidon: 32,           // L rendus par un bidon
       reserveSpeed: 1 / 3, // vitesse en panne seche
       alertAt: 20,         // seuil du filet de securite et de l'alarme
-      rescueRadius: 20     // sous le seuil, un bidon est garanti dans ce rayon
+      rescueRadius: 20,    // sous le seuil, un bidon est garanti dans ce rayon
+      freeTop: 35,         // ration de secours offerte au depart d'un niveau
+      canSize: 40,         // litres par bidon achete a la station
+      canPrice: 110        // prix du bidon
     },
 
     // Stats de depart de la foreuse
@@ -92,7 +95,7 @@ window.CORE = window.CORE || {};
     {
       id: 1, name: 'LA TERRE', from: 0, to: 220,
       bg: '#1a110c', fog: '#2c1d13', dark: 0.30,
-      soft: '#6b4a2f', med: '#82603c', hard: '#77736c',
+      soft: '#5b3d26', med: '#6f5133', hard: '#6a675f',
       ore: '#d68b3f', oreName: 'cuivre', oreValue: 13,
       wSoft: 0.56, wMed: 0.26, wHard: 0.08,
       special: 'FRIABLE', wSpecial: 0.10,   // s'effondre en cascade
@@ -101,7 +104,7 @@ window.CORE = window.CORE || {};
     {
       id: 2, name: 'LES SEDIMENTS', from: 220, to: 880,
       bg: '#12151a', fog: '#232a2f', dark: 0.55,
-      soft: '#8a8175', med: '#666158', hard: '#9ba3ab',
+      soft: '#6f685e', med: '#4f4b45', hard: '#828a91',
       ore: '#e0b23c', oreName: 'fer', oreValue: 22,
       wSoft: 0.44, wMed: 0.30, wHard: 0.14,
       special: 'CHARBON', wSpecial: 0.12,   // explose et enflamme ses voisines
@@ -110,7 +113,7 @@ window.CORE = window.CORE || {};
     {
       id: 3, name: 'LES GROTTES DE CRISTAL', from: 880, to: 1600,
       bg: '#0e0a18', fog: '#241b3a', dark: 0.68,
-      soft: '#6d5aa0', med: '#4c3f78', hard: '#8fa0d8',
+      soft: '#584a85', med: '#3b3160', hard: '#7787bb',
       ore: '#c8e6ff', oreName: 'argent', oreValue: 38,
       wSoft: 0.38, wMed: 0.28, wHard: 0.16,
       special: 'CRISTAL', wSpecial: 0.18,   // reaction en chaine, et ca paye

@@ -76,7 +76,7 @@ window.CORE = window.CORE || {};
     G.run = {
       job: job, parts: {}, passives: {}, gold: 0,
       levelIndex: 0, splits: [], medals: [], total: 0,
-      shopClosedFor: 0, restarts: 0, lost: 0,
+      shopClosedFor: 0, restarts: 0, lost: 0, fuelCarry: undefined,
       seed: (Math.random() * 1e9) | 0
     };
     startLevel(0);
@@ -105,7 +105,11 @@ window.CORE = window.CORE || {};
 
     var stats = computeStats();
     G.fuelMax = stats.fuelMax;
-    G.fuel = stats.fuelMax;          // plein gratuit a chaque station
+    // Le carburant ne se remplit plus tout seul : il se reporte d'un niveau a
+    // l'autre, s'achete a la station et se trouve dans la roche. Seule une
+    // ration de secours est offerte, pour qu'on ne parte jamais a sec.
+    if (G.run.fuelCarry === undefined) G.run.fuelCarry = stats.fuelMax;
+    G.fuel = Math.min(stats.fuelMax, Math.max(G.run.fuelCarry, CFG.FUEL.freeTop));
 
     // defis du niveau
     var crng = CORE.makeRng((G.run.seed + index * 5711) | 0);
@@ -120,6 +124,7 @@ window.CORE = window.CORE || {};
     G.cam.x = G.drill.x * CFG.TILE - 300;
     G.cam.y = 0;
     G.stats = stats;
+    G.levelStartFuel = G.fuel;
     G.state = 'play';
   }
 
@@ -186,6 +191,7 @@ window.CORE = window.CORE || {};
      restent acquis. Seul le temps deja passe est perdu, et il compte. */
   function restartLevel() {
     G.run.lost += G.levelTime;
+    G.run.fuelCarry = G.levelStartFuel;
     G.run.total += G.levelTime;
     G.run.restarts++;
     SFX.fail();
@@ -771,6 +777,7 @@ window.CORE = window.CORE || {};
     });
     G.run.gold += bonusGold;
 
+    G.run.fuelCarry = G.fuel;
     G.run.splits.push(t);
     G.run.medals.push(medal);
     G.run.total += t;
@@ -813,6 +820,16 @@ window.CORE = window.CORE || {};
     return true;
   }
 
+  function buyFuel() {
+    if (!shopOpen()) return false;
+    if (G.run.gold < CFG.FUEL.canPrice) return false;
+    var max = computeStats().fuelMax;
+    if (G.run.fuelCarry >= max) return false;
+    G.run.gold -= CFG.FUEL.canPrice;
+    G.run.fuelCarry = Math.min(max, G.run.fuelCarry + CFG.FUEL.canSize);
+    return true;
+  }
+
   function nextLevel() {
     if (G.run.levelIndex >= CFG.LEVELS.length - 1) {
       CORE.SAVE.recordTotal(G.run.total);
@@ -825,6 +842,6 @@ window.CORE = window.CORE || {};
   CORE.GAME = {
     G: G, startRun: startRun, startLevel: startLevel, update: update,
     computeStats: computeStats, chooseCard: chooseCard, buyPart: buyPart,
-    nextLevel: nextLevel, medalFor: medalFor, shopOpen: shopOpen
+    nextLevel: nextLevel, medalFor: medalFor, shopOpen: shopOpen, buyFuel: buyFuel
   };
 })(window.CORE);

@@ -102,6 +102,23 @@ window.CORE = window.CORE || {};
     $('stShopNote').textContent = open ? '' : '  — fermee : pacte de l\'avare';
     var host = $('stShop');
     host.innerHTML = '';
+
+    // Le carburant ne se remplit plus tout seul : on l'achete ici, ou on le
+    // trouve dans la roche pendant la descente.
+    var stats = GAME.computeStats();
+    var carry = G.run.fuelCarry === undefined ? stats.fuelMax : G.run.fuelCarry;
+    var full = carry >= stats.fuelMax;
+    var canBuy = open && !full && G.run.gold >= CFG.FUEL.canPrice;
+    var fuelEl = document.createElement('div');
+    fuelEl.className = 'part fuel' + (canBuy ? '' : ' no');
+    fuelEl.innerHTML = '<div class="pn">Bidon de carburant</div>' +
+      '<div class="pd">+' + CFG.FUEL.canSize + ' L &nbsp;·&nbsp; reservoir ' +
+      Math.round(carry) + ' / ' + Math.round(stats.fuelMax) + ' L</div>' +
+      '<div class="pc">' + (full ? 'PLEIN' : CFG.FUEL.canPrice + ' $') + '</div>';
+    fuelEl.onclick = function () {
+      if (GAME.buyFuel()) { CORE.SFX.fuel(); buildShop(); }
+    };
+    host.appendChild(fuelEl);
     C.PARTS.forEach(function (part) {
       var owned = G.run.parts[part.id] || 0;
       var cost = C.partCost(part, owned);

@@ -21,6 +21,31 @@ window.CORE = window.CORE || {};
     return ((h ^ (h >> 16)) >>> 0) / 4294967296;
   }
 
+  /* Eclairage par bloc : chaque tuile est assombrie selon sa distance a la
+     foreuse et son angle par rapport au phare. Des tuiles nettes, pas de voile
+     flou par-dessus la scene. */
+  function makeLight(g) {
+    var d = g.drill, layer = g.world.layer;
+    var cx = d.x + CFG.DRILL_W / 2, cy = d.y + CFG.DRILL_H / 2;
+    var vis = g.stats.vision * (g.event && g.event.id === 'coupure' ? 0.4 : 1);
+    var floor = Math.max(0.10, 0.33 - layer.dark * 0.28);
+    var fx = d.fx, fy = d.fy;
+    var fl = Math.sqrt(fx * fx + fy * fy) || 1;
+    fx /= fl; fy /= fl;
+    return function (x, y) {
+      var lx = x + 0.5 - cx, ly = y + 0.5 - cy;
+      var dist = Math.sqrt(lx * lx + ly * ly);
+      if (dist > vis * 2.1) return floor;
+      var f = 1 - dist / (vis * 1.15);
+      if (f <= 0) return floor;
+      var dot = dist < 0.01 ? 1 : (lx * fx + ly * fy) / dist;
+      var beam = dot > 0 ? dot * dot : 0;
+      var v = f * (0.5 + 1.0 * beam);
+      if (v > 1) v = 1;
+      return floor + (1 - floor) * v;
+    };
+  }
+
   /* Ce que les bonus actifs font a l'allure de la foreuse. */
   function drillLook(g) {
     var look = { head: '#d8dde4', scale: 1, len: 1, trail: 0, flames: false, arcs: false, glow: null };
@@ -73,8 +98,8 @@ window.CORE = window.CORE || {};
 
     // --- fond en parallaxe : c'est lui qui donne la profondeur --------------
     var grd = ctx.createLinearGradient(0, 0, 0, vh);
-    grd.addColorStop(0, layer.fog);
-    grd.addColorStop(1, layer.bg);
+    grd.addColorStop(0, shade(layer.fog, 0.45));
+    grd.addColorStop(1, shade(layer.bg, 0.5));
     ctx.fillStyle = grd;
     ctx.fillRect(0, 0, vw, vh);
     drawParallax(ctx, g, vw, vh, camX, camY, T);
@@ -86,6 +111,7 @@ window.CORE = window.CORE || {};
     var r0 = Math.max(0, Math.floor(camY / T)), r1 = Math.min(world.h - 1, Math.ceil((camY + vh) / T));
     var x, y, t, px, py;
     var pulse = 0.55 + 0.45 * Math.sin(g.time * 4);
+    var lightAt = makeLight(g);
 
     // --- blocs ---------------------------------------------------------------
     for (y = r0; y <= r1; y++) {
@@ -94,16 +120,40 @@ window.CORE = window.CORE || {};
         if (t === W.T.EMPTY) continue;
         px = x * T; py = y * T;
         var col = TYPE_COLOR[t] || layer.med;
-        var v = 0.86 + hash(x, y) * 0.28;
+        // bandes sedimentaires + tres peu de bruit : la roche doit paraitre
+        // stratifiee, pas mouchetee au hasard
+        var band = 0.93 + 0.07 * Math.sin(y * 0.33) + 0.04 * Math.sin(y * 0.11 + x * 0.02);
+        var lit = lightAt(x, y);
+        var v = (band + (hash(x, y) - 0.5) * 0.10) * (0.28 + 0.95 * lit);
         ctx.fillStyle = shade(col, v);
         ctx.fillRect(px, py, T, T);
-        ctx.fillStyle = 'rgba(255,255,255,0.06)';
-        ctx.fillRect(px, py, T, 2);
-        ctx.fillStyle = 'rgba(0,0,0,0.16)';
-        ctx.fillRect(px, py + T - 2, T, 2);
+
+        // On n'eclaire que les faces exposees : c'est ce qui fait qu'une
+        // galerie a l'air taillee dans la masse.
+        if (world.at(x, y - 1) === W.T.EMPTY) {
+          ctx.fillStyle = 'rgba(255,240,215,' + (0.05 + 0.22 * lit) + ')';
+          ctx.fillRect(px, py, T, 3);
+        }
+        if (world.at(x, y + 1) === W.T.EMPTY) {
+          ctx.fillStyle = 'rgba(0,0,0,0.34)';
+          ctx.fillRect(px, py + T - 3, T, 3);
+        }
+        if (world.at(x - 1, y) === W.T.EMPTY) {
+          ctx.fillStyle = 'rgba(0,0,0,0.16)';
+          ctx.fillRect(px, py, 2, T);
+        }
+        if (world.at(x + 1, y) === W.T.EMPTY) {
+          ctx.fillStyle = 'rgba(0,0,0,0.16)';
+          ctx.fillRect(px + T - 2, py, 2, T);
+        }
 
         if (t === W.T.ORE) {
-          ctx.fillStyle = 'rgba(255,255,255,0.35)';
+          var og = ctx.createRadialGradient(px + T / 2, py + T / 2, 1, px + T / 2, py + T / 2, T * 0.8);
+          og.addColorStop(0, 'rgba(255,225,150,' + (0.18 + 0.3 * lit) + ')');
+          og.addColorStop(1, 'rgba(255,225,150,0)');
+          ctx.fillStyle = og;
+          ctx.fillRect(px - T * 0.3, py - T * 0.3, T * 1.6, T * 1.6);
+          ctx.fillStyle = 'rgba(255,255,255,' + (0.2 + 0.45 * lit) + ')';
           ctx.fillRect(px + 5, py + 5, 4, 4);
           ctx.fillRect(px + T - 9, py + T - 10, 3, 3);
         } else if (t === W.T.CRISTAL) {
@@ -165,7 +215,8 @@ window.CORE = window.CORE || {};
           var fx2 = f.cells[ci2][0] * T;
           var fy2 = (f.cells[ci2][1] + fr) * T;
           var ftype = f.types[ci2];
-          ctx.fillStyle = shade(TYPE_COLOR[ftype] || layer.med, 0.9);
+          ctx.fillStyle = shade(TYPE_COLOR[ftype] || layer.med,
+            0.9 * (0.3 + 0.9 * lightAt(f.cells[ci2][0], f.cells[ci2][1] + f.dy)));
           ctx.fillRect(fx2, fy2, T, T);
           ctx.fillStyle = 'rgba(0,0,0,0.2)';
           ctx.fillRect(fx2, fy2 + T - 3, T, 3);
@@ -309,64 +360,28 @@ window.CORE = window.CORE || {};
     drawDrill(ctx, g, T);
     ctx.restore();
 
-    drawForeground(ctx, g, vw, vh, camX, camY, T);
 
-    // --- le phare : un vrai cone oriente dans le sens de la marche -----------
-    // On peint l'obscurite, puis on la RETIRE dans un cone. Le trace du cone
-    // passe par un clip et non par une transformation : sous 'destination-out',
-    // manipuler la matrice pendant le remplissage donne l'effet inverse.
-    var dark = Math.min(0.96, layer.dark + (g.event && g.event.id === 'coupure' ? 0.35 : 0));
+    // --- lueur chaude du phare ------------------------------------------------
+    // L'obscurite est appliquee bloc par bloc dans la boucle de tuiles ; il ne
+    // reste ici qu'un halo chaud, pour que le faisceau se voie dans le vide.
     var dxp = (d.x + CFG.DRILL_W / 2) * T - camX;
     var dyp = (d.y + CFG.DRILL_H / 2) * T - camY;
     var rad = g.stats.vision * T;
-    if (dark > 0.02) {
-      ctx.save();
-      ctx.fillStyle = 'rgba(0,0,0,' + dark + ')';
-      ctx.fillRect(0, 0, vw, vh);
-      ctx.globalCompositeOperation = 'destination-out';
-
-      var amb = ctx.createRadialGradient(dxp, dyp, 0, dxp, dyp, rad * 0.5);
-      amb.addColorStop(0, 'rgba(0,0,0,1)');
-      amb.addColorStop(0.6, 'rgba(0,0,0,0.75)');
-      amb.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = amb;
-      ctx.fillRect(dxp - rad, dyp - rad, rad * 2, rad * 2);
-
-      var ang2 = Math.atan2(d.fy, d.fx);
-      var len = rad * 2.2, spread = 0.52;
-      ctx.save();
-      ctx.beginPath();
-      ctx.moveTo(dxp, dyp);
-      ctx.lineTo(dxp + Math.cos(ang2 - spread) * len, dyp + Math.sin(ang2 - spread) * len);
-      ctx.lineTo(dxp + Math.cos(ang2) * len * 1.15, dyp + Math.sin(ang2) * len * 1.15);
-      ctx.lineTo(dxp + Math.cos(ang2 + spread) * len, dyp + Math.sin(ang2 + spread) * len);
-      ctx.closePath();
-      ctx.clip();
-      var cg = ctx.createRadialGradient(dxp, dyp, 0, dxp, dyp, len);
-      cg.addColorStop(0, 'rgba(0,0,0,1)');
-      cg.addColorStop(0.6, 'rgba(0,0,0,0.8)');
-      cg.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = cg;
-      ctx.fillRect(0, 0, vw, vh);
-      ctx.restore();
-      ctx.restore();
-
-      // le faisceau lui-meme, chaud, par-dessus
-      ctx.save();
-      ctx.globalCompositeOperation = 'lighter';
-      ctx.beginPath();
-      ctx.moveTo(dxp, dyp);
-      ctx.lineTo(dxp + Math.cos(ang2 - spread * 0.8) * len * 0.8, dyp + Math.sin(ang2 - spread * 0.8) * len * 0.8);
-      ctx.lineTo(dxp + Math.cos(ang2 + spread * 0.8) * len * 0.8, dyp + Math.sin(ang2 + spread * 0.8) * len * 0.8);
-      ctx.closePath();
-      ctx.clip();
-      var wg = ctx.createRadialGradient(dxp, dyp, 0, dxp, dyp, len * 0.8);
-      wg.addColorStop(0, 'rgba(255,232,170,0.13)');
-      wg.addColorStop(1, 'rgba(255,232,170,0)');
-      ctx.fillStyle = wg;
-      ctx.fillRect(0, 0, vw, vh);
-      ctx.restore();
+    var ang2 = Math.atan2(d.fy, d.fx);
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (var wi = 0; wi <= 4; wi++) {
+      var w2 = wi / 4;
+      var wx = dxp + Math.cos(ang2) * rad * 0.95 * w2;
+      var wy = dyp + Math.sin(ang2) * rad * 0.95 * w2;
+      var wr = rad * (0.22 + w2 * 0.38);
+      var wg2 = ctx.createRadialGradient(wx, wy, 0, wx, wy, wr);
+      wg2.addColorStop(0, 'rgba(255,226,160,' + (0.045 * (1 - w2 * 0.55)) + ')');
+      wg2.addColorStop(1, 'rgba(255,226,160,0)');
+      ctx.fillStyle = wg2;
+      ctx.fillRect(wx - wr, wy - wr, wr * 2, wr * 2);
     }
+    ctx.restore();
 
     // --- alerte de proximite de la Faille -------------------------------------
     var fdist = (d.y - world.failleRow);
@@ -610,7 +625,7 @@ window.CORE = window.CORE || {};
     ctx.translate(cx, cy);
 
     var hl = ctx.createRadialGradient(0, 0, 0, 0, 0, T * 3);
-    hl.addColorStop(0, 'rgba(255,220,150,0.32)');
+    hl.addColorStop(0, 'rgba(255,220,150,0.22)');
     hl.addColorStop(1, 'rgba(255,220,150,0)');
     ctx.fillStyle = hl;
     ctx.fillRect(-T * 3, -T * 3, T * 6, T * 6);
