@@ -1,9 +1,9 @@
 # Architecte Logique
 
 Jeu d'apprentissage de la logique numérique et de l'automatisme : des portes
-élémentaires jusqu'aux capteurs, aux régulateurs et aux automates. 145 missions
+élémentaires jusqu'aux capteurs, aux régulateurs et aux automates. 148 missions
 guidées, de « allume une ampoule » au processeur 1 bit, puis du thermostat au
-feu tricolore programmé et au circuit hydraulique.
+feu tricolore programmé, au circuit hydraulique et au diagnostic de pannes.
 
 L'appli tient deux ateliers dans le même plan de travail : **⚡ Électronique**
 (le signal et la logique) et **🏭 Process** (l'installation : capteurs,
@@ -50,6 +50,15 @@ automatisée, carrefour piloté par automate, capteurs en prise directe, circuit
 hydraulique à deux branches, remplissage automatique à deux seuils, perceuse
 pilotée en GRAFCET, et un
 **atelier complet** où trois boucles tournent en parallèle.
+
+**Les pannes.** Une installation qui marche n'apprend rien : ce qu'on apprend,
+c'est à trouver *pourquoi* elle ne marche plus. Tout composant accepte une
+panne — hors service, mesure figée, dérive, organe bloqué — et rien ne se voit
+sur le schéma : la touche `P` révèle les défauts, mais on ne s'en sert
+qu'après avoir cherché. Les pannes voyagent avec les sauvegardes, de quoi en
+piéger une et la faire chercher à quelqu'un. Le chapitre 30 apprend la méthode :
+remonter la chaîne depuis la demande jusqu'à l'effet, et trouver le premier
+maillon où « ce qui est ordonné » cesse de correspondre à « ce qui se produit ».
 
 **Le GRAFCET.** Un cycle de machine ne se décrit pas en équations mais en
 étapes reliées par des transitions : une étape est active ou non, et les
@@ -109,7 +118,7 @@ concatène entre `test/pre.js` (stubs DOM / Canvas / Audio / localStorage, plus
 une horloge `Date.now` pilotable) et `test/post.js` (les tests), puis exécute le
 tout dans un contexte `vm`. Aucun navigateur, aucune dépendance npm.
 
-158 tests couvrent le moteur, le séquentiel, les blocs numériques, l'analogique
+161 tests couvrent le moteur, le séquentiel, les blocs numériques, l'analogique
 et la régulation (dont une boucle fermée four + thermostat), l'édition,
 l'orientation, les tunnels, les puces, l'interface, le balisage et le guide.
 Deux tests valident automatiquement **tout** nouveau composant du registre

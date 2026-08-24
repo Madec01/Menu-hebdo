@@ -1616,6 +1616,20 @@ class Component {
     else this.drawDevice(c, col, hov, t);
     drawParamStrip(this, c, col, hov);
     if (R || M){ c.fillText = origFill; c.strokeText = origStroke; c.restore(); }
+    // Panne révélée : le boîtier porte sa marque. Sinon rien ne se voit —
+    // c'est tout l'intérêt du diagnostic.
+    if (revelePannes && pannesOf(this)){
+      c.save();
+      c.beginPath(); c.roundRect(this.x - 6, this.y - 6, this.bw + 12, this.bh + 12, 13);
+      c.lineWidth = 2.4; c.strokeStyle = '#ff5d6c';
+      c.shadowBlur = 12; c.shadowColor = '#ff5d6c';
+      c.setLineDash([7, 5]); c.lineDashOffset = -t * .03; c.stroke();
+      c.setLineDash([]); c.shadowBlur = 0;
+      c.font = "700 14px 'IBM Plex Mono', monospace";
+      c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText('🩺', this.x + this.bw + 2, this.y - 4);
+      c.restore();
+    }
 
     // Nom sous le composant (toujours, ou seulement au survol / dans la sélection)
     if (labelsMode || hov || selection.has(this)){
@@ -2578,6 +2592,7 @@ function serializeGroup(list){
       rot:  c.rot || undefined,
       mir:  c.mir || undefined,
       lk:   c.locked || undefined,
+      pn:   c.panne && c.panne.k ? c.panne : undefined,
       obs:  c.obs || undefined },
       (REG[c.type] && REG[c.type].save) ? REG[c.type].save(c) : null)),
     wires: wires.filter(w => arr.includes(w.outPin.comp) && arr.includes(w.inPin.comp))
@@ -2794,6 +2809,7 @@ function buildBoard(d){
       c.bbTT = m.tt;
     }
     if (s.lk) c.locked = true;
+    if (s.pn && s.pn.k) c.panne = { k:s.pn.k, v:s.pn.v };
     if (s.obs) c.obs = true;
     components.push(c);
   });
@@ -2988,6 +3004,20 @@ function openInspector(c){
       '" maxlength="' + (ml || 24) + '">', hint));
   const regO = regOpts(c);
   if (regO) regO.forEach(o => B.push(regOptField(c, o)));
+  // Panne : disponible sur tout ce qui produit quelque chose
+  if (c.outPins.length){
+    const cur = (c.panne && c.panne.k) || '';
+    B.push(inspField('🩺 Panne simulée',
+      '<select data-k="panne">' + PANNES.map(([k, lab]) =>
+        '<option value="' + k + '"' + (k === cur ? ' selected' : '') + '>' + lab + '</option>').join('') +
+      '</select>',
+      (PANNES.find(x => x[0] === cur) || [])[2] ||
+      'Mets un organe en défaut et regarde l’installation réagir — c’est ainsi qu’on apprend à dépanner. Appuie sur <code>P</code> pour révéler les composants en panne.'));
+    if (cur === 'derive')
+      B.push(inspField('Dérive (%)', '<input type="number" data-k="pannev" value="' +
+        ((c.panne && c.panne.v) == null ? 20 : c.panne.v) + '" min="-90" max="200" step="5">',
+        'Positif : le capteur lit trop haut. Négatif : il lit trop bas.'));
+  }
   switch (c.type){
     case 'CLOCK':
       num('freq', 'Fréquence (Hz)', +(c.opt.freq || 1000 / CLOCK_SPEEDS[c.clockIdx]).toFixed(2), 0.1, 30, 0.1);
@@ -3164,6 +3194,8 @@ function applyInspector(c, inp){
   else if (k === 'bfreq')c.opt.bfreq = clamp(parseInt(inp.value) || 349, 80, 2000);
   else if (k === 'val')  c.value = clamp(parseInt(inp.value) || 0, 0, 15);
   else if (k === 'coul'){ if (lampColor(inp.value)) c.opt.coul = inp.value; }
+  else if (k === 'panne'){ setPanne(c, PANNES.some(x => x[0] === inp.value) ? inp.value : ''); openInspector(c); }
+  else if (k === 'pannev'){ if (c.panne) c.panne.v = clamp(parseFloat(inp.value) || 0, -90, 200); }
   else if (k === 'chipname'){
     const nn = renameChip(c.chipName, inp.value);
     if (nn !== inp.value.trim()) inp.value = nn;
@@ -3235,15 +3267,64 @@ function connectWire(outPin, inPin){
   AudioSys.connect();
   markDirty();
 }
+/* ==================== PANNES ====================
+   Une installation qui marche n'apprend rien : ce qu'on apprend, c'est à
+   trouver POURQUOI elle ne marche plus. Une panne s'applique APRÈS
+   l'évaluation, sur les sorties du composant — aucun composant n'a besoin de
+   la connaître, et c'est exactement la position du dépanneur : on ne voit que
+   ce que l'organe rend, jamais ce qu'il « voulait » faire. */
+const PANNES = [
+  ['',       'Aucune — fonctionne normalement', ''],
+  ['hs',     'Hors service',
+   'Plus aucune sortie : capteur débranché, bobine grillée, fusible fondu. La panne la plus franche — et la plus facile à trouver.'],
+  ['fige',   'Mesure figée',
+   'Les sorties restent bloquées sur la dernière valeur lue. La panne sournoise : la régulation continue de « croire » son capteur et pousse dans le vide.'],
+  ['derive', 'Dérive de la mesure',
+   'Les sorties sont décalées d’un pourcentage constant. Le capteur ment sans le dire : tout a l’air normal, sauf le résultat.'],
+  ['bloque', 'Organe bloqué',
+   'L’intérieur ne bouge plus : vanne grippée, vérin coincé, roulement serré. Les mesures restent honnêtes — elles disent que rien ne bouge.']
+];
+let revelePannes = false;              // 🩺 : le mode « je suis le formateur »
+function pannesOf(c){ return c && c.panne && c.panne.k ? c.panne : null; }
+function setPanne(c, k, v){
+  if (!k){ delete c.panne; delete c.pFige; return; }
+  c.panne = { k, v: v == null ? (c.panne && c.panne.v) : v };
+  delete c.pFige;                      // une nouvelle panne repart d'une mesure fraîche
+}
+function applyPanne(c){
+  const p = pannesOf(c);
+  if (!p) { if (c.pFige) delete c.pFige; return; }
+  if (p.k === 'hs'){ c.outPins.forEach(o => o.state = 0); return; }
+  // Figée comme bloquée gèlent les sorties ; « bloqué » gèle en plus l'intérieur
+  // (voir la phase de commit). La différence est dans l'organe qu'on choisit :
+  // un capteur figé laisse le procédé s'emballer, un organe bloqué l'arrête.
+  if (p.k === 'fige' || p.k === 'bloque'){
+    if (!c.pFige) c.pFige = c.outPins.map(o => o.state);
+    c.outPins.forEach((o, i) => o.state = c.pFige[i]);
+    return;
+  }
+  if (p.k === 'derive'){
+    const f = 1 + (p.v == null ? 20 : p.v) / 100;
+    c.outPins.forEach(o => {
+      if (o.state > 1) o.state = Math.max(0, Math.min(ANA_MAX, o.state * f));
+    });
+  }
+  // 'bloque' : rien à faire ici, c'est le commit qui est gelé
+}
 function simulate(passes){
   for (let p = 0; p < passes; p++){
     components.forEach(c => c.inPins.forEach(pin => { pin.state = 0; pin.busWarn = 0; }));
     tunnelSwap();                       // les nœuds nommés propagent d'une passe à l'autre
     wires.forEach(w => w.update());
-    components.forEach(c => c.evaluate());
+    components.forEach(c => { c.evaluate(); applyPanne(c); });
   }
-  // Phase synchrone : toutes les bascules commutent EN MÊME TEMPS (comme un vrai front d'horloge)
-  components.forEach(c => c.commit && c.commit());
+  // Phase synchrone : toutes les bascules commutent EN MÊME TEMPS (comme un vrai
+  // front d'horloge) — sauf l'organe bloqué, dont l'intérieur ne bouge plus.
+  components.forEach(c => {
+    const p = pannesOf(c);
+    if (p && p.k === 'bloque') return;
+    c.commit && c.commit();
+  });
 }
 
 /* ---------- Interactions (Pointer Events) ---------- */
@@ -3480,6 +3561,15 @@ addEventListener('keydown', e => {
   if (!e.ctrlKey && !e.metaKey && (e.key === 'r' || e.key === 'R')) rotateSel(e.shiftKey ? -1 : 1);
   if (!e.ctrlKey && !e.metaKey && (e.key === 'm' || e.key === 'M')) mirrorSel();
   if (!e.ctrlKey && !e.metaKey && (e.key === 'n' || e.key === 'N')) setLabelsMode(!labelsMode);
+  if (!e.ctrlKey && !e.metaKey && (e.key === 'p' || e.key === 'P')){
+    revelePannes = !revelePannes;
+    const n = components.filter(pannesOf).length;
+    toast(revelePannes
+      ? (n ? '🩺 ' + n + ' composant(s) en panne — cerclés de rouge.'
+           : '🩺 Aucune panne sur ce montage.')
+      : '🩺 Pannes masquées : à toi de les trouver.', 'info', 2600);
+    markDirty();
+  }
   if (!e.ctrlKey && !e.metaKey && (e.key === 'f' || e.key === 'F')){
     const bb = boardBBox();
     if (bb){ camFitTo(bb, 90); updateStats(true); AudioSys.click(); }
@@ -5307,6 +5397,17 @@ const missions = [
       "Double-clique la cuve pour régler ses deux seuils : bas 20 %, haut 85 %.",
       "Vide la cuve à la main (entrée VID ou glissière) : dès 20 % la vanne s'ouvre et ne se referme qu'à 85 %."],
     why:"Sans mémoire, la vanne claquerait en permanence autour d'un seuil unique. Les <b>deux seuils</b> créent une zone morte, et la <b>bascule SR</b> retient la décision à l'intérieur de cette zone : c'est très exactement une régulation tout ou rien à hystérésis, câblée en composants séparés. Réservoir d'eau, cuve de fioul, bac tampon d'une machine : le montage est le même partout, et il tient en trois composants."} },
+{ id:"m140", ch:"Chapitre 28 · L'usine", title:"Ton atelier",
+  desc:"🏆 Mission finale : assemble ton propre atelier. Au moins un procédé régulé (four, cuve ou réservoir d'air), un capteur en prise directe, un actionneur commandé, un ÉCRAN qui surveille tout et un ENREGISTREUR sur la grandeur qui t'intéresse. Charge l'exemple « Atelier complet » 📦 si tu veux un point de départ.",
+  inputs:0, outputs:0, tt:[], par:0,
+  sol:{
+    plan:["POMPE ─▶ TUYAU ─▶ CUVE (régulée par ses seuils)","FOUR ─▶ CAPTEUR ─▶ PID ─▶ PWM ─▶ FOUR","CONVOYEUR ─▶ COMPTEUR","ÉCRAN 4 voies + ENREGISTREUR"],
+    steps:["Ouvre les exemples 📦 et charge « Atelier complet » pour voir une installation qui tourne.",
+      "Repère les trois boucles indépendantes : le remplissage, la régulation de température, le comptage des pièces.",
+      "Ajoute ta propre boucle : par exemple un réservoir d'air qui alimente un vérin.",
+      "Branche tout ce qui t'intéresse sur l'écran (jusqu'à quatre voies) et sur l'enregistreur (deux voies).",
+      "Enregistre ton montage sous un nom avec 💾 : tu pourras y revenir et l'exporter."],
+    why:"Une usine n'est pas un grand circuit : c'est un <b>ensemble de boucles</b> qui tournent chacune de leur côté, reliées par la matière qui circule et par quelques sécurités communes. Tu possèdes maintenant les cinq briques de n'importe laquelle : mesurer, comparer à une consigne, décider, agir, et vérifier que l'action a produit son effet. Le reste n'est qu'une question d'échelle."} },
 { id:"m143", ch:"Chapitre 29 · Le GRAFCET", title:"Étapes et transitions",
   desc:"Découvre le langage des automaticiens. Pose un GRAFCET, règle-le sur 3 étapes, branche un BOUTON sur R1 et trois AMPOULES sur X0, X1, X2. Fais avancer le jeton d'étape en étape et observe : une seule étape est active à la fois. Mission libre.",
   inputs:0, outputs:0, tt:[], par:0,
@@ -5348,17 +5449,53 @@ const missions = [
       "Branche une ampoule verte sur X1 (« bac bonne ») et une rouge sur X2 (« bac rebut »).",
       "Bascule R1 : le jeton part à gauche. Bascule R2 : il part à droite. Les deux à la fois : la branche principale gagne."],
     why:"C'est la <b>divergence en OU</b> du GRAFCET : depuis une même étape, plusieurs transitions concurrentes, dont une seule sera franchie. En norme, les réceptivités de ces transitions doivent être <b>exclusives</b> — deux chemins vrais en même temps, et le comportement dépendrait de l'ordre d'écriture, ce qu'on ne veut jamais sur une machine. Ici la branche principale est prioritaire, ce qui rend la chose déterministe ; sur un vrai automate, on écrirait plutôt R2·R̄1 pour lever toute ambiguïté." } },
-{ id:"m140", ch:"Chapitre 28 · L'usine", title:"Ton atelier",
-  desc:"🏆 Mission finale : assemble ton propre atelier. Au moins un procédé régulé (four, cuve ou réservoir d'air), un capteur en prise directe, un actionneur commandé, un ÉCRAN qui surveille tout et un ENREGISTREUR sur la grandeur qui t'intéresse. Charge l'exemple « Atelier complet » 📦 si tu veux un point de départ.",
+{ id:"m146", ch:"Chapitre 30 · Dépanner", title:"Le capteur qui ment",
+  desc:"🩺 Voici un four régulé qui NE marche pas : la température s'envole alors que la boucle a l'air correcte. Charge le montage avec 🧭, observe, et trouve l'organe fautif. Appuie sur P quand tu penses avoir trouvé — le simulateur te dira si tu avais raison. Mission libre.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
-    plan:["POMPE ─▶ TUYAU ─▶ CUVE (régulée par ses seuils)","FOUR ─▶ CAPTEUR ─▶ PID ─▶ PWM ─▶ FOUR","CONVOYEUR ─▶ COMPTEUR","ÉCRAN 4 voies + ENREGISTREUR"],
-    steps:["Ouvre les exemples 📦 et charge « Atelier complet » pour voir une installation qui tourne.",
-      "Repère les trois boucles indépendantes : le remplissage, la régulation de température, le comptage des pièces.",
-      "Ajoute ta propre boucle : par exemple un réservoir d'air qui alimente un vérin.",
-      "Branche tout ce qui t'intéresse sur l'écran (jusqu'à quatre voies) et sur l'enregistreur (deux voies).",
-      "Enregistre ton montage sous un nom avec 💾 : tu pourras y revenir et l'exporter."],
-    why:"Une usine n'est pas un grand circuit : c'est un <b>ensemble de boucles</b> qui tournent chacune de leur côté, reliées par la matière qui circule et par quelques sécurités communes. Tu possèdes maintenant les cinq briques de n'importe laquelle : mesurer, comparer à une consigne, décider, agir, et vérifier que l'action a produit son effet. Le reste n'est qu'une question d'échelle."} }
+    demo:{ comps:[{t:'FOUR',x:560,y:60,opt:{inert:3}},
+                  {t:'TEMPC',x:840,y:60,pn:{k:'fige'}},
+                  {t:'THERMO',x:80,y:60,opt:{cons:170,hyst:10}},
+                  {t:'COURBE',x:520,y:300,opt:{duree:60}}],
+           wires:[[0,0,1,0],[1,0,2,0],[2,0,0,0],[1,0,3,0]] },
+    plan:["FOUR (T°) ─▶ CAPTEUR (PROC)","CAPTEUR (MES) ─▶ THERMOSTAT ─▶ FOUR (CHF)",
+          "🩺 le capteur est en MESURE FIGÉE"],
+    steps:["Pose le montage : c'est la boucle du chapitre 28, celle qui marchait.",
+      "Laisse tourner et regarde l'enregistreur : la mesure se stabilise… mais le four, lui, continue de chauffer. Survole-le : sa vraie température monte toujours.",
+      "Le thermostat fait ce qu'on lui demande — il ne coupe pas, puisque sa mesure n'atteint jamais la consigne. Ce n'est donc pas lui.",
+      "Compare la sortie T° du four et la sortie MES du capteur en les survolant : les deux devraient dire la même chose. Elles divergent : le coupable est entre les deux.",
+      "Appuie sur <b>P</b> : le capteur est cerclé de rouge. Double-clique-le et remets sa panne sur « Aucune » : la régulation repart."],
+    why:"C'est la panne la plus dangereuse d'une installation, et la plus fréquente : un capteur <b>figé</b> ne tombe pas en panne franchement — il continue d'envoyer une valeur plausible. La régulation lui fait confiance et pousse indéfiniment dans la même direction. En pratique on s'en protège par la <b>redondance</b> (deux capteurs qu'on compare) ou par un <b>chien de garde</b> : si une mesure ne bouge plus du tout pendant que la commande est à fond, c'est qu'elle ment. Règle d'or du dépannage : ne jamais croire un capteur sur parole, toujours comparer ce qu'il dit à ce que fait le procédé." } },
+{ id:"m147", ch:"Chapitre 30 · Dépanner", title:"L'organe qui ne bouge plus",
+  desc:"🩺 Le remplissage automatique de la cuve ne se fait plus : la commande part bien, mais rien n'arrive. Trouve où la chaîne se rompt. Mission libre.",
+  inputs:0, outputs:0, tt:[], par:0,
+  sol:{
+    demo:{ comps:[{t:'CUVE',x:560,y:60,niv:8,opt:{debit:14,haut:85,bas:20}},
+                  {t:'VALVE',x:300,y:80,pn:{k:'bloque'}},
+                  {t:'SRMEM',x:60,y:100},
+                  {t:'LED',x:300,y:340,opt:{coul:'vert'}}],
+           wires:[[0,2,2,0],[0,1,2,1],[2,0,1,0],[1,1,0,2],[2,0,3,0]] },
+    plan:["CUVE (BAS) ─▶ S · CUVE (HAUT) ─▶ R","MÉMOIRE ─▶ VANNE (CMD) et ─▶ voyant",
+          "VANNE (S) ═▶ CUVE (E)","🩺 la vanne est BLOQUÉE"],
+    steps:["Pose le montage et laisse tourner : le niveau est bas, le voyant vert est allumé — l'ordre de remplir est donné.",
+      "Remonte la chaîne dans l'ordre : la cuve demande (BAS = 1), la mémoire mémorise (Q = 1), la vanne reçoit sa commande (CMD = 1). Tout est normal jusque-là.",
+      "Survole la vanne : sa commande est à 1, mais son débit reste à zéro. C'est le premier endroit où l'ordre donné et l'effet obtenu ne correspondent plus.",
+      "Appuie sur <b>P</b> pour confirmer, puis double-clique la vanne et lève sa panne. La cuve se remplit.",
+      "Refais le diagnostic avec la panne « Hors service » : la différence est instructive — une vanne HS n'affiche même plus son ouverture."],
+    why:"La méthode s'appelle le <b>diagnostic en chaîne</b> : on part de la demande et on avance vers l'effet, en cherchant le premier maillon où « ce qui est ordonné » cesse de correspondre à « ce qui se produit ». On ne saute jamais directement à l'organe suspect, parce que neuf fois sur dix le vrai coupable est en amont. Le repère décisif ici, c'est l'écart entre la <b>commande</b> d'un actionneur et sa <b>mesure de retour</b> : c'est exactement pour ça qu'on équipe les vannes et les vérins de capteurs de position, alors qu'on pourrait s'en passer pour les commander." } },
+{ id:"m148", ch:"Chapitre 30 · Dépanner", title:"À toi de piéger quelqu'un",
+  desc:"🩺 Mission finale : construis une installation qui tourne, mets un organe en panne (double-clic → 🩺), sauvegarde-la avec 💾 et fais-la diagnostiquer par quelqu'un d'autre. La touche P révèle les pannes : n'y touche pas avant qu'il ait cherché. Mission libre.",
+  inputs:0, outputs:0, tt:[], par:0,
+  sol:{
+    plan:["N'importe quelle boucle : cuve, four, convoyeur, vérin…",
+          "Un organe en panne (figée, dérive, bloqué, hors service)",
+          "💾 pour sauvegarder · P pour révéler"],
+    steps:["Construis une installation complète qui marche, avec au moins une mesure affichée à l'écran ou à l'enregistreur — sans repère lisible, un diagnostic est impossible.",
+      "Vérifie qu'elle tourne correctement, puis choisis ton coupable et double-clique-le pour lui donner une panne.",
+      "Une <b>dérive</b> est la plus difficile à trouver : tout a l'air de marcher, mais la valeur finale est fausse. Une <b>mesure figée</b> vient juste après. Le <b>hors service</b> est le plus facile.",
+      "Sauvegarde le montage avec 💾 sous un nom qui ne vend pas la mèche.",
+      "Fais chercher : la seule règle est de raisonner en remontant la chaîne, et de comparer commande et retour à chaque étage."],
+    why:"Poser une panne apprend autant que la trouver, parce que ça oblige à se demander <b>ce qui serait visible</b> et <b>ce qui ne le serait pas</b>. Une bonne panne pédagogique n'est jamais franche : elle laisse l'installation « presque » marcher, et c'est cet écart entre le presque et le vrai qui force à raisonner au lieu de deviner. C'est la différence entre remplacer des pièces au hasard et dépanner." } }
 ];
 
 /* ---------- Progression (localStorage) ---------- */
@@ -5645,6 +5782,7 @@ function compFromData(s, ox, oy, depth){
   if (s.ci != null) c.clockIdx = s.ci;
   if (s.opt) c.opt = JSON.parse(JSON.stringify(s.opt));
   if (s.lbl) c.customLabel = s.lbl;
+  if (s.pn && s.pn.k) c.panne = { k:s.pn.k, v:s.pn.v };
   if (s.rot) c.rot = s.rot % 4;
   if (s.mir) c.mir = true;
   const d = regOf(s.t);
@@ -8210,8 +8348,10 @@ let tutor = null;      // { sol, step, ghosts:{index:Component} }
    réglages d'un montage de référence (nombre d'étapes, consigne, couleur…)
    soient là dès le fantôme. */
 function tutorComp(sc){
-  return compFromData({ t:sc.t, x:sc.px != null ? sc.px : sc.x, y:sc.py != null ? sc.py : sc.y,
-                        opt:sc.opt, lbl:sc.lbl, s:sc.s, niv:sc.niv }, 0, 0, 0);
+  // tout le descripteur passe (réglages, étiquette, état initial, panne posée)
+  return compFromData(Object.assign({}, sc, {
+    x: sc.px != null ? sc.px : sc.x,
+    y: sc.py != null ? sc.py : sc.y }), 0, 0, 0);
 }
 /* Montage de référence d'une mission libre : posé à même la mission, ou
    emprunté à un exemple du menu 📦. */
@@ -9130,12 +9270,13 @@ function buildGuide(){
     '<b>🔍 L’infobulle.</b> Survole n’importe quoi : un <b>composant</b> te donne l’état de chacune de ses ' +
     'entrées et sorties, ses réglages et son coût ; un <b>pin</b> dit à quoi il est relié ; un <b>câble</b> ' +
     'affiche la valeur qu’il transporte, dans son unité quand il en a une. C’est le réflexe à prendre quand un circuit ne fait pas ce que tu crois.<br><br>' +
+    '<b>🩺 Les pannes.</b> Une installation qui marche n’apprend rien : ce qu’on apprend, c’est à trouver <b>pourquoi</b> elle ne marche plus. Double-clique n’importe quel composant et donne-lui une panne : <code>hors service</code> (plus rien ne sort), <code>mesure figée</code> (la valeur reste bloquée alors que le procédé continue), <code>dérive</code> (la mesure ment d’un pourcentage constant) ou <code>organe bloqué</code> (la vanne, le vérin ou le moteur ne bougent plus). Rien ne se voit sur le schéma — c’est le principe : la touche <code>P</code> révèle les composants en défaut, mais on ne s’en sert qu’<i>après</i> avoir cherché. La méthode tient en une phrase : remonte la chaîne depuis la demande jusqu’à l’effet, et cherche le <b>premier maillon</b> où « ce qui est ordonné » cesse de correspondre à « ce qui se produit ». Les pannes voyagent avec les sauvegardes 💾 : tu peux en piéger une et la faire chercher à quelqu’un.<br><br>' +
     '<b>⌨️ Les gestes qui font gagner du temps.</b> <code>Ctrl+Z</code> / <code>Ctrl+Y</code> annuler-refaire, ' +
     '<code>Ctrl+C</code> / <code>Ctrl+V</code> copier-coller, <code>Ctrl+D</code> dupliquer la sélection, ' +
     '<code>Suppr</code> effacer, glisser dans le vide pour sélectionner plusieurs boîtiers (puis ⇤ ⤒ ☰ pour les aligner), ' +
     '<code>R</code> tourner un composant d’un quart de tour (Maj+R dans l’autre sens), <code>M</code> le retourner ' +
     'en miroir — pratique pour les boucles de rétroaction et les montages verticaux, ' +
-    '<code>F</code> recadrer la vue sur ton circuit, <code>N</code> masquer les noms sous les boîtiers ' +
+    '<code>F</code> recadrer la vue sur ton circuit, <code>P</code> révéler les pannes, <code>N</code> masquer les noms sous les boîtiers ' +
     '(le plan respire quand il y a beaucoup de composants), ' +
     '<code>🪄</code> pour ranger les câbles automatiquement et <code>📷</code> pour exporter une image de ton montage.',
     items:[] },
@@ -9388,6 +9529,12 @@ function compTipData(c){
       NAND:'S = ¬(A·B)', NOR:'S = ¬(A+B)', XNOR:'S = ¬(A⊕B)',
       AND3:'S = A·B·C', OR3:'S = A+B+C' };
     if (F[c.type]) lines.push('<span class="td">' + F[c.type] + '</span>');
+  }
+  if (revelePannes){
+    const p = pannesOf(c);
+    if (p) lines.push('<span class="tw">🩺 EN PANNE — ' +
+      (PANNES.find(x => x[0] === p.k) || [,'?'])[1].toLowerCase() +
+      (p.k === 'derive' ? ' de ' + (p.v == null ? 20 : p.v) + ' %' : '') + '</span>');
   }
   if (c.type === 'LED'){
     const e = LAMP_COLORS.find(x => x[0] === (c.opt.coul || 'vert'));

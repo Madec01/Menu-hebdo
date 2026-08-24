@@ -2759,6 +2759,8 @@ T('T60 le guide documente les ateliers, les unités, les seuils et la tuyauterie
    ['réceptivité', 'les réceptivités'],
    ['CEI 60848', 'la norme du GRAFCET'],
    ['CEI 60073', 'les couleurs normalisées des voyants'],
+   ['mesure figée', 'les pannes simulées'],
+   ['premier maillon', 'la méthode de diagnostic'],
    ['BRIDÉ', 'le bridage d’un tuyau trop étroit']]
     .forEach(([txt, what]) => ok(html.includes(txt), 'le guide parle de ' + what));
   ok(/TUYAU/.test(__el('guide-body').innerHTML), 'et présente le tuyau lui-même');
@@ -3140,6 +3142,126 @@ T('T160 les entrées ne sont bridées que sur les missions à table de vérité'
     ok(toolState('AND', nandOnly).dis, 'mission à base imposée : les autres portes sont fermées');
     ok(!toolState(nandOnly.allowed[0], nandOnly).dis, 'sauf celle qu’elle impose');
   }
+});
+
+T('T161 pannes : hors service, mesure figée, dérive et organe bloqué', () => {
+  board();
+  const four = mk('FOUR', 0, 0), capt = mk('TEMPC', 300, 0), ecr = mk('ECRAN', 600, 0);
+  const on = mk('HIGH', -300, 0);
+  link(on, 0, four, 0); link(four, 0, capt, 0); link(capt, 0, ecr, 0);
+  for (let i = 0; i < 20; i++){ __advance(150); sim(); }
+  const sain = capt.outPins[0].state;
+  ok(sain > 0, 'en marche normale, le capteur mesure (' + sain.toFixed(1) + ')');
+
+  // --- hors service : plus rien ne sort
+  setPanne(capt, 'hs');
+  sim();
+  eq(capt.outPins[0].state, 0, 'hors service : plus aucune sortie');
+  eq(ecr.inPins[0].state, 0, 'et l’écran ne reçoit plus rien');
+
+  // --- mesure figée : la valeur reste, le four continue de chauffer
+  setPanne(capt, 'fige');
+  sim();
+  const gele = capt.outPins[0].state;
+  ok(gele > 0, 'figée sur la dernière valeur (' + gele.toFixed(1) + ')');
+  const avant = four.temp;
+  for (let i = 0; i < 20; i++){ __advance(150); sim(); }
+  ok(four.temp > avant + 5, 'le four continue de monter pour de vrai');
+  eq(capt.outPins[0].state, gele, 'mais la mesure ne bouge plus d’un poil');
+
+  // --- dérive : la mesure ment d’un pourcentage constant.
+  // Sur un capteur en pleine échelle la dérive serait invisible (il sature
+  // déjà) : on la mesure sur une sonde à mi-course, comme en vrai.
+  setPanne(capt, '');
+  const pot = mk('POT', 0, 400);
+  applyInspector(pot, fld('o_val', 40));
+  sim(); sim();
+  const vrai = pot.outPins[0].state;
+  ok(vrai > 20 && vrai < ANA_MAX - 20, 'la sonde est à mi-échelle (' + vrai.toFixed(1) + ')');
+  setPanne(pot, 'derive', 50);
+  sim(); sim();
+  near(pot.outPins[0].state / vrai, 1.5, 0.02, 'la dérive de 50 % décale bien la mesure');
+  setPanne(pot, 'derive', -30);
+  sim(); sim();
+  near(pot.outPins[0].state / vrai, 0.7, 0.02, 'et une dérive négative fait lire trop bas');
+
+  // --- organe bloqué : l’intérieur ne bouge plus
+  const t0 = four.temp;
+  setPanne(four, 'bloque');
+  for (let i = 0; i < 20; i++){ __advance(150); sim(); }
+  near(four.temp, t0, 0.01, 'four bloqué : sa température ne bouge plus');
+  ok(capt.outPins[0].state > 0, 'et le capteur dit honnêtement que rien ne change');
+  setPanne(four, '');
+  for (let i = 0; i < 10; i++){ __advance(150); sim(); }
+  ok(four.temp > t0, 'panne levée : le procédé repart');
+});
+
+T('T162 une panne se règle, se révèle et voyage avec le montage', () => {
+  board();
+  const v = mk('VALVE', 0, 0);
+  eq(pannesOf(v), null, 'un composant neuf est sain');
+  applyInspector(v, fld('panne', 'bloque'));
+  eq(v.panne.k, 'bloque', 'l’inspecteur pose la panne');
+  applyInspector(v, fld('panne', 'derive'));
+  applyInspector(v, fld('pannev', 35));
+  eq(v.panne.v, 35, 'et son ampleur');
+  applyInspector(v, fld('panne', 'nimportequoi'));
+  eq(pannesOf(v), null, 'une panne inconnue remet le composant en état');
+  applyInspector(v, fld('panne', 'hs'));
+  // elle survit à la copie et à la sauvegarde
+  const data = serializeGroup([v]);
+  board();
+  const copie = spawnGroup(data, 0, 0, true).made[0];
+  eq(copie.panne.k, 'hs', 'la panne voyage avec le montage');
+  // …et au parcours annuler / refaire
+  const snap = snapshotState();
+  copie.panne = null;
+  buildBoard(JSON.parse(snap));
+  ok(pannesOf(components[0]), 'annuler retrouve le composant en panne');
+  // le révélateur ne change rien à la simulation, seulement à l’affichage
+  const avant = revelePannes;
+  revelePannes = true;
+  ok(compTipData(components[0]).lines.some(l => /EN PANNE/.test(l)),
+     'révélées, elles s’annoncent dans l’infobulle');
+  revelePannes = false;
+  ok(!compTipData(components[0]).lines.some(l => /EN PANNE/.test(l)),
+     'masquées, rien ne les trahit — c’est le principe du diagnostic');
+  revelePannes = avant;
+});
+
+T('T163 les missions de dépannage tombent vraiment en panne', () => {
+  // m146 : le capteur figé laisse le four s’emballer
+  let idx = missions.findIndex(m => m.id === 'm146');
+  ok(idx >= 0, 'mission m146 présente');
+  loadMission(idx); openTutor(); tutorAll();
+  const capt = components.find(c => c.type === 'TEMPC');
+  const four = components.find(c => c.type === 'FOUR');
+  ok(pannesOf(capt) && pannesOf(capt).k === 'fige', 'le capteur est bien posé en panne');
+  for (let i = 0; i < 40; i++){ __advance(150); sim(); }
+  const mes = capt.outPins[0].state, vrai = four.temp;
+  ok(vrai > 120, 'le four s’emballe pour de vrai (' + Math.round(vrai) + ')');
+  for (let i = 0; i < 20; i++){ __advance(150); sim(); }
+  eq(capt.outPins[0].state, mes, 'pendant que la mesure reste figée');
+  ok(four.temp > vrai, 'et que la température continue de monter');
+  // panne levée : la boucle régule de nouveau
+  setPanne(capt, '');
+  let coupe = false;
+  for (let i = 0; i < 120; i++){ __advance(150); sim(); if (!four.pwr) coupe = true; }
+  ok(coupe, 'panne levée, le thermostat finit par couper');
+
+  // m147 : la vanne bloquée ne laisse rien passer malgré l’ordre
+  idx = missions.findIndex(m => m.id === 'm147');
+  loadMission(idx); openTutor(); tutorAll();
+  const vanne = components.find(c => c.type === 'VALVE');
+  const cuve = components.find(c => c.type === 'CUVE');
+  const niv0 = cuve.niv;
+  for (let i = 0; i < 30; i++){ __advance(150); sim(); }
+  ok(vanne.inPins[0].state > 0, 'l’ordre d’ouvrir arrive bien à la vanne');
+  near(cuve.niv, niv0, 0.5, 'et pourtant la cuve ne se remplit pas');
+  setPanne(vanne, '');
+  for (let i = 0; i < 30; i++){ __advance(150); sim(); }
+  ok(cuve.niv > niv0 + 3, 'panne levée : le remplissage repart (' + cuve.niv.toFixed(1) + ' %)');
+  loadMission(-1);
 });
 
 /* ===================== bilan ===================== */
