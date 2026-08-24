@@ -214,7 +214,11 @@ table.tt tr.tt-fail td:first-child::before{content:'✗ ';color:var(--red)}
   letter-spacing:.06em}
 #insp-close{background:none;border:none;color:var(--dim);font-size:14px;cursor:pointer;padding:2px 6px}
 #insp-close:hover{color:#fff}
-.insp-field{margin-bottom:9px}
+.insp-field{margin-bottom:9px;position:relative}
+.insp-field .uni{position:absolute;right:9px;bottom:7px;font-family:var(--mono);font-size:10px;
+  color:var(--cyan);opacity:.85;pointer-events:none;letter-spacing:.04em}
+.insp-field .uni + input,.insp-field input + .uni ~ input{padding-right:42px}
+.insp-field:has(.uni) input[type=number]{padding-right:44px}
 .insp-field label{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.14em;
   text-transform:uppercase;color:var(--dim);margin-bottom:3px}
 .insp-field input[type=number],.insp-field input[type=text],.insp-field select{
@@ -1058,10 +1062,56 @@ function sourceOf(inPin){
 /* Met une valeur brute 0-255 à l'échelle physique de sa source */
 function physOf(raw, info){
   if (!info) return null;
-  const v = info.min + (Math.max(0, Math.min(ANA_MAX, raw)) / ANA_MAX) * (info.max - info.min);
+  const v = raw2phys(raw, info);
   const dec = (info.max - info.min) <= 20 ? 1 : 0;
   return { v, txt: (dec ? v.toFixed(1) : Math.round(v)) + (info.unit ? ' ' + info.unit : '') };
 }
+/* ---- Réglages exprimés dans une vraie unité ----------------------------
+   Un réglage marqué `mes:i` parle la langue de la mesure branchée sur
+   l'entrée i ; marqué `mesOut:i`, celle d'une des sorties du composant.
+   En interne la valeur reste une grandeur brute 0-255 : seule la saisie et
+   l'affichage passent en °C, bar, %, tr/min…  Marqué `span:true`, c'est un
+   écart (hystérésis, pente) : on convertit l'amplitude, pas le zéro. */
+const ECHELLE_PCT = { unit:'%', min:0, max:100, brut:true };
+function optScale(c, o){
+  if (!c || !o) return null;
+  if (o.mesOut != null) return pinInfo(c.outPins[o.mesOut]);
+  if (o.mes != null){
+    const s = sourceOf(c.inPins[o.mes]);
+    return (s && s.info) ? s.info : ECHELLE_PCT;   // rien de branché : on parle en % d'échelle
+  }
+  return null;
+}
+function physDec(info){ return info && (info.max - info.min) <= 20 ? 1 : 0; }
+function raw2phys(raw, info, span){
+  if (!info) return raw;
+  const r = Math.max(0, Math.min(ANA_MAX, raw)) / ANA_MAX * (info.max - info.min);
+  return span ? r : info.min + r;
+}
+function phys2raw(v, info, span){
+  if (!info || info.max === info.min) return Math.round(v);
+  const r = Math.round((span ? v : v - info.min) / (info.max - info.min) * ANA_MAX);
+  return Math.max(0, Math.min(ANA_MAX, r));
+}
+/* Un nombre physique mis en forme, sans son unité */
+function physNum(v, info){ return physDec(info) ? +v.toFixed(1) : Math.round(v); }
+/* Un réglage mis en forme dans son unité : « 47 °C », « 62 % » */
+function optTxt(c, k){
+  const d = regOf(c.type), o = d && d.opts && d.opts.find(x => x.k === k);
+  const raw = optOf(c, k), sc = optScale(c, o);
+  if (!sc) return String(raw);
+  return physNum(raw2phys(raw, sc, o.span), sc) + (sc.unit ? ' ' + sc.unit : '');
+}
+/* La valeur brute qui circule sur une entrée, dite dans l'unité de sa source */
+function mesTxt(c, i){
+  const s = sourceOf(c.inPins[i]);
+  const raw = c.inPins[i].state | 0;
+  const sc = (s && s.info) || ECHELLE_PCT;
+  return physNum(raw2phys(raw, sc), sc) + (sc.unit ? ' ' + sc.unit : '');
+}
+/* Une valeur brute 0-255 dite en pourcentage de pleine échelle */
+function pctTxt(raw){ return Math.round(Math.max(0, Math.min(ANA_MAX, raw | 0)) / ANA_MAX * 100) + ' %'; }
+
 /* Une valeur de bus arrivant sur ce pin sera-t-elle ramenée à 0/1 ? */
 function busNormalized(pin){
   const c = pin.comp;
@@ -4788,8 +4838,8 @@ const missions = [
     steps:["Pose un FOUR (onglet Actionneurs), un THERMOSTAT À HYSTÉRÉSIS et un CNA (onglet Régulation).",
       "Câble : sortie T° du four → entrée MES du thermostat.",
       "Câble : sortie CDE du thermostat → entrée de poids 128 du CNA ; sortie A du CNA → entrée CHF du four.",
-      "Règle le thermostat : consigne 100, hystérésis 10. Règle l'inertie du four sur 4 secondes.",
-      "Regarde la température monter, le chauffage se couper à 110, redescendre, se relancer à 90. Indéfiniment."],
+      "Règle le thermostat : consigne <b>100 °C</b>, hystérésis <b>10 °C</b> \u2014 il parle la langue du four, puisque c\u2019est sa température qui arrive sur MES. Règle l\u2019inertie du four sur 4 secondes.",
+      "Regarde la température monter, le chauffage se couper à 110 °C, redescendre, se relancer à 90 °C. Indéfiniment."],
     why:"Tu viens de fermer une <b>boucle</b> : la sortie du système influence sa propre entrée. C'est le saut conceptuel de tout l'automatisme. La température ne se stabilise jamais vraiment : elle oscille autour de la consigne en dents de scie. C'est la signature de la régulation « tout ou rien » — celle de ton chauffe-eau, de ton frigo et de ton fer à repasser. Réduis l'hystérésis à 1 et regarde la commande claquer ; augmente l'inertie et regarde les dépassements grandir."} },
 { id:"m124", ch:"Chapitre 25 · Réguler", title:"Doser avec du tout ou rien",
   desc:"Un moteur ne connaît que marche et arrêt — et pourtant on veut régler sa vitesse. Utilise un POTENTIOMÈTRE, un MODULATEUR PWM et un MOTEUR. Baisse la fréquence du PWM à 1 Hz pour voir les impulsions une à une.",
@@ -4906,7 +4956,7 @@ const missions = [
     plan:["VÉRIN (POS) ─▶ COMPARATEUR À HYSTÉRÉSIS (seuils 120 / 135)","NON(sortie) ─▶ + du VÉRIN"],
     steps:["Pose un VÉRIN et un COMPARATEUR À HYSTÉRÉSIS (onglet Régulation), plus une porte NON.",
       "Câble : sortie POS du vérin → entrée A du comparateur.",
-      "Règle les seuils du comparateur : bas 120, haut 135 (la mi-course vaut 128 sur 255).",
+      "Règle les seuils du comparateur : bas 47 % et haut 53 % — les réglages se donnent dans l\u2019unité de la mesure branchée, ici des pourcentages.",
       "Sortie du comparateur → NON → entrée + du vérin : tant que la position est sous le seuil, on pousse ; au-dessus, on arrête.",
       "Le vérin part, atteint le milieu et s'immobilise.",
       "Essaie ensuite avec des seuils identiques (par exemple 128 / 127) : la commande se met à vibrer autour du point. Voilà pourquoi l'hystérésis existe."],
@@ -5164,8 +5214,26 @@ function regOptField(c, o){
   if (o.type === 'text')
     return inspField(o.label, '<input type="text" data-k="o_' + o.k + '" value="' +
       String(v == null ? '' : v).replace(/"/g, '&quot;') + '" maxlength="' + (o.max || 16) + '">', o.hint);
+  const sc = optScale(c, o);
+  if (sc){                                   // réglage exprimé dans une vraie unité
+    const lo = physNum(raw2phys(o.min, sc, o.span), sc),
+          hi = physNum(raw2phys(o.max, sc, o.span), sc),
+          pas = physDec(sc) ? 0.1 : 1,
+          u   = sc.unit + (o.suffix || '');
+    const hint = (o.hint ? o.hint + ' ' : '') +
+      (sc.brut ? 'Aucune mesure branchée : le réglage se donne en % de l’échelle. Branche une mesure et il passera dans son unité.'
+               : 'Exprimé dans l’unité de la mesure branchée (' + lo + ' à ' + hi + ' ' + u + ').');
+    return inspField(optLabel(o, sc), '<input type="number" data-k="o_' + o.k + '" value="' +
+      physNum(raw2phys(v, sc, o.span), sc) + '" min="' + lo + '" max="' + hi +
+      '" step="' + pas + '"><span class="uni">' + u + '</span>', hint);
+  }
   return inspField(o.label, '<input type="number" data-k="o_' + o.k + '" value="' + v +
     '" min="' + o.min + '" max="' + o.max + '" step="' + (o.step || 1) + '">', o.hint);
+}
+/* Intitulé d'un réglage, avec l'unité réellement en vigueur */
+function optLabel(o, sc){
+  const base = o.label.replace(/\s*\([^)]*\)\s*$/, '');
+  return sc ? base + ' (' + sc.unit + (o.suffix || '') + ')' : o.label;
 }
 function regOptApply(c, key, raw){
   const d = regOf(c.type);
@@ -5174,8 +5242,10 @@ function regOptApply(c, key, raw){
   if (o.type === 'text') c.opt[o.k] = String(raw).slice(0, o.max || 16);
   else if (o.type === 'select') c.opt[o.k] = isNaN(+raw) ? raw : +raw;
   else {
-    let v = (o.step && o.step < 1) ? parseFloat(raw) : parseInt(raw, 10);
-    if (isNaN(v)) v = o.def;
+    const sc = optScale(c, o);
+    let v = (sc || (o.step && o.step < 1)) ? parseFloat(raw) : parseInt(raw, 10);
+    if (isNaN(v)) v = sc ? raw2phys(o.def, sc, o.span) : o.def;
+    if (sc) v = phys2raw(v, sc, o.span);       // la saisie est physique, le stockage reste brut
     c.opt[o.k] = Math.max(o.min, Math.min(o.max, v));
   }
   if (d.onOpt) d.onOpt(c, o.k);
@@ -5197,7 +5267,9 @@ const FAM_SECTIONS = [
   { key:'time', t:'Temps & automatisme — attendre, compter, séquencer',
     p:'Les vrais automates ne raisonnent pas qu\u2019en 0 et 1 : ils <b>attendent</b>. Temporisations, impulsions calibrées, mémoires d\u2019état — voici la boîte à outils exacte des automates programmables industriels, en version démontable.' },
   { key:'reg', t:'Régulation — maintenir une consigne',
-    p:'Réguler, c\u2019est corriger en permanence l\u2019écart entre ce qu\u2019on veut et ce qu\u2019on mesure. Du simple thermostat au PID, ces blocs ferment la boucle entre un capteur et un actionneur.' },
+    p:'Réguler, c\u2019est corriger en permanence l\u2019écart entre ce qu\u2019on veut et ce qu\u2019on mesure. Du simple thermostat au PID, ces blocs ferment la boucle entre un capteur et un actionneur.<br><br>' +
+      '<b>Les réglages parlent en unités réelles.</b> Une consigne se donne en <code>°C</code>, en <code>bar</code>, en <code>%</code> ou en <code>tr/min</code> — jamais en valeur brute. Chaque régulateur regarde ce qui est branché sur son entrée de mesure, en reprend l\u2019unité et l\u2019étendue, et t\u2019ouvre un champ gradué dans cette unité : branche un four qui mesure de 0 à 250 °C, et le thermostat te demande une consigne <b>entre 0 et 250 °C</b>. Les seuils, l\u2019hystérésis et les limites suivent la même règle ; l\u2019hystérésis étant un <i>écart</i>, « ± 10 °C » veut bien dire dix degrés. Tant que rien n\u2019est branché, faute de mieux le réglage s\u2019exprime en <b>% de l\u2019échelle</b> — branche une mesure et il bascule tout seul dans la bonne unité.<br><br>' +
+      'La conversion se fait à la saisie comme à la lecture : la glissière de réglage, l\u2019inspecteur et l\u2019infobulle affichent tous la même valeur physique. Ce que le circuit transporte en interne reste une grandeur numérique — c\u2019est exactement ce que fait un automate réel, qui convertit ses entrées analogiques en grandeurs métier avant toute décision. On appelle ça la <b>mise à l\u2019échelle</b>.' },
   { key:'calc', t:'Calcul & données — les blocs assemblés (suite)',
     p:'Des blocs numériques plus larges : décoder, coder, aiguiller, mémoriser des octets. Tous restent démontables en portes — leur coût affiché est celui du circuit qu\u2019ils remplacent.' },
   { key:'mem', t:'Mémoire — registres et bascules (suite)',
@@ -5764,7 +5836,8 @@ defComp('MOTOR', {
     c.tr = Math.floor(Math.abs(c.ang) / (Math.PI * 2)) !== Math.floor(Math.abs(av) / (Math.PI * 2)) ? 1 : 0;
     if (c.tr) c.tours++;
   },
-  tip:c => ['Vitesse : ' + Math.round(c.vit) + ' / 255 (consigne ' + Math.round(c.cmd || 0) + ')',
+  tip:c => ['Vitesse : ' + (physOf(c.vit, { unit:'tr/min', min:0, max:3000 }) || {}).txt +
+              ' (commande ' + pctTxt(c.cmd || 0) + ')',
             'Sens ' + (c.rev ? 'inverse' : 'direct') + ' · ' + (c.tours || 0) + ' tours comptés',
             'Sortie TR : une impulsion par tour — c’est un tachymètre'],
   body(c, x, col, on, hov, t){
@@ -5862,7 +5935,8 @@ defComp('VALVE', {
     c.outPins[0].state = c.deb;
     c.outPins[1].state = c.deb;
   },
-  tip:c => [c.open ? ('Ouverte à ' + Math.round(c.ouv / 2.55) + ' % — débit ' + c.ouv + '/255')
+  tip:c => [c.open ? ('Ouverte à ' + Math.round(c.ouv / 2.55) + ' % — débit ' +
+                       (physOf(c.deb, { unit:'L/min', min:0, max:50 }) || {}).txt)
                    : 'Fermée, débit nul',
             'Commande dosable : une valeur intermédiaire entrouvre la vanne'],
   body(c, x, col, on, hov, t){
@@ -5911,7 +5985,8 @@ defComp('PUMP', {
     if (c.deb < .5) c.deb = 0;
     if (c.deb) c.ang += dt * 0.00006 * c.deb;
   },
-  tip:c => [c.run ? ('Débit : ' + Math.round(c.deb) + ' / 255') : 'Arrêtée',
+  tip:c => [c.run ? ('Débit : ' + (physOf(c.deb, { unit:'L/min', min:0, max:50 }) || {}).txt)
+                  : 'Arrêtée',
             'Commande dosable : la pompe tourne plus ou moins vite'],
   body(c, x, col, on, hov, t){
     const cx = c.x + c.w / 2, cy = c.y + c.h / 2 - 2;
@@ -6013,8 +6088,6 @@ const ANA_MAX = 255;
      2 … 255  → dosage proportionnel (PWM, CNA, régulateur…)
    Un actionneur se commande donc aussi bien en tout ou rien qu'en analogique. */
 const anaIn = pin => { const v = (pin.state | 0); return v <= 0 ? 0 : (v === 1 ? ANA_MAX : Math.min(ANA_MAX, v)); };
-const phys2raw = (v, mn, mx) => Math.max(0, Math.min(ANA_MAX, Math.round((v - mn) / (mx - mn) * ANA_MAX)));
-const raw2phys = (r, mn, mx) => mn + (r / ANA_MAX) * (mx - mn);
 const fmtPhys = (v, unit, dec) => (dec ? v.toFixed(dec) : Math.round(v)) + (unit ? ' ' + unit : '');
 
 /* Fabrique de capteurs : mesure + seuil, tous bâtis sur le même moule */
@@ -6057,7 +6130,7 @@ function defSensor(id, o){
       }
       c.mes = v;
       const sh = optOf(c, 'seuil'), sb = optOf(c, 'bas');
-      c.raw = phys2raw(v, o.min, o.max);
+      c.raw = phys2raw(v, o);
       c.outPins[0].state = c.raw;
       c.outPins[1].state = v >= sh ? 1 : 0;
       c.outPins[2].state = v <= sb ? 1 : 0;
@@ -6077,7 +6150,7 @@ function defSensor(id, o){
     tip:c => [
       (c.direct ? 'MESURE EN DIRECT sur le procédé' : 'Valeur simulée à la main (rien n’est branché sur PROC)'),
       'Mesure : ' + fmtPhys(c.mes != null ? c.mes : optOf(c, 'val'), o.unit, 1) +
-        '  →  valeur brute ' + c.raw + ' / 255',
+        '  →  ' + pctTxt(c.raw) + ' de son échelle',
       (c.horsGamme ? '⚠ hors gamme : le procédé vaut ' + fmtPhys(c.brut, o.unit, 1) +
         ', le capteur sature (étendue ' + o.min + ' … ' + o.max + ' ' + o.unit + ')' :
         'Étendue de mesure : ' + o.min + ' … ' + o.max + ' ' + o.unit),
@@ -6212,9 +6285,9 @@ defComp('THERMO', {
   glyph:'⇅', w:120, h:92,
   ins:[{ n:'MES', bus:true }], outs:[{ n:'CDE' }],
   opts:[
-    { k:'cons', label:'Consigne (0-255)', min:0, max:255, step:1, def:128,
+    { k:'cons', label:'Consigne', min:0, max:255, step:1, def:128, mes:0,
       hint:'La valeur à maintenir.' },
-    { k:'hyst', label:'Hystérésis (±)', min:1, max:60, step:1, def:12,
+    { k:'hyst', label:'Hystérésis (±)', min:1, max:60, step:1, def:12, mes:0, span:true,
       hint:'Zone morte autour de la consigne : elle évite que la commande claque sans arrêt.' },
     { k:'sens', label:'Action', type:'select', def:'chauf',
       choices:[['chauf','Chauffer (sous la consigne)'],['refr','Refroidir (au-dessus)']] }
@@ -6232,11 +6305,12 @@ defComp('THERMO', {
     c.mes = v;
     c.outPins[0].state = c.q;
   },
-  value:c => (c.mes || 0) + ' → ' + optOf(c, 'cons'),
-  sub:c => c.q ? (optOf(c, 'sens') === 'chauf' ? 'chauffe' : 'refroidit') : 'repos',
+  value:c => mesTxt(c, 0),
+  sub:c => 'cons. ' + optTxt(c, 'cons') + ' · ' +
+           (c.q ? (optOf(c, 'sens') === 'chauf' ? 'chauffe' : 'refroidit') : 'repos'),
   bar:c => (c.mes || 0) / 255,
-  tip:c => ['Consigne ' + optOf(c, 'cons') + ' ± ' + optOf(c, 'hyst'),
-            'Mesure ' + (c.mes || 0) + ' → commande ' + (c.q ? 'ACTIVE' : 'arrêtée')],
+  tip:c => ['Consigne ' + optTxt(c, 'cons') + ' ± ' + optTxt(c, 'hyst'),
+            'Mesure ' + mesTxt(c, 0) + ' → commande ' + (c.q ? 'ACTIVE' : 'arrêtée')],
   guide:{ txt:'Il compare une mesure à une <code>consigne</code> et commande le chauffage (ou le refroidissement). Le secret est l’<b>hystérésis</b> : il ne coupe pas dès que la consigne est atteinte, mais un peu au-dessus, et ne relance qu’un peu en dessous. Sans elle, la commande claquerait plusieurs fois par seconde.',
     ex:'FOUR → THERMOSTAT → entrée CHAUFFE du four : la boucle est fermée, la température oscille autour de la consigne. Réduis l’hystérésis à 1 et observe le claquement.',
     real:'Ce va-et-vient contrôlé s’appelle une régulation « tout ou rien ». C’est celle de ton chauffe-eau, de ton réfrigérateur et de ton fer à repasser.' }
@@ -6246,8 +6320,8 @@ defComp('SCHMITT', {
   glyph:'⎍', w:116, h:88,
   ins:[{ n:'A', bus:true }], outs:[{ n:'S' }],
   opts:[
-    { k:'haut', label:'Seuil haut', min:1, max:255, step:1, def:170 },
-    { k:'bas',  label:'Seuil bas',  min:0, max:254, step:1, def:85,
+    { k:'haut', label:'Seuil haut', min:1, max:255, step:1, def:170, mes:0 },
+    { k:'bas',  label:'Seuil bas',  min:0, max:254, step:1, def:85, mes:0,
       hint:'Le signal doit repasser SOUS ce seuil pour que la sortie retombe.' }
   ],
   init(c){ c.q = 0; },
@@ -6258,8 +6332,11 @@ defComp('SCHMITT', {
     c.mes = v;
     c.outPins[0].state = c.q;
   },
-  value:c => String(c.mes || 0),
-  sub:c => optOf(c, 'bas') + ' / ' + optOf(c, 'haut'),
+  value:c => mesTxt(c, 0),
+  sub:c => optTxt(c, 'bas') + ' ▼ ▲ ' + optTxt(c, 'haut'),
+  tip:c => ['Mesure : ' + mesTxt(c, 0),
+            'Bascule à 1 au-dessus de ' + optTxt(c, 'haut'),
+            'et ne retombe que sous ' + optTxt(c, 'bas')],
   bar:c => (c.mes || 0) / 255,
   guide:{ txt:'Un comparateur avec <code>deux seuils</code> : il bascule à 1 en franchissant le seuil haut, et ne retombe qu’en repassant sous le seuil bas. Entre les deux, il ne change pas d’avis — c’est ce qui le rend insensible au bruit.',
     ex:'BRUIT → SCHMITT : compare la sortie avec un comparateur à seuil unique. Le second hésite en permanence, le Schmitt reste net.',
@@ -6270,16 +6347,21 @@ defComp('LIMIT', {
   glyph:'⊏⊐', w:112, h:84,
   ins:[{ n:'A', bus:true }], outs:[{ n:'S', bus:true }],
   opts:[
-    { k:'min', label:'Minimum', min:0, max:255, step:1, def:0 },
-    { k:'max', label:'Maximum', min:0, max:255, step:1, def:200 }
+    { k:'min', label:'Minimum', min:0, max:255, step:1, def:0, mes:0 },
+    { k:'max', label:'Maximum', min:0, max:255, step:1, def:200, mes:0 }
   ],
   eval(c){
     const v = c.inPins[0].state | 0;
     c.out = Math.max(optOf(c, 'min'), Math.min(optOf(c, 'max'), v));
     c.outPins[0].state = c.out;
   },
-  value:c => String(c.out || 0),
-  sub:c => optOf(c, 'min') + ' … ' + optOf(c, 'max'),
+  value:c => { const s = sourceOf(c.inPins[0]);
+    return physNum(raw2phys(c.out || 0, (s && s.info) || ECHELLE_PCT),
+                   (s && s.info) || ECHELLE_PCT) + ' ' +
+           (((s && s.info) || ECHELLE_PCT).unit || ''); },
+  sub:c => optTxt(c, 'min') + ' … ' + optTxt(c, 'max'),
+  tip:c => ['Entrée écrêtée entre ' + optTxt(c, 'min') + ' et ' + optTxt(c, 'max'),
+            'Sortie : ' + mesTxt(c, 0)],
   guide:{ txt:'Il écrête la valeur qui le traverse entre un minimum et un maximum. Une sécurité bête et efficace : quoi qu’il arrive en amont, l’actionneur ne recevra jamais plus que ce qu’il peut encaisser.',
     ex:'POTAR → LIMITEUR (max 120) → PWM → MOTEUR : impossible de dépasser la mi-puissance, même en poussant le bouton à fond.' }
 });
@@ -6287,7 +6369,7 @@ defComp('RAMPE', {
   name:'RAMPE / DÉMARRAGE PROGRESSIF', short:'RAMPE', family:'reg', color:'#ffc23d', cost:12, seq:true,
   glyph:'◺', w:120, h:92,
   ins:[{ n:'CIB', bus:true }], outs:[{ n:'S', bus:true }],
-  opts:[{ k:'vit', label:'Pente (unités/s)', min:5, max:255, step:5, def:60,
+  opts:[{ k:'vit', label:'Pente', min:5, max:255, step:5, def:60, mes:0, span:true, suffix:'/s',
     hint:'Vitesse maximale de variation de la sortie.' }],
   init(c){ c.val = 0; c.lastT = 0; },
   eval(c){ c.cible = c.inPins[0].state | 0; c.outPins[0].state = Math.round(c.val); },
@@ -6298,8 +6380,11 @@ defComp('RAMPE', {
     if (c.val < c.cible) c.val = Math.min(c.cible, c.val + step);
     else if (c.val > c.cible) c.val = Math.max(c.cible, c.val - step);
   },
-  value:c => String(Math.round(c.val || 0)),
-  sub:c => '→ ' + (c.cible || 0),
+  value:c => mesTxt(c, 0),
+  sub:c => 'pente ' + optTxt(c, 'vit') + '/s',
+  tip:c => ['Sortie : ' + pctTxt(c.val || 0) + ' de l’échelle',
+            'Cible : ' + pctTxt(c.cible || 0),
+            'Elle ne peut varier que de ' + optTxt(c, 'vit') + ' par seconde'],
   bar:c => (c.val || 0) / 255,
   guide:{ txt:'La sortie rejoint la valeur demandée <code>en douceur</code>, à pente limitée, au lieu de sauter d’un coup. C’est le démarrage progressif — et l’arrêt progressif.',
     ex:'INTERRUPTEUR → VRAI·1 → RAMPE → PWM → MOTEUR : le moteur monte en régime au lieu de démarrer d’un coup.',
@@ -6310,7 +6395,7 @@ defComp('PROP', {
   glyph:'∝', w:124, h:96,
   ins:[{ n:'MES', bus:true }], outs:[{ n:'CDE', bus:true }],
   opts:[
-    { k:'cons', label:'Consigne (0-255)', min:0, max:255, step:1, def:150 },
+    { k:'cons', label:'Consigne', min:0, max:255, step:1, def:150, mes:0 },
     { k:'gain', label:'Gain', min:0.2, max:10, step:0.2, def:3,
       hint:'Plus le gain est fort, plus la correction est vive — et plus le système risque d’osciller.' }
   ],
@@ -6320,11 +6405,13 @@ defComp('PROP', {
     c.cmd = Math.max(0, Math.min(255, Math.round(c.err * optOf(c, 'gain'))));
     c.outPins[0].state = c.cmd;
   },
-  value:c => String(c.cmd || 0),
-  sub:c => 'écart ' + (c.err > 0 ? '+' : '') + (c.err || 0),
+  value:c => pctTxt(c.cmd || 0),
+  sub:c => 'cons. ' + optTxt(c, 'cons'),
   bar:c => (c.cmd || 0) / 255,
-  tip:c => ['Consigne ' + optOf(c, 'cons') + ' · mesure ' + ((optOf(c, 'cons') - (c.err || 0)) | 0),
-            'Commande = écart × gain ' + optOf(c, 'gain')],
+  tip:c => ['Consigne ' + optTxt(c, 'cons') + ' · mesure ' + mesTxt(c, 0),
+            'Écart : ' + (c.err > 0 ? '+' : '') + pctTxt(Math.abs(c.err || 0)).replace(' %', '') +
+              ' % d’échelle',
+            'Commande = écart × gain ' + optOf(c, 'gain') + ' → ' + pctTxt(c.cmd || 0)],
   guide:{ txt:'Au lieu de commander en tout ou rien, il <code>dose</code> : plus l’écart à la consigne est grand, plus la commande est forte. Le résultat est bien plus doux qu’un thermostat — mais il subsiste toujours un petit écart résiduel, que seuls les termes I et D d’un vrai PID savent effacer.',
     ex:'FOUR → RÉG. P → PWM → entrée CHAUFFE : compare avec le thermostat. La température ne fait plus de dents de scie. Monte le gain à 10 : elle se met à osciller.',
     real:'Le proportionnel est la première brique du fameux PID, qui pilote aujourd’hui les fours, les drones, les fusées et la vitesse de ta voiture.' }
@@ -6339,7 +6426,7 @@ defComp('FOUR', {
   opts:[
     { k:'inert', label:'Inertie (s)', min:1, max:60, step:1, def:8,
       hint:'Temps de réaction du procédé : plus il est grand, plus la régulation est difficile.' },
-    { k:'alerte', label:'Seuil « chaud » (0-255)', min:0, max:255, step:5, def:200 }
+    { k:'alerte', label:'Seuil « chaud »', min:0, max:255, step:5, def:200, mesOut:0 }
   ],
   init(c){ c.temp = 0; c.lastT = 0; },
   save:c => ({ temp: c.temp ? Math.round(c.temp) : undefined }),
@@ -6355,10 +6442,10 @@ defComp('FOUR', {
     const tau = optOf(c, 'inert') * 1000;
     c.temp += (c.pwr - c.temp) * Math.min(1, dt / tau);   // premier ordre
   },
-  value:c => Math.round(raw2phys(c.temp || 0, 0, 250)) + ' °C',
+  value:c => Math.round(raw2phys(c.temp || 0, { min:0, max:250 })) + ' °C',
   sub:c => c.pwr ? 'chauffe ' + Math.round(c.pwr / 2.55) + ' %' : 'refroidit',
   bar:c => (c.temp || 0) / 255,
-  tip:c => ['Température : ' + Math.round(raw2phys(c.temp || 0, 0, 250)) + ' °C (brut ' + Math.round(c.temp || 0) + ')',
+  tip:c => ['Température : ' + Math.round(raw2phys(c.temp || 0, { min:0, max:250 })) + ' °C',
             'Puissance reçue : ' + Math.round((c.pwr || 0) / 2.55) + ' %',
             'Inertie : ' + optOf(c, 'inert') + ' s'],
   guide:{ txt:'Un vrai <b>procédé</b> : il reçoit une puissance de chauffe et sa température monte <code>lentement</code>, avec de l’inertie, puis redescend toute seule quand on coupe. Il mesure lui-même sa température et la renvoie sur <code>T°</code>.<br>C’est la pièce qui manquait pour boucler : logique → actionneur → <b>monde</b> → capteur → logique.',
@@ -6402,7 +6489,7 @@ defComp('CUVE', {
     if (c.fill && !c.drain) c.niv = Math.min(100, c.niv + d * c.fill / ANA_MAX);
     else if (c.drain && !c.fill) c.niv = Math.max(0, c.niv - d * c.drain / ANA_MAX);
   },
-  tip:c => ['Niveau : ' + Math.round(c.niv) + ' % (mesure ' + Math.round(c.niv * 2.55) + '/255)',
+  tip:c => ['Niveau : ' + Math.round(c.niv) + ' %',
             'Pression au fond : ' + (c.niv / 100 * 0.1).toFixed(2) + ' bar — proportionnelle à la hauteur',
             'Seuils : bas ' + optOf(c, 'bas') + ' % · haut ' + optOf(c, 'haut') + ' %',
             'Débits dosables : une commande à mi-valeur remplit deux fois moins vite'],
@@ -6434,7 +6521,7 @@ defComp('CUVE', {
     x.fillStyle = col;
     x.fillText(Math.round(c.niv) + ' %', c.x + c.w / 2, c.y + c.h - 10);
   },
-  guide:{ txt:'Une cuve qui se remplit et se vide vraiment. Elle renvoie <code>NIV</code> (le niveau mesuré, 0-255), <code>HAUT</code> et <code>BAS</code> (les deux détecteurs de seuil), et <code>PRES</code> (la pression au fond, proportionnelle à la hauteur de liquide). Les commandes de remplissage et de vidange sont dosables ; ensemble, elles s’annulent.',
+  guide:{ txt:'Une cuve qui se remplit et se vide vraiment. Elle renvoie <code>NIV</code> (le niveau mesuré, en %), <code>HAUT</code> et <code>BAS</code> (les deux détecteurs de seuil), et <code>PRES</code> (la pression au fond, proportionnelle à la hauteur de liquide). Les commandes de remplissage et de vidange sont dosables ; ensemble, elles s’annulent.',
     ex:'HAUT → R et BAS → S d’une MÉMOIRE SR, sortie → REMP : le remplissage automatique classique. La pompe démarre au niveau bas et s’arrête au niveau haut, jamais entre les deux.',
     real:'Pourquoi deux seuils et pas un ? Avec un seul, la pompe démarrerait et s’arrêterait plusieurs fois par seconde autour du point de consigne. Cet écart volontaire s’appelle l’hystérésis — et il use dix fois moins la pompe.' }
 });
@@ -6456,7 +6543,7 @@ defComp('JAUGE', {
     c.info = info;
     c.ph = physOf(c.raw, info);
   },
-  tip:c => ['Affiché : ' + (c.ph ? c.ph.txt : (c.raw || 0)) + '  (brut ' + (c.raw || 0) + '/255)',
+  tip:c => ['Affiché : ' + (c.ph ? c.ph.txt : pctTxt(c.raw || 0)),
             'Échelle : ' + (c.info ? c.info.min + ' … ' + c.info.max + ' ' + c.info.unit : 'auto')],
   body(c, x, col, on, hov, t){
     const cx = c.x + c.w / 2, cy = c.y + c.h - 26, r = 32;
@@ -6960,7 +7047,7 @@ defComp('PID', {
   glyph:'∑∫', w:148, h:126,
   ins:[{ n:'MES', bus:true }, { n:'RAZ' }], outs:[{ n:'CDE', bus:true }],
   opts:[
-    { k:'cons', label:'Consigne (0-255)', min:0, max:255, step:1, def:150 },
+    { k:'cons', label:'Consigne', min:0, max:255, step:1, def:150, mes:0 },
     { k:'kp', label:'Gain proportionnel Kp', min:0, max:10, step:0.1, def:2,
       hint:'Réagit à l’écart présent. Trop fort : ça oscille.' },
     { k:'ki', label:'Gain intégral Ki (par s)', min:0, max:5, step:0.05, def:0.4,
@@ -6997,19 +7084,18 @@ defComp('PID', {
     c.err = err;
     c.prevErr = err;
   },
-  tip:c => ['Consigne ' + optOf(c, 'cons') + ' · mesure ' + (c.mes || 0) +
-              ' · écart ' + Math.round(c.err || 0),
+  tip:c => ['Consigne ' + optTxt(c, 'cons') + ' · mesure ' + mesTxt(c, 0),
             'P = ' + Math.round(c.p || 0) + '   I = ' + Math.round(c.i || 0) +
-              '   D = ' + Math.round(c.dd || 0),
-            'Commande : ' + Math.round(c.cmd || 0) + ' / 255',
+              '   D = ' + Math.round(c.dd || 0) + ' (parts de commande)',
+            'Commande : ' + pctTxt(c.cmd || 0),
             'RAZ remet l’intégrale à zéro — utile après un arrêt'],
   body(c, x, col, on, hov, t){
     const cx = c.x + c.w / 2;
     x.font = "700 20px 'Chakra Petch', sans-serif"; x.textAlign = 'center'; x.textBaseline = 'middle';
     x.fillStyle = col; x.shadowBlur = 8; x.shadowColor = col;
-    x.fillText(Math.round(c.cmd || 0), cx, c.y + 34); x.shadowBlur = 0;
+    x.fillText(pctTxt(c.cmd || 0), cx, c.y + 34); x.shadowBlur = 0;
     x.font = "600 8px 'IBM Plex Mono', monospace"; x.fillStyle = PAL.dim;
-    x.fillText('cons ' + optOf(c, 'cons') + ' · mes ' + (c.mes || 0), cx, c.y + 52);
+    x.fillText('cons ' + optTxt(c, 'cons') + ' · mes ' + mesTxt(c, 0), cx, c.y + 52);
     // trois barres : la part de chaque terme dans la commande
     const tot = Math.max(1, Math.abs(c.p || 0) + Math.abs(c.i || 0) + Math.abs(c.dd || 0));
     [['P', c.p, '#3dff9e'], ['I', c.i, '#38e1ff'], ['D', c.dd, '#ff6bc1']].forEach(([lab, v, cc], k) => {
@@ -8810,9 +8896,20 @@ function primaryParam(c){
   const o = d.opts.find(x => x.k === d.main) ||
             d.opts.find(x => x.type !== 'text' && x.type !== 'select');
   if (!o) return null;
+  const set = (cc, v) => { cc.opt[o.k] = v; if (d.onOpt) d.onOpt(cc, o.k); };
+  const sc = optScale(c, o);
+  if (sc){                    // la glissière parle elle aussi en °C, bar, % ou tr/min
+    const dec = physDec(sc);
+    return { label:o.label.replace(/ *\([^)]*\) *$/, ''), unit:sc.unit + (o.suffix || ''),
+             min:physNum(raw2phys(o.min, sc, o.span), sc),
+             max:physNum(raw2phys(o.max, sc, o.span), sc),
+             step:dec ? 0.1 : 1,
+             get:cc => physNum(raw2phys(optOf(cc, o.k), sc, o.span), sc),
+             set:(cc, v) => set(cc, phys2raw(v, sc, o.span)) };
+  }
   return { label:o.label.replace(/ *\(.*\)/, ''), unit:(o.label.match(/\(([^)]*)\)/) || [,''])[1],
            min:o.min, max:o.max, step:o.step || 1,
-           get:cc => optOf(cc, o.k), set:(cc, v) => { cc.opt[o.k] = v; if (d.onOpt) d.onOpt(cc, o.k); } };
+           get:cc => optOf(cc, o.k), set };
 }
 /* Zone d'accroche de la glissière, en coordonnées LOCALES (repère non tourné) */
 function paramZone(c){

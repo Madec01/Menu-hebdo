@@ -1271,16 +1271,16 @@ T('T89 capteurs : mesure physique, valeur brute et seuil', () => {
   board();
   const t = mk('TEMPC', 0, 0), l = mk('LDR', 300, 0), d = mk('DIST', 600, 0);
   sim();
-  eq(t.outPins[0].state, phys2raw(20, -10, 50), '20 °C → valeur brute');
+  eq(t.outPins[0].state, phys2raw(20, { min:-10, max:50 }), '20 °C → valeur brute');
   eq(t.outPins[1].state, 0, '20 °C sous le seuil de 25 °C');
   applyInspector(t, fld('o_val', 30)); sim();
   eq(t.outPins[1].state, 1, '30 °C : seuil dépassé');
-  eq(t.outPins[0].state, phys2raw(30, -10, 50), 'valeur brute suit la mesure');
+  eq(t.outPins[0].state, phys2raw(30, { min:-10, max:50 }), 'valeur brute suit la mesure');
   applyInspector(t, fld('o_val', 99));
   eq(optOf(t, 'val'), 50, 'mesure bornée au maximum du capteur');
   applyInspector(l, fld('o_seuil', 500)); applyInspector(l, fld('o_val', 800)); sim();
   eq(l.outPins[1].state, 1, 'lumière au-dessus du seuil');
-  eq(d.outPins[0].state, phys2raw(120, 0, 400), 'distance convertie');
+  eq(d.outPins[0].state, phys2raw(120, { min:0, max:400 }), 'distance convertie');
   // le clic balaye l’échelle
   const v0 = optOf(d, 'val');
   REG.DIST.click(d);
@@ -1297,7 +1297,7 @@ T('T90 conversions CAN et CNA : aller-retour sans perte', () => {
   recalcFan();
   [0, 25, 50, 75, 100].forEach(pc => {
     applyInspector(pot, fld('o_val', pc)); sim();
-    const brut = phys2raw(pc, 0, 100);
+    const brut = phys2raw(pc, { min:0, max:100 });
     eq(can.raw, brut, pc + ' % → ' + brut);
     eq(cna.outPins[0].state, brut, 'reconverti à l’identique');
     eq(jauge.raw, brut, 'la jauge reçoit la valeur');
@@ -1329,7 +1329,10 @@ T('T92 thermostat : hystérésis et sens d’action', () => {
   board();
   const pot = mk('POT', 0, 0), th = mk('THERMO', 300, 0);
   link(pot, 0, th, 0);
-  applyInspector(th, fld('o_cons', 128)); applyInspector(th, fld('o_hyst', 12));
+  // le potentiomètre parle en % : la consigne et l'hystérésis aussi
+  applyInspector(th, fld('o_cons', 50)); applyInspector(th, fld('o_hyst', 5));
+  eq(optOf(th, 'cons'), phys2raw(50, { min:0, max:100 }), '50 % → 128 en interne');
+  eq(optTxt(th, 'cons'), '50 %', 'et l’affichage reste en %');
   applyInspector(pot, fld('o_val', 20)); sim();      // ≈ 51 brut, très en dessous
   eq(th.outPins[0].state, 1, 'sous la consigne : ça chauffe');
   applyInspector(pot, fld('o_val', 50)); sim();      // ≈ 128, dans la zone morte
@@ -1349,24 +1352,25 @@ T('T93 comparateur à hystérésis (Schmitt) et limiteur', () => {
   board();
   const pot = mk('POT', 0, 0), sc = mk('SCHMITT', 300, 0), li = mk('LIMIT', 300, 300);
   link(pot, 0, sc, 0); link(pot, 0, li, 0);
-  applyInspector(sc, fld('o_haut', 200)); applyInspector(sc, fld('o_bas', 80));
-  applyInspector(li, fld('o_min', 40)); applyInspector(li, fld('o_max', 150));
+  const PC = { min:0, max:100 };
+  applyInspector(sc, fld('o_haut', 78)); applyInspector(sc, fld('o_bas', 31));
+  applyInspector(li, fld('o_min', 20)); applyInspector(li, fld('o_max', 60));
   const set = pc => { applyInspector(pot, fld('o_val', pc)); sim(); };
   set(0);  eq(sc.outPins[0].state, 0, 'départ bas');
   set(50); eq(sc.outPins[0].state, 0, '≈128 : pas encore le seuil haut');
   set(90); eq(sc.outPins[0].state, 1, '≈230 : bascule');
   set(50); eq(sc.outPins[0].state, 1, 'reste haut dans la zone d’hystérésis');
   set(10); eq(sc.outPins[0].state, 0, 'sous le seuil bas : retombe');
-  set(0);   eq(li.outPins[0].state, 40, 'limiteur : plancher');
-  set(100); eq(li.outPins[0].state, 150, 'limiteur : plafond');
-  set(30);  eq(li.outPins[0].state, phys2raw(30, 0, 100), 'entre les deux : inchangé');
+  set(0);   eq(li.outPins[0].state, phys2raw(20, PC), 'limiteur : plancher');
+  set(100); eq(li.outPins[0].state, phys2raw(60, PC), 'limiteur : plafond');
+  set(30);  eq(li.outPins[0].state, phys2raw(30, { min:0, max:100 }), 'entre les deux : inchangé');
 });
 
 T('T94 rampe : la sortie rejoint la cible à pente limitée', () => {
   board();
   const pot = mk('POT', 0, 0), r = mk('RAMPE', 300, 0);
   link(pot, 0, r, 0);
-  applyInspector(r, fld('o_vit', 100));           // 100 unités par seconde
+  applyInspector(r, fld('o_vit', 40));           // 40 % d'échelle par seconde ≈ 102 brut
   applyInspector(pot, fld('o_val', 100));         // cible 255
   sim();
   eq(Math.round(r.val), 0, 'départ à zéro');
@@ -2430,14 +2434,16 @@ T('T136 boucle de vitesse : le tachymètre régule le moteur', () => {
   const en = mk('HIGH', 200, 400);
   link(m, 0, reg, 0);                     // la vitesse mesurée revient au régulateur
   link(reg, 0, pwm, 0); link(en, 0, pwm, 1); link(pwm, 0, m, 0);
-  applyInspector(reg, fld('o_cons', 150)); applyInspector(reg, fld('o_gain', 4));
+  // le régulateur voit une vitesse en tr/min : la consigne se donne en tr/min
+  applyInspector(reg, fld('o_cons', 1765)); applyInspector(reg, fld('o_gain', 4));
+  eq(optOf(reg, 'cons'), 150, '1765 tr/min → 150 en interne');
   applyInspector(m, fld('o_inert', .5));
   applyInspector(pwm, fld('o_hz', 20));
   for (let i = 0; i < 120; i++){ __advance(100); sim(); }
   ok(m.vit > 100 && m.vit < 210, 'la vitesse se cale autour de la consigne (' +
      Math.round(m.vit) + ' pour 150)');
   // on augmente la consigne : la vitesse suit
-  applyInspector(reg, fld('o_cons', 220));
+  applyInspector(reg, fld('o_cons', 2588));       // ≈ 220 en interne
   for (let i = 0; i < 120; i++){ __advance(100); sim(); }
   ok(m.vit > 150, 'nouvelle consigne suivie (' + Math.round(m.vit) + ')');
 });
@@ -2550,9 +2556,10 @@ T('T141 boucle complète four → capteur → régulateur → four', () => {
   link(four, 0, capt, 0);                 // le capteur mesure le four
   link(capt, 0, th, 0);                   // sa mesure alimente le régulateur
   link(th, 0, four, 0);                   // qui commande la chauffe
-  // Attention à l’échelle : ce capteur mesure de −10 à 50 °C, il sort donc déjà 43
-  // quand le four est à 0 °C. La consigne se fixe dans l’échelle du CAPTEUR.
-  applyInspector(th, fld('o_cons', 150)); applyInspector(th, fld('o_hyst', 10));
+  // La consigne se donne directement en °C, dans l'échelle du capteur branché
+  applyInspector(th, fld('o_cons', 25)); applyInspector(th, fld('o_hyst', 2.4));
+  eq(optTxt(th, 'cons'), '25 °C', 'le thermostat affiche sa consigne en °C');
+  eq(optOf(th, 'cons'), phys2raw(25, { min:-10, max:50 }), '25 °C → 149 en interne');
   applyInspector(four, fld('o_inert', 2));
   eq(Math.round(four.temp), 0, 'four froid');
   let coupe = false, relance = false;
@@ -2755,6 +2762,43 @@ T('T147 tous les exemples se câblent sur des ports compatibles', () => {
     });
   });
   ok(!bad.length, 'liaisons incohérentes —\n      ' + bad.join('\n      '));
+});
+
+T('T148 les réglages se donnent dans l’unité de la mesure branchée', () => {
+  board();
+  const four = mk('FOUR', 0, 0), th = mk('THERMO', 400, 0);
+  // sans rien de branché : on parle en % de l'échelle
+  eq(optScale(th, REG.THERMO.opts[0]).unit, '%', 'par défaut : % de l’échelle');
+  applyInspector(th, fld('o_cons', 50));
+  eq(optOf(th, 'cons'), 128, '50 % → 128 en interne');
+  // branché sur un four (0-250 °C) : la consigne se donne en °C
+  link(four, 0, th, 0);
+  const sc = optScale(th, REG.THERMO.opts[0]);
+  eq(sc.unit, '°C', 'la consigne parle la langue du four');
+  eq(sc.max, 250, 'et son échelle');
+  applyInspector(th, fld('o_cons', 47));
+  eq(optOf(th, 'cons'), phys2raw(47, { min:0, max:250 }), '47 °C stocké en brut');
+  eq(optTxt(th, 'cons'), '47 °C', 'et relu en °C');
+  // l'hystérésis est un écart : on convertit l'amplitude, pas le zéro
+  applyInspector(th, fld('o_hyst', 10));
+  eq(optOf(th, 'hyst'), Math.round(10 / 250 * 255), '10 °C d’écart → 10 en brut');
+  eq(optTxt(th, 'hyst'), '10 °C', 'relu comme un écart');
+  // le champ de l'inspecteur porte l'unité, pas « 0-255 »
+  const html = regOptField(th, REG.THERMO.opts[0]);
+  ok(/Consigne \(°C\)/.test(html), 'l’intitulé porte l’unité');
+  ok(/value="47"/.test(html), 'la valeur affichée est physique');
+  ok(!/0-255/.test(html), 'plus aucune échelle brute à l’écran');
+  // et la glissière aussi
+  const p = primaryParam(th);
+  eq(p.unit, '°C', 'la glissière est graduée en °C');
+  eq(p.max, 250, 'sur toute l’échelle du four');
+  eq(p.get(th), 47, 'et lit la consigne en °C');
+  p.set(th, 120);
+  eq(optTxt(th, 'cons'), '120 °C', 'glisser règle bien la consigne physique');
+  // le four exprime son propre seuil dans sa propre unité
+  applyInspector(four, fld('o_alerte', 200));
+  eq(optTxt(four, 'alerte'), '200 °C', 'seuil « chaud » en °C');
+  eq(optOf(four, 'alerte'), phys2raw(200, { min:0, max:250 }), 'stocké en brut');
 });
 
 /* ===================== bilan ===================== */
