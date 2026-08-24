@@ -1072,42 +1072,61 @@ cas("equipe-et-stocks", async (nav) => {
   v.aumoins("on peut tout libérer", lib.n, 1);
   v.egal("et il ne reste aucun poste fixe", lib.restants, 0);
 
-  // Réapprovisionnement : seuil, lot, plafond, prix maximum.
+  // Deux réglages possibles, et un seul à la fois.
   const st = await jeu(`(() => {
     const u = U();
     u.stocks = {};
     const r = reglerSurConsommation('pdt_brutes');
-    r.actif = true; r.plafond = 800; r.prixMax = 0;
+    r.mode = 'seuil';
     const avant = etat.finances.solde;
     reapprovisionner();
-    const apres1 = Math.round(stockDe('pdt_brutes'));
-    // deuxième passage : le plafond doit borner
-    ajouterStock('pdt_brutes', 0);
+    const apresSeuil = Math.round(stockDe('pdt_brutes'));
+    // au-dessus du seuil, on ne recommande plus
     reapprovisionner(); reapprovisionner();
-    const apres2 = Math.round(stockDe('pdt_brutes'));
-    return { seuil:r.seuil, lot:r.lot, plafond:r.plafond, apres1, apres2,
+    const stable = Math.round(stockDe('pdt_brutes'));
+    return { seuil:r.seuil, lot:r.lot, hebdo:r.hebdo, apresSeuil, stable,
              depense: avant - etat.finances.solde };
   })()`);
   v("le réglage automatique donne un seuil et un lot sensés",
     st.seuil > 0 && st.lot > st.seuil, st.seuil + " / " + st.lot);
-  v("la première recommande arrive", st.apres1 > 0 && st.apres1 <= st.plafond,
-    st.apres1 + " livrés pour un lot de " + st.lot + " et un plafond de " + st.plafond);
-  v("le plafond borne le stock", st.apres2 <= st.plafond, st.apres2 + " pour un plafond de " + st.plafond);
-  v.aumoins("et ça se paie", st.depense, 1);
+  v.egal("au seuil, on reçoit exactement le lot", st.apresSeuil, st.lot);
+  v.egal("et on ne recommande plus tant qu'on est au-dessus", st.stable, st.apresSeuil);
+  v.aumoins("ça se paie", st.depense, 1);
 
-  const cher = await jeu(`(() => {
+  const heb = await jeu(`(() => {
     const u = U(); u.stocks = {};
     const r = etat.reappro['pdt_brutes'];
-    r.plafond = 0; r.prixMax = prixAchat('pdt_brutes') * 0.5;   // limite sous le cours
-    const avant = Math.round(stockDe('pdt_brutes'));
-    reapprovisionner();
-    const bloque = Math.round(stockDe('pdt_brutes'));
-    r.prixMax = prixAchat('pdt_brutes') * 2;
-    reapprovisionner();
-    return { avant, bloque, passe: Math.round(stockDe('pdt_brutes')) };
+    r.mode = 'hebdo';
+    reapprovisionner();                      // le passage quotidien ne fait rien
+    const apresJour = Math.round(stockDe('pdt_brutes'));
+    livraisonHebdo();
+    const apresLundi = Math.round(stockDe('pdt_brutes'));
+    livraisonHebdo();
+    return { apresJour, apresLundi, deuxLundis: Math.round(stockDe('pdt_brutes')), hebdo:r.hebdo };
   })()`);
-  v.egal("au-dessus du prix maximum, on n'achète pas", cher.bloque, cher.avant);
-  v.aumoins("en dessous, la livraison arrive", cher.passe, 1);
+  v.egal("en mode hebdomadaire, rien ne part chaque jour", heb.apresJour, 0);
+  v.egal("la livraison du lundi arrive", heb.apresLundi, heb.hebdo);
+  v.egal("et elle s'ajoute chaque lundi", heb.deuxLundis, heb.hebdo*2);
+
+  const rien = await jeu(`(() => {
+    const u = U(); u.stocks = {};
+    etat.reappro['pdt_brutes'].mode = 'aucun';
+    reapprovisionner(); livraisonHebdo();
+    return Math.round(stockDe('pdt_brutes'));
+  })()`);
+  v.egal("à la main, rien n'arrive tout seul", rien, 0);
+
+  // La caisse d'abord : une commande automatique ne coule pas la maison.
+  const pauvre = await jeu(`(() => {
+    const u = U(); u.stocks = {};
+    const r = etat.reappro['pdt_brutes'];
+    r.mode = 'seuil'; r.lot = 100000;
+    etat.finances.solde = 50;
+    reapprovisionner();
+    return { stock: Math.round(stockDe('pdt_brutes')), solde: Math.round(etat.finances.solde) };
+  })()`);
+  v.egal("pas d'achat impossible", pauvre.stock, 0);
+  v("et la caisse est intacte", pauvre.solde >= 50 - 1, pauvre.solde + " €");
 
   const auto = await jeu(`(() => {
     U().stocks = {}; ajouterStock('pdt_brutes', 10);
@@ -1764,6 +1783,110 @@ cas("vitesse-rendue", async (nav) => {
 
   await page.close();
   return { echecs: v.echecs.concat(erreurs), note: "×4 rendu après vendredi, âge et recette" };
+});
+
+cas("rupture-et-pret", async (nav) => {
+  const { page, jeu, erreurs } = await contexte(nav);
+  const v = verif();
+
+  // L'atelier tombe en panne de matière : on propose, on n'automatise pas.
+  const r = await jeu(`(() => {
+    poserMachine('laveuse',4,3,0); poserMachine('trancheuse',8,3,0);
+    embaucher(creerCandidat());
+    U().stocks = {};
+    reglerVitesse(4);
+    for (let t=0;t<CONFIG.ticksParJour;t++) simTick();
+    const stockAvant = Math.round(stockDe('pdt_brutes'));
+    alerterRupture();
+    const z = document.querySelector('#ecranRupture');
+    return { stockAvant, ouvert: z.classList.contains('visible'),
+             arretees: machinesArreteesPour('pdt_brutes'),
+             lots: document.querySelectorAll('#rupLots .bt').length,
+             prets: document.querySelectorAll('#rupPret .bt').length,
+             vitesse: etat.meta.vitesse,
+             titre: document.querySelector('#rupTitre').textContent };
+  })()`);
+  v.egal("on est bien à sec", r.stockAvant, 0);
+  v("l'écran s'ouvre", r.ouvert);
+  v.aumoins("des machines attendent", r.arretees, 1);
+  v.egal("trois lots proposés", r.lots, 3);
+  v.egal("et aucun prêt tant qu'il y a de l'argent", r.prets, 0);
+  v.egal("le temps s'arrête", r.vitesse, 0);
+  v("le titre nomme la matière", /patate/i.test(r.titre), r.titre);
+
+  // Acheter depuis l'écran fait vraiment arriver la marchandise.
+  const ach = await jeu(`(() => {
+    const avant = etat.finances.solde;
+    document.querySelectorAll('#rupLots .bt')[0].click();
+    return { stock: Math.round(stockDe('pdt_brutes')), depense: Math.round(avant - etat.finances.solde),
+             ferme: !document.querySelector('#ecranRupture').classList.contains('visible'),
+             vitesse: etat.meta.vitesse };
+  })()`);
+  v.aumoins("la livraison arrive", ach.stock, 1);
+  v.aumoins("elle se paie", ach.depense, 1);
+  v("l'écran se ferme", ach.ferme);
+  v.egal("et le ×4 est rendu", ach.vitesse, 4);
+
+  // On ne redemande pas tous les jours.
+  const encore = await jeu(`(() => {
+    U().stocks = {};
+    for (let t=0;t<CONFIG.ticksParJour;t++) simTick();
+    alerterRupture();
+    return document.querySelector('#ecranRupture').classList.contains('visible');
+  })()`);
+  v("on ne harcèle pas le joueur", !encore);
+
+  // Plus un sou : la banque entre en scène.
+  const pret = await jeu(`(() => {
+    etat.ruptures = {}; etat.finances.solde = -4900;
+    U().stocks = {};
+    alerterRupture();
+    const prets = document.querySelectorAll('#rupPret .bt').length;
+    const lotsMorts = [...document.querySelectorAll('#rupLots .bt')].every(b => b.disabled);
+    const avant = etat.finances.solde;
+    const emprunts = etat.finances.emprunts.length;
+    document.querySelectorAll('#rupPret .bt')[0].click();
+    return { prets, lotsMorts, gagne: Math.round(etat.finances.solde - avant),
+             emprunts: etat.finances.emprunts.length - emprunts,
+             rouvert: document.querySelector('#ecranRupture').classList.contains('visible') };
+  })()`);
+  v.egal("les trois banques sont proposées", pret.prets, 3);
+  v("et aucun lot n'est achetable", pret.lotsMorts);
+  v.aumoins("l'emprunt rentre en caisse", pret.gagne, 1000);
+  v.egal("il est bien inscrit", pret.emprunts, 1);
+  v("et on repropose d'acheter dans la foulée", pret.rouvert);
+
+  // Le raccourci « le recommander tout seul » règle la matière au seuil.
+  const seuil = await jeu(`(() => {
+    sauterAge(2);
+    document.querySelector('#rupSeuil').click();
+    const r2 = etat.reappro['pdt_brutes'];
+    return { mode: r2.mode, seuil: r2.seuil, lot: r2.lot,
+             ferme: !document.querySelector('#ecranRupture').classList.contains('visible') };
+  })()`);
+  v.egal("la matière passe au seuil", seuil.mode, "seuil");
+  v("avec des valeurs sensées", seuil.seuil > 0 && seuil.lot > seuil.seuil,
+    seuil.seuil + " / " + seuil.lot);
+  v("et l'écran se ferme", seuil.ferme);
+
+  // Les chiffres du suivi existent, matière par matière.
+  const st = await jeu(`(() => {
+    acheter('pdt_brutes', 600); acheter('huile', 100);
+    for (let i=0;i<3;i++) embaucher(creerCandidat());
+    for (let t=0;t<CONFIG.ticksParJour*2;t++) simTick();
+    document.querySelector('#ecranVendredi')?.classList.remove('visible');
+    document.querySelector('#ecranRupture')?.classList.remove('visible');
+    const s = etat.stats.semaineCourante;
+    return { achats: Object.keys(s.achats||{}).length,
+             cout: Object.keys(s.coutAchats||{}).length,
+             consommes: Object.keys(s.consommes||{}).length };
+  })()`);
+  v.aumoins("les achats sont comptés par matière", st.achats, 1);
+  v.aumoins("leur coût aussi", st.cout, 1);
+  v.aumoins("et ce que les machines avalent", st.consommes, 1);
+
+  await page.close();
+  return { echecs: v.echecs.concat(erreurs), note: "rupture, achat, prêt, seuil" };
 });
 
 /* ============================================================== Exécution ==*/

@@ -296,6 +296,21 @@ table.tab{width:100%;border-collapse:collapse;font-size:12.5px}
 table.tab th{text-align:left;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--texte-faible);padding:4px 6px;font-weight:600}
 table.tab td{padding:5px 6px;border-top:1px solid rgba(255,255,255,.05);font-variant-numeric:tabular-nums}
 table.tab tr:hover td{background:rgba(255,255,255,.028)}
+.sousVolet{font-size:11.5px;color:var(--texte-faible);line-height:1.45;margin-bottom:9px}
+.puceTab{display:inline-block;width:8px;height:8px;border-radius:2px;vertical-align:middle}
+
+/* ---------- La rupture de stock ---------- */
+.lotRupture{
+  display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;
+}
+.lotRupture .lrQte{font-weight:600}
+.lotRupture .lrPrix{color:var(--or);font-variant-numeric:tabular-nums}
+.bt.plein .lotRupture .lrPrix{color:#241b03}          /* or sur or, sinon on ne lit rien */
+.bt:disabled .lotRupture .lrPrix{color:var(--rouge)}
+.rupturePret{
+  margin-top:14px;padding-top:12px;border-top:1px solid var(--bord);
+}
+.ruptureNote{font-size:12px;color:var(--texte-faible);line-height:1.5;margin:8px 0}
 
 .mev{color:var(--or);font-weight:600}
 .tendHausse{color:var(--rouge)}
@@ -358,6 +373,8 @@ table.tab tr:hover td{background:rgba(255,255,255,.028)}
 .reapproNb:focus{outline:none;border-color:var(--or)}
 .reapproNote{margin-top:5px;font-size:10.5px;color:var(--texte-faible);line-height:1.4}
 .reapproNote.alerte{color:var(--or)}
+.modesReappro{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px}
+.modesReappro .rechOpt{flex:1 1 auto}
 
 /* ---------- La marque ---------- */
 .jaugeMarque{margin-bottom:11px}
@@ -668,6 +685,7 @@ table.tab tr:hover td{background:rgba(255,255,255,.028)}
 <div class="overlay" id="ecranRecherche"></div>
 <div class="overlay" id="ecranSortieRecette"></div>
 <div class="overlay" id="ecranEpilogue"></div>
+<div class="overlay" id="ecranRupture"></div>
 <div id="panneauDev"></div>
 
 <script>
@@ -1699,7 +1717,8 @@ function nouvellePartie(nomEntreprise, modeChoisi){
     tuto: { etape:0, fait:[] },
     reglages: { volAmbiance:0.5, volEffets:0.6, volMusique:0.35, muet:false },
     formations: [],        // [{ ouvrierId, competence, jours, restant }]
-    reappro: {},           // { item: {actif:true, seuil:40, lot:60} }
+    reappro: {},           // { item: { mode:'aucun'|'seuil'|'hebdo', seuil, lot, hebdo } }
+    ruptures: {},          // dernier jour où on a proposé de racheter, par matière
     venteAuto: (MODES[modeChoisi||"normal"] || MODES.normal).venteAuto,
     journal: []            // faits marquants de la semaine
   };
@@ -1790,7 +1809,11 @@ function surcoutMatiere(){
 }
 
 function semaineVierge(){
-  return { produits:{}, livres:{}, ca:0, depenses:0, depensesParMotif:{}, pannes:0, retards:0, rebuts:0, reclamations:0, faits:[] };
+  return { produits:{}, livres:{}, ca:0, depenses:0, depensesParMotif:{},
+           achats:{},      // ce qu'on a fait livrer, par matière
+           coutAchats:{},  // et ce que ça a coûté
+           consommes:{},   // ce que les machines ont avalé
+           pannes:0, retards:0, rebuts:0, reclamations:0, faits:[] };
 }
 
 function creerUsine(nom, largeur, hauteur){
@@ -2182,6 +2205,7 @@ function simMachine(m, dt){
     for (const e of r.entrees){
       m.entree[e.id] -= e.qte;
       if (m.entree[e.id] < 1e-6) delete m.entree[e.id];
+      compter(etat.stats.semaineCourante.consommes, e.id, e.qte);
     }
     m.enCycle = true;
     m.progression = 0;
@@ -3183,6 +3207,23 @@ function alerterRupture(){
   notif("Bientôt à court", "Il ne reste presque plus " + deDe(noms) + noms + ". Onglet Stocks pour en recommander.", "att");
   if (court.some(id => stockDe(id) < 1))
     parle("On n'a plus " + deDe(noms) + noms + ", patron. Les machines vont s'arrêter.", 11000);
+  // À sec pour de bon : on ne se contente pas d'un message, on propose d'agir.
+  const asec = court.filter(id => stockDe(id) < 0.5 && machineArretePour(id));
+  if (asec.length) proposerRupture(asec[0]);
+}
+
+/** Une machine est-elle vraiment arrêtée à cause de cette matière ? On ne
+ *  dérange le joueur que si l'atelier attend après elle. Attention : quand il
+ *  n'y a plus rien du tout, personne ne prend le poste et la machine est en
+ *  « sans opérateur » plutôt qu'en « attente de matière » — c'est le même
+ *  problème vu de plus loin, et il faut le compter aussi. */
+function machineArretePour(id){ return machinesArreteesPour(id) > 0; }
+function machinesArreteesPour(id){
+  return U().machines.filter(m => {
+    if (m.etat === "produit" || m.enPanne) return false;
+    const r = recetteDe(m);
+    return !!r && r.entrees.some(e => e.id === id) && (m.entree[id]||0) < 1e-6;
+  }).length;
 }
 
 /** Une formation par jour de moins. À la fin, la compétence a fait un bond. */
@@ -3334,6 +3375,7 @@ function acheter(id, qte){
   }
   depenser(prix, "achat");
   ajouterStock(id, qte);
+  noterAchat(id, qte, prix);
   son("argent");
   flottant(U().quaiEntree.x+1, U().quaiEntree.y+1, "−" + Math.round(prix) + " €", "#e0574a");
   notif("Livraison", quantiteItem(id, qte, true) + " pour " + euros(prix) + ".", "");
@@ -3342,21 +3384,24 @@ function acheter(id, qte){
 }
 
 /* --------------------------------------------------- Gestion des stocks
-   Quatre réglages par matière, et pas un de plus : à partir de quand on
-   recommande, combien on fait livrer, jusqu'où on accepte de monter, et à quel
-   prix on refuse d'acheter. Tout est écrit comme une phrase dans l'onglet
-   Stocks — le joueur ne voit jamais un coefficient. */
+   Deux façons de ne pas tomber en panne, et on n'en choisit qu'une :
+     au seuil  — « quand il en reste moins de tant, en faire livrer tant »
+     chaque semaine — « en faire livrer tant tous les lundis »
+   La première évite la rupture, la seconde lisse la trésorerie. Les
+   statistiques disent laquelle convient : une consommation régulière appelle
+   la livraison hebdomadaire, une consommation en dents de scie le seuil. */
 function reglageStock(id){
   const it = ITEMS[id];
   if (!etat.reappro[id]){
+    const pas = it.unite === "kg" ? 100 : 20;
     const j = Math.max(1, uneJourneeDe(id) * 2);
-    etat.reappro[id] = it.unite === "kg"
-      ? { actif:false, seuil: arrondiLot(j*2, 50), lot: arrondiLot(j*6, 50), plafond:0, prixMax:0 }
-      : { actif:false, seuil: arrondiLot(j*2, 10), lot: arrondiLot(j*6, 10), plafond:0, prixMax:0 };
+    etat.reappro[id] = { mode:"aucun", seuil: arrondiLot(j*2, pas), lot: arrondiLot(j*6, pas),
+                         hebdo: arrondiLot(j*5, pas) };
   }
   const r = etat.reappro[id];
-  if (r.plafond == null) r.plafond = 0;     // 0 = pas de plafond
-  if (r.prixMax == null) r.prixMax = 0;     // 0 = à n'importe quel prix
+  // Les vieux réglages avaient quatre boutons : on les ramène à un mode.
+  if (!r.mode) r.mode = r.actif ? "seuil" : "aucun";
+  if (r.hebdo == null) r.hebdo = r.lot;
   return r;
 }
 function arrondiLot(v, pas){ return Math.max(pas, Math.round(v/pas)*pas); }
@@ -3368,53 +3413,60 @@ function autonomieDe(id){
   return stockDe(id) / parJour;
 }
 
-/** Règle une matière sur ce que l'atelier consomme vraiment : deux jours de
- *  marge, six jours de lot. C'est le réglage qu'on ferait à la main. */
+/** Le réglage que l'atelier appelle, d'après ce qu'il consomme vraiment. */
 function reglerSurConsommation(id){
   const it = ITEMS[id], r = reglageStock(id);
-  const pas = it.unite === "kg" ? 50 : 10;
+  const pas = it.unite === "kg" ? 100 : 20;
   const j = Math.max(1, uneJourneeDe(id) * 2);
   r.seuil = arrondiLot(j*2, pas);
-  r.lot = arrondiLot(j*6, pas);
-  r.plafond = arrondiLot(j*14, pas);
+  r.lot   = arrondiLot(j*6, pas);
+  r.hebdo = arrondiLot(j*5, pas);
   return r;
 }
 
-/** Le passage quotidien du fournisseur. Silencieux quand il n'y a rien à faire. */
+/** Le passage quotidien du fournisseur, pour les matières réglées au seuil. */
 function reapprovisionner(){
   if (!debloque("reappro")) return;
   const faits = [];
   for (const id in etat.reappro){
     const r = etat.reappro[id];
-    if (!r || !r.actif || !ITEMS[id]) continue;
-    const stock = stockDe(id);
-    if (stock >= r.seuil) continue;
-    // Le prix du jour : on peut refuser d'acheter trop cher et attendre.
-    const prix = prixAchat(id);
-    if (r.prixMax > 0 && prix > r.prixMax){
-      if (autonomieDe(id) < 1.5)
-        notif("Trop cher pour l'instant", nomItem(id,2,true) + " " + nb(prix,2) + " € le kg, au-dessus de " +
-              "votre limite. Il en reste pour moins d'une journée.", "att");
-      continue;
-    }
-    // Le plafond : on ne remplit pas au-delà de ce qu'on a demandé.
-    let lot = r.lot;
-    if (r.plafond > 0) lot = Math.min(lot, Math.max(0, r.plafond - stock));
-    if (lot < 1) continue;
-    // La caisse : un réapprovisionnement automatique ne met jamais en faillite.
-    if (etat.finances.solde - lot*prix < CONFIG.decouvertMax){
-      notif("Recommande impossible", "Il faudrait " + euros(lot*prix) + " pour " +
-            nomItem(id,2,true) + ", la caisse ne suit pas.", "ko");
-      continue;
-    }
-    if (acheterSilencieux(id, lot)) faits.push({ id, lot, prix: lot*prix });
+    if (!r || r.mode !== "seuil" || !ITEMS[id]) continue;
+    if (stockDe(id) >= r.seuil || r.lot < 1) continue;
+    if (!livraisonAuto(id, r.lot, faits)) break;
   }
-  if (faits.length){
-    const tot = faits.reduce((s,f) => s + f.prix, 0);
-    notif("Livraison automatique",
-          faits.map(f => quantiteItem(f.id, f.lot, true)).join(", ") + " — " + euros(tot) + ".", "");
-    for (const f of faits) compter(etat.stats.semaineCourante.produits, "_reappro", 0);
+  direLivraisons(faits);
+}
+
+/** La livraison du lundi, pour les matières réglées à la semaine. */
+function livraisonHebdo(){
+  if (!debloque("reappro")) return;
+  const faits = [];
+  for (const id in etat.reappro){
+    const r = etat.reappro[id];
+    if (!r || r.mode !== "hebdo" || !ITEMS[id] || r.hebdo < 1) continue;
+    if (!livraisonAuto(id, r.hebdo, faits)) break;
   }
+  direLivraisons(faits);
+}
+
+/** Une commande automatique ne met jamais la maison en faillite : elle
+ *  s'arrête avant le découvert, et elle le dit. */
+function livraisonAuto(id, lot, faits){
+  const prix = prixAchat(id);
+  if (etat.finances.solde - lot*prix < CONFIG.decouvertMax){
+    notif("Recommande impossible", "Il faudrait " + euros(lot*prix) + " pour " +
+          nomItem(id, 2, true) + ", la caisse ne suit pas.", "ko");
+    return false;
+  }
+  if (acheterSilencieux(id, lot)) faits.push({ id, lot, prix: lot*prix });
+  return true;
+}
+
+function direLivraisons(faits){
+  if (!faits.length) return;
+  const tot = faits.reduce((s,f) => s + f.prix, 0);
+  notif("Livraison automatique",
+        faits.map(f => quantiteItem(f.id, f.lot, true)).join(", ") + " — " + euros(tot) + ".", "");
 }
 
 /** Comme acheter(), sans la notification : le récapitulatif est groupé. */
@@ -3423,7 +3475,14 @@ function acheterSilencieux(id, qte){
   if (etat.finances.solde - prix < CONFIG.faillite) return false;
   depenser(prix, "achat");
   ajouterStock(id, qte);
+  noterAchat(id, qte, prix);
   return true;
+}
+
+function noterAchat(id, qte, prix){
+  const s = etat.stats.semaineCourante;
+  compter(s.achats, id, qte);
+  compter(s.coutAchats, id, prix);
 }
 
 function vendreComptant(id, qte){
@@ -3762,6 +3821,7 @@ function finSemaine(){
 
   etat.stats.semaineCourante = semaineVierge();
   etat.progression.produitsSemaine = {};
+  livraisonHebdo();          // la livraison du lundi, pour qui l'a choisie
   majLabels();
   majStanding(s);
   majRival();
@@ -7718,7 +7778,8 @@ function panneauStocks(z){
     const g = blocTitre("Le réapprovisionnement");
     const achetables = Object.keys(ITEMS).filter(id =>
       ITEMS[id].achat && (ITEMS[id].ageMin||1) <= etat.meta.age);
-    const actifs = achetables.filter(id => (etat.reappro[id]||{}).actif).length;
+    const actifs = achetables.filter(id => (etat.reappro[id]||{}).mode &&
+                                          etat.reappro[id].mode !== "aucun").length;
     const court = achetables.filter(id => autonomieDe(id) < 2);
     g.appendChild(elem('<div style="font-size:12.5px;color:var(--texte-doux);margin-bottom:7px"></div>'))
      .textContent = actifs + " " + pluriel(actifs,"matière") + " sur " + achetables.length +
@@ -7729,14 +7790,18 @@ function panneauStocks(z){
         "Moins de deux jours d'avance : " + court.map(id => nomItem(id,2,true)).join(", ") + ".";
     const rg = document.createElement("div");
     rg.className = "btRang";
-    rg.appendChild(bouton("Tout régler et activer", () => {
-      for (const id of achetables){ reglerSurConsommation(id); etat.reappro[id].actif = true; }
+    rg.appendChild(bouton("Tout mettre au seuil", () => {
+      for (const id of achetables){ reglerSurConsommation(id); etat.reappro[id].mode = "seuil"; }
       notif("Réapprovisionnement réglé", achetables.length + " matières calées sur la consommation " +
-            "de l'atelier : deux jours de marge, six jours de lot.", "ok");
+            "de l'atelier.", "ok");
       majPanneau();
     }));
-    rg.appendChild(bouton("Tout couper", () => {
-      for (const id of achetables) if (etat.reappro[id]) etat.reappro[id].actif = false;
+    rg.appendChild(bouton("Tout à la semaine", () => {
+      for (const id of achetables){ reglerSurConsommation(id); etat.reappro[id].mode = "hebdo"; }
+      majPanneau();
+    }));
+    rg.appendChild(bouton("Tout à la main", () => {
+      for (const id of achetables) if (etat.reappro[id]) etat.reappro[id].mode = "aucun";
       majPanneau();
     }));
     g.appendChild(rg);
@@ -7767,60 +7832,52 @@ function panneauStocks(z){
 
     if (debloque("reappro")){
       const rp = reglageStock(id);
-      const pas = it.unite === "kg" ? 50 : 10;
+      const pas = it.unite === "kg" ? 100 : 20;
       const u2 = it.unite === "kg" ? " kg" : "";
 
       const bloc = document.createElement("div");
-      bloc.className = "reappro" + (rp.actif ? " actif" : "");
-      const lab = document.createElement("label");
-      lab.className = "reapproTete";
-      const cb = document.createElement("input");
-      cb.type = "checkbox"; cb.checked = rp.actif;
-      cb.onchange = () => { rp.actif = cb.checked; majPanneau(); };
-      lab.appendChild(cb);
-      lab.appendChild(document.createTextNode("Recommander toute seule"));
-      bloc.appendChild(lab);
+      bloc.className = "reappro" + (rp.mode !== "aucun" ? " actif" : "");
 
-      if (rp.actif){
-        // Les réglages sont écrits comme des phrases : « dès qu'il en reste
-        // moins de 150 kg, en faire livrer 400 kg, sans dépasser 1 200 kg ».
-        const champ = (val, maj, largeur) => {
-          const i = document.createElement("input");
-          i.type = "number"; i.min = "0"; i.step = String(pas);
-          i.value = Math.round(val); i.className = "reapproNb";
-          if (largeur) i.style.width = largeur;
-          i.onchange = () => { maj(Math.max(0, Math.round(+i.value || 0))); majPanneau(); };
-          return i;
-        };
-        const phrase = (...bouts) => {
-          const p = document.createElement("div");
-          p.className = "reapproPhrase";
-          for (const b of bouts) p.appendChild(typeof b === "string" ? document.createTextNode(b) : b);
-          bloc.appendChild(p);
-        };
-        phrase("Dès qu'il en reste moins de", champ(rp.seuil, v => rp.seuil = v),
+      // Un seul choix à faire, et il se lit en trois mots.
+      const choix3 = document.createElement("div");
+      choix3.className = "modesReappro";
+      for (const [m2, lib] of [["aucun","À la main"], ["seuil","Au seuil"], ["hebdo","Chaque semaine"]]){
+        const b = document.createElement("button");
+        b.className = "rechOpt" + (rp.mode === m2 ? " actif" : "");
+        b.textContent = lib;
+        b.onclick = () => { rp.mode = m2; majPanneau(); };
+        choix3.appendChild(b);
+      }
+      bloc.appendChild(choix3);
+
+      const champ = (val, maj) => {
+        const i = document.createElement("input");
+        i.type = "number"; i.min = "0"; i.step = String(pas);
+        i.value = Math.round(val); i.className = "reapproNb";
+        i.onchange = () => { maj(Math.max(0, Math.round(+i.value || 0))); majPanneau(); };
+        return i;
+      };
+      const phrase = (...bouts) => {
+        const p = document.createElement("div");
+        p.className = "reapproPhrase";
+        for (const b of bouts) p.appendChild(typeof b === "string" ? document.createTextNode(b) : b);
+        bloc.appendChild(p);
+      };
+
+      if (rp.mode === "seuil")
+        phrase("Quand il en reste moins de", champ(rp.seuil, v => rp.seuil = v),
                u2 + ", en faire livrer", champ(rp.lot, v => rp.lot = v), u2 + ".");
-        phrase("Sans jamais dépasser", champ(rp.plafond, v => rp.plafond = v),
-               u2 + (rp.plafond ? "." : " — 0 : pas de plafond."));
-        const pm = document.createElement("input");
-        pm.type = "number"; pm.min = "0"; pm.step = "0.1";
-        pm.value = rp.prixMax ? nb(rp.prixMax,2).replace(",", ".") : 0;
-        pm.className = "reapproNb";
-        pm.onchange = () => { rp.prixMax = Math.max(0, +pm.value || 0); majPanneau(); };
-        phrase("Et jamais au-dessus de", pm,
-               " € " + (it.unite === "kg" ? "le kg" : "pièce") +
-               (rp.prixMax ? "." : " — 0 : à n'importe quel prix."));
+      else if (rp.mode === "hebdo")
+        phrase("En faire livrer", champ(rp.hebdo, v => rp.hebdo = v), u2 + " chaque lundi.");
 
-        const auto = autonomieDe(id), parJour = uneJourneeDe(id)*2;
+      if (rp.mode !== "aucun"){
+        const parJour = uneJourneeDe(id)*2, auto = autonomieDe(id);
         const note = elem('<div class="reapproNote"></div>');
         note.textContent =
           "L'atelier en consomme environ " + mesure(id, parJour) + " par jour" +
-          (isFinite(auto) ? " — il y a de quoi tenir " + nb(auto,1) + " " + pluriel(auto,"jour") + "." : ".") +
-          " Le lot coûtera " + euros(rp.lot * prixAchat(id)) + ".";
+          (isFinite(auto) ? ", il y a de quoi tenir " + nb(auto,1) + " " + pluriel(auto,"jour") : "") +
+          ". La livraison coûtera " + euros((rp.mode === "hebdo" ? rp.hebdo : rp.lot) * prixAchat(id)) + ".";
         bloc.appendChild(note);
-        if (rp.prixMax > 0 && prixAchat(id) > rp.prixMax)
-          bloc.appendChild(elem('<div class="reapproNote alerte"></div>')).textContent =
-            "Le cours est au-dessus de votre limite : rien ne sera commandé tant qu'il n'aura pas baissé.";
         const br = document.createElement("div");
         br.className = "btRang";
         br.appendChild(bouton("Régler sur la consommation", () => {
@@ -8755,6 +8812,124 @@ function tutoDemarrage(){
   if (etat.tuto && etat.tuto.etape === 0) parle(TUTO[0].texte, 15000);
 }
 
+/* ============================================================ La rupture
+   L'atelier s'arrête faute de matière. Plutôt qu'une notification de plus, on
+   arrête le temps et on propose d'agir : commander, régler une recommande, ou
+   emprunter s'il n'y a plus un sou. Jamais automatique — c'est le joueur qui
+   décide, c'est tout l'intérêt. */
+function proposerRupture(id){
+  if (!ITEMS[id] || !ITEMS[id].achat) return;
+  etat.ruptures = etat.ruptures || {};
+  // Une fois par matière et par semaine, pas plus : on prévient, on ne harcèle pas.
+  const vu = etat.ruptures[id];
+  if (vu != null && jourCourant() - vu < CONFIG.joursParSemaine) return;
+  if (unEcranOuvert()) return;
+  etat.ruptures[id] = jourCourant();
+
+  const prix = prixAchat(id);
+  const parJour = uneJourneeDe(id) * 2;
+  const pas = ITEMS[id].unite === "kg" ? 100 : 20;
+  // Trois lots qui ont un sens : deux jours, une semaine, deux semaines.
+  const lots = [...new Set([2, CONFIG.joursParSemaine, CONFIG.joursParSemaine*2]
+    .map(j => Math.max(pas, Math.round(parJour*j/pas)*pas)))];
+  const arret = machinesArreteesPour(id);
+
+  const z = $("#ecranRupture");
+  z.innerHTML = `
+    <div class="feuille" style="max-width:480px;margin-top:14vh">
+      <div style="font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--rouge)">
+        L'atelier est à l'arrêt</div>
+      <h1 style="font-size:26px;font-weight:400;margin:6px 0 4px" id="rupTitre"></h1>
+      <div class="ruptureNote" id="rupSous"></div>
+      <div id="rupLots"></div>
+      <div id="rupPret"></div>
+      <div class="btRang" style="margin-top:12px">
+        <button class="bt" id="rupSeuil">Le recommander tout seul</button>
+        <button class="bt" id="rupPlusTard">Plus tard</button>
+      </div>
+    </div>`;
+
+  $("#rupTitre").textContent = "Plus " + deDe(nomItem(id,2,true,true)) + nomItem(id,2,true,true);
+  $("#rupSous").textContent =
+    (arret ? arret + " " + pluriel(arret,"machine") + " " + pluriel(arret,"attend","attendent") + ". " : "") +
+    "L'atelier en consomme " + mesure(id, parJour) + " par jour, au cours du moment de " +
+    nb(prix,2) + " € " + (ITEMS[id].unite === "kg" ? "le kg" : "pièce") + ".";
+
+  const zl = $("#rupLots");
+  let auMoinsUn = false;
+  for (const lot of lots){
+    const cout = lot * prix;
+    // On tolère le découvert, pas le gouffre : au-delà, on propose un prêt
+    // plutôt que de laisser creuser.
+    const possible = mode().argentInfini || etat.finances.solde - cout >= CONFIG.decouvertMax;
+    const b = document.createElement("button");
+    b.className = "bt large" + (possible && !auMoinsUn ? " plein" : "");
+    b.disabled = !possible;
+    b.style.marginBottom = "7px";
+    b.innerHTML = '<span class="lotRupture"><span class="lrQte"></span><span class="lrPrix"></span></span>';
+    b.querySelector(".lrQte").textContent = mesure(id, lot) +
+      "  ·  " + Math.round(lot/Math.max(1,parJour)) + " " + pluriel(Math.round(lot/Math.max(1,parJour)),"jour");
+    b.querySelector(".lrPrix").textContent = euros(cout);
+    if (possible){
+      auMoinsUn = true;
+      b.onclick = () => { acheter(id, lot); fermerRupture(); };
+    }
+    zl.appendChild(b);
+  }
+
+  // Plus un sou : on propose d'emprunter, avec les conditions en clair.
+  if (!auMoinsUn){
+    const p = document.createElement("div");
+    p.className = "rupturePret";
+    p.appendChild(elem('<div class="ruptureNote"></div>')).textContent =
+      "La caisse ne suit plus : " + euros(etat.finances.solde) + " en tout. " +
+      "Une banque peut avancer de quoi repartir.";
+    for (const b of BANQUES){
+      const total = b.montant * (1 + b.taux);
+      const bt = document.createElement("button");
+      bt.className = "bt large";
+      bt.style.marginBottom = "7px";
+      bt.innerHTML = '<span class="lotRupture"><span class="lrQte"></span><span class="lrPrix"></span></span>';
+      bt.querySelector(".lrQte").textContent = b.nom + "  ·  " + euros(b.montant);
+      bt.querySelector(".lrPrix").textContent = euros(total/b.jours) + "/jour";
+      bt.title = b.texte + " Remboursé sur " + b.jours + " jours, " +
+                 Math.round(b.taux*100) + " % d'intérêts.";
+      bt.onclick = () => { emprunter(b); fermerRupture(); proposerRuptureEncore(id); };
+      p.appendChild(bt);
+    }
+    $("#rupPret").appendChild(p);
+  }
+
+  $("#rupSeuil").onclick = () => {
+    if (!debloque("reappro")){
+      notif("Pas encore", "Le réapprovisionnement automatique s'ouvre à l'âge de la fabrique.", "att");
+      return;
+    }
+    const r = reglerSurConsommation(id);
+    r.mode = "seuil";
+    notif("C'est réglé", nomItem(id,2,true) + " : dès qu'il en reste moins de " +
+          mesure(id, r.seuil) + ", on en fait livrer " + mesure(id, r.lot) + ".", "ok");
+    fermerRupture();
+  };
+  $("#rupPlusTard").onclick = fermerRupture;
+
+  suspendreTemps();
+  ouvrir("#ecranRupture");
+  son("refus");
+}
+
+/** Après un emprunt, on repropose tout de suite : c'était le but. */
+function proposerRuptureEncore(id){
+  etat.ruptures[id] = null;
+  proposerRupture(id);
+}
+
+function fermerRupture(){
+  fermer("#ecranRupture");
+  reprendreTemps();
+  majPanneau();
+}
+
 /* ============================================================================
    UI — onglet Guide
    Tout est calculé à partir de DONNÉES : recettes, rendements et prix de
@@ -9192,18 +9367,22 @@ function SECTIONS_GUIDE(){
     "en grand sur le mur de l'atelier — c'est votre usine, ça se voit.</p>" },
 
   { titre:"Les stocks et le réapprovisionnement", corps:
-    "<p>Onglet <b>Stocks</b>. Chaque matière peut se recommander toute seule, et le réglage s'écrit "+
-    "comme une phrase : <i>dès qu'il en reste moins de tant, en faire livrer tant, sans jamais "+
-    "dépasser tant, et jamais au-dessus de tel prix.</i></p>"+
-    "<p>Les deux derniers réglages comptent autant que les deux premiers. Le <b>plafond</b> évite "+
-    "d'immobiliser de la trésorerie dans un stock dormant. Le <b>prix maximum</b> laisse passer les "+
-    "coups de chaud du marché : la commande attend que le cours redescende — et le contremaître "+
-    "prévient s'il ne reste pas une journée d'avance.</p>"+
-    "<p>Chaque matière affiche son <b>autonomie</b> : combien de jours l'atelier tient avec ce qu'il "+
-    "y a. C'est le seul chiffre à regarder. « Régler sur la consommation » cale tout d'un coup : deux "+
-    "jours de marge, six jours de lot, quinze jours de plafond.</p>"+
+    "<p>Onglet <b>Stocks</b>. Chaque matière se règle d'un seul choix, et il n'y en a que trois :</p>"+
+    "<p><b>À la main</b> — rien n'arrive tout seul, vous commandez quand vous voulez.<br>"+
+    "<b>Au seuil</b> — <i>quand il en reste moins de tant, en faire livrer tant</i>. C'est ce qu'il "+
+    "faut quand la consommation est irrégulière : on ne tombe jamais en panne.<br>"+
+    "<b>Chaque semaine</b> — <i>en faire livrer tant tous les lundis</i>. C'est ce qu'il faut quand "+
+    "la consommation est régulière : la dépense est lissée et prévisible.</p>"+
+    "<p><b>C'est l'écran des statistiques qui dit lequel choisir.</b> Le tableau des matières donne, "+
+    "pour chacune, ce qui a été acheté, ce que les machines ont avalé, ce qui reste, et la moyenne "+
+    "sur quatre et douze semaines. Une consommation proche de sa moyenne appelle la livraison du "+
+    "lundi ; une consommation en dents de scie appelle le seuil.</p>"+
     "<p>Un réapprovisionnement automatique ne met jamais la maison en faillite : il s'arrête avant "+
-    "le découvert et le dit.</p>" },
+    "le découvert et le dit.</p>"+
+    "<p>Et si l'atelier s'arrête faute de matière alors que rien n'était réglé, le jeu s'interrompt "+
+    "et <b>propose</b> — jamais il n'achète à votre place. Trois quantités avec leur prix, ou un "+
+    "réglage au seuil en un clic. Et s'il n'y a plus un sou en caisse, les banques sont là, avec "+
+    "leurs conditions en clair.</p>" },
 
   { titre:"La qualité", corps:
     "<p>À partir de la PME, tout ce qui sort de la <b>friteuse</b> et de l'<b>ensacheuse</b> n'est pas bon à "+
@@ -9871,6 +10050,15 @@ function ouvrirStats(){
     }, COUL_VIZ.mauvais, v => v.toFixed(1) + " %");
   }
 
+  /* --- Les matières, chiffre par chiffre. C'est ce tableau qui dit s'il faut
+         régler une matière au seuil ou à la semaine : une consommation
+         régulière appelle la livraison du lundi, une consommation en dents de
+         scie appelle le seuil. --- */
+  vizMatieres(c, h);
+
+  /* --- L'argent, semaine en cours et moyennes --- */
+  vizArgent(c, h);
+
   /* --- Où part l'argent --- */
   const v4 = volet("Où part l'argent, sur ces " + douze.length + " " + pluriel(douze.length,"semaine"));
   c.appendChild(v4);
@@ -9901,6 +10089,117 @@ function ouvrirStats(){
     c.appendChild(v5);
   }
 
+}
+
+/** Moyenne par semaine d'un champ compté par matière, sur les N dernières. */
+function moyenneHebdo(semaines, champ, id){
+  if (!semaines.length) return 0;
+  let t = 0;
+  for (const s of semaines) t += ((s[champ]||{})[id] || 0);
+  return t / semaines.length;
+}
+function totalChamp(s, champ){
+  let t = 0;
+  for (const k in (s[champ]||{})) t += s[champ][k];
+  return t;
+}
+
+function vizMatieres(c, h){
+  const s = etat.stats.semaineCourante;
+  const quatre = h.slice(-4), douze = h.slice(-12);
+  // Tout ce qui a circulé : ce qu'on achète, ce qu'on fabrique, ce qui reste.
+  const ids = Object.keys(ITEMS).filter(id =>
+    stockDe(id) > 0.01 || (s.achats||{})[id] || (s.consommes||{})[id] || (s.produits||{})[id] ||
+    h.some(x => (x.achats||{})[id] || (x.consommes||{})[id] || (x.produits||{})[id]));
+  if (!ids.length) return;
+
+  const v = volet("Les matières, semaine par semaine");
+  v.appendChild(elem('<div class="sousVolet">Ce qui entre, ce qui est avalé par les machines, ' +
+    'ce qui reste au quai. La moyenne dit si la consommation est régulière — auquel cas la ' +
+    'livraison du lundi suffit — ou en dents de scie, et alors il vaut mieux un seuil.</div>'));
+
+  const t = document.createElement("table");
+  t.className = "tab";
+  t.innerHTML = "<tr><th>Matière</th>" +
+    "<th style='text-align:right'>En stock</th>" +
+    "<th style='text-align:right'>Acheté</th>" +
+    "<th style='text-align:right'>Consommé</th>" +
+    "<th style='text-align:right'>Produit</th>" +
+    "<th style='text-align:right'>Moy. 4 sem.</th>" +
+    "<th style='text-align:right'>Moy. 12 sem.</th>" +
+    "<th style='text-align:right'>Coût sem.</th></tr>";
+
+  // On range dans l'ordre de la chaîne — celui de la table ITEMS, qui suit la
+  // ligne de production — et pas par volume : le joueur relit son atelier de
+  // haut en bas.
+  const rang = Object.keys(ITEMS);
+  ids.sort((a,b) => rang.indexOf(a) - rang.indexOf(b));
+  for (const id of ids){
+    const conso = (s.consommes||{})[id] || 0;
+    const tr = document.createElement("tr");
+    for (let k=0;k<8;k++) tr.appendChild(document.createElement("td"));
+    const td = tr.querySelectorAll("td");
+    for (let k=1;k<8;k++) td[k].style.textAlign = "right";
+    td[0].innerHTML = '<span class="puceTab"></span>';
+    td[0].querySelector(".puceTab").style.background = ITEMS[id].couleur;
+    td[0].appendChild(document.createTextNode(" " + ITEMS[id].nom));
+    td[1].textContent = mesure(id, stockDe(id));
+    td[2].textContent = (s.achats||{})[id] ? mesure(id, s.achats[id]) : "—";
+    td[3].textContent = conso ? mesure(id, conso) : "—";
+    td[4].textContent = (s.produits||{})[id] ? mesure(id, s.produits[id]) : "—";
+    const m4 = moyenneHebdo(quatre, "consommes", id), m12 = moyenneHebdo(douze, "consommes", id);
+    td[5].textContent = m4 > 0.05 ? mesure(id, m4) : "—";
+    td[6].textContent = m12 > 0.05 ? mesure(id, m12) : "—";
+    td[7].textContent = (s.coutAchats||{})[id] ? euros(s.coutAchats[id]) : "—";
+    // Une matière qui va manquer se voit tout de suite.
+    if (ITEMS[id].achat && autonomieDe(id) < 2){
+      td[1].style.color = "var(--rouge)";
+      td[1].textContent += " · " + nb(autonomieDe(id),1) + " j";
+    }
+    t.appendChild(tr);
+  }
+  v.appendChild(t);
+  c.appendChild(v);
+}
+
+function vizArgent(c, h){
+  const s = etat.stats.semaineCourante;
+  const quatre = h.slice(-4), douze = h.slice(-12), tout = h;
+  const moy = (tab, f) => tab.length ? tab.reduce((a,x) => a + f(x), 0) / tab.length : 0;
+
+  const v = volet("L'argent, semaine en cours et moyennes");
+  const t = document.createElement("table");
+  t.className = "tab";
+  t.innerHTML = "<tr><th></th>" +
+    "<th style='text-align:right'>Semaine en cours</th>" +
+    "<th style='text-align:right'>Moy. 4 sem.</th>" +
+    "<th style='text-align:right'>Moy. 12 sem.</th>" +
+    "<th style='text-align:right'>Depuis le début</th></tr>";
+  const ligne = (lab, valSem, f, teinte) => {
+    const tr = document.createElement("tr");
+    for (let k=0;k<5;k++) tr.appendChild(document.createElement("td"));
+    const td = tr.querySelectorAll("td");
+    for (let k=1;k<5;k++) td[k].style.textAlign = "right";
+    td[0].textContent = lab;
+    td[1].textContent = valSem;
+    td[2].textContent = h.length ? euros(moy(quatre, f)) : "—";
+    td[3].textContent = h.length ? euros(moy(douze, f)) : "—";
+    td[4].textContent = h.length ? euros(moy(tout, f)) : "—";
+    if (teinte) td[1].style.color = teinte;
+    t.appendChild(tr);
+  };
+  ligne("Ce qui rentre", euros(s.ca), x => x.ca, "var(--vert)");
+  ligne("Ce qui sort", euros(s.depenses), x => x.depenses, "var(--rouge)");
+  ligne("dont la matière", euros(totalChamp(s, "coutAchats")),
+        x => totalChamp(x, "coutAchats"));
+  ligne("Résultat", eurosSigne(s.ca - s.depenses), x => x.ca - x.depenses,
+        s.ca - s.depenses >= 0 ? "var(--vert)" : "var(--rouge)");
+  v.appendChild(t);
+  v.appendChild(elem('<div class="sousVolet"></div>')).textContent =
+    "En caisse aujourd'hui : " + euros(etat.finances.solde) + ". Depuis le début, " +
+    euros(etat.finances.totalVentes) + " encaissés et " + euros(etat.finances.totalAchats) +
+    " de matière achetée.";
+  c.appendChild(v);
 }
 
 function volet(titre){
@@ -11216,6 +11515,7 @@ function appliquer(o){
   // champs ajoutés après coup : on complète sans casser les vieilles parties
   etat.reglages = Object.assign({ volAmbiance:0.5, volEffets:0.6, volMusique:0.35, muet:false }, etat.reglages||{});
   etat.reappro = etat.reappro || {};
+  etat.ruptures = etat.ruptures || {};
   etat.formations = etat.formations || [];
   etat.marque = Object.assign(marqueParDefaut(etat.meta.nomEntreprise), etat.marque || {});
   etat.labels = Object.assign({ obtenus:[], suite:{}, local:false }, etat.labels || {});
@@ -11375,6 +11675,7 @@ function initClavier(){
       if ($("#panneauDev").classList.contains("visible")) return basculerDev();
       if (vue.convDepart){ annulerTrace(); return; }
       if ($("#ecranSortieRecette").classList.contains("visible")) return fermerSortieRecette();
+      if ($("#ecranRupture").classList.contains("visible")) return fermerRupture();
       if ($("#ecranEpilogue").classList.contains("visible")) return;   // on ne s'en échappe pas au hasard
       if (unEcranOuvert() && $("#ecranStats").classList.contains("visible")) fermer("#ecranStats");
       else if (unEcranOuvert() && $("#ecranRecherche").classList.contains("visible")) fermer("#ecranRecherche");

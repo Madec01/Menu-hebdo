@@ -71,12 +71,20 @@ sachets se comptent à l'unité.
   croisement ne relie jamais rien : c'est là où l'on s'arrête qui fait le
   raccord. La tuile reste à la bande du dessous, et un pont dont on démolit le
   dessous redescend tout seul.
-- **Le réapprovisionnement, en quatre phrases** : dès qu'il en reste moins de
-  tant, en faire livrer tant, sans jamais dépasser tant, et jamais au-dessus de
-  tel prix. Le plafond évite le stock dormant, le prix maximum laisse passer les
-  coups de chaud du marché. Chaque matière affiche son **autonomie en jours**, et
-  « Régler sur la consommation » cale tout d'un coup. L'automatique ne met jamais
-  la maison en faillite.
+- **Le réapprovisionnement, un seul choix par matière** : à la main, *au seuil*
+  (« quand il en reste moins de tant, en faire livrer tant ») ou *chaque semaine*
+  (« en faire livrer tant tous les lundis »). Le premier évite la rupture, le
+  second lisse la trésorerie — et c'est **le tableau des statistiques qui dit
+  lequel choisir**. L'automatique ne met jamais la maison en faillite.
+- **Un tableau des matières** dans les statistiques : pour chacune, ce qui a été
+  acheté, ce que les machines ont avalé, ce qui a été produit, ce qui reste, et
+  les moyennes sur quatre et douze semaines. Plus un tableau de l'argent :
+  entrées, sorties, part de la matière, résultat — semaine en cours, moyennes,
+  et depuis le début.
+- **Quand l'atelier tombe en panne de matière**, le jeu s'arrête et *propose* —
+  il n'achète jamais tout seul. Trois quantités avec leur prix, ou un réglage au
+  seuil en un clic. Et s'il n'y a plus un sou, les banques entrent en scène avec
+  leurs conditions en clair.
 - **Affecter tout le monde** d'un bouton : chacun sur le poste où il est le
   meilleur, sans traverser l'atelier, une machine par personne ; le reste passe
   au portage.
@@ -271,12 +279,12 @@ réelles** à la vitesse ×1.
 
 ## Tests
 
-`node tests/suite.mjs` pilote le jeu dans un vrai navigateur : vingt-sept cas qui
+`node tests/suite.mjs` pilote le jeu dans un vrai navigateur : vingt-huit cas qui
 couvrent le didacticiel, la chaîne, la conservation de la matière, le réseau de
 convoyeurs, la qualité, les modes, les cinq âges, les auto-vérifications, la
 sauvegarde, le rythme, la performance, la recherche, le raccord entre bandes,
 les quais et rangements, les bâtiments d'équipe, la cour, le garde-manger du
-labo, les raccords courts, les croisements, l'équipe, les stocks, la marque, les labels, le concurrent, les clients, les cadres, la fin de partie et la vitesse du jeu. Voir [`tests/README.md`](tests/README.md).
+labo, les raccords courts, les croisements, l'équipe, les stocks, la marque, les labels, le concurrent, les clients, les cadres, la fin de partie, la vitesse du jeu et les ruptures de stock. Voir [`tests/README.md`](tests/README.md).
 
 ## Organisation du code
 
