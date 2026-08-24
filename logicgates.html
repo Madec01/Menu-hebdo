@@ -545,6 +545,7 @@ table.tt tr.tt-fail td:first-child::before{content:'✗ ';color:var(--red)}
       <span class="kbd">Suppr</span> effacer (survolé ou sélection) &nbsp;·&nbsp; <span class="kbd">Échap</span> annuler câble / désélectionner<br>
       <span class="kbd">Maj + glisser</span> sélection rectangle &nbsp;·&nbsp; <span class="kbd">Maj + clic</span> (dé)sélectionner &nbsp;·&nbsp;
       <span class="kbd">Ctrl+C</span> copier &nbsp;·&nbsp; <span class="kbd">Ctrl+V</span> coller &nbsp;·&nbsp; <span class="kbd">Ctrl+A</span> tout sélectionner<br>
+      <span class="kbd">R</span> tourner &nbsp;·&nbsp; <span class="kbd">M</span> miroir &nbsp;·&nbsp;
       <span class="kbd">F</span> recadrer sur le circuit &nbsp;·&nbsp; <span class="kbd">N</span> noms des composants &nbsp;·&nbsp;
       <b>survol</b> = infobulle détaillée<br>
       Cliquer sur une <b>entrée déjà câblée</b> détache le fil (relâcher dans le vide le supprime).<br>
@@ -780,16 +781,31 @@ class Pin {
     this.comp = comp; this.isOutput = isOutput; this.index = index;
     this.r = 5.5; this.state = 0;
   }
-  get x(){
+  /* Position dans le repère NON tourné du composant */
+  get lx(){
     const pp = this.comp.pinPos && this.comp.pinPos(this);
     if (pp) return pp.x;
     return this.isOutput ? this.comp.x + this.comp.w : this.comp.x;
   }
-  get y(){
+  get ly(){
     const pp = this.comp.pinPos && this.comp.pinPos(this);
     if (pp) return pp.y;
     const total = this.isOutput ? this.comp.outputs : this.comp.inputs;
     return this.comp.y + this.comp.h * (this.index + 1) / (total + 1);
+  }
+  get x(){ return this.comp.l2w(this.lx, this.ly).x; }
+  get y(){ return this.comp.l2w(this.lx, this.ly).y; }
+  /* Direction sortante du pin (vers l'extérieur du boîtier), après rotation */
+  dir(){
+    const c = this.comp;
+    let dx = this.isOutput ? 1 : -1, dy = 0;
+    if (c.pinPos && c.pinPos(this) && c.type === 'MATRIX'){
+      if (this.index >= 8){ dx = 0; dy = 1; } else { dx = -1; dy = 0; }
+    }
+    if (c.mir) dx = -dx;
+    const r = (c.rot | 0) % 4;
+    for (let i = 0; i < r; i++){ const t = dx; dx = -dy; dy = t; }
+    return { x:dx, y:dy };
   }
   isHit(wx, wy){
     const dx = wx - this.x, dy = wy - this.y;
@@ -840,9 +856,13 @@ class Wire {
   /* Rebouclage d'un composant sur lui-même sans waypoint -> boucle sous le boîtier */
   isSelfLoop(){ return this.outPin.comp === this.inPin.comp && !this.wp.length; }
   segCtrl(A, B, first, last){
-    const d = Math.max(34, Math.abs(B.x - A.x) * .5) + Math.abs(this.fan) * 9;
+    const d = Math.max(34, Math.hypot(B.x - A.x, B.y - A.y) * .42) + Math.abs(this.fan) * 9;
     const f = this.fan * 22;
-    return [ A.x + d, A.y + (first ? f : 0), B.x - d, B.y + (last ? f : 0) ];
+    const dA = first ? this.outPin.dir() : { x:1, y:0 };
+    const dB = last  ? this.inPin.dir()  : { x:-1, y:0 };
+    // l'écartement en éventail se fait perpendiculairement à la sortie du pin
+    return [ A.x + dA.x * d - (first ? dA.y * f : 0), A.y + dA.y * d + (first ? dA.x * f : 0),
+             B.x + dB.x * d - (last  ? dB.y * f : 0), B.y + dB.y * d + (last  ? dB.x * f : 0) ];
   }
   buildPath(c){
     if (this.isSelfLoop()){
@@ -995,11 +1015,11 @@ function firstCollision(w){
     for (let i = components.length - 1; i >= 0; i--){
       const co = components[i];
       if (co === w.outPin.comp || co === w.inPin.comp) continue;
-      if (p.x > co.x - 10 && p.x < co.x + co.w + 10 && p.y > co.y - 14 && p.y < co.y + co.h + 14){
+      if (p.x > co.x - 10 && p.x < co.x + co.bw + 10 && p.y > co.y - 14 && p.y < co.y + co.bh + 14){
         let pj = pi;   // étendre la traversée de CE boîtier
         while (pj + 1 < pts.length){
           const q = pts[pj + 1];
-          if (q.x > co.x - 10 && q.x < co.x + co.w + 10 && q.y > co.y - 14 && q.y < co.y + co.h + 14) pj++;
+          if (q.x > co.x - 10 && q.x < co.x + co.bw + 10 && q.y > co.y - 14 && q.y < co.y + co.bh + 14) pj++;
           else break;
         }
         return { co, e0: pts[pi], e1: pts[pj], seg: p.seg };
@@ -1047,6 +1067,7 @@ class Component {
     this.id = uid++;
     this.x = x; this.y = y; this.type = type;
     this.locked = false; this.customLabel = null;
+    this.rot = 0; this.mir = false;      // orientation : 0-3 quarts de tour + miroir
     this.state = 0; this.clockIdx = 1;
     this.opt = {};                      // paramètres personnalisés (inspecteur)
     const RD = (typeof REG !== 'undefined') ? REG[type] : null;
@@ -1124,6 +1145,27 @@ class Component {
     this.chipCost = this.inner.reduce((s, c) =>
       s + (GATE_COST[c.type] || 0) + (c.type === 'CHIP' ? (c.chipCost || 0) : 0), 0);
   }
+  /* Encombrement à l'écran : la rotation d'un quart de tour échange largeur et hauteur */
+  get bw(){ return (this.rot % 2) ? this.h : this.w; }
+  get bh(){ return (this.rot % 2) ? this.w : this.h; }
+  /* Repère local (non tourné) -> monde */
+  l2w(lx, ly){
+    if (!this.rot && !this.mir) return { x:lx, y:ly };
+    let dx = lx - (this.x + this.w / 2), dy = ly - (this.y + this.h / 2);
+    if (this.mir) dx = -dx;
+    const r = this.rot % 4;
+    for (let i = 0; i < r; i++){ const t = dx; dx = -dy; dy = t; }
+    return { x: this.x + this.bw / 2 + dx, y: this.y + this.bh / 2 + dy };
+  }
+  /* Monde -> repère local (pour les clics sur les cases d'un séquenceur, d'un DIP…) */
+  w2l(wx, wy){
+    if (!this.rot && !this.mir) return { x:wx, y:wy };
+    let dx = wx - (this.x + this.bw / 2), dy = wy - (this.y + this.bh / 2);
+    const r = (4 - this.rot % 4) % 4;
+    for (let i = 0; i < r; i++){ const t = dx; dx = -dy; dy = t; }
+    if (this.mir) dx = -dx;
+    return { x: this.x + this.w / 2 + dx, y: this.y + this.h / 2 + dy };
+  }
   /* Position custom des pins (matrice : lignes à gauche, colonnes en bas) */
   pinPos(pin){
     if (this.type !== 'MATRIX' || pin.isOutput) return null;
@@ -1132,8 +1174,9 @@ class Component {
     return { x: gx + cell * (pin.index - 8 + .5), y: this.y + this.h };
   }
   /* Case du séquenceur sous le curseur (-1 sinon) */
-  seqCellAt(wx, wy){
+  seqCellAt(wx0, wy0){
     if (this.type !== 'SEQ') return -1;
+    const L = this.w2l(wx0, wy0), wx = L.x, wy = L.y;
     const x0 = this.x + 12, y0 = this.y + 15, cw = 12.5, nB = this.bits.length;
     if (wy < y0 || wy > y0 + 23 || wx < x0 || wx > x0 + nB * cw) return -1;
     return Math.min(nB - 1, Math.max(0, Math.floor((wx - x0) / cw)));
@@ -1327,8 +1370,8 @@ class Component {
     if (this.outPins.length) this.outPins[0].state = out;
   }
   isHit(wx, wy){
-    return wx >= this.x - 4 && wx <= this.x + this.w + 4 &&
-           wy >= this.y - 4 && wy <= this.y + this.h + 4;
+    return wx >= this.x - 4 && wx <= this.x + this.bw + 4 &&
+           wy >= this.y - 4 && wy <= this.y + this.bh + 4;
   }
   get active(){
     if (this.outPins.length) return !!this.outPins[0].state;
@@ -1341,18 +1384,18 @@ class Component {
      lisible d'un coup d'œil et le rendu ne s'effondre pas à 200 composants. */
   drawSimple(c){
     const col = GATE_STYLE[this.type].c, on = this.active;
-    c.beginPath(); c.roundRect(this.x, this.y, this.w, this.h, 8);
+    c.beginPath(); c.roundRect(this.x, this.y, this.bw, this.bh, 8);
     c.fillStyle = this.hexA(col, on ? .34 : .13); c.fill();
     c.lineWidth = 1.4; c.strokeStyle = this.hexA(col, on ? .95 : .45); c.stroke();
     if (this.locked){
       c.lineWidth = 1; c.strokeStyle = 'rgba(255,194,61,.5)';
-      c.strokeRect(this.x - 3, this.y - 3, this.w + 6, this.h + 6);
+      c.strokeRect(this.x - 3, this.y - 3, this.bw + 6, this.bh + 6);
     }
     if (lodLevel >= 1){
       c.font = "600 9px 'IBM Plex Mono', monospace";
       c.textAlign = 'center'; c.textBaseline = 'middle';
       c.fillStyle = this.hexA(col, .95);
-      c.fillText(this.customLabel || SHORT[this.type] || this.type, this.x + this.w / 2, this.y + this.h / 2);
+      c.fillText(this.customLabel || SHORT[this.type] || this.type, this.x + this.bw / 2, this.y + this.bh / 2);
       c.fillStyle = PAL.pinOn;
       this.inPins.forEach(p => { if (p.state){ c.beginPath(); c.arc(p.x, p.y, 2.6, 0, 7); c.fill(); } });
       this.outPins.forEach(p => { if (p.state){ c.beginPath(); c.arc(p.x, p.y, 2.6, 0, 7); c.fill(); } });
@@ -1363,27 +1406,58 @@ class Component {
     const hov = (this === hoveredComp && !dragged) || this === dragged;
     if (lodLevel < 2 && !hov){ this.drawSimple(c); return; }
 
+    // Orientation : on tourne le repère, et on contre-tourne les textes pour
+    // qu'ils restent lisibles quel que soit l'angle du boîtier.
+    const R = this.rot % 4, M = this.mir;
+    let origFill = null, origStroke = null;
+    if (R || M){
+      c.save();
+      c.translate(this.x + this.bw / 2, this.y + this.bh / 2);
+      c.rotate(R * Math.PI / 2);
+      if (M) c.scale(-1, 1);
+      c.translate(-(this.x + this.w / 2), -(this.y + this.h / 2));
+      const ang = -R * Math.PI / 2;
+      origFill = c.fillText; origStroke = c.strokeText;
+      // Le texte reste horizontal : on annule la rotation autour de son ancrage.
+      // Il faut aussi retourner l'alignement, sinon il s'étend hors du boîtier.
+      const flipH = { left:'right', right:'left', center:'center', start:'right', end:'left' };
+      const flipV = { top:'bottom', bottom:'top', middle:'middle', alphabetic:'hanging', hanging:'alphabetic' };
+      const wrap = fn => function(txt, tx, ty){
+        const al = this.textAlign, bl = this.textBaseline;
+        this.save(); this.translate(tx, ty);
+        if (M) this.scale(-1, 1);
+        this.rotate(ang);
+        if (R === 2){ this.textAlign = flipH[al] || al; this.textBaseline = flipV[bl] || bl; }
+        else if (R === 1 || R === 3) this.textAlign = 'center';
+        if (M && R !== 2) this.textAlign = flipH[this.textAlign] || this.textAlign;
+        fn.call(this, txt, 0, 0);
+        this.restore();
+        this.textAlign = al; this.textBaseline = bl;
+      };
+      c.fillText = wrap(origFill); c.strokeText = wrap(origStroke);
+    }
     if (GATE_TYPES.includes(this.type)) this.drawGate(c, col, hov);
     else this.drawDevice(c, col, hov, t);
+    if (R || M){ c.fillText = origFill; c.strokeText = origStroke; c.restore(); }
 
     // Nom sous le composant (toujours, ou seulement au survol / dans la sélection)
     if (labelsMode || hov || selection.has(this)){
       c.font = "500 8.5px 'IBM Plex Mono', monospace";
       c.textAlign = 'center'; c.textBaseline = 'top';
       c.fillStyle = hov ? '#c8d6ee' : PAL.dim;
-      c.fillText(FR_NAME[this.type], this.x + this.w/2, this.y + this.h + 6);
+      c.fillText(FR_NAME[this.type], this.x + this.bw/2, this.y + this.bh + 6);
     }
 
     // Badge de label mission (A, B, S…)
     if (this.customLabel){
       c.font = "600 11px 'IBM Plex Mono', monospace";
       const tw = c.measureText(this.customLabel).width + 14;
-      const bx = this.x + this.w/2 - tw/2, by = this.y - 24;
+      const bx = this.x + this.bw/2 - tw/2, by = this.y - 24;
       c.beginPath(); c.roundRect(bx, by, tw, 18, 6);
       c.fillStyle = 'rgba(56,225,255,.1)'; c.fill();
       c.strokeStyle = 'rgba(56,225,255,.45)'; c.lineWidth = 1; c.stroke();
       c.fillStyle = PAL.label; c.textBaseline = 'middle';
-      c.fillText(this.customLabel, this.x + this.w/2, by + 9.5);
+      c.fillText(this.customLabel, this.x + this.bw/2, by + 9.5);
     }
     // Cadenas mission
     if (this.locked){
@@ -2155,6 +2229,8 @@ function serializeGroup(list){
       chip: c.type === 'CHIP' ? c.chipName : undefined,
       opt:  Object.keys(c.opt || {}).length ? JSON.parse(JSON.stringify(c.opt)) : undefined,
       lbl:  c.customLabel || undefined,
+      rot:  c.rot || undefined,
+      mir:  c.mir || undefined,
       lk:   c.locked || undefined,
       obs:  c.obs || undefined },
       (REG[c.type] && REG[c.type].save) ? REG[c.type].save(c) : null)),
@@ -2227,7 +2303,8 @@ function updateSelHud(){
   if (!selection.size){ h.classList.add('hidden'); return; }
   h.classList.remove('hidden');
   h.innerHTML = '<b>' + selection.size + '</b> sélectionné' + (selection.size > 1 ? 's' : '') +
-    ' · <span class="kbd">Ctrl+C/V</span> copier-coller · <span class="kbd">Ctrl+D</span> dupliquer · <span class="kbd">Suppr</span> effacer' +
+    ' · <span class="kbd">Ctrl+C/V</span> copier-coller · <span class="kbd">Ctrl+D</span> dupliquer · ' +
+    '<span class="kbd">R</span> tourner · <span class="kbd">M</span> miroir · <span class="kbd">Suppr</span> effacer' +
     (selection.size > 1 ?
       ' &nbsp; <button class="sel-al" data-al="left" title="Aligner à gauche">⇤</button>' +
       '<button class="sel-al" data-al="top" title="Aligner en haut">⤒</button>' +
@@ -2408,6 +2485,32 @@ function duplicateSelection(){
   const r = spawnGroup(data, 32, 32, true);
   if (r.made.length) AudioSys.spawn();
   return r.made.length > 0;
+}
+/* Tourner (R) et retourner (M) la sélection, ou le composant survolé */
+function orientTargets(){
+  const list = [...selection].filter(c => !c.locked);
+  if (list.length) return list;
+  return (hoveredComp && !hoveredComp.locked) ? [hoveredComp] : [];
+}
+function rotateSel(dir){
+  const list = orientTargets();
+  if (!list.length) return false;
+  list.forEach(c => {
+    // on tourne autour du centre du boîtier pour qu'il ne « saute » pas
+    const cx = c.x + c.bw / 2, cy = c.y + c.bh / 2;
+    c.rot = ((c.rot + (dir < 0 ? 3 : 1)) % 4);
+    c.x = Math.round((cx - c.bw / 2) / 8) * 8;
+    c.y = Math.round((cy - c.bh / 2) / 8) * 8;
+  });
+  recalcFan(); AudioSys.click(); markDirty();
+  return true;
+}
+function mirrorSel(){
+  const list = orientTargets();
+  if (!list.length) return false;
+  list.forEach(c => c.mir = !c.mir);
+  recalcFan(); AudioSys.click(); markDirty();
+  return true;
 }
 /* Alignement de la sélection */
 function alignSel(mode){
@@ -2777,7 +2880,10 @@ canvas.addEventListener('pointerup', e => {
     const c = pressComp;
     const RD = REG[c.type];
     if (RD){
-      if (RD.click){ RD.click(c, mouseW.x, mouseW.y); AudioSys.click(); markDirty(); }
+      if (RD.click){
+        const L = c.w2l(mouseW.x, mouseW.y);
+        RD.click(c, L.x, L.y); AudioSys.click(); markDirty();
+      }
     }
     else if (c.type === 'SWITCH'){
       c.state = c.state ? 0 : 1;
@@ -2822,7 +2928,7 @@ canvas.addEventListener('pointerup', e => {
     let n = 0;
     components.forEach(c => {
       if (c.locked) return;
-      const cx2 = c.x + c.w/2, cy2 = c.y + c.h/2;
+      const cx2 = c.x + c.bw/2, cy2 = c.y + c.bh/2;
       if (cx2 >= rx0 && cx2 <= rx1 && cy2 >= ry0 && cy2 <= ry1){ selection.add(c); n++; }
     });
     if (n) AudioSys.click();
@@ -2893,6 +2999,8 @@ addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && (e.key === 'd' || e.key === 'D')){
     e.preventDefault(); duplicateSelection();
   }
+  if (!e.ctrlKey && !e.metaKey && (e.key === 'r' || e.key === 'R')) rotateSel(e.shiftKey ? -1 : 1);
+  if (!e.ctrlKey && !e.metaKey && (e.key === 'm' || e.key === 'M')) mirrorSel();
   if (!e.ctrlKey && !e.metaKey && (e.key === 'n' || e.key === 'N')) setLabelsMode(!labelsMode);
   if (!e.ctrlKey && !e.metaKey && (e.key === 'f' || e.key === 'F')){
     const bb = boardBBox();
@@ -4421,6 +4529,8 @@ function compFromData(s, ox, oy, depth){
   if (s.ci != null) c.clockIdx = s.ci;
   if (s.opt) c.opt = JSON.parse(JSON.stringify(s.opt));
   if (s.lbl) c.customLabel = s.lbl;
+  if (s.rot) c.rot = s.rot % 4;
+  if (s.mir) c.mir = true;
   const d = regOf(s.t);
   if (d && d.restore) d.restore(c, s);
   return c;
@@ -6861,6 +6971,8 @@ function buildGuide(){
     '<b>⌨️ Les gestes qui font gagner du temps.</b> <code>Ctrl+Z</code> / <code>Ctrl+Y</code> annuler-refaire, ' +
     '<code>Ctrl+C</code> / <code>Ctrl+V</code> copier-coller, <code>Ctrl+D</code> dupliquer la sélection, ' +
     '<code>Suppr</code> effacer, glisser dans le vide pour sélectionner plusieurs boîtiers (puis ⇤ ⤒ ☰ pour les aligner), ' +
+    '<code>R</code> tourner un composant d’un quart de tour (Maj+R dans l’autre sens), <code>M</code> le retourner ' +
+    'en miroir — pratique pour les boucles de rétroaction et les montages verticaux, ' +
     '<code>F</code> recadrer la vue sur ton circuit, <code>N</code> masquer les noms sous les boîtiers ' +
     '(le plan respire quand il y a beaucoup de composants), ' +
     '<code>🪄</code> pour ranger les câbles automatiquement et <code>📷</code> pour exporter une image de ton montage.',
@@ -7295,7 +7407,7 @@ function drawScene(t, opaque){
     ctx.save();
     ctx.setLineDash([6, 5]); ctx.lineDashOffset = -t * .02;
     ctx.strokeStyle = 'rgba(56,225,255,.8)'; ctx.lineWidth = 1.5;
-    selection.forEach(c => ctx.strokeRect(c.x - 8, c.y - 8, c.w + 16, c.h + 16));
+    selection.forEach(c => ctx.strokeRect(c.x - 8, c.y - 8, c.bw + 16, c.bh + 16));
     ctx.restore();
   }
   if (selRect){
@@ -7330,8 +7442,8 @@ function boardBBox(){
   if (!components.length) return null;
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   components.forEach(c => {
-    x0 = Math.min(x0, c.x); y0 = Math.min(y0, c.y - 26);          // badge d'étiquette
-    x1 = Math.max(x1, c.x + c.w); y1 = Math.max(y1, c.y + c.h + 18); // nom sous le boîtier
+    x0 = Math.min(x0, c.x); y0 = Math.min(y0, c.y - 26);           // badge d'étiquette
+    x1 = Math.max(x1, c.x + c.bw); y1 = Math.max(y1, c.y + c.bh + 18); // nom sous le boîtier
   });
   wires.forEach(w => w.wp.forEach(p => {
     x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y);

@@ -1896,6 +1896,111 @@ T('T112 mise en évidence du voisinage au survol', () => {
   hideTip();
 });
 
+/* ===================== 6quinquies. Orientation ===================== */
+console.log('— Rotation & miroir —');
+
+T('T113 rotation : les pins suivent le boîtier', () => {
+  board();
+  const g = mk('AND', 100, 100);
+  const w0 = g.bw, h0 = g.bh;
+  const inY = g.inPins[0].y, outX = g.outPins[0].x;
+  ok(g.inPins[0].x < g.outPins[0].x, 'au départ : entrées à gauche, sortie à droite');
+  deq(g.outPins[0].dir(), { x:1, y:0 }, 'sortie vers la droite');
+  deq(g.inPins[0].dir(), { x:-1, y:0 }, 'entrée vers la gauche');
+  selection.clear(); selection.add(g);
+  rotateSel(1);
+  eq(g.rot, 1, 'un quart de tour');
+  eq(g.bw, h0, 'largeur et hauteur échangées');
+  eq(g.bh, w0, 'largeur et hauteur échangées (2)');
+  deq(g.outPins[0].dir(), { x:0, y:1 }, 'la sortie pointe vers le bas');
+  ok(g.outPins[0].y > g.inPins[0].y, 'la sortie est passée sous les entrées');
+  rotateSel(1); rotateSel(1);
+  eq(g.rot, 3, 'trois quarts de tour');
+  deq(g.outPins[0].dir(), { x:0, y:-1 }, 'la sortie pointe vers le haut');
+  rotateSel(1);
+  eq(g.rot, 0, 'quatre quarts : retour au départ');
+  eq(g.bw, w0, 'encombrement retrouvé');
+  rotateSel(-1);
+  eq(g.rot, 3, 'Maj+R tourne dans l’autre sens');
+});
+
+T('T114 rotation : le composant reste sous le curseur et sélectionnable', () => {
+  board();
+  const g = mk('DFF', 200, 200);
+  const cx = g.x + g.bw / 2, cy = g.y + g.bh / 2;
+  selection.clear(); selection.add(g);
+  rotateSel(1);
+  ok(Math.abs((g.x + g.bw / 2) - cx) <= 8 && Math.abs((g.y + g.bh / 2) - cy) <= 8,
+    'le centre du boîtier ne bouge quasiment pas');
+  ok(g.isHit(g.x + 4, g.y + 4) && g.isHit(g.x + g.bw - 4, g.y + g.bh - 4),
+    'la zone cliquable suit la rotation');
+  ok(!g.isHit(g.x + g.bw + 40, g.y), 'et pas au-delà');
+  eq(pickComp(g.x + g.bw / 2, g.y + g.bh / 2), g, 'sélectionnable au centre');
+});
+
+T('T115 miroir : les entrées passent à droite', () => {
+  board();
+  const g = mk('AND', 100, 100);
+  const inX0 = g.inPins[0].x;
+  selection.clear(); selection.add(g);
+  mirrorSel();
+  ok(g.mir, 'miroir posé');
+  ok(g.inPins[0].x > g.outPins[0].x, 'entrées à droite, sortie à gauche');
+  deq(g.inPins[0].dir(), { x:1, y:0 }, 'l’entrée regarde vers la droite');
+  mirrorSel();
+  eq(g.mir, false, 'retour à l’endroit');
+  eq(g.inPins[0].x, inX0, 'position retrouvée');
+});
+
+T('T116 orientation : simulation, sérialisation et raccourcis', () => {
+  board();
+  const a = mk('SWITCH', 0, 0), b = mk('SWITCH', 0, 200);
+  const g = mk('AND', 400, 100), l = mk('LED', 700, 100);
+  link(a, 0, g, 0); link(b, 0, g, 1); link(g, 0, l, 0);
+  selection.clear(); selection.add(g);
+  rotateSel(1); mirrorSel();
+  deq(measure([a, b], [l]).map(r => r[0]), [0,0,0,1], 'le circuit fonctionne à l’identique une fois tourné');
+  const data = serializeGroup(components);
+  ok(JSON.stringify(data).includes('"rot":1'), 'orientation sérialisée');
+  board();
+  spawnGroup(data, 0, 0, false);
+  const g2 = components.find(c => c.type === 'AND');
+  eq(g2.rot, 1, 'rotation restaurée');
+  eq(g2.mir, true, 'miroir restauré');
+  // raccourcis clavier
+  board();
+  const k = mk('OR', 100, 100);
+  hoveredComp = k;
+  __fireWin('keydown', { key:'r' });
+  eq(k.rot, 1, 'la touche R tourne le composant survolé');
+  __fireWin('keydown', { key:'m' });
+  eq(k.mir, true, 'la touche M le retourne');
+  hoveredComp = null;
+});
+
+T('T117 orientation : dessin et cadrage tiennent compte du boîtier tourné', () => {
+  board();
+  const list = ['AND','DFF','SEQ','MATRIX','FOUR','CUVE','DIP8','JAUGE','RELAY'];
+  list.forEach((t, i) => {
+    const c = mk(t, i * 260, 0);
+    c.rot = (i % 4); c.mir = i % 2 === 0;
+  });
+  sim();
+  drawScene(0);                       // aucun rendu ne doit lever d’exception
+  const bb = boardBBox();
+  components.forEach(c => {
+    ok(bb.x1 >= c.x + c.bw && bb.y1 >= c.y + c.bh, FR_NAME[c.type] + ' : entièrement dans le cadrage');
+  });
+  // un séquenceur tourné : le clic sur une case est ramené dans son repère
+  const sq = components.find(c => c.type === 'SEQ');
+  sq.rot = 1; sq.mir = false;
+  const local = { x: sq.x + 20, y: sq.y + 22 };
+  const world = sq.l2w(local.x, local.y);
+  const back = sq.w2l(world.x, world.y);
+  ok(Math.abs(back.x - local.x) < .01 && Math.abs(back.y - local.y) < .01,
+    'changement de repère réversible');
+});
+
 /* ===================== 7. Guide ===================== */
 console.log('— Guide —');
 
