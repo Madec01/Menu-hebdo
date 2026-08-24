@@ -1,9 +1,9 @@
-# Croustille
+# La Chipserie
 
 Jeu de gestion d'usine à chips, en navigateur. On démarre seul dans un hangar à
 éplucher des pommes de terre, et on finit par voir son nom peint sur le mur.
 
-**Le jeu tient dans un seul fichier : [`croustille.html`](croustille.html).**
+**Le jeu tient dans un seul fichier : [`chipserie.html`](chipserie.html).**
 Double-clic pour jouer. Aucune installation, aucune dépendance, aucun réseau —
 il fonctionne hors ligne.
 

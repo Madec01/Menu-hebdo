@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Croustille</title>
+<title>La Chipserie</title>
 <style>
 /* ============================================================
-   CROUSTILLE — feuille de style unique
+   LA CHIPSERIE — feuille de style unique
    L'interface de gestion est en DOM/CSS, la vue usine en Canvas.
    ============================================================ */
 
@@ -267,8 +267,9 @@ p.sousTitre{font-size:12px;color:var(--texte-faible);margin-bottom:12px}
 .piedFeuille{display:flex;justify-content:space-between;align-items:center;margin-top:16px;gap:16px}
 
 /* ---------- Écran-titre ---------- */
-#ecranTitre .feuille{max-width:520px;margin-top:9vh;text-align:center}
-#ecranTitre h1{font-size:60px;letter-spacing:.3em;color:var(--or);font-weight:300;margin-bottom:4px;text-indent:.3em}
+#ecranTitre .feuille{max-width:560px;margin-top:9vh;text-align:center}
+#ecranTitre h1{font-size:50px;letter-spacing:.18em;color:var(--or);font-weight:300;
+  margin-bottom:4px;text-indent:.18em;white-space:nowrap}
 #ecranTitre .accroche{color:var(--texte-doux);font-size:14.5px;line-height:1.6;margin-bottom:32px}
 #ecranTitre .bt{width:100%;margin-bottom:9px;padding:13px}
 #ecranTitre .credits{margin-top:26px;font-size:11.5px;color:var(--texte-faible);line-height:1.7}
@@ -596,7 +597,7 @@ table.tab tr:hover td{background:rgba(255,255,255,.028)}
 
   <!-- ===================== BARRE HAUTE ===================== -->
   <header id="barreHaute">
-    <div class="marque">CROUSTILLE</div>
+    <div class="marque">LA CHIPSERIE</div>
 
     <div class="indic" id="indArgent"><span class="lab">Caisse</span><span class="val">8 000 €</span></div>
     <div class="indic" id="indDate"><span class="lab">Date</span><span class="val">Semaine 1 · Lundi 8 h</span></div>
@@ -8240,7 +8241,7 @@ function ouvrirTitre(){
   const sauve = localStorage.getItem(CONFIG.sauvegarde);
   z.innerHTML = `
     <div class="feuille">
-      <h1>CROUSTILLE</h1>
+      <h1>LA CHIPSERIE</h1>
       <div class="accroche">
         Un hangar, un bain d'huile, cinquante kilos de pommes de terre.<br>
         Trente ans plus tard, on verra bien.
@@ -11260,7 +11261,7 @@ function importerFichier(){
           demarrer();
           notif("Partie chargée", etat.meta.nomEntreprise + ", semaine " + (semaineCourante()+1) + ".", "ok");
         }
-      } catch (e){ notif("Fichier illisible", "Ce n'est pas une sauvegarde de Croustille.", "ko"); }
+      } catch (e){ notif("Fichier illisible", "Ce n'est pas une sauvegarde de La Chipserie.", "ko"); }
     };
     r.readAsText(f);
   };
