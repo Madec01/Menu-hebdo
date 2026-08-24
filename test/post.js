@@ -1437,6 +1437,195 @@ T('T97 vérins, servos et jauges acceptent une valeur de bus sans avertissement'
   ok(servo.ang < 0.1, 'et revient à 0°');
 });
 
+/* ===================== 6quater. Solveur et tuteur ===================== */
+console.log('— Solveur & tuteur —');
+
+T('T102 solveur : formes simplifiées attendues', () => {
+  // ET : une seule ligne à 1 -> un seul terme de deux littéraux
+  let r = sopTerms([[0],[0],[0],[1]], 2, 0);
+  eq(r.terms.length, 1, 'ET : un terme');
+  eq(r.terms[0].length, 2, 'ET : deux littéraux');
+  ok(r.terms[0].every(l => !l.neg), 'ET : aucun littéral inversé');
+  // OU : simplification en deux termes d’un seul littéral
+  r = sopTerms([[0],[1],[1],[1]], 2, 0);
+  eq(r.terms.length, 2, 'OU : deux termes');
+  ok(r.terms.every(t => t.length === 1), 'OU : simplifié à un littéral par terme');
+  // XOR : deux termes de deux littéraux (pas simplifiable)
+  r = sopTerms([[0],[1],[1],[0]], 2, 0);
+  eq(r.terms.length, 2, 'XOR : deux termes');
+  ok(r.terms.every(t => t.length === 2), 'XOR : irréductible');
+  // constantes
+  eq(sopTerms([[0],[0]], 1, 0).konst, 0, 'toujours 0');
+  eq(sopTerms([[1],[1]], 1, 0).konst, 1, 'toujours 1');
+  // majorité 3 entrées : 3 termes de 2 littéraux après simplification
+  const maj = [[0],[0],[0],[1],[0],[1],[1],[1]];
+  r = sopTerms(maj, 3, 0);
+  eq(r.terms.length, 3, 'majorité : 3 termes');
+  ok(r.terms.every(t => t.length === 2), 'majorité : simplifiée à 2 littéraux par terme');
+});
+
+T('T103 solveur : le circuit produit RÉELLEMENT la table demandée', () => {
+  let testees = 0, portes = 0;
+  missions.forEach((m, idx) => {
+    if (!m.tt.length || m.inputs < 1 || m.inputs > 4 || m.bb) return;
+    const sol = buildSolution(m);
+    ok(sol, m.id + ' : solution construite');
+    loadMission(idx);
+    applySolution(sol, -1);
+    const io = missionIO();
+    eq(io.ins.length, m.inputs, m.id + ' : entrées');
+    const saved = io.ins.map(c => c.state);
+    const passes = components.length + wires.length + 10;
+    for (let i = 0; i < m.tt.length; i++){
+      for (let j = 0; j < m.inputs; j++) io.ins[j].state = (i >> (m.inputs - 1 - j)) & 1;
+      simulate(passes);
+      const got = io.outs.map(o => o.inPins[0].state ? 1 : 0);
+      deq(got, m.tt[i], m.id + ' ligne ' + i);
+    }
+    io.ins.forEach((c, j) => c.state = saved[j]);
+    testees++; portes += sol.gates;
+  });
+  ok(testees > 40, 'au moins 40 missions combinatoires résolues (' + testees + ')');
+  console.log('        → ' + testees + ' missions résolues automatiquement, ' + portes + ' portes engendrées');
+  loadMission(-1);
+});
+
+T('T104 solveur : la vérification de mission accepte la solution engendrée', () => {
+  ['m2','m3','m5','m7','m12'].forEach(id => {
+    const idx = missions.findIndex(m => m.id === id);
+    if (idx < 0) return;
+    loadMission(idx);
+    delete progress.done[id];
+    applySolution(buildSolution(missions[idx]), -1);
+    __fire('btn-verify', 'click');
+    ok(progress.done[id], id + ' : mission validée par la solution du solveur');
+  });
+  loadMission(-1);
+});
+
+T('T105 solveur : pose progressive, étape par étape', () => {
+  const idx = missions.findIndex(m => m.id === 'm7');   // XOR ou équivalent
+  loadMission(idx);
+  const m = missions[idx];
+  const sol = buildSolution(m);
+  ok(sol.steps.length >= 2, 'plusieurs étapes');
+  const base = components.length;
+  let dernier = base;
+  for (let k = 1; k <= sol.steps.length; k++){
+    loadMission(idx);
+    applySolution(sol, k);
+    ok(components.length >= dernier || k === 1, 'étape ' + k + ' : le circuit grandit');
+    dernier = components.length;
+  }
+  eq(components.length, base + sol.comps.length, 'à la dernière étape, tout est posé');
+  sol.steps.forEach((st, i) => {
+    ok(st.txt && st.txt.length > 10, 'étape ' + i + ' : texte');
+    ok(st.why && st.why.length > 20, 'étape ' + i + ' : explication');
+  });
+  loadMission(-1);
+});
+
+T('T106 solveur : conversion en base NAND / NOR et respect des contraintes', () => {
+  const nand = missions.find(m => m.allowed && m.allowed.join() === 'NAND' && m.tt.length);
+  ok(nand, 'une mission « NAND uniquement » existe');
+  const sol = buildSolution(nand);
+  eq(sol.basis, 'NAND', 'base détectée');
+  ok(sol.types.filter(t => LOGIC_TYPES.includes(t)).every(t => t === 'NAND'),
+    'le circuit engendré n’utilise que des NAND : ' + sol.types.join(','));
+  const contraintes = missions.map((m, i) => [m, i])
+    .filter(([m]) => m.tt.length && m.inputs >= 1 && m.inputs <= 4 && !m.bb && (m.allowed || m.maxGates));
+  ok(contraintes.length >= 5, contraintes.length + ' missions sous contrainte');
+  const nonConformes = [];
+  contraintes.forEach(([m, i]) => {
+    const so = buildSolution(m);
+    if (!so.conforme){ nonConformes.push(m.id); return; }
+    loadMission(i);
+    delete progress.done[m.id];
+    applySolution(so, -1);
+    __fire('btn-verify', 'click');
+    ok(progress.done[m.id], m.id + ' : la solution engendrée passe la vérification sous contrainte');
+  });
+  console.log('        → ' + (contraintes.length - nonConformes.length) + '/' + contraintes.length +
+    ' missions sous contrainte résolues automatiquement' +
+    (nonConformes.length ? ' (hors barème : ' + nonConformes.join(', ') + ')' : ''));
+  loadMission(-1);
+});
+
+T('T107 diagnostic en direct : compte les lignes justes et pointe l’erreur', () => {
+  const idx = missions.findIndex(m => m.id === 'm3');   // OU
+  loadMission(idx);
+  const io = missionIO();
+  let r = liveCheck();
+  ok(r, 'diagnostic disponible');
+  eq(r.total, 4, '4 lignes');
+  eq(r.bon, 1, 'circuit vide : seule la ligne 0 0 → 0 est juste');
+  ok(r.premierEchec, 'une erreur est pointée');
+  eq(r.premierEchec.i, 1, 'première ligne fausse');
+  const g = mk('AND', 400, 200);                        // mauvaise porte
+  link(io.ins[0], 0, g, 0); link(io.ins[1], 0, g, 1); link(g, 0, io.outs[0], 0);
+  r = liveCheck();
+  eq(r.bon, 2, 'avec un ET : 2 lignes justes sur 4');
+  deleteComponent(g);
+  const g2 = mk('OR', 400, 200);
+  link(io.ins[0], 0, g2, 0); link(io.ins[1], 0, g2, 1); link(g2, 0, io.outs[0], 0);
+  r = liveCheck();
+  eq(r.bon, 4, 'avec un OU : tout est juste');
+  eq(r.premierEchec, null, 'aucune erreur');
+  __advance(800); liveTick();
+  ok(/lignes sont justes/.test(__el('live-box').innerHTML), 'message de réussite affiché');
+  loadMission(-1);
+});
+
+T('T108 diagnostic : un circuit séquentiel n’est pas jugé en continu', () => {
+  const idx = missions.findIndex(m => m.id === 'm2');
+  loadMission(idx);
+  mk('DFF', 400, 300);
+  const r = liveCheck();
+  ok(r && r.seq, 'séquentiel détecté');
+  __advance(800); liveTick();
+  ok(/séquentiel/i.test(__el('live-box').innerHTML), 'message adapté');
+  loadMission(-1);
+});
+
+T('T109 tuteur : fantômes, pas-à-pas et solution complète', () => {
+  const idx = missions.findIndex(m => m.id === 'm7');
+  loadMission(idx);
+  delete progress.done['m7'];
+  const base = components.length;
+  __fire('btn-tutor', 'click');
+  ok(tutor, 'tuteur ouvert');
+  ok(!__el('tutor-box').classList.contains('hidden'), 'panneau visible');
+  eq(Object.keys(tutor.ghosts).length, tutor.sol.comps.length, 'un fantôme par composant à poser');
+  eq(components.length, base, 'aucun composant réel posé pour l’instant');
+  ok(/ÉTAPE 1/.test(__el('tutor-step').textContent), 'première étape annoncée');
+  ok(__el('tutor-why').innerHTML.length > 20, 'explication affichée');
+  drawScene(0);                                   // les fantômes doivent se dessiner
+  const n0 = Object.keys(tutor.ghosts).length;
+  __fire('tutor-place', 'click');
+  ok(Object.keys(tutor.ghosts).length < n0, 'les fantômes de l’étape sont devenus réels');
+  ok(components.length > base, 'des composants sont posés');
+  __fire('tutor-all', 'click');
+  eq(Object.keys(tutor.ghosts).length, 0, 'plus aucun fantôme');
+  eq(components.length, base + tutor.sol.comps.length, 'tout est posé');
+  const r = liveCheck();
+  eq(r.premierEchec, null, 'la solution posée est juste');
+  __fire('btn-verify', 'click');
+  ok(progress.done['m7'], 'et elle passe la vérification');
+  __fire('tutor-close', 'click');
+  ok(!tutor, 'tuteur refermé');
+  loadMission(-1);
+});
+
+T('T110 tuteur : refusé sur une boîte noire, replié en sandbox', () => {
+  loadMission(missions.findIndex(m => m.id === 'm79'));
+  ok(__el('btn-tutor').classList.contains('hidden'), 'bouton masqué en boîte noire');
+  openTutor();
+  ok(!tutor, 'aucune solution montrée sur une boîte noire');
+  loadMission(-1);
+  ok(__el('btn-tutor').classList.contains('hidden'), 'bouton masqué en sandbox');
+  eq(liveCheck(), null, 'pas de diagnostic hors mission');
+});
+
 /* ===================== 7. Interface & export ===================== */
 console.log('— Interface & export —');
 

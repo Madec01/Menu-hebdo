@@ -101,6 +101,24 @@ table.tt tr.tt-ok td:first-child::before{content:'✓ ';color:var(--green)}
 table.tt tr.tt-fail td{background:rgba(255,92,105,.12)}
 table.tt tr.tt-fail td:first-child::before{content:'✗ ';color:var(--red)}
 
+#live-box{margin-bottom:9px;padding:7px 10px;border-radius:9px;font-family:var(--mono);font-size:11px;
+  border:1px solid var(--border);background:rgba(5,9,18,.5);line-height:1.5}
+#live-box.hidden{display:none}
+#live-box.ok{border-color:rgba(61,255,158,.4);background:rgba(61,255,158,.07);color:var(--green)}
+#live-box.ko{border-color:rgba(255,92,105,.35);background:rgba(255,92,105,.07);color:#ffb3ba}
+#live-box b{color:#fff}
+#tutor-box{margin-bottom:9px;padding:9px 11px;border-radius:11px;border:1px solid rgba(56,225,255,.32);
+  background:rgba(56,225,255,.06)}
+#tutor-box.hidden{display:none}
+#tutor-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+#tutor-step{font-family:'Chakra Petch',sans-serif;font-weight:700;font-size:11px;color:var(--cyan);letter-spacing:.08em}
+#tutor-close{background:none;border:none;color:var(--dim);cursor:pointer;font-size:13px}
+#tutor-txt{font-size:12px;color:var(--text);line-height:1.5;margin-bottom:5px}
+#tutor-why{font-size:10.5px;color:var(--dim);line-height:1.5;margin-bottom:8px;font-style:italic}
+#tutor-actions{display:flex;gap:6px;flex-wrap:wrap}
+#tutor-actions .btn{width:auto;flex:1;min-width:96px;padding:7px 8px;font-size:11px}
+.btn-tutor{background:rgba(56,225,255,.12);color:var(--cyan);border-color:rgba(56,225,255,.35);margin-bottom:8px}
+.btn-tutor:hover{background:rgba(56,225,255,.2)}
 #stats-row{display:flex;gap:8px;margin-bottom:10px;font-family:var(--mono);font-size:11px;color:var(--dim)}
 #stats-row .stat{flex:1;border:1px solid var(--border);border-radius:8px;padding:6px 8px;
   background:rgba(255,255,255,.02);display:flex;justify-content:space-between}
@@ -411,6 +429,18 @@ table.tt tr.tt-fail td:first-child::before{content:'✗ ';color:var(--red)}
     <div class="stat">Câbles <b id="stat-wires">0</b></div>
     <div class="stat">Zoom <b id="stat-zoom">100%</b></div>
   </div>
+  <div id="live-box" class="hidden"></div>
+  <div id="tutor-box" class="hidden">
+    <div id="tutor-head"><span id="tutor-step">Étape</span><button id="tutor-close" title="Quitter le tuteur">✕</button></div>
+    <div id="tutor-txt"></div>
+    <div id="tutor-why"></div>
+    <div id="tutor-actions">
+      <button class="btn btn-verify" id="tutor-place">Poser cette étape</button>
+      <button class="btn btn-sol" id="tutor-skip">Étape suivante →</button>
+      <button class="btn btn-sol" id="tutor-all">Tout poser</button>
+    </div>
+  </div>
+  <button class="btn btn-tutor hidden" id="btn-tutor">🧭 Guide-moi sur le schéma</button>
   <button class="btn btn-start" id="btn-start">▶ &nbsp;Commencer les missions</button>
   <button class="btn btn-verify hidden" id="btn-verify">Vérifier le circuit</button>
   <button class="btn btn-sol hidden" id="btn-solution">💡 Solution &amp; explication</button>
@@ -5090,7 +5120,7 @@ const fmtPhys = (v, unit, dec) => (dec ? v.toFixed(dec) : Math.round(v)) + (unit
 function defSensor(id, o){
   return defComp(id, {
     name:o.name, short:o.short, family:'sense', color:'#38e1ff', glyph:o.glyph,
-    w:o.w || 116, h:96, ins:[], outs:[{ n:'MES', bus:true }, { n:o.seuilPin || '>' }],
+    w:o.w || 116, h:96, ins:[], outs:[{ n:'MES', bus:true }, { n:o.seuilPin || 'SEU' }],
     opts:[
       { k:'val', label:'Mesure (' + o.unit + ')', min:o.min, max:o.max, step:o.step || 1, def:o.def,
         hint:'La grandeur que « voit » le capteur. Fais-la varier pour tester ton circuit.' },
@@ -5876,9 +5906,215 @@ function paintVerifyResults(results){
   });
 }
 
+/* ====================================================================
+   TUTEUR : diagnostic en direct + solution montrée sur le schéma
+   Niveau 1 — pendant que l'élève câble, on compare en continu sa table à
+   celle demandée et on dit CE QUI cloche, ligne par ligne.
+   Niveau 2 — les composants manquants apparaissent en fantômes.
+   Niveau 3 — étape par étape, avec l'explication de chaque geste.
+   ==================================================================== */
+const SEQ_MARKERS = ['CLOCK','SEQ','NOISE','KEY','RANDOM','BUTTON','DFF','DELAY','CNT4'];
+let liveT = 0, liveRes = null;
+
+/* Le circuit est-il purement combinatoire ? (sinon, pas de table figée) */
+function boardCombinatoire(){
+  return !components.some(c => SEQ_MARKERS.includes(c.type) ||
+    (REG[c.type] && REG[c.type].seq));
+}
+/* Compare en silence la table obtenue à la table demandée */
+function liveCheck(){
+  if (currentIdx < 0) return null;
+  const m = missions[currentIdx];
+  if (!m.tt.length || m.bb) return null;
+  const io = missionIO();
+  if (io.ins.length !== m.inputs || io.outs.length !== m.outputs) return null;
+  if (!boardCombinatoire()) return { seq:true };
+  const saved = io.ins.map(c => c.state);
+  const passes = components.length + wires.length + 10;
+  const rows = [];
+  let bon = 0, premierEchec = null;
+  simulating = true;
+  for (let i = 0; i < m.tt.length; i++){
+    for (let j = 0; j < m.inputs; j++) io.ins[j].state = (i >> (m.inputs - 1 - j)) & 1;
+    simulate(passes);
+    const got = io.outs.map(o => o.inPins[0].state ? 1 : 0);
+    const ok = got.every((v, k) => v === m.tt[i][k]);
+    rows.push(ok);
+    if (ok) bon++; else if (!premierEchec) premierEchec = { i, got };
+  }
+  io.ins.forEach((c, j) => c.state = saved[j]);
+  simulate(passes);
+  simulating = false;
+  return { rows, bon, total:m.tt.length, premierEchec };
+}
+function renderLive(){
+  const box = document.getElementById('live-box');
+  if (currentIdx < 0 || !liveRes){ box.classList.add('hidden'); return; }
+  box.classList.remove('hidden');
+  const m = missions[currentIdx];
+  if (liveRes.seq){
+    box.className = '';
+    box.innerHTML = '⏱ <b>Circuit séquentiel</b> — horloge ou mémoire détectée : la vérification ne peut pas ' +
+      'être faite en continu. Clique sur <b>Vérifier</b> quand tu es prêt.';
+    return;
+  }
+  const { bon, total, premierEchec } = liveRes;
+  if (!premierEchec){
+    box.className = 'ok';
+    box.innerHTML = '✓ <b>Les ' + total + ' lignes sont justes !</b> Clique sur <b>Vérifier le circuit</b> pour valider.';
+    return;
+  }
+  box.className = 'ko';
+  const inL = inShortLabels(m), outL = outShortLabels(m);
+  const combo = inL.map((l, j) => l + '=' + ((premierEchec.i >> (m.inputs - 1 - j)) & 1)).join(' ');
+  const att = m.tt[premierEchec.i].map((v, k) => outL[k] + '=' + v).join(' ');
+  const obt = premierEchec.got.map((v, k) => outL[k] + '=' + v).join(' ');
+  box.innerHTML = '<b>' + bon + ' / ' + total + '</b> lignes justes.<br>' +
+    'Première erreur : <b>' + combo + '</b> → attendu <b>' + att + '</b>, ton circuit donne <b>' + obt + '</b>.';
+}
+/* Appelé par la boucle de rendu, au ralenti */
+function liveTick(){
+  const now = Date.now();
+  if (now - liveT < 700) return;
+  liveT = now;
+  if (currentIdx < 0){ liveRes = null; renderLive(); return; }
+  liveRes = liveCheck();
+  renderLive();
+  if (liveRes && liveRes.rows) paintVerifyResults(liveRes.rows);
+}
+
+/* ---------- Fantômes et pas-à-pas ---------- */
+let tutor = null;      // { sol, step, ghosts:{index:Component} }
+
+function layoutSolution(sol){
+  const io = missionIO();
+  const x0 = 250;
+  const x1 = (io.outs[0] ? io.outs[0].x : W - 420) - 180;
+  const maxX = sol.comps.reduce((a, c) => Math.max(a, c.x), x0);
+  const sx = maxX > x0 ? Math.min(1, (x1 - x0) / (maxX - x0)) : 1;
+  const maxY = sol.comps.reduce((a, c) => Math.max(a, c.y), 0);
+  const cy = io.ins.length ? (io.ins[0].y + io.ins[io.ins.length - 1].y) / 2 : H / 2;
+  const oy = Math.round(cy - maxY / 2 - 20);
+  sol.comps.forEach(c => { c.px = Math.round(x0 + (c.x - x0) * sx); c.py = c.y + oy; });
+}
+function openTutor(){
+  if (currentIdx < 0) return;
+  const m = missions[currentIdx];
+  if (m.bb){ toast('🕵️ Pas de guide sur une boîte noire : c’est à toi de déduire !', 'error', 3600); return; }
+  const sol = buildSolution(m);
+  if (!sol || !sol.conforme){
+    toast('🧭 Cette mission demande une astuce que le tuteur ne sait pas dessiner — ouvre 💡 Solution : ' +
+          'les étapes y sont détaillées.', 'info', 5200);
+    return;
+  }
+  layoutSolution(sol);
+  tutor = { sol, step:0, ghosts:{}, made:{} };
+  sol.comps.forEach((sc, i) => {
+    const g = new Component(sc.px, sc.py, sc.t);
+    tutor.ghosts[i] = g;
+  });
+  document.getElementById('tutor-box').classList.remove('hidden');
+  document.getElementById('btn-tutor').classList.add('hidden');
+  renderTutor();
+  AudioSys.spawn();
+}
+function closeTutor(){
+  tutor = null;
+  document.getElementById('tutor-box').classList.add('hidden');
+  const bt = document.getElementById('btn-tutor');
+  if (currentIdx >= 0 && !missions[currentIdx].bb) bt.classList.remove('hidden');
+}
+function renderTutor(){
+  if (!tutor) return;
+  const st = tutor.sol.steps[tutor.step];
+  document.getElementById('tutor-step').textContent =
+    st ? ('ÉTAPE ' + (tutor.step + 1) + ' / ' + tutor.sol.steps.length) : 'TERMINÉ';
+  document.getElementById('tutor-txt').innerHTML = st ? st.txt :
+    'Le circuit est complet. Actionne les entrées pour le comprendre, puis clique sur <b>Vérifier</b>.';
+  document.getElementById('tutor-why').innerHTML = st ? st.why : '';
+  document.getElementById('tutor-place').classList.toggle('hidden', !st);
+  document.getElementById('tutor-skip').classList.toggle('hidden', !st);
+  document.getElementById('tutor-all').classList.toggle('hidden', !st);
+}
+/* Matérialise l'étape courante (ses composants + les câbles devenus posables) */
+function tutorPlace(){
+  if (!tutor) return;
+  const st = tutor.sol.steps[tutor.step];
+  if (!st) return;
+  st.comps.forEach(i => delete tutor.ghosts[i]);
+  applySolution(tutor.sol, tutor.step + 1, tutor.made);
+  tutor.step++;
+  renderTutor();
+  AudioSys.connect();
+  if (tutor.step >= tutor.sol.steps.length) toast('🧭 Solution complète — compare-la à la table !', 'info', 3200);
+}
+function tutorSkip(){
+  if (!tutor) return;
+  tutor.step = Math.min(tutor.step + 1, tutor.sol.steps.length);
+  renderTutor(); AudioSys.click();
+}
+function tutorAll(){
+  if (!tutor) return;
+  while (tutor.step < tutor.sol.steps.length) tutorPlace();
+}
+/* Dessin des fantômes : composants pas encore posés + câbles en pointillés */
+function drawGhosts(c, t){
+  if (!tutor) return;
+  const io = missionIO();
+  const pulse = .28 + Math.sin(t * .003) * .1;
+  const st = tutor.sol.steps[tutor.step];
+  const focus = st ? st.comps : [];
+  c.save();
+  // câbles fantômes
+  const posOf = (ref, isOut) => {
+    if (ref.in != null) return io.ins[ref.in] ? io.ins[ref.in].outPins[0] : null;
+    if (ref.out != null) return io.outs[ref.out] ? io.outs[ref.out].inPins[0] : null;
+    return tutor.ghosts[ref.g] ? (isOut ? tutor.ghosts[ref.g].outPins[0] : null) : null;
+  };
+  c.setLineDash([5, 7]); c.lineWidth = 2; c.lineDashOffset = -t * .03;
+  tutor.sol.wires.forEach(w => {
+    const gA = w.a.g != null ? tutor.ghosts[w.a.g] : null;
+    const gB = w.b.g != null ? tutor.ghosts[w.b.g] : null;
+    if (w.a.g != null && !gA) return;
+    if (w.b.g != null && !gB) return;
+    if (w.a.g == null && w.b.g == null) return;
+    const A = posOf(w.a, true);
+    const B = w.b.out != null ? (io.outs[w.b.out] ? io.outs[w.b.out].inPins[0] : null)
+                              : (gB ? gB.inPins[w.bp] : null);
+    if (!A || !B) return;
+    const d = Math.max(40, Math.abs(B.x - A.x) * .5);
+    c.beginPath(); c.moveTo(A.x, A.y);
+    c.bezierCurveTo(A.x + d, A.y, B.x - d, B.y, B.x, B.y);
+    c.strokeStyle = 'rgba(56,225,255,' + (pulse + .18) + ')';
+    c.stroke();
+  });
+  c.setLineDash([]);
+  // composants fantômes
+  Object.keys(tutor.ghosts).forEach(k => {
+    const g = tutor.ghosts[k], en = focus.includes(+k);
+    c.globalAlpha = en ? .78 : .3;
+    g.draw(c, t);
+    if (en){
+      c.globalAlpha = 1;
+      c.beginPath(); c.roundRect(g.x - 9, g.y - 9, g.w + 18, g.h + 18, 12);
+      c.setLineDash([6, 5]); c.lineDashOffset = -t * .04;
+      c.lineWidth = 2; c.strokeStyle = '#38e1ff'; c.stroke(); c.setLineDash([]);
+    }
+  });
+  c.globalAlpha = 1;
+  c.restore();
+}
+document.getElementById('btn-tutor').addEventListener('click', () => { AudioSys.click(); openTutor(); });
+document.getElementById('tutor-close').addEventListener('click', () => { AudioSys.click(); closeTutor(); });
+document.getElementById('tutor-place').addEventListener('click', tutorPlace);
+document.getElementById('tutor-skip').addEventListener('click', tutorSkip);
+document.getElementById('tutor-all').addEventListener('click', tutorAll);
+
 /* ---------- Chargement de mission ---------- */
 let currentIdx = -1;
 function clearBoard(){
+  if (typeof closeTutor === 'function') closeTutor();
+  liveRes = null;
   components = []; wires = [];
   dragged = null; pressComp = null; wiring = null;
   hoveredComp = null; hoveredPin = null; hoveredWire = null; draggedWp = null;
@@ -5901,6 +6137,7 @@ function loadMission(idx){
     descEl.textContent = 'Placez des composants, câblez-les et expérimentez librement. Votre montage est sauvegardé automatiquement.';
     badges.innerHTML = '';
     show('btn-verify', false); show('btn-solution', false); show('btn-start', true);
+    show('btn-tutor', false);
     buildTruthTable(null);
     restoreSandbox();
   } else {
@@ -5915,6 +6152,7 @@ function loadMission(idx){
     if (progress.done[m.id]) bh += '<span class="badge done">✓ Réussie</span>';
     badges.innerHTML = bh;
     show('btn-verify', true); show('btn-solution', true); show('btn-start', false);
+    show('btn-tutor', !m.bb && m.tt.length > 0 && m.inputs >= 1 && m.inputs <= 4);
     buildTruthTable(m);
 
     // Placement des E/S verrouillées
@@ -5960,6 +6198,237 @@ function loadMission(idx){
   ttSig = '§';
 }
 
+
+/* ====================================================================
+   SOLVEUR DE TABLE DE VÉRITÉ
+   Il reconstruit un circuit à partir de la seule table demandée par la
+   mission : implicants premiers (Quine-McCluskey), couverture gloutonne,
+   puis mise en place des portes NON / ET / OU et de leur câblage.
+   C'est ce qui permet au tuteur de MONTRER la solution sur le schéma,
+   et non seulement de la raconter.
+   ==================================================================== */
+function primeImplicants(minterms, n){
+  if (!minterms.length) return [];
+  // Un implicant : { bits, mask } — mask=1 signifie « bit indifférent »
+  let groups = minterms.map(m => ({ bits:m, mask:0, used:false }));
+  const all = [], seen = new Set();
+  const key = t => t.bits + '/' + t.mask;
+  while (groups.length){
+    const next = [], usedKeys = new Set();
+    for (let i = 0; i < groups.length; i++){
+      for (let j = i + 1; j < groups.length; j++){
+        const a = groups[i], b = groups[j];
+        if (a.mask !== b.mask) continue;
+        const diff = (a.bits ^ b.bits) & ~a.mask;
+        if (diff && (diff & (diff - 1)) === 0){       // une seule différence
+          const t = { bits: a.bits & ~diff, mask: a.mask | diff, used:false };
+          usedKeys.add(key(a)); usedKeys.add(key(b));
+          if (!next.some(x => key(x) === key(t))) next.push(t);
+        }
+      }
+    }
+    groups.forEach(g => { if (!usedKeys.has(key(g)) && !seen.has(key(g))){ seen.add(key(g)); all.push(g); } });
+    groups = next;
+  }
+  return all;
+}
+function coverMinterms(minterms, implicants, n){
+  const covers = imp => minterms.filter(m => (m & ~imp.mask) === imp.bits);
+  const rest = new Set(minterms), chosen = [];
+  // 1. implicants essentiels
+  minterms.forEach(m => {
+    const c = implicants.filter(i => (m & ~i.mask) === i.bits);
+    if (c.length === 1 && !chosen.includes(c[0])){
+      chosen.push(c[0]); covers(c[0]).forEach(x => rest.delete(x));
+    }
+  });
+  // 2. couverture gloutonne du reste
+  while (rest.size){
+    let best = null, bestN = 0;
+    implicants.forEach(i => {
+      if (chosen.includes(i)) return;
+      const n2 = covers(i).filter(m => rest.has(m)).length;
+      if (n2 > bestN){ bestN = n2; best = i; }
+    });
+    if (!best) break;
+    chosen.push(best); covers(best).forEach(x => rest.delete(x));
+  }
+  return chosen;
+}
+/* Termes produits d'une sortie : [[{i, neg}], …] — [] = toujours 0, [[]] = toujours 1 */
+function sopTerms(tt, n, outIdx){
+  const minterms = [];
+  for (let i = 0; i < tt.length; i++) if (tt[i][outIdx]) minterms.push(i);
+  if (!minterms.length) return { terms:[], konst:0 };
+  if (minterms.length === (1 << n)) return { terms:[], konst:1 };
+  const chosen = coverMinterms(minterms, primeImplicants(minterms, n), n);
+  const terms = chosen.map(imp => {
+    const lits = [];
+    for (let b = 0; b < n; b++){
+      const bit = 1 << (n - 1 - b);
+      if (imp.mask & bit) continue;
+      lits.push({ i:b, neg: !(imp.bits & bit) });
+    }
+    return lits;
+  });
+  terms.sort((a, b) => a.length - b.length);
+  return { terms, konst:null };
+}
+/* Construit le circuit complet : composants, câbles et étapes expliquées.
+   Si la mission impose une base (NAND ou NOR uniquement), chaque opération
+   est émise dans cette base — c'est la conversion classique qu'on apprend
+   au chapitre 3, appliquée automatiquement. */
+function buildSolution(m){
+  const n = m.inputs, K = m.outputs;
+  if (!m.tt || !m.tt.length || n < 1 || n > 4) return null;
+  const basis = (m.allowed && m.allowed.length === 1 &&
+                 (m.allowed[0] === 'NAND' || m.allowed[0] === 'NOR')) ? m.allowed[0] : 'std';
+  const inL = inShortLabels(m), outL = outShortLabels(m);
+  const comps = [], wires = [], steps = [];
+  const add = (t, depth) => { comps.push({ t, x:0, y:0, d:depth }); return comps.length - 1; };
+  const link2 = (a, b, bp) => wires.push({ a, ap:0, b, bp });
+  const depthOf = r => r.g != null ? comps[r.g].d : 0;
+  const born = [];                          // composants créés par l'opération courante
+
+  /* --- émetteurs élémentaires, selon la base --- */
+  function emitNOT(a){
+    const d = depthOf(a) + 1;
+    if (basis === 'std'){ const g = add('NOT', d); link2(a, { g }, 0); born.push(g); return { g }; }
+    const g = add(basis, d); link2(a, { g }, 0); link2(a, { g }, 1); born.push(g);
+    return { g };
+  }
+  function emitAND(a, b){
+    const d = Math.max(depthOf(a), depthOf(b)) + 1;
+    if (basis === 'std'){ const g = add('AND', d); link2(a, { g }, 0); link2(b, { g }, 1); born.push(g); return { g }; }
+    if (basis === 'NAND'){
+      const g = add('NAND', d); link2(a, { g }, 0); link2(b, { g }, 1); born.push(g);
+      return emitNOT({ g });                       // ET = NAND puis inversion
+    }
+    return emitNOR2(emitNOT(a), emitNOT(b));       // ET = NOR des inverses
+  }
+  function emitNOR2(a, b){
+    const d = Math.max(depthOf(a), depthOf(b)) + 1;
+    const g = add('NOR', d); link2(a, { g }, 0); link2(b, { g }, 1); born.push(g);
+    return { g };
+  }
+  function emitOR(a, b){
+    const d = Math.max(depthOf(a), depthOf(b)) + 1;
+    if (basis === 'std'){ const g = add('OR', d); link2(a, { g }, 0); link2(b, { g }, 1); born.push(g); return { g }; }
+    if (basis === 'NOR'){ return emitNOT(emitNOR2(a, b)); }
+    return emitNAND2(emitNOT(a), emitNOT(b));     // OU = NAND des inverses
+  }
+  function emitNAND2(a, b){
+    const d = Math.max(depthOf(a), depthOf(b)) + 1;
+    const g = add('NAND', d); link2(a, { g }, 0); link2(b, { g }, 1); born.push(g);
+    return { g };
+  }
+  const baseTxt = basis === 'std' ? '' : ' (en ' + basis + ' uniquement)';
+
+  const notOf = {};
+  const litRef = lit => {
+    if (!lit.neg) return { in: lit.i };
+    if (notOf[lit.i] == null){
+      born.length = 0;
+      notOf[lit.i] = emitNOT({ in: lit.i }).g;
+      steps.push({ comps:born.slice(), txt:'Inverser <b>' + inL[lit.i] + '</b>' + baseTxt + '.',
+        why:'Un terme a besoin de « ' + inL[lit.i] + ' = 0 ». Une porte ET ne sait tester que des 1 : on lui fournit donc l’inverse de ' + inL[lit.i] + '.' });
+    }
+    return { g: notOf[lit.i] };
+  };
+
+  for (let k = 0; k < K; k++){
+    const { terms, konst } = sopTerms(m.tt, n, k);
+    if (konst === 0 || konst === 1){
+      const g = add(konst ? 'HIGH' : 'LOW', 1);
+      link2({ g }, { out:k }, 0);
+      steps.push({ comps:[g], txt:'La sortie <b>' + outL[k] + '</b> vaut toujours ' + konst +
+        ' : une constante <b>' + (konst ? 'VRAI·1' : 'FAUX·0') + '</b> suffit.',
+        why:'La colonne ne contient que des ' + konst + ' : aucune logique n’est nécessaire.' });
+      continue;
+    }
+    const termOuts = [];
+    terms.forEach(lits => {
+      const refs = lits.map(litRef);
+      born.length = 0;
+      let cur = refs[0];
+      for (let i = 1; i < refs.length; i++) cur = emitAND(cur, refs[i]);
+      const desc = lits.map(l => (l.neg ? '¬' : '') + inL[l.i]).join('·');
+      if (born.length)
+        steps.push({ comps:born.slice(), txt:'Détecter le cas <b>' + desc + '</b>' + baseTxt +
+          ' (' + born.length + ' porte' + (born.length > 1 ? 's' : '') + ').',
+          why:'Ce bloc ne sort 1 que pour cette combinaison précise : c’est un détecteur d’une ligne de la table.' });
+      termOuts.push(cur);
+    });
+    born.length = 0;
+    let cur = termOuts[0];
+    for (let i = 1; i < termOuts.length; i++) cur = emitOR(cur, termOuts[i]);
+    if (born.length)
+      steps.push({ comps:born.slice(), txt:'Réunir les ' + termOuts.length + ' cas' + baseTxt +
+        ' (' + born.length + ' porte' + (born.length > 1 ? 's' : '') + ').',
+        why:'La sortie doit valoir 1 dès qu’UN des cas détectés se présente : c’est le rôle du OU.' });
+    link2(cur, { out:k }, 0);
+    steps.push({ comps:[], txt:'Relier le résultat à la sortie <b>' + outL[k] + '</b>.',
+      why:'Le circuit est complet pour cette sortie : compare-le à la table, ligne par ligne.' });
+  }
+
+  /* Mise en page : une colonne par profondeur, empilées sans chevauchement */
+  const maxD = comps.reduce((a, c) => Math.max(a, c.d), 1);
+  const colW = Math.max(150, Math.min(190, 1000 / (maxD + 1)));
+  const cursor = {};
+  comps.forEach(c => {
+    cursor[c.d] = (cursor[c.d] || 0);
+    c.x = 250 + (c.d - 1) * colW;
+    c.y = 30 + cursor[c.d] * 104;
+    cursor[c.d]++;
+  });
+  const gates = comps.reduce((a, c) => a + (GATE_COST[c.t] || 0), 0);
+  const types = [...new Set(comps.map(c => c.t))];
+  const conforme = (!m.allowed || types.every(t => !LOGIC_TYPES.includes(t) || m.allowed.includes(t))) &&
+                   (!m.maxGates || gates <= m.maxGates);
+  return { comps, wires, steps, gates, types, basis, conforme };
+}
+
+/* Les entrées et sorties verrouillées de la mission en cours */
+function missionIO(){
+  return {
+    ins: components.filter(c => c.type === 'SWITCH' && c.locked).sort((a, b) => a.y - b.y),
+    outs: components.filter(c => c.type === 'LED' && c.locked && !c.obs).sort((a, b) => a.y - b.y)
+  };
+}
+/* Instancie (une partie de) la solution sur le plan de travail.
+   nSteps = nombre d'étapes à matérialiser, -1 pour tout. */
+function applySolution(sol, nSteps, made){
+  const io = missionIO();
+  made = made || {};                     // index de composant de solution -> composant réel
+                                         // (partagé entre appels : pose progressive)
+  const limit = nSteps == null || nSteps < 0 ? sol.steps.length : nSteps;
+  const allowed = new Set();
+  sol.steps.slice(0, limit).forEach(st => st.comps.forEach(g => allowed.add(g)));
+  sol.comps.forEach((sc, i) => {
+    if (!allowed.has(i) || made[i]) return;
+    const c = new Component(sc.px != null ? sc.px : sc.x, sc.py != null ? sc.py : sc.y, sc.t);
+    components.push(c);
+    made[i] = c;
+  });
+  const pinOf = (ref, isOut) => {
+    if (ref.in != null) return io.ins[ref.in] ? io.ins[ref.in].outPins[0] : null;
+    if (ref.out != null) return io.outs[ref.out] ? io.outs[ref.out].inPins[0] : null;
+    const c = made[ref.g];
+    return c ? (isOut ? c.outPins[0] : null) : null;
+  };
+  sol.wires.forEach(w => {
+    const a = pinOf(w.a, true);
+    const bComp = w.b.out != null ? (io.outs[w.b.out] || null) : made[w.b.g];
+    if (!a || !bComp) return;
+    const bPin = w.b.out != null ? bComp.inPins[0] : bComp.inPins[w.bp];
+    if (!bPin) return;
+    if (wires.some(x => x.inPin === bPin && x.outPin === a)) return;
+    wires = wires.filter(x => x.inPin !== bPin);
+    wires.push(new Wire(a, bPin));
+  });
+  recalcFan(); markDirty();
+  return Object.keys(made).length;
+}
 /* ---------- Vérification ---------- */
 document.getElementById('btn-verify').addEventListener('click', () => {
   if (currentIdx < 0) return;
@@ -6349,6 +6818,12 @@ function buildGuide(){
     '<code>mém[…]</code> pour une bascule). Si le circuit est combinatoire et compte au plus 4 interrupteurs, il en mesure ' +
     'aussi la <b>vraie table de vérité</b> en simulant les combinaisons. Dans les missions 🕵️ boîte noire il est brouillé : ' +
     'à toi de déduire.<br><br>' +
+    '<b>🧭 Le tuteur.</b> Pendant une mission, le panneau te dit <b>en direct</b> combien de lignes de la table ' +
+    'sont déjà justes et laquelle cloche encore — inutile d’attendre la vérification pour savoir où tu en es. ' +
+    'Le bouton <code>Guide-moi sur le schéma</code> va plus loin : il calcule une solution complète et la pose ' +
+    'en <b>fantômes</b> sur ton plan de travail, étape par étape, en expliquant chaque geste. Tu peux poser une ' +
+    'étape, la sauter pour la faire toi-même, ou tout poser d’un coup. Sur une mission « NAND uniquement », il ' +
+    'convertit tout seul sa solution dans la base imposée. Et sur une boîte noire 🕵️, il refuse : ce serait tricher.<br><br>' +
     '<b>🔍 L’infobulle.</b> Survole n’importe quoi : un <b>composant</b> te donne l’état de chacune de ses ' +
     'entrées et sorties, ses réglages et son coût ; un <b>pin</b> dit à quoi il est relié ; un <b>câble</b> ' +
     'affiche la valeur qu’il transporte. C’est le réflexe à prendre quand un circuit ne fait pas ce que tu crois.<br><br>' +
@@ -6753,6 +7228,7 @@ function drawScene(t, opaque){
     ctx.setLineDash([]); ctx.shadowBlur = 0;
   }
   components.forEach(c => c.draw(ctx, t));
+  drawGhosts(ctx, t);
 
   // Sélection : liserés + rectangle élastique
   if (selection.size){
@@ -6784,6 +7260,7 @@ function render(t){
   if (anyBuzz !== buzzActive && !simulating){ buzzActive = anyBuzz; AudioSys.buzz(anyBuzz, bz && bz.opt.bfreq); }
 
   drawScene(t);
+  liveTick();
   updateTruthHighlight();
   updateStats();
   requestAnimationFrame(render);
