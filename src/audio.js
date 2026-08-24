@@ -63,6 +63,38 @@ window.CORE = window.CORE || {};
       [523, 659, 784, 1047].forEach(function (f, i) {
         setTimeout(function () { blip(f, 0.16, 'triangle', 0.16); }, i * 90);
       });
+    },
+    /* trois sons distincts pour les niveaux I, II et III d'un bonus */
+    bonusTier: function (level) {
+      if (level >= 3) {
+        [660, 880, 1100, 1320, 1760].forEach(function (f, i) {
+          setTimeout(function () { blip(f, 0.14, 'square', 0.17); }, i * 55);
+        });
+      } else if (level === 2) {
+        blip(620, 0.09, 'sawtooth', 0.15, 1240);
+        setTimeout(function () { blip(1240, 0.13, 'square', 0.14, 1860); }, 60);
+      } else {
+        blip(520, 0.09, 'sawtooth', 0.14, 1040);
+        setTimeout(function () { blip(1040, 0.12, 'square', 0.12, 1560); }, 55);
+      }
+    },
+    expire: function () { blip(150, 0.14, 'square', 0.11, 70); },
+    fuel: function () { blip(300, 0.1, 'triangle', 0.16, 520); },
+    alarm: function () {
+      [0, 220, 440].forEach(function (d) {
+        setTimeout(function () { blip(760, 0.12, 'square', 0.16, 500); }, d);
+      });
+    },
+    cascade: function () {
+      [900, 1150, 1400, 1700].forEach(function (f, i) {
+        setTimeout(function () { blip(f, 0.1, 'triangle', 0.12); }, i * 45);
+      });
+    },
+    blast: function () { blip(120, 0.35, 'sawtooth', 0.2, 40); },
+    bounce: function () { blip(400, 0.16, 'sine', 0.16, 1100); },
+    event: function () {
+      blip(180, 0.5, 'sawtooth', 0.13, 320);
+      setTimeout(function () { blip(320, 0.4, 'triangle', 0.12, 240); }, 140);
     }
   };
 })(window.CORE);

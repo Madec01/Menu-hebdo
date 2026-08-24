@@ -15,7 +15,8 @@ window.CORE = window.CORE || {};
       turboT: 0, turboCd: 0,
       prog: 0, progKey: '', crit: false,
       drilling: false, grounded: false, falling: false,
-      stall: 0, bit: 0
+      stall: 0, bit: 0,
+      straight: 0, straightBest: 0, fallFrom: null, lastHard: 1
     };
   }
 
@@ -56,20 +57,27 @@ window.CORE = window.CORE || {};
   function update(d, world, input, s, dt, hooks) {
     var i;
 
+    var inDx = input.dx, inDy = input.dy;
+    // Le pacte du fondeur interdit de FORER vers le haut, pas de grimper dans
+    // une galerie deja creusee.
+    var noDrillUp = !!s.noUp;
+
     // ---- direction de la tete -------------------------------------------
-    if (input.dx !== 0 || input.dy !== 0) {
-      if (input.dx !== d.fx || input.dy !== d.fy) {
-        d.fx = input.dx; d.fy = input.dy;
+    if (inDx !== 0 || inDy !== 0) {
+      if (inDx !== d.fx || inDy !== d.fy) {
+        d.fx = inDx; d.fy = inDy;
         d.rotT = s.rot;
         d.elan *= (1 - s.elanLoss);
         d.prog = 0; d.progKey = '';
+        if (d.straight > d.straightBest) d.straightBest = d.straight;
+        d.straight = 0;
       }
     }
     if (d.rotT > 0) d.rotT -= dt;
 
     // ---- turbo ------------------------------------------------------------
     if (d.turboCd > 0) d.turboCd -= dt;
-    if (input.turbo && d.turboT <= 0 && d.turboCd <= 0) {
+    if (input.turbo && !s.turboBlocked && d.turboT <= 0 && d.turboCd <= 0) {
       d.turboT = s.turboDur; d.turboCd = s.turboCd + s.turboDur;
       if (hooks.onTurbo) hooks.onTurbo();
     }
@@ -77,8 +85,8 @@ window.CORE = window.CORE || {};
     var turbo = d.turboT > 0 ? s.turboMult : 1;
 
     // ---- cible de forage (calculee avant le deplacement) -------------------
-    var cells = null, solidCount = 0, breakable = 0, maxHard = 0;
-    if (input.dx !== 0 || input.dy !== 0) {
+    var cells = null, solidCount = 0, breakable = 0, maxHard = 0, slow = 1;
+    if (inDx !== 0 || inDy !== 0) {
       cells = targets(d, d.fx, d.fy, s.width, s.length);
       for (i = 0; i < cells.length; i++) {
         var ct = world.at(cells[i][0], cells[i][1]);
@@ -86,8 +94,10 @@ window.CORE = window.CORE || {};
         solidCount++;
         if (W.DESTRUCTIBLE[ct]) {
           breakable++;
-          var ch = world.hard[world.idx(cells[i][0], cells[i][1])];
+          var ch = world.hard[world.idx(cells[i][0], cells[i][1])] * world.hardMul;
           if (ch > maxHard) maxHard = ch;
+          var beh = W.BEHAVIOUR[ct];
+          if (beh && beh.slow) slow = Math.min(slow, beh.slow);
         }
       }
     }
@@ -97,12 +107,12 @@ window.CORE = window.CORE || {};
     var anchored = breakable > 0 && d.rotT <= 0;
 
     // ---- deplacement ------------------------------------------------------
-    d.vx = anchored ? 0 : input.dx * s.roll * (d.turboT > 0 ? 1.4 : 1);
-    if (input.dy < 0) {
+    d.vx = anchored ? 0 : inDx * s.roll * (d.turboT > 0 ? 1.4 : 1);
+    if (inDy < 0) {
       d.vy = -s.climb;
     } else {
       d.vy += CFG.GRAVITY * dt;
-      if (input.dy > 0) d.vy = Math.max(d.vy, s.roll * 0.9);
+      if (inDy > 0) d.vy = Math.max(d.vy, s.roll * 0.9);
       if (d.vy > CFG.TERMINAL) d.vy = CFG.TERMINAL;
     }
 
@@ -110,7 +120,9 @@ window.CORE = window.CORE || {};
     if (!overlapsSolid(world, nx, d.y)) {
       d.x = nx;
     } else if (d.vx !== 0) {
-      d.x = d.vx > 0 ? Math.floor(nx + DW) - DW - 0.002 : Math.floor(nx) + 1 + 0.002;
+      // recalage EXACT sur la grille : un epsilon ferait deborder la foreuse
+      // dans la case voisine et pourrait l'encastrer dans la roche
+      d.x = d.vx > 0 ? Math.floor(nx + DW) - DW : Math.floor(nx) + 1;
       d.vx = 0;
     }
 
@@ -120,17 +132,33 @@ window.CORE = window.CORE || {};
       d.y = ny;
     } else {
       if (d.vy > 0) {
-        d.y = Math.floor(ny + DH) - DH - 0.002;
-        if (wasFalling && hooks.onLand) hooks.onLand(d.vy);
+        d.y = Math.floor(ny + DH) - DH;
+        if (wasFalling && hooks.onLand) hooks.onLand(d.vy, d.fallFrom === null ? 0 : d.y - d.fallFrom);
+        d.fallFrom = null;
+        // un bloc rebond renvoie la foreuse vers le haut
+        var brow = Math.floor(d.y + DH + 0.1);
+        for (var bx2 = Math.floor(d.x); bx2 <= Math.floor(d.x + DW - 0.01); bx2++) {
+          var bb = W.BEHAVIOUR[world.at(bx2, brow)];
+          if (bb && bb.bounce) {
+            d.vy = -bb.bounce;
+            if (hooks.onBounce) hooks.onBounce();
+            break;
+          }
+        }
       } else if (d.vy < 0) {
-        d.y = Math.floor(ny) + 1 + 0.002;
+        d.y = Math.floor(ny) + 1;
       }
       d.vy = 0;
     }
     d.x = Math.max(0.05, Math.min(world.w - DW - 0.05, d.x));
+    if (!anchored && Math.abs(d.vx) > 0.5 && hooks.onBurn) {
+      hooks.onBurn(CFG.FUEL.burnRoll * dt);
+    }
 
     d.grounded = overlapsSolid(world, d.x, d.y + 0.08);
     d.falling = !d.grounded && d.vy > 6;
+    if (d.falling && d.fallFrom === null) d.fallFrom = d.y;
+    if (d.grounded) d.fallFrom = null;
 
     // ---- forage -----------------------------------------------------------
     d.drilling = false;
@@ -139,19 +167,31 @@ window.CORE = window.CORE || {};
     if (cells) {
       if (solidCount > 0 && breakable === 0) {
         if (d.stall <= 0) { d.stall = 0.35; d.elan *= 0.5; if (hooks.onStall) hooks.onStall(); }
-      } else if (breakable > 0 && d.rotT <= 0) {
+      } else if (breakable > 0 && d.rotT <= 0 && !(noDrillUp && d.fy < 0)) {
         var key = d.fx + ',' + d.fy + ',' + cells[0][0] + ',' + cells[0][1];
         if (key !== d.progKey) {
           d.progKey = key; d.prog = 0;
           d.crit = Math.random() < (s.crit || 0);
         }
         var hits = d.crit ? 1 : Math.max(1, Math.ceil(maxHard / Math.max(0.1, s.force)));
-        var rate = s.speed * (1 + d.elan * s.elanMax) * turbo;
+        var rate = s.speed * (1 + d.elan * s.elanMax) * turbo * slow;
         if (d.fy < 0) rate *= CFG.UP_PENALTY;
         if (s.gravDrill && d.falling && d.fy > 0) rate *= 2;
         d.prog += rate * dt;
         d.drilling = true;
         d.bit += rate * dt * 12;
+
+        // Le carburant se paie au VOLUME excave, pas au nombre de coups : sinon
+        // la roche dure couterait a la fois du temps et du carburant, et on
+        // doublerait la meme punition. Ici le chrono punit la durete, le
+        // carburant punit la largeur de taille. Deux pressions distinctes.
+        if (hooks.onBurn && !s.noBurn) {
+          var area = Math.round(s.width) * Math.round(s.length);
+          var mult = s.burn;
+          if (d.turboT > 0 && !s.dryTurbo) mult *= CFG.FUEL.burnTurbo;
+          if (d.fy < 0) mult *= CFG.FUEL.burnUp;
+          hooks.onBurn(CFG.FUEL.burnPerBlock * area * mult * (rate / hits) * dt);
+        }
 
         if (d.prog >= hits) {
           d.prog = 0; d.progKey = '';
@@ -163,6 +203,9 @@ window.CORE = window.CORE || {};
             var bt = world.type[bi];
             if (!W.DESTRUCTIBLE[bt]) continue;
             world.type[bi] = W.T.EMPTY;
+            d.straight++;
+            if (d.straight > d.straightBest) d.straightBest = d.straight;
+            if (d.fy < 0 && hooks.onDrillUp) hooks.onDrillUp();
             if (hooks.onBreak) hooks.onBreak(bx, by, bt, world.items.get(bi));
             world.items.delete(bi);
           }

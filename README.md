@@ -3,8 +3,9 @@
 Un jeu de minage 2D. Tu pilotes une foreuse, tu perces la planete couche par couche,
 et ton seul adversaire est le chrono.
 
-> Pas de vie, pas d'energie, pas de game over. Un piege te coute des secondes,
-> jamais la partie.
+> Pas de vie, pas de game over. Un piege te coute des secondes, jamais la partie.
+> Le carburant, lui, ne brule qu'a l'action : creuser large coute cher, reflechir
+> ne coute rien.
 
 ## Jouer
 
@@ -46,11 +47,23 @@ node build.js
 - Les **bonus brillent a travers la roche**. Le detour vaut-il les secondes qu'il coute ?
   C'est la seule vraie question du jeu.
 
-## Contenu du MVP
+## Contenu
 
-6 niveaux (2 couches), 6 bonus temporaires cumulables en niveaux I-III, 2 pieges,
-17 passifs dont une legendaire, 3 metiers de depart, 4 pieces de foreuse, medailles et
-records par niveau.
+- **3 couches, 9 niveaux** courts (12 a 90 s chacun), du sol aux grottes de cristal.
+- **7 variantes de niveaux** : descente, gisement (sortie scellee par un quota), sceau
+  de fin de couche, filon (une veine geante a suivre ou a quitter), effondrement (le
+  plafond descend), chute (defouloir en caverne), dedale (murs infranchissables).
+- **7 evenements de couche** qui se declenchent en cours de niveau : coup de grisou,
+  ruee, secousse, eboulement, vapeurs, filon revele, coupure des phares.
+- **Des blocs a comportement**, un par couche : roche friable qui s'effondre en cascade,
+  poches de charbon qui explosent en chaine, cristaux en reaction en chaine. Plus des
+  coffres, des blocs rebond et de la roche gluante.
+- **8 bonus** cumulables en niveaux I a III, **3 pieges**, **25 passifs** dont trois
+  legendaires, **5 pactes** (gros gain, vrai prix), **4 metiers**, **6 pieces de foreuse**.
+- **Carburant** : reservoir, bidons enfouis, mode reserve, et toute une famille de
+  passifs dediee.
+- **3 defis optionnels par niveau**, un **combo** qui multiplie l'or, des **medailles**
+  or/argent/bronze, et le **fantome** de ton meilleur passage qui creuse a cote de toi.
 
 ## Structure
 
@@ -71,20 +84,25 @@ build.js            genere core.html, le fichier unique autonome
 core.html           le jeu entier en un seul fichier (genere)
 ```
 
-**Tout l'equilibrage tient dans `src/config.js` et `src/content.js`.** Le reste n'en depend
-pas : changer la durete d'une couche ou le prix d'une piece ne demande de toucher a rien
-d'autre.
+**Tout l'equilibrage tient dans `src/config.js` et `src/content.js`** — couches, niveaux,
+carburant, evenements, defis, bonus, passifs, pactes, pieces. Le reste n'en depend pas :
+changer la durete d'une couche ou le prix d'une piece ne demande de toucher a rien d'autre.
+
+Les temps de medaille ne sont pas inventes : ils sont cales par simulation headless d'un
+bot sur douze graines, puis derives de la mediane par niveau (or = mediane x 0,92).
 
 ## Les deux formules qui gouvernent le jeu
 
 ```
 temps_pour_percer_un_bloc = ceil(durete / FORCE) / (VITESSE x elan)
 blocs_perces_par_coup     = LARGEUR x LONGUEUR
+carburant                 = 0,20 L x blocs reellement excaves
 durete(profondeur)        = 1 + 100 x (profondeur / 4000)^2
 ```
 
 Bonus, passifs et pieces n'agissent que sur ces quatre chiffres.
 **Invariant d'equilibrage : entre 1 et 4 coups par bloc, du debut a la fin.**
+Le chrono punit la durete, le carburant punit la largeur : deux pressions distinctes.
 
 ## Conception
 
@@ -93,5 +111,6 @@ Bonus, passifs et pieces n'agissent que sur ces quatre chiffres.
 - [docs/bonus-et-passifs.md](docs/bonus-et-passifs.md) — le catalogue complet :
   19 bonus, 49 passifs, 10 legendaires, 6 pactes, 8 metiers, regles de tirage et
   archetypes de build.
-
-Le code implemente le perimetre marque « MVP » dans ces deux documents.
+- [docs/v2-propositions.md](docs/v2-propositions.md) — le carburant, la variete des
+  niveaux et le ressenti des bonus : la conception de tout ce qui a ete ajoute apres
+  le premier jouable.

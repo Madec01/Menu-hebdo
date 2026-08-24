@@ -2,6 +2,10 @@
 
 > Trois chantiers, tous **additifs** : rien de ce qui existe n'est remis en cause.
 > Voir §5 pour la liste explicite de ce qu'on ne touche pas.
+>
+> **Etat : tout ce document est implemente.** Les chiffres du §1.3 ont ete corriges
+> pendant l'implementation (voir l'encadre) et les valeurs de reference vivent
+> desormais dans `src/config.js`.
 
 ---
 
@@ -36,28 +40,44 @@ evidence. Aujourd'hui la largeur est strictement meilleure ; demain elle vide le
 
 | | Valeur |
 |---|---|
-| Reservoir de base | **100 L** |
-| Cout d'un coup de forage | **0,25 L x largeur x longueur** (soit 0,5 L en 2x1) |
+| Reservoir de base | **120 L** |
+| Cout du forage | **0,20 L par bloc reellement excave** |
 | Turbo | consommation **x3** |
 | Forage vers le haut | consommation **x1,5** |
 | Roulage dans une galerie | 0,05 L/s (negligeable) |
 | Chute, reflexion, immobilite | **0 L** |
-| Bidon enfoui | **+25 L**, environ 8 par niveau, visibles a travers la roche |
+| Bidon enfoui | **+32 L**, 8 a 10 par niveau, visibles a travers la roche |
 | Plein a la station | gratuit et automatique |
 
-A 3 coups/s en 2x1, un plein dure **environ 65 secondes de forage continu** — soit
-exactement un niveau en ligne droite, sans marge. Tout detour se paie en bidons.
-En 6x2, le meme plein tient **11 secondes**. C'est la le dilemme.
+> **Correction apportee pendant l'implementation.** La premiere version facturait le
+> carburant **au coup de forage**. Erreur : le nombre de coups depend de la durete, donc
+> la roche profonde coutait a la fois du temps *et* du carburant — exactement la double
+> punition que le §1.1 interdit. Mesure a l'appui : une descente verticale consommait
+> 62 L en couche 1 mais 120 L en couche 3, avec panne seche systematique.
+>
+> Le carburant se paie donc **au volume excave**. Le chrono punit la durete, le carburant
+> punit la largeur de taille. Deux pressions distinctes, comme prevu. Effet de bord
+> heureux : **la longueur de taille est neutre en carburant** (elle double le volume par
+> coup mais divise le nombre de coups par deux) alors que la largeur le multiplie. La
+> longueur devient le choix econome, la largeur le choix gourmand.
+
+Mesure apres correction, en descente strictement verticale et sans ramasser un seul
+bidon : **62 L en couche 1, 66 L en couche 2, 39 L en couche 3** (les cavernes offrent
+de la chute gratuite). Un plein couvre donc largement un niveau en ligne droite, mais
+creuser en 6 de large le triple, et un joueur qui explore consomme le double. C'est la
+que se joue le dilemme.
 
 ### 1.4 La panne seche ne termine jamais une partie
 
-A 0 L, la foreuse passe en **mode reserve** : vitesse divisee par 3, turbo interdit, liseré
+A 0 L, la foreuse passe en **mode reserve** : vitesse divisee par 3, turbo interdit, lisere
 rouge a l'ecran, alarme sonore. On peut finir le niveau — tres lentement. La sanction est
 enorme en secondes et nulle en progression. C'est la meme philosophie que le reste du jeu :
 **on perd du temps, jamais la partie.**
 
-Filet de securite : sous 15 L, un bidon est garanti dans un rayon de 20 blocs et son halo
-devient beaucoup plus visible. On ne doit jamais mourir de soif par malchance de generation.
+Filet de securite, implemente en trois temps : sous 20 L, un bidon est garanti **devant**
+la foreuse (jamais derriere : remonter couterait plus cher que la panne) ; a 0 L un autre
+est pose immediatement ; et tant que la panne dure, le filet se re-arme toutes les 3
+secondes. Une partie ne doit jamais pouvoir se bloquer faute de carburant.
 
 ### 1.5 Le contenu que ca ouvre
 

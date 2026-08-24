@@ -1,4 +1,4 @@
-/* CORE — etat de jeu : run, niveaux, stats effectives, bonus, butin. */
+/* CORE — etat de jeu : run, niveaux, carburant, evenements, butin, ressenti. */
 window.CORE = window.CORE || {};
 (function (CORE) {
   'use strict';
@@ -9,9 +9,16 @@ window.CORE = window.CORE || {};
     state: 'menu',          // menu | play | station | end
     run: null,
     world: null, drill: null,
-    buffs: [], pickups: [], parts: [],
-    time: 0, levelTime: 0, freeze: 0, souffle: 0,
+    buffs: [], pickups: [], parts: [], toasts: [],
+    time: 0, levelTime: 0, freeze: 0, souffle: 0, rescueT: 0,
     ore: 0, shake: 0, currentHard: 1,
+    fuel: 100, fuelMax: 100, reserve: false, lowWarned: false,
+    event: null, eventT: 0, eventNext: 0, marker: null,
+    combo: 0, comboT: 0, comboMult: 1,
+    challenges: [], st: null,
+    hitstop: 0, slowmo: 0, flash: null, desat: 0,
+    ghost: null, ghostRec: null, ghostT: 0,
+    nextBlast: 0,
     cam: { x: 0, y: 0 }, dpr: 1,
     stats: null, drawnCards: [], cardChosen: false, lastResult: null
   };
@@ -20,34 +27,40 @@ window.CORE = window.CORE || {};
   function computeStats() {
     var s = {};
     for (var k in CFG.BASE) s[k] = CFG.BASE[k];
-    s.crit = 0; s.gravDrill = false; s.visionPenalty = 0;
+    s.crit = 0; s.turboBlocked = false;
     var run = G.run;
     if (!run) return s;
 
-    // pieces de foreuse
     C.PARTS.forEach(function (p) {
       var n = run.parts[p.id] || 0;
       if (n > 0) p.apply(s, n);
     });
 
-    // passifs
-    C.PASSIVES.forEach(function (p) {
+    C.ALL.forEach(function (p) {
       var n = run.passives[p.id] || 0;
       if (n <= 0) return;
       if (p.flag) s[p.flag] = true;
       p.apply(s, n);
     });
 
-    // metier
     if (run.job) run.job.apply(s);
 
-    // bonus temporaires
     G.buffs.forEach(function (b) {
       var tier = b.def.tiers ? b.def.tiers[b.level - 1] : undefined;
       b.def.apply(s, tier);
     });
 
     if (G.souffle > 0) s.speed *= 1.3;
+
+    // evenements de couche
+    if (G.event) {
+      if (G.event.id === 'ruee') s.value *= 2;
+      if (G.event.id === 'vapeurs') s.burn *= 2;
+      if (G.event.id === 'coupure') s.vision = 4;
+    }
+
+    // panne seche : on peut finir, tres lentement
+    if (G.reserve) { s.speed *= CFG.FUEL.reserveSpeed; s.turboBlocked = true; }
 
     s.width = Math.max(1, Math.min(6, Math.round(s.width)));
     s.length = Math.max(1, Math.min(4, Math.round(s.length)));
@@ -60,6 +73,7 @@ window.CORE = window.CORE || {};
     G.run = {
       job: job, parts: {}, passives: {}, gold: 0,
       levelIndex: 0, splits: [], medals: [], total: 0,
+      shopClosedFor: 0,
       seed: (Math.random() * 1e9) | 0
     };
     startLevel(0);
@@ -68,50 +82,77 @@ window.CORE = window.CORE || {};
   function startLevel(index) {
     var def = CFG.LEVELS[index];
     var layer = CFG.LAYERS[def.layer - 1];
-    var stats = computeStats();
+    var pre = computeStats();
     G.run.levelIndex = index;
-    G.world = W.generate(def, layer, G.run.seed + index * 7919, stats.luck);
+    G.world = W.generate(def, layer, G.run.seed + index * 7919, pre.luck);
     G.drill = CORE.DRILL.create(G.world);
-    G.buffs = []; G.pickups = []; G.parts = [];
+    G.buffs = []; G.pickups = []; G.parts = []; G.toasts = [];
     G.levelTime = 0; G.freeze = 0; G.souffle = 0; G.ore = 0; G.shake = 0;
+    G.event = null; G.eventT = 0; G.eventNext = CFG.EVENT_FIRST; G.marker = null;
+    G.combo = 0; G.comboT = 0; G.comboMult = 1;
+    G.hitstop = 0; G.slowmo = 0; G.flash = null; G.desat = 0;
+    G.lowWarned = false; G.reserve = false; G.rescueT = 0;
+    G.nextBlast = def.top + 60;
+    G.st = { up: 0, bonus: 0, reserve: 0, straight: 0, ore: 0, bigFall: 0, fuelEnd: 0 };
+
+    var stats = computeStats();
+    G.fuelMax = stats.fuelMax;
+    G.fuel = stats.fuelMax;          // plein gratuit a chaque station
+
+    // defis du niveau
+    var crng = CORE.makeRng((G.run.seed + index * 5711) | 0);
+    var pool = CFG.CHALLENGES.slice();
+    crng.shuffle(pool);
+    G.challenges = pool.slice(0, 3).map(function (c) { return { def: c, done: false }; });
+
+    // fantome : lecture du meilleur passage, enregistrement du nouveau
+    G.ghost = CORE.SAVE.ghost(def.id);
+    G.ghostRec = []; G.ghostT = 0;
+
     G.cam.x = G.drill.x * CFG.TILE - 300;
     G.cam.y = 0;
-    G.stats = computeStats();
+    G.stats = stats;
     G.state = 'play';
   }
+
+  /* ------------------------------------------------------- RESSENTI */
+  function toast(text, color, big) {
+    G.toasts.push({ text: text, color: color, t: 0, dur: big ? 1.1 : 0.8, big: !!big });
+  }
+  function flash(color, dur) { G.flash = { color: color, t: dur, max: dur }; }
 
   /* ------------------------------------------------------------- BONUS */
   function addBuff(def) {
     var found = null;
     for (var i = 0; i < G.buffs.length; i++) if (G.buffs[i].def.id === def.id) found = G.buffs[i];
     var maxLvl = def.tiers ? def.tiers.length : 1;
+    var level = 1;
     if (found) {
       found.level = Math.min(maxLvl, found.level + 1);
-      found.t = def.freeze ? def.tiers[found.level - 1] : def.dur;
+      found.t = def.tiers && (def.freeze || def.noBurn) ? def.tiers[found.level - 1] : def.dur;
+      level = found.level;
     } else {
       G.buffs.push({
         def: def, level: 1,
-        t: def.freeze ? def.tiers[0] : def.dur,
-        malus: def.stun || def.id.charAt(0) === 'M'
+        t: def.tiers && (def.freeze || def.noBurn) ? def.tiers[0] : def.dur,
+        malus: !!def.stun || !!def.leak || def.id.charAt(0) === 'M'
       });
     }
+    return level;
   }
 
   function spawnPickup(cx, cy, item) {
     var p = { x: cx + 0.5, y: cy + 0.5, kind: item.kind, bonus: item.bonus, t: 0 };
-    if (item.kind === W.KIND.BONUS) {
-      p.color = item.bonus.color; p.label = item.bonus.icon;
-    } else if (item.kind === W.KIND.PEPITE) {
-      p.color = '#ffd24a'; p.label = '$';
-    } else {
-      p.color = '#5ff0e0'; p.label = '-5';
-    }
+    if (item.kind === W.KIND.BONUS) { p.color = item.bonus.color; p.label = item.bonus.icon; }
+    else if (item.kind === W.KIND.PEPITE) { p.color = '#ffd24a'; p.label = '$'; }
+    else if (item.kind === W.KIND.CARBURANT) { p.color = '#8ac46a'; p.label = 'L'; }
+    else { p.color = '#5ff0e0'; p.label = '-5'; }
     G.pickups.push(p);
   }
 
   function burst(cx, cy, color, n) {
     for (var i = 0; i < n; i++) {
-      if (G.parts.length > 260) return;
+      if (G.parts.length > 320) return;
       G.parts.push({
         x: cx + 0.5, y: cy + 0.5,
         vx: (Math.random() - 0.5) * 9, vy: (Math.random() - 0.9) * 9,
@@ -121,40 +162,281 @@ window.CORE = window.CORE || {};
     }
   }
 
+  /* ---------------------------------------------------------- CARBURANT */
+  function burn(amount) {
+    if (G.fuel <= 0) return;
+    G.fuel -= amount;
+    if (G.fuel <= 0) {
+      G.fuel = 0;
+      G.reserve = true;
+      G.st.reserve++;
+      rescueCan();
+      toast('PANNE SECHE', '#ff5a6e', true);
+      flash('#ff5a6e', 0.5);
+      G.shake = 12;
+      SFX.malus();
+    } else if (!G.lowWarned && G.fuel < CFG.FUEL.alertAt) {
+      G.lowWarned = true;
+      SFX.alarm();
+      toast('RESERVE BASSE', '#ffb03d', false);
+      rescueCan();
+    }
+  }
+
+  function refuel(litres) {
+    G.fuel = Math.min(G.fuelMax, G.fuel + litres);
+    if (G.reserve && G.fuel > 0) G.reserve = false;
+    if (G.fuel > CFG.FUEL.alertAt) G.lowWarned = false;
+  }
+
+  /* Filet de securite : sous le seuil, un bidon est garanti a portee. */
+  function rescueCan() {
+    var d = G.drill, world = G.world;
+    var cx = Math.floor(d.x), cy = Math.floor(d.y);
+    if (W.nearestItem(world, W.KIND.CARBURANT, cx, cy, CFG.FUEL.rescueRadius)) return;
+    // Le filet de securite se pose devant, pas derriere : remonter pour se
+    // ravitailler couterait plus cher que la panne.
+    for (var tries = 0; tries < 250; tries++) {
+      var bx = Math.round(cx + (Math.random() - 0.5) * 22);
+      var by = Math.round(cy + 5 + Math.random() * 12);
+      if (!world.inside(bx, by)) continue;
+      var bi = world.idx(bx, by);
+      if (!W.DESTRUCTIBLE[world.type[bi]] || world.items.has(bi)) continue;
+      world.items.set(bi, { kind: W.KIND.CARBURANT, rescue: true });
+      return;
+    }
+  }
+
+  /* --------------------------------------------------- CASSE ET CHAINES */
+  function destroyAt(cx, cy, chain, budget) {
+    var world = G.world;
+    if (!world.inside(cx, cy)) return;
+    var idx = world.idx(cx, cy);
+    var type = world.type[idx];
+    if (!W.DESTRUCTIBLE[type]) return;
+    world.type[idx] = W.T.EMPTY;
+    onCellBroken(cx, cy, type, world.items.get(idx), chain, budget);
+    world.items.delete(idx);
+  }
+
+  function onCellBroken(cx, cy, type, item, chain, budget) {
+    var world = G.world, layer = world.layer, stats = G.stats;
+    var beh = W.BEHAVIOUR[type];
+
+    if (type === W.T.ORE) {
+      G.ore++; G.st.ore++;
+      bumpCombo();
+      G.run.gold += Math.round(layer.oreValue * stats.value * G.comboMult);
+      if (stats.oreFuel) refuel(1);
+      burst(cx, cy, layer.ore, 7);
+      SFX.ore();
+      G.shake = Math.max(G.shake, 3);
+      if (world.locked && G.ore >= (world.def.quota || 0)) {
+        W.unlockExit(world);
+        toast('SORTIE OUVERTE', '#78ffb4', true);
+        SFX.level();
+      }
+    } else {
+      burst(cx, cy, beh && beh.name === 'cristal' ? layer.hard : layer.med, 3);
+      if (!chain) SFX.breakBlock();
+    }
+
+    if (beh && beh.chest) {
+      G.run.gold += Math.round(layer.oreValue * 8 * stats.value * G.comboMult);
+      burst(cx, cy, '#ffd24a', 18);
+      toast('COFFRE', '#ffd24a', true);
+      flash('#ffd24a', 0.25);
+      G.shake = Math.max(G.shake, 9);
+      SFX.gold();
+      spawnPickup(cx, cy, { kind: W.KIND.BONUS, bonus: C.rollBonus(world.rng, false) });
+    }
+
+    if (item) spawnPickup(cx, cy, item);
+
+    // --- comportements en chaine -----------------------------------------
+    if (!budget) budget = { n: 60 };
+    if (beh && beh.cascade && budget.n > 0) {
+      var dirs = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]];
+      for (var i = 0; i < dirs.length && budget.n > 0; i++) {
+        var nx = cx + dirs[i][0], ny = cy + dirs[i][1];
+        if (world.at(nx, ny) !== type) continue;
+        budget.n--;
+        if (beh.gold) G.run.gold += Math.round(world.layer.oreValue * beh.gold * stats.value);
+        destroyAt(nx, ny, true, budget);
+      }
+      if (!chain) { SFX.cascade(); G.shake = Math.max(G.shake, 6); }
+    }
+
+    if (beh && beh.blast && budget.n > 0) {
+      blast(cx, cy, beh.blast, budget, type);
+      if (!chain) { SFX.blast(); G.shake = Math.max(G.shake, 10); flash('#ff8a3d', 0.18); }
+    }
+  }
+
+  function blast(cx, cy, radius, budget, chainType) {
+    var world = G.world;
+    burst(cx, cy, '#ffb03d', 14);
+    for (var oy = -radius; oy <= radius; oy++) {
+      for (var ox = -radius; ox <= radius; ox++) {
+        if (ox * ox + oy * oy > radius * radius) continue;
+        if (budget.n <= 0) return;
+        var nx = cx + ox, ny = cy + oy;
+        if (!world.inside(nx, ny)) continue;
+        var t = world.type[world.idx(nx, ny)];
+        if (!W.DESTRUCTIBLE[t]) continue;
+        budget.n--;
+        destroyAt(nx, ny, true, budget);
+      }
+    }
+  }
+
+  function bumpCombo() {
+    G.combo++;
+    G.comboT = 3;
+    G.comboMult = 1 + Math.min(1.5, Math.floor(G.combo / 5) * 0.15);
+    if (G.combo > (G.comboBest || 0)) G.comboBest = G.combo;
+  }
+
+  /* -------------------------------------------------------- EVENEMENTS */
+  function fireEvent() {
+    var world = G.world;
+    var pool = CFG.EVENTS.filter(function (e) { return world.layer.id >= e.minLayer; });
+    var ev = world.rng.pick(pool);
+    G.event = ev; G.eventT = ev.dur;
+    G.eventNext = G.levelTime + ev.dur + CFG.EVENT_GAP;
+    toast(ev.name, ev.color, true);
+    flash(ev.color, 0.35);
+    G.shake = Math.max(G.shake, 8);
+    SFX.event();
+
+    if (ev.id === 'secousse') world.hardMul = 0.7;
+    if (ev.id === 'eboulement') world.ceilingRow = Math.floor(G.drill.y) - 26;
+    if (ev.id === 'filonrev') {
+      var fx = Math.max(4, Math.min(world.w - 5, Math.floor(G.drill.x) + world.rng.int(-18, 18)));
+      var fy = Math.floor(G.drill.y) + world.rng.int(8, 26);
+      for (var oy = -3; oy <= 3; oy++) {
+        for (var ox = -4; ox <= 4; ox++) {
+          var nx = fx + ox, ny = fy + oy;
+          if (!world.inside(nx, ny)) continue;
+          var idx = world.idx(nx, ny);
+          if (!W.DESTRUCTIBLE[world.type[idx]]) continue;
+          if (world.rng.chance(0.65)) {
+            world.type[idx] = W.T.ORE;
+            world.hard[idx] = Math.max(1, CFG.hardnessAt(world.depthAt(ny)) * 1.1);
+          }
+        }
+      }
+      G.marker = { x: fx, y: fy, t: ev.dur };
+    }
+  }
+
+  function endEvent() {
+    if (!G.event) return;
+    if (G.event.id === 'secousse') G.world.hardMul = 1;
+    G.event = null;
+    G.marker = null;
+  }
+
+  function collapseCeiling(dt) {
+    var world = G.world, def = world.def, d = G.drill;
+    var speed = def.ceiling || 0;
+    var eboul = G.event && G.event.id === 'eboulement';
+    if (!speed && !eboul) return;
+    if (speed) world.ceilingRow += speed * dt;
+    if (eboul) world.ceilingRow = Math.max(world.ceilingRow, d.y - 26);
+
+    var row = Math.min(Math.floor(world.ceilingRow), world.top + def.height - 1);
+    if (world.filledTo === undefined) world.filledTo = world.top - 1;
+    if (row <= world.filledTo) return;
+
+    // On ne remplit que les lignes nouvellement franchies, et JAMAIS les cases
+    // occupees par la foreuse : sinon elle se retrouve emmuree, incapable de
+    // bouger comme de forer. Une partie ne doit jamais pouvoir se bloquer.
+    var px0 = Math.floor(d.x) - 1, px1 = Math.floor(d.x + CFG.DRILL_W) + 1;
+    var py0 = Math.floor(d.y) - 1, py1 = Math.floor(d.y + CFG.DRILL_H) + 1;
+    for (var y = world.filledTo + 1; y <= row; y++) {
+      for (var x = 1; x < world.w - 1; x++) {
+        if (x >= px0 && x <= px1 && y >= py0 && y <= py1) continue;
+        var i = world.idx(x, y);
+        if (world.type[i] === W.T.EMPTY) world.setRock(x, y, W.T.HARD);
+      }
+    }
+    world.filledTo = row;
+  }
+
   /* ------------------------------------------------------------ UPDATE */
   function update(dt, input) {
     if (G.state !== 'play') return;
+
+    if (G.hitstop > 0) { G.hitstop -= dt; return; }
+    if (G.slowmo > 0) { G.slowmo -= dt; dt *= 0.35; }
+
     G.time += dt;
 
     var stats = computeStats();
     G.stats = stats;
+    G.fuelMax = stats.fuelMax;
     var world = G.world, d = G.drill;
 
     var hooks = {
-      onBreak: function (cx, cy, type, item) {
-        burst(cx, cy, type === W.T.ORE ? world.layer.ore : world.layer.med, type === W.T.ORE ? 7 : 3);
-        if (type === W.T.ORE) {
-          G.ore++;
-          G.run.gold += Math.round(world.layer.oreValue * stats.value);
-          SFX.ore();
-          G.shake = Math.max(G.shake, 3);
-          if (world.locked && G.ore >= (world.def.quota || 0)) {
-            W.unlockExit(world);
-            SFX.level();
-          }
-        } else {
-          SFX.breakBlock();
-        }
-        if (item) spawnPickup(cx, cy, item);
-      },
+      onBreak: function (cx, cy, type, item) { onCellBroken(cx, cy, type, item, false, null); },
       onStall: function () { G.shake = Math.max(G.shake, 7); SFX.stall(); },
-      onLand: function (v) { G.shake = Math.max(G.shake, Math.min(9, v * 0.28)); SFX.land(); },
-      onTurbo: function () { G.shake = Math.max(G.shake, 6); SFX.turbo(); }
+      onLand: function (v, dist) {
+        G.shake = Math.max(G.shake, Math.min(9, v * 0.28));
+        SFX.land();
+        if (dist > 0) {
+          if (dist > G.st.bigFall) G.st.bigFall = dist;
+          if (stats.fallFuel) refuel(Math.floor(dist / 10) * 3);
+        }
+      },
+      onBounce: function () { G.shake = Math.max(G.shake, 10); SFX.bounce(); flash('#7ec8ff', 0.15); },
+      onTurbo: function () { G.shake = Math.max(G.shake, 6); SFX.turbo(); },
+      onBurn: function (a) { burn(a); },
+      onDrillUp: function () { G.st.up++; }
     };
 
     CORE.DRILL.update(d, world, input, stats, dt, hooks);
-    G.currentHard = d.lastHard || 1;
+    G.currentHard = (d.lastHard || 1);
+
+    // Garde-fou : si la foreuse se retrouvait malgre tout encastree dans la
+    // roche sans rien a forer, on degage ses propres cases. Une partie ne doit
+    // jamais pouvoir se bloquer.
+    if (CORE.DRILL.overlapsSolid(world, d.x, d.y)) {
+      G.embedT = (G.embedT || 0) + dt;
+      if (G.embedT > 1) {
+        G.embedT = 0;
+        var ex0 = Math.floor(d.x), ex1 = Math.floor(d.x + CFG.DRILL_W - 1e-6);
+        var ey0 = Math.floor(d.y), ey1 = Math.floor(d.y + CFG.DRILL_H - 1e-6);
+        for (var cy = ey0; cy <= ey1; cy++) {
+          for (var cx = ex0; cx <= ex1; cx++) {
+            if (W.DESTRUCTIBLE[world.at(cx, cy)]) destroyAt(cx, cy, true, { n: 8 });
+          }
+        }
+      }
+    } else {
+      G.embedT = 0;
+    }
     SFX.drill(d.drilling, d.elan);
+
+    // fuite de carburant (malus)
+    G.buffs.forEach(function (b) { if (b.def.leak) burn(b.def.leak * dt); });
+
+    // En panne seche, on re-arme le filet de securite regulierement : une partie
+    // ne doit jamais pouvoir se bloquer faute de carburant.
+    if (G.reserve) {
+      G.rescueT -= dt;
+      if (G.rescueT <= 0) { G.rescueT = 3; rescueCan(); }
+    }
+
+    // legendaire : explosion tous les 60 m
+    if (stats.unstable) {
+      var depth = world.depthAt(d.y);
+      if (depth > G.nextBlast) {
+        G.nextBlast = depth + 60;
+        blast(Math.floor(d.x + 1), Math.floor(d.y + 3), 5, { n: 80 }, null);
+        SFX.blast(); G.shake = 12; flash('#ffb03d', 0.2);
+      }
+    }
 
     // --- bonus actifs -----------------------------------------------------
     for (var i = G.buffs.length - 1; i >= 0; i--) {
@@ -162,15 +444,40 @@ window.CORE = window.CORE || {};
       b.t -= dt;
       if (b.t <= 0) {
         G.buffs.splice(i, 1);
+        G.desat = 0.35;
+        SFX.expire();
         if (!b.malus && G.run.passives['V-04']) G.souffle = 5;
       }
     }
     if (G.souffle > 0) G.souffle -= dt;
 
+    // --- combo -------------------------------------------------------------
+    if (G.comboT > 0) {
+      G.comboT -= dt;
+      if (G.comboT <= 0) { G.combo = 0; G.comboMult = 1; }
+    }
+
+    // --- evenements --------------------------------------------------------
+    if (G.event) {
+      G.eventT -= dt;
+      if (G.eventT <= 0) endEvent();
+    } else if (G.levelTime > G.eventNext) {
+      fireEvent();
+    }
+    if (G.marker) G.marker.t -= dt;
+    collapseCeiling(dt);
+
     // --- chrono ------------------------------------------------------------
     var frozen = false;
     G.buffs.forEach(function (b) { if (b.def.freeze) frozen = true; });
     if (!frozen) G.levelTime += dt;
+
+    // --- fantome ------------------------------------------------------------
+    G.ghostT += dt;
+    if (G.ghostRec.length < 4000 && G.ghostT >= 0.08) {
+      G.ghostT = 0;
+      G.ghostRec.push(Math.round(d.x * 10) / 10, Math.round(d.y * 10) / 10);
+    }
 
     // --- ramassage ---------------------------------------------------------
     var dcx = d.x + CFG.DRILL_W / 2, dcy = d.y + CFG.DRILL_H / 2;
@@ -179,23 +486,14 @@ window.CORE = window.CORE || {};
       p.t += dt;
       var dx = dcx - p.x, dy = dcy - p.y;
       var dist = Math.sqrt(dx * dx + dy * dy);
+      p.near = dist < 7;
       if (dist < stats.magnet + 1.2) {
         var pull = Math.min(1, dt * 9);
         p.x += dx * pull; p.y += dy * pull;
       }
       if (dist < 1.4) {
         G.pickups.splice(pi, 1);
-        if (p.kind === W.KIND.BONUS) {
-          addBuff(p.bonus);
-          if (p.bonus.stun || p.bonus.id.charAt(0) === 'M') { SFX.malus(); G.shake = 10; }
-          else { SFX.bonus(); G.shake = Math.max(G.shake, 5); }
-        } else if (p.kind === W.KIND.PEPITE) {
-          G.run.gold += Math.round(world.layer.oreValue * 2 * stats.value);
-          SFX.gold();
-        } else {
-          G.levelTime = Math.max(0, G.levelTime - 5);
-          SFX.gold();
-        }
+        collect(p, stats);
       }
     }
 
@@ -208,10 +506,55 @@ window.CORE = window.CORE || {};
       q.x += q.vx * dt; q.y += q.vy * dt;
     }
 
+    // --- messages ----------------------------------------------------------
+    for (var ti = G.toasts.length - 1; ti >= 0; ti--) {
+      G.toasts[ti].t += dt;
+      if (G.toasts[ti].t > G.toasts[ti].dur) G.toasts.splice(ti, 1);
+    }
+    if (G.flash) { G.flash.t -= dt; if (G.flash.t <= 0) G.flash = null; }
+    if (G.desat > 0) G.desat -= dt;
+
     // --- sortie ------------------------------------------------------------
     if (!world.locked && d.y + CFG.DRILL_H > world.exitRow + 0.6) {
       var cx0 = Math.floor(d.x), cx1 = Math.floor(d.x + CFG.DRILL_W - 0.01);
       if (cx0 >= world.exitX - 1 && cx1 <= world.exitX + world.exitW) finishLevel();
+    }
+  }
+
+  function collect(p, stats) {
+    if (p.kind === W.KIND.BONUS) {
+      var lvl = addBuff(p.bonus);
+      var malus = p.bonus.stun || p.bonus.leak || p.bonus.id.charAt(0) === 'M';
+      if (malus) {
+        SFX.malus(); G.shake = 11;
+        toast(p.bonus.name, p.bonus.color, false);
+        flash(p.bonus.color, 0.3);
+      } else {
+        G.st.bonus++;
+        bumpCombo();
+        G.hitstop = 0.10;                       // arret sur image
+        if (p.bonus.rar === 2 || lvl >= 3) G.slowmo = 0.3;
+        SFX.bonusTier(lvl);
+        G.shake = Math.max(G.shake, 5 + lvl * 2);
+        toast(p.bonus.name + ' ' + ['I', 'II', 'III'][lvl - 1], p.bonus.color, true);
+        flash(p.bonus.color, 0.22);
+      }
+    } else if (p.kind === W.KIND.PEPITE) {
+      bumpCombo();
+      G.run.gold += Math.round(G.world.layer.oreValue * 2 * stats.value * G.comboMult);
+      SFX.gold();
+      toast('+ or', '#ffd24a', false);
+    } else if (p.kind === W.KIND.CARBURANT) {
+      var l = CFG.FUEL.bidon * (stats.bigCans ? 2 : 1);
+      refuel(l);
+      SFX.fuel();
+      toast('+' + l + ' L', '#8ac46a', false);
+      flash('#8ac46a', 0.15);
+    } else {
+      G.levelTime = Math.max(0, G.levelTime - 5);
+      SFX.gold();
+      toast('-5 s', '#5ff0e0', true);
+      flash('#5ff0e0', 0.2);
     }
   }
 
@@ -227,17 +570,33 @@ window.CORE = window.CORE || {};
     var def = CFG.LEVELS[G.run.levelIndex];
     var t = G.levelTime;
     var medal = medalFor(def, t);
+
+    // defis
+    G.st.straight = G.drill.straightBest;
+    G.st.fuelEnd = G.fuel;
+    var bonusGold = 0;
+    G.challenges.forEach(function (c) {
+      c.done = c.def.check(G.st);
+      if (c.done) bonusGold += c.def.gold;
+    });
+    G.run.gold += bonusGold;
+
     G.run.splits.push(t);
     G.run.medals.push(medal);
     G.run.total += t;
-    CORE.SAVE.record(def.id, t, medal);
+    var isRecord = CORE.SAVE.record(def.id, t, medal);
+    if (isRecord) CORE.SAVE.saveGhost(def.id, t, G.ghostRec);
     SFX.drill(false, 0);
     SFX.level();
 
     var rng = CORE.makeRng((G.run.seed + G.run.levelIndex * 131) | 0);
     G.drawnCards = C.draw(rng, G.run.passives, def.layer, 3);
     G.cardChosen = false;
-    G.lastResult = { def: def, time: t, medal: medal, ore: G.ore, last: G.run.levelIndex >= CFG.LEVELS.length - 1 };
+    G.lastResult = {
+      def: def, time: t, medal: medal, ore: G.ore, record: isRecord,
+      challenges: G.challenges.slice(), bonusGold: bonusGold,
+      last: G.run.levelIndex >= CFG.LEVELS.length - 1
+    };
     G.state = 'station';
   }
 
@@ -245,9 +604,15 @@ window.CORE = window.CORE || {};
     if (G.cardChosen) return;
     G.run.passives[passive.id] = (G.run.passives[passive.id] || 0) + 1;
     G.cardChosen = true;
+    if (passive.flag === 'shopClosed') G.run.shopClosedFor = G.run.levelIndex + 3;
+  }
+
+  function shopOpen() {
+    return G.run.levelIndex >= G.run.shopClosedFor;
   }
 
   function buyPart(part) {
+    if (!shopOpen()) return false;
     var owned = G.run.parts[part.id] || 0;
     if (owned >= part.max) return false;
     var cost = C.partCost(part, owned);
@@ -269,6 +634,6 @@ window.CORE = window.CORE || {};
   CORE.GAME = {
     G: G, startRun: startRun, startLevel: startLevel, update: update,
     computeStats: computeStats, chooseCard: chooseCard, buyPart: buyPart,
-    nextLevel: nextLevel, medalFor: medalFor
+    nextLevel: nextLevel, medalFor: medalFor, shopOpen: shopOpen
   };
 })(window.CORE);

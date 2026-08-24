@@ -27,13 +27,27 @@
   #left .lvl{font-size:18px;font-weight:700}
   #right{position:absolute;top:14px;right:14px;text-align:right;font-size:12px;line-height:1.7}
   #gold{font-size:20px;font-weight:700;color:var(--or)}
-  #buffs{position:absolute;top:60px;right:14px;display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+  #buffs{position:absolute;top:92px;right:14px;display:flex;flex-direction:column;gap:6px;align-items:flex-end}
   .buff{display:flex;align-items:center;gap:6px;background:rgba(12,14,18,.75);
     border:1px solid var(--line);border-radius:4px;padding:3px 7px;font-size:11px}
   .buff .ic{font-weight:700}
   .buff .bar{width:44px;height:3px;background:#333;border-radius:2px;overflow:hidden}
   .buff .bar i{display:block;height:100%}
-  #bars{position:absolute;bottom:16px;left:14px;width:190px;font-size:10px;color:var(--dim)}
+  #bars{position:absolute;bottom:16px;left:14px;width:210px;font-size:10px;color:var(--dim)}
+  #bars .lab{display:flex;justify-content:space-between}
+  #fuelWrap.low #fuelLab{color:#ffb03d}
+  #fuelWrap.dry #fuelLab{color:#ff3b52;font-weight:700}
+  #combo{position:absolute;top:74px;right:14px;text-align:right;font-size:12px;
+    color:var(--acc);font-weight:700;text-shadow:0 1px 6px rgba(0,0,0,.9)}
+  #eventBanner{position:absolute;top:128px;left:50%;transform:translateX(-50%);
+    text-align:center;font-size:14px;font-weight:700;letter-spacing:3px;
+    padding:5px 16px;border:1px solid;border-radius:4px;background:rgba(10,11,14,.7);
+    display:none}
+  #challenges{position:absolute;top:120px;left:14px;font-size:10px;line-height:1.9;
+    color:var(--dim)}
+  #challenges .ok{color:#78ffb4}
+  #challenges .ok:before{content:'[x] '}
+  #challenges .ko:before{content:'[ ] '}
   .meter{height:7px;background:#22252c;border:1px solid var(--line);border-radius:3px;
     overflow:hidden;margin:3px 0 8px}
   .meter i{display:block;height:100%;transition:width .06s linear}
@@ -66,6 +80,9 @@
   .r0{background:#2a2f39;color:#aab2be}
   .r1{background:#1d3a52;color:#7ec8ff}
   .r2{background:#4a2a12;color:#ffb03d}
+  .rp{background:#1a1a1e;color:#d8b0ff;border:1px solid #6a4a8a}
+  .card.pact{background:#100e14;border-color:#4a3a5e}
+  .card.pact:hover{border-color:#b48dff}
   .shop{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
   .part{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:12px;
     cursor:pointer;transition:.12s}
@@ -103,7 +120,14 @@
   <div id="right"><div id="gold">0 $</div><div id="oreCount"></div></div>
   <div id="buffs"></div>
   <div id="quota"></div>
+  <div id="combo"></div>
+  <div id="eventBanner"></div>
+  <div id="challenges"></div>
   <div id="bars">
+    <div id="fuelWrap">
+      <div class="lab"><span>CARBURANT</span><span id="fuelLab">100 L</span></div>
+      <div class="meter" style="height:11px"><i id="fuelBar" style="background:linear-gradient(90deg,#5f9c3a,#9be08a)"></i></div>
+    </div>
     ELAN<div class="meter"><i id="elanBar" style="background:linear-gradient(90deg,#ff8a3d,#ffd24a)"></i></div>
     TURBO<div class="meter"><i id="turboBar" style="background:linear-gradient(90deg,#5ff0e0,#7ec8ff)"></i></div>
   </div>
@@ -113,13 +137,15 @@
 <div class="screen on" id="scMenu"><div class="box">
   <h1>C<span>O</span>RE</h1>
   <div class="sub">Tu pilotes une foreuse. Le centre de la planete est a 1 300 metres.<br>
-    Il n'y a pas de vie, pas d'energie, pas de game over : ton seul adversaire est le chrono.</div>
+    Il n'y a pas de vie et pas de game over : ton seul adversaire est le chrono.<br>
+    Le carburant, lui, ne brule qu'a l'action — creuser large coute cher, reflechir ne coute rien.</div>
   <h2>Choisis ton metier</h2>
   <div class="cards" id="jobs"></div>
   <div class="keys">
     <span><b>Z Q S D</b> / fleches — diriger et forer</span>
     <span><b>2 touches</b> — forer en diagonale</span>
     <span><b>Espace</b> — turbo</span>
+    <span><b>Le carburant</b> brule a l'action, pas au temps</span>
     <span><b>R</b> — recommencer le niveau</span>
     <span><b>M</b> — son</span>
   </div>
@@ -133,9 +159,10 @@
     <div class="medal" id="stMedal"></div>
     <div style="color:var(--dim);font-size:12px" id="stBest"></div>
   </div>
+  <div id="stChallenges" style="text-align:center;font-size:12px;margin-bottom:6px"></div>
   <h2>Choisis un passif</h2>
   <div class="cards" id="stCards"></div>
-  <h2>Boutique — <span class="goldtag" id="stGold">0 $</span></h2>
+  <h2>Boutique — <span class="goldtag" id="stGold">0 $</span><span id="stShopNote" style="color:#ff5a6e"></span></h2>
   <div class="shop" id="stShop"></div>
   <button class="btn" id="stNext" disabled>CHOISIS UNE CARTE</button>
 </div></div>
