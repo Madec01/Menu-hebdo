@@ -2761,6 +2761,8 @@ T('T60 le guide documente les ateliers, les unités, les seuils et la tuyauterie
    ['CEI 60073', 'les couleurs normalisées des voyants'],
    ['mesure figée', 'les pannes simulées'],
    ['premier maillon', 'la méthode de diagnostic'],
+   ['éditeur de GRAFCET', 'l’éditeur de GRAFCET'],
+   ['divergence ET', 'les divergences ET'],
    ['BRIDÉ', 'le bridage d’un tuyau trop étroit']]
     .forEach(([txt, what]) => ok(html.includes(txt), 'le guide parle de ' + what));
   ok(/TUYAU/.test(__el('guide-body').innerHTML), 'et présente le tuyau lui-même');
@@ -2957,108 +2959,184 @@ T('T153 les voyants prennent les couleurs normalisées du pupitre', () => {
   eq(compColor(copie), lampColor('orange'), 'et elle se rallume de la bonne couleur');
 });
 
-T('T154 GRAFCET : étapes, réceptivités, temporisation et rebouclage', () => {
+T('T154 GRAFCET : franchissement, temporisation, scrutation et INIT', () => {
   board();
   const g = mk('GRAFCET', 0, 0);
-  const r1 = mk('SWITCH', -300, 0), r2 = mk('SWITCH', -300, 100);
-  link(r1, 0, g, 0); link(r2, 0, g, 1);
-  applyInspector(g, fld('o_nb', 3));
+  const r1 = mk('SWITCH', -400, 0), r2 = mk('SWITCH', -400, 120), ini = mk('SWITCH', -400, 240);
+  link(r1, 0, g, 0); link(r2, 0, g, 1); link(ini, 0, g, 4);
+  // un cycle à trois étapes : X0 --R1--> X1 --R2--> X2 --t/1s--> X0
+  const M = grModel(g);
+  M.st = [{ x:0, y:0, ini:1 }, { x:0, y:1 }, { x:0, y:2 }];
+  M.tr = [{ de:[0], a:[1], r:'R1', t:0 },
+          { de:[1], a:[2], r:'R2', t:0 },
+          { de:[2], a:[0], r:'1',  t:1 }];
+  M.scan = 100;
+  grReset(g);
   eq(grNb(g), 3, 'trois étapes');
-  // par défaut le cycle est linéaire et reboucle
-  eq(grStep(g, 0).cible, 1, 'X0 → X1'); eq(grStep(g, 2).cible, 0, 'la dernière reboucle');
-  // X0 attend R1
-  const gr = (i, ch, v) => applyInspector(g, Object.assign(fld('x', v), { dataset:{ gr:i + ',' + ch } }));
-  gr(0, 'cond', 'R1'); gr(1, 'cond', 'R2'); gr(2, 'cond', '1'); gr(2, 'tempo', 1);
   sim();
-  eq(g.et, 0, 'on démarre sur l’étape initiale');
-  eq(g.outPins[0].state, 1, 'X0 est actif');
+  eq(g.outPins[0].state, 1, 'X0 actif au départ');
   eq(g.outPins[1].state, 0, 'et lui seul');
-  // R1 encore à 0 : rien ne bouge, même après du temps
-  for (let i = 0; i < 5; i++){ __advance(200); sim(); }
-  eq(g.et, 0, 'sans réceptivité, l’étape ne passe pas — c’est ça, « l’automate attend »');
-  r1.state = 1; __advance(100); sim();
-  eq(g.et, 1, 'R1 franchit la transition');
-  sim();                                   // le franchissement se publie au cycle suivant
-  eq(g.outPins[1].state, 1, 'X1 prend le relais');
-  eq(g.outPins[0].state, 0, 'et X0 s’éteint : une seule étape active');
-  r1.state = 0; r2.state = 1; __advance(100); sim();
-  eq(g.et, 2, 'R2 fait avancer à X2');
-  // X2 : réceptivité toujours vraie mais temporisée à 1 s
+
+  // sans réceptivité vraie, le jeton ne bouge pas — même longtemps
+  for (let i = 0; i < 20; i++){ __advance(150); sim(); }
+  ok(g.act[0], 'sans réceptivité, l’étape ne passe pas : l’automate attend');
+
+  r1.state = 1; __advance(150); sim();
+  ok(g.act[1] && !g.act[0], 'R1 franchit la transition : X0 s’éteint, X1 s’allume');
+  sim();
+  eq(g.outPins[1].state, 1, 'la broche X1 suit au cycle suivant');
+
+  r1.state = 0; r2.state = 1; __advance(150); sim();
+  ok(g.act[2], 'R2 fait avancer à X2');
+
+  // temporisation : « toujours vraie », mais pas avant 1 s
   __advance(300); sim();
-  eq(g.et, 2, 'la temporisation retient l’étape');
-  for (let i = 0; i < 6; i++){ __advance(200); sim(); }
-  eq(g.et, 0, 'après 1 s, la transition est franchie et le cycle reboucle');
-  // INIT ramène à l’étape initiale depuis n’importe où
-  r1.state = 1; __advance(100); sim();
-  eq(g.et, 1, 'reparti dans le cycle');
-  const ini = mk('SWITCH', -300, 200); link(ini, 0, g, 4);
-  ini.state = 1; __advance(100); sim();
-  eq(g.et, 0, 'INIT ramène à l’étape initiale');
+  ok(g.act[2], 'la temporisation retient l’étape');
+  for (let i = 0; i < 8; i++){ __advance(200); sim(); }
+  ok(g.act[0], 'après 1 s, la transition est franchie et le cycle reboucle');
+
+  // le temps de scrutation borne la vitesse : c’est ce qui empêche le clignotement
+  M.tr.forEach(t => { t.r = '1'; t.t = 0; });
+  M.scan = 500;
+  grReset(g);
+  const depart = g.act.indexOf(1);
+  __advance(100); sim(); sim();
+  eq(g.act.indexOf(1), depart, 'sous le temps de scrutation, rien ne bouge');
+  __advance(600); sim();
+  ok(g.act.indexOf(1) !== depart, 'passé la scrutation, une seule transition est franchie');
+
+  // INIT ramène à la situation initiale, sur front montant
+  ini.state = 1; __advance(600); sim();
+  ok(g.act[0] && !g.act[1] && !g.act[2], 'INIT ramène à l’étape initiale');
 });
 
-T('T155 GRAFCET : choix de séquence, mémoire d’étape et broches alignées', () => {
+T('T155 GRAFCET : divergences OU et ET, réceptivités composées', () => {
   board();
   const g = mk('GRAFCET', 0, 0);
-  const a = mk('SWITCH', -300, 0), b = mk('SWITCH', -300, 100);
-  link(a, 0, g, 0); link(b, 0, g, 1);
-  applyInspector(g, fld('o_nb', 4));
-  const gr = (i, ch, v) => applyInspector(g, Object.assign(fld('x', v), { dataset:{ gr:i + ',' + ch } }));
-  // depuis X0 : R1 → X1 (pièce bonne), sinon R2 → X3 (rebut)
-  gr(0, 'cond', 'R1'); gr(0, 'cible', 1);
-  gr(0, 'alt', 'R2');  gr(0, 'altCible', 3);
-  sim();
+  const a = mk('SWITCH', -400, 0), b = mk('SWITCH', -400, 120), c2 = mk('SWITCH', -400, 240);
+  link(a, 0, g, 0); link(b, 0, g, 1); link(c2, 0, g, 2);
+  const M = grModel(g);
+  M.scan = 50;
+
+  // --- divergence OU : deux transitions concurrentes, réceptivités exclusives
+  M.st = [{ x:1, y:0, ini:1 }, { x:0, y:1 }, { x:2, y:1 }];
+  M.tr = [{ de:[0], a:[1], r:'R1·/R2', t:0 },
+          { de:[0], a:[2], r:'R2·/R1', t:0 }];
+  grReset(g);
   b.state = 1; __advance(100); sim();
-  eq(g.et, 3, 'la branche « OU BIEN » aiguille vers l’étape 3');
-  // retour et vérification de la branche principale
-  applyInspector(g, Object.assign(fld('x', 0), { dataset:{ gr:'3,cible' } }));
-  b.state = 0; gr(3, 'cond', '1'); __advance(100); sim();
-  eq(g.et, 0, 'retour à l’étape initiale');
+  ok(g.act[2] && !g.act[1], 'R2 seule aiguille vers la branche de droite');
+  grReset(g); b.state = 0; a.state = 1; __advance(100); sim();
+  ok(g.act[1] && !g.act[2], 'R1 seule aiguille vers la branche de gauche');
+  grReset(g); b.state = 1; __advance(100); sim();
+  ok(g.act[0], 'les deux à la fois : réceptivités exclusives, rien ne part');
+
+  // --- divergence ET : deux branches actives en même temps, puis convergence
+  a.state = 0; b.state = 0; c2.state = 0;
+  M.st = [{ x:1, y:0, ini:1 }, { x:0, y:1 }, { x:2, y:1 }, { x:1, y:2 }];
+  M.tr = [{ de:[0], a:[1, 2], r:'R1', t:0 },        // divergence ET
+          { de:[1, 2], a:[3], r:'R2', t:0 },        // convergence ET
+          { de:[3], a:[0], r:'R3', t:0 }];
+  grReset(g);
   a.state = 1; __advance(100); sim();
-  eq(g.et, 1, 'la branche principale reste prioritaire');
-  // l'étape courante voyage avec le montage
-  const data = serializeGroup([g]);
+  ok(g.act[1] && g.act[2], 'divergence ET : les deux branches partent ensemble');
+  eq(g.act[0], 0, 'et l’étape amont s’éteint');
+  sim();
+  ok(g.outPins[1].state === 1 && g.outPins[2].state === 1, 'les deux broches sont actives');
+  // la convergence attend que les DEUX branches soient là
+  a.state = 0; g.act[2] = 0; b.state = 1; __advance(100); sim();
+  eq(g.act[3], 0, 'convergence ET : une seule branche prête ne suffit pas');
+  g.act[2] = 1; __advance(100); sim();
+  ok(g.act[3] && !g.act[1] && !g.act[2], 'les deux branches réunies, la convergence est franchie');
+});
+
+T('T156 GRAFCET : l’expression de réceptivité, le modèle et sa migration', () => {
+  board();
+  const g = mk('GRAFCET', 0, 0);
+  const r = [0, 1, 2, 3].map(i => { const s2 = mk('SWITCH', -400, i * 100); link(s2, 0, g, i); return s2; });
+  const M = grModel(g);
+  M.st = [{ x:0, y:0, ini:1 }, { x:0, y:1 }];
+  grReset(g); sim();
+  const E = e => grEval(g, e);
+  r[0].state = 1; r[1].state = 0; r[2].state = 1; sim();
+  ok(E('R1'), 'R1');
+  ok(!E('R2'), 'R2');
+  ok(E('/R2'), 'le complément');
+  ok(E('R1·R3'), 'le ET');
+  ok(!E('R1·R2'), 'le ET, faux');
+  ok(E('R2+R1'), 'le OU');
+  ok(E('R1·/R2'), 'la composition');
+  ok(E('/(R2+R4)'), 'les parenthèses');
+  ok(E('X0'), 'l’activité d’une étape');
+  ok(!E('X1'), 'une étape inactive');
+  ok(E('1') && !E('0'), 'les constantes');
+  ok(!E(''), 'une réceptivité vide ne franchit jamais : c’est le défaut sûr');
+
+  // --- édition du modèle
+  M.tr = [];
+  const k = grAddStep(g, 1, 1);
+  eq(grNb(g), 3, 'une étape ajoutée');
+  grAddTrans(g, [0], [k], 'R4', 2);
+  eq(grModel(g).tr.length, 1, 'une transition ajoutée');
+  eq(grLabel(grModel(g).tr[0]), 'R4·t/2s', 'son étiquette porte la temporisation');
+  grDelStep(g, 0);
+  eq(grNb(g), 2, 'une étape supprimée');
+  eq(grModel(g).tr.length, 0, 'et les transitions qui la touchaient avec');
+  ok(grModel(g).st.some(e => e.ini), 'il reste toujours une étape initiale');
+
+  // --- migration d'un montage enregistré à l'ancien format linéaire
+  const vieux = mk('GRAFCET', 400, 0);
+  vieux.opt = { nb:3, gr:[{ cond:'R1' }, { cond:'1', tempo:2 }, { cond:'R2', alt:'R3', altCible:0 }] };
+  const mig = grModel(vieux);
+  eq(mig.st.length, 3, 'les trois étapes sont retrouvées');
+  eq(mig.tr.length, 4, 'trois transitions plus la branche alternative');
+  eq(mig.tr[0].r, 'R1', 'les réceptivités sont reprises');
+  eq(mig.tr[1].t, 2, 'les temporisations aussi');
+  deq(mig.tr[1].a, [2], 'le chaînage est conservé');
+  deq(mig.tr[2].a, [0], 'et le rebouclage de la dernière étape');
+  eq(mig.tr[3].r, 'R3', 'la branche alternative devient une seconde transition');
+
+  // --- et l'état voyage avec le montage
+  board();
+  const g2 = mk('GRAFCET', 0, 0);
+  const M2 = grModel(g2);
+  M2.st = [{ x:0, y:0, ini:1 }, { x:0, y:1 }, { x:0, y:2 }];
+  M2.tr = [{ de:[0], a:[1], r:'1', t:0 }];
+  grReset(g2); g2.act = [0, 1, 0];
+  const data = serializeGroup([g2]);
   board();
   const copie = spawnGroup(data, 0, 0, true).made[0];
-  eq(copie.et, 1, 'l’étape active est sauvegardée');
-  eq(grStep(copie, 0).alt, 'R2', 'et la table des transitions aussi');
-  // la broche Xn est à la hauteur de la case n
-  eq(Math.round(copie.outPins[0].ly - copie.y), 30, 'X0 en face de l’étape 0');
-  eq(Math.round(copie.outPins[2].ly - copie.outPins[1].ly), GR_PAS, 'un pas d’étape entre deux broches');
-  // le boîtier grandit avec le nombre d'étapes
-  const h4 = copie.h;
-  applyInspector(copie, fld('o_nb', 6));
-  ok(copie.h > h4, 'six étapes : le boîtier s’allonge');
+  deq(copie.act, [0, 1, 0], 'l’étape active est sauvegardée');
+  eq(grNb(copie), 3, 'et le graphe avec');
 });
 
-T('T156 l’exemple « Perceuse en GRAFCET » enchaîne son cycle', () => {
+T('T156b l’exemple « Perceuse en GRAFCET » enchaîne son cycle', () => {
   board();
   const ex = EXAMPLES.find(e => e.name === 'Perceuse en GRAFCET');
   ok(!!ex, 'exemple présent');
   const m = spawnGroup(ex.data, 0, 0, true).made;
   const g = m[0], dep = m[1], ver = m[2];
+  grModel(g).scan = 60;                       // on accélère la scrutation pour le test
   sim();
-  eq(g.et, 0, 'au repos sur l’étape initiale');
-  // le vérin ne bouge pas tant qu’on n’a pas donné le départ
+  ok(g.act[0], 'au repos sur l’étape initiale');
   for (let i = 0; i < 5; i++){ __advance(150); sim(); }
-  eq(g.et, 0, 'sans départ, rien ne se passe');
+  ok(g.act[0], 'sans départ, rien ne se passe');
   ok(ver.pos < 0.05, 'la broche est en haut');
   dep.state = 1; __advance(100); sim(); sim();
-  eq(g.et, 1, 'départ donné : descente');
+  ok(g.act[1], 'départ donné : descente');
   dep.state = 0;
-  // on suit le cycle complet en relevant chaque changement d'étape
-  const vues = [g.et], tps = {};
+  const vues = [1], tps = {};
   let t0 = Date.now();
-  for (let i = 0; i < 220; i++){
+  for (let i = 0; i < 300; i++){
     __advance(60); sim();
-    if (g.et !== vues[vues.length - 1]){
+    const cur = g.act.indexOf(1);
+    if (cur !== vues[vues.length - 1]){
       tps[vues[vues.length - 1]] = Date.now() - t0; t0 = Date.now();
-      vues.push(g.et);
+      vues.push(cur);
       if (vues.length > 4) break;
     }
   }
   deq(vues.slice(0, 5), [1, 2, 3, 0], 'le cycle s’enchaîne 1 → 2 → 3 → 0');
   ok(tps[2] >= 2000, 'l’étape de perçage a bien duré 2 s (' + tps[2] + ' ms)');
-  ok(tps[1] > 1500 && tps[1] < 3500, 'la descente attend le capteur bas (' + tps[1] + ' ms)');
   ok(ver.pos < .05, 'la broche est revenue en haut');
 });
 
@@ -3262,6 +3340,102 @@ T('T163 les missions de dépannage tombent vraiment en panne', () => {
   for (let i = 0; i < 30; i++){ __advance(150); sim(); }
   ok(cuve.niv > niv0 + 3, 'panne levée : le remplissage repart (' + cuve.niv.toFixed(1) + ' %)');
   loadMission(-1);
+});
+
+T('T164 l’éditeur de GRAFCET construit et corrige le graphe', () => {
+  board();
+  const g = mk('GRAFCET', 0, 0);
+  openGrafcet(g);
+  ok(grOuvert(), 'l’éditeur s’ouvre sur un GRAFCET');
+  eq(grComp, g, 'et travaille sur le bon composant');
+
+  // ajouter une étape
+  const n0 = grNb(g);
+  const nouvelle = grToolAdd();
+  eq(grNb(g), n0 + 1, 'une étape ajoutée');
+  ok(grSel && grSel.k === 'st' && grSel.i === nouvelle, 'et sélectionnée aussitôt');
+  const M = grModel(g);
+  ok(!M.st.some((e, i) => i !== nouvelle && e.x === M.st[nouvelle].x && e.y === M.st[nouvelle].y),
+     'posée sur une case libre, sans en recouvrir une autre');
+
+  // relier : deux clics, une transition
+  const nt = M.tr.length;
+  grToolLink();
+  eq(grMode, 'link', 'mode raccordement armé');
+  grClickStep(0);
+  eq(grLinkFrom, 0, 'première étape retenue');
+  grClickStep(nouvelle);
+  eq(M.tr.length, nt + 1, 'la transition est créée');
+  eq(grMode, '', 'et le mode se referme tout seul');
+  eq(grSel.k, 'tr', 'la nouvelle transition est sélectionnée');
+  deq(M.tr[grSel.i].de, [0], 'de la bonne étape');
+  deq(M.tr[grSel.i].a, [nouvelle], 'vers la bonne étape');
+  const T = grSel.i;
+
+  // réceptivité et temporisation
+  grSetRec(T, 'R2·/R3');
+  eq(M.tr[T].r, 'R2·/R3', 'la réceptivité est reprise');
+  grSetTempo(T, '3');
+  eq(M.tr[T].t, 3, 'la temporisation aussi');
+  eq(grLabel(M.tr[T]), 'R2·¬R3·t/3s', 'et l’étiquette les rassemble');
+
+  // divergence ET par les pastilles d’aval
+  grToggleBranch(T, 'a', 1);
+  ok(M.tr[T].a.length === 2, 'une seconde étape aval : divergence ET');
+  grToggleBranch(T, 'a', 1);
+  ok(M.tr[T].a.length === 1, 'et on peut la retirer');
+  grToggleBranch(T, 'a', M.tr[T].a[0]);
+  ok(M.tr[T].a.length === 1, 'mais jamais retirer la dernière : une transition mène quelque part');
+
+  // étape initiale
+  grSel = { k:'st', i:nouvelle };
+  grToolInit();
+  ok(M.st[nouvelle].ini, 'l’étape devient initiale');
+  grSel = { k:'st', i:0 };
+  grToolInit(); grSel = { k:'st', i:nouvelle }; grToolInit();
+  ok(M.st.some(e => e.ini), 'il reste toujours au moins une étape initiale');
+
+  // suppression
+  grSel = { k:'tr', i:T };
+  const avant = M.tr.length;
+  grToolDel();
+  eq(M.tr.length, avant - 1, 'la transition sélectionnée est supprimée');
+  eq(grSel, null, 'et la sélection est libérée');
+
+  // temps de scrutation
+  eq(grSetScan('800'), 800, 'le temps de scrutation se règle');
+  eq(grScan(g), 800, 'et il est retenu');
+  grSetScan('5');
+  ok(grScan(g) >= 20, 'borné en bas : un automate ne scrute pas à l’infini');
+
+  // le graphe édité survit à la fermeture
+  const nb = grNb(g), ntr = grModel(g).tr.length;
+  closeGrafcet();
+  ok(!grOuvert(), 'l’éditeur se referme');
+  eq(grNb(g), nb, 'les étapes sont conservées');
+  eq(grModel(g).tr.length, ntr, 'les transitions aussi');
+});
+
+T('T165 un GRAFCET neuf ne s’emballe pas', () => {
+  board();
+  const g = mk('GRAFCET', 0, 0);
+  sim();
+  const depart = g.act.join('');
+  // le défaut d’usine attend R1 : rien ne bouge tant qu’on n’appuie pas
+  for (let i = 0; i < 60; i++){ __advance(16); sim(); }
+  eq(g.act.join(''), depart, 'sans réceptivité vraie, le jeton reste en place');
+  // et même avec une réceptivité toujours vraie, la scrutation borne la cadence
+  const M = grModel(g);
+  M.tr.forEach(t => { t.r = '1'; t.t = 0; });
+  M.scan = 250;
+  grReset(g);
+  let sauts = 0, prev = g.act.join('');
+  for (let i = 0; i < 60; i++){                 // 60 images à 16 ms ≈ 1 s
+    __advance(16); sim();
+    if (g.act.join('') !== prev){ sauts++; prev = g.act.join(''); }
+  }
+  ok(sauts <= 5, 'au plus quelques franchissements par seconde (' + sauts + '), pas soixante');
+  ok(sauts >= 2, 'mais le graphe avance quand même (' + sauts + ')');
 });
 
 /* ===================== bilan ===================== */

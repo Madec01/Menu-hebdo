@@ -316,6 +316,59 @@ table.tt tr.tt-fail td:first-child::before{content:'✗ ';color:var(--red)}
 @keyframes toastIn{from{opacity:0;transform:translateY(14px) scale(.94)}to{opacity:1}}
 @keyframes toastOut{to{opacity:0;transform:translateY(8px) scale(.96)}}
 
+/* ---------- Éditeur de GRAFCET ---------- */
+.modal-content.gr-modal{width:min(1180px,96vw);padding:0;text-align:left;display:flex;
+  flex-direction:column;height:min(760px,92vh);max-height:92vh;overflow:hidden}
+.gr-modal *{text-align:initial}
+.gr-head{display:flex;align-items:center;gap:14px;padding:14px 18px 12px;
+  border-bottom:1px solid var(--border);flex-wrap:wrap}
+.gr-head h2{margin:0;font-size:17px;color:var(--violet);white-space:nowrap}
+.gr-tools{display:flex;align-items:center;gap:6px;flex:1;flex-wrap:wrap}
+.gr-b{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+  padding:6px 11px;border-radius:8px;border:1px solid rgba(177,140,255,.3);
+  background:rgba(177,140,255,.08);color:#d9c8ff;cursor:pointer;transition:.15s;white-space:nowrap}
+.gr-b:hover{background:rgba(177,140,255,.2);color:#fff}
+.gr-b.on{background:linear-gradient(180deg,#d6c4ff,#b18cff);color:#12081f;font-weight:700;
+  border-color:transparent}
+.gr-b.gr-danger{border-color:rgba(255,93,108,.3);background:rgba(255,93,108,.08);color:#ffb9bf}
+.gr-b.gr-danger:hover{background:rgba(255,93,108,.22);color:#fff}
+.gr-sep{flex:1}
+.gr-lab{font-family:var(--mono);font-size:9.5px;color:var(--dim);display:flex;align-items:center;gap:5px}
+.gr-lab input{width:64px;padding:4px 6px;border-radius:6px;border:1px solid rgba(120,160,220,.25);
+  background:rgba(255,255,255,.05);color:#dbe6f5;font-family:var(--mono);font-size:11px}
+#gr-close{background:none;border:none;color:var(--dim);font-size:16px;cursor:pointer;padding:2px 6px}
+#gr-close:hover{color:#fff}
+.gr-main{display:flex;flex:1;min-height:0;align-items:stretch}
+.gr-stage{flex:1;overflow:auto;background:
+  radial-gradient(circle at 1px 1px,rgba(255,255,255,.07) 1px,transparent 0) 0 0/26px 26px,
+  rgba(4,8,16,.55)}
+#gr-svg{display:block;min-width:100%}
+#gr-panel{width:268px;border-left:1px solid var(--border);padding:14px;overflow-y:auto;
+  background:rgba(255,255,255,.02)}
+.gr-ptitle{font-family:'Chakra Petch',sans-serif;font-weight:700;font-size:13px;color:var(--violet);
+  margin-bottom:3px}
+.gr-psub{font-size:10.5px;color:var(--dim);line-height:1.5;margin-bottom:12px}
+.gr-f{margin-bottom:11px}
+.gr-f label{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--dim);margin-bottom:4px}
+.gr-f input[type=text],.gr-f input[type=number]{width:100%;box-sizing:border-box;padding:7px 9px;
+  border-radius:8px;border:1px solid rgba(120,160,220,.25);background:rgba(255,255,255,.05);
+  color:#dbe6f5;font-family:var(--mono);font-size:12.5px;outline:none}
+.gr-f input:focus{border-color:var(--violet)}
+.gr-keys{display:flex;gap:3px;flex-wrap:wrap;margin-top:5px}
+.gr-key{font-family:var(--mono);font-size:10px;padding:3px 7px;border-radius:6px;cursor:pointer;
+  border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:#c8d6ee}
+.gr-key:hover{background:rgba(177,140,255,.25);color:#fff}
+.gr-chips{display:flex;gap:4px;flex-wrap:wrap}
+.gr-chip{font-family:var(--mono);font-size:10.5px;padding:4px 9px;border-radius:7px;cursor:pointer;
+  border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:var(--dim)}
+.gr-chip.on{background:rgba(177,140,255,.28);border-color:rgba(177,140,255,.5);color:#fff}
+.gr-hintp{font-size:10px;color:var(--dim);line-height:1.5;margin-top:-5px;margin-bottom:10px}
+.gr-foot{padding:9px 18px;border-top:1px solid var(--border);font-family:var(--mono);
+  font-size:10px;color:var(--dim);line-height:1.6}
+.gr-foot b{color:#c8d6ee}
+.gr-warn{color:#ffc23d}
+
 /* ---------- Modals ---------- */
 .modal-overlay{position:fixed;inset:0;background:rgba(3,6,12,.72);z-index:80;
   display:none;align-items:center;justify-content:center;backdrop-filter:blur(6px)}
@@ -538,6 +591,31 @@ table.tt tr.tt-fail td:first-child::before{content:'✗ ';color:var(--red)}
 </div>
 
 <!-- ======= MODALE ANALYSEUR ======= -->
+<!-- ======= ÉDITEUR DE GRAFCET ======= -->
+<div id="grafcet-modal" class="modal-overlay">
+  <div class="modal-content glass gr-modal">
+    <div class="gr-head">
+      <h2>⊟ Éditeur de GRAFCET</h2>
+      <div class="gr-tools">
+        <button class="gr-b" id="gr-add">＋ Étape</button>
+        <button class="gr-b" id="gr-link">↘ Relier</button>
+        <button class="gr-b" id="gr-init">◧ Initiale</button>
+        <button class="gr-b gr-danger" id="gr-del">🗑 Supprimer</button>
+        <span class="gr-sep"></span>
+        <label class="gr-lab">Scrutation
+          <input type="number" id="gr-scan" min="20" max="3000" step="10"> ms</label>
+        <button class="gr-b" id="gr-reset">⟲ Réinitialiser le jeton</button>
+      </div>
+      <button id="gr-close" title="Fermer (Échap)">✕</button>
+    </div>
+    <div class="gr-main">
+      <div class="gr-stage"><svg id="gr-svg" xmlns="http://www.w3.org/2000/svg"></svg></div>
+      <div id="gr-panel"></div>
+    </div>
+    <div class="gr-foot" id="gr-hint"></div>
+  </div>
+</div>
+
 <div id="analyze-modal" class="modal-overlay">
   <div class="modal-content glass">
     <h2>🔬 Analyse du circuit</h2>
@@ -2512,7 +2590,10 @@ const EXAMPLES = [
 { name:'Perceuse en GRAFCET', icon:'⊟', diff:'Automatisme',
   desc:'Le cycle d’une perceuse écrit dans le langage du métier : X0 attend le départ, X1 descend la broche jusqu’au capteur bas, X2 temporise 2 s en fond de trou, X3 remonte jusqu’au capteur haut, et ça reboucle. Appuie sur DÉPART et regarde le jeton descendre les étapes.',
   data:{ comps:[
-    {t:'GRAFCET',x:300,y:60,opt:{nb:4,gr:[{cond:'R1'},{cond:'R2'},{cond:'1',tempo:2},{cond:'R3'}]}},
+    {t:'GRAFCET',x:300,y:60,opt:{g:{scan:250,
+      st:[{x:0,y:0,ini:1},{x:0,y:1},{x:0,y:2},{x:0,y:3}],
+      tr:[{de:[0],a:[1],r:'R1',t:0},{de:[1],a:[2],r:'R2',t:0},
+          {de:[2],a:[3],r:'1',t:2},{de:[3],a:[0],r:'R3',t:0}]}}},
     {t:'BUTTON',x:40,y:60},
     {t:'JACK',x:700,y:250,opt:{sec:2}},
     {t:'LED',x:640,y:60,opt:{coul:'blanc'},lbl:'ATTENTE'},
@@ -3080,35 +3161,13 @@ function openInspector(c){
         'Pour chaque état (ligne) et chaque combinaison des entrées A et B (colonne), l\u2019état suivant.'));
       break;
     }
-    case 'GRAFCET': {
-      const nb = grNb(c);
-      const cibles = v => Array.from({ length:nb }, (_, k) =>
-        '<option value="' + k + '"' + (k === v ? ' selected' : '') + '>' + k + '</option>').join('');
-      let g = '<div class="gr-grid">' +
-        '<span class="rg-h">ÉT.</span><span class="rg-h">RÉCEPTIVITÉ</span>' +
-        '<span class="rg-h">t (s)</span><span class="rg-h">VERS</span>' +
-        '<span class="rg-h">OU BIEN</span><span class="rg-h">VERS</span>';
-      for (let i = 0; i < nb; i++){
-        const st = grStep(c, i);
-        g += '<span class="gr-n">X' + i + '</span>';
-        g += '<select data-gr="' + i + ',cond">' + GR_RECEPT.map(([k, lab]) =>
-          '<option value="' + k + '"' + (k === st.cond ? ' selected' : '') + '>' + lab + '</option>').join('') +
-          '</select>';
-        g += '<input type="number" data-gr="' + i + ',tempo" value="' + st.tempo +
-          '" min="0" max="120" step="0.5">';
-        g += '<select data-gr="' + i + ',cible">' + cibles(st.cible) + '</select>';
-        g += '<select data-gr="' + i + ',alt"><option value="-"' +
-          (st.alt === '-' ? ' selected' : '') + '>—</option>' + GR_RECEPT.slice(1).map(([k, lab]) =>
-          '<option value="' + k + '"' + (k === st.alt ? ' selected' : '') + '>' + lab + '</option>').join('') +
-          '</select>';
-        g += '<select data-gr="' + i + ',altCible">' + cibles(st.altCible) + '</select>';
-      }
-      B.push(inspField('Étapes et transitions', g + '</div>',
-        'Pour chaque étape : la <b>réceptivité</b> qui fait franchir la transition, une <b>temporisation</b> ' +
-        'facultative (0 = aucune), et l’étape d’arrivée. La colonne <b>OU BIEN</b> ouvre une seconde branche : ' +
-        'c’est le choix de séquence. Les actions se câblent sur X0…X5.'));
+    case 'GRAFCET':
+      B.push(inspField('Graphe',
+        '<button class="btn btn-sol" data-k="gredit" style="width:100%;padding:9px">' +
+        '⊟ Ouvrir l’éditeur de GRAFCET</button>',
+        'Le graphe se construit à la souris : poser les étapes, les relier, écrire les réceptivités. ' +
+        'Double-cliquer le boîtier ouvre directement l’éditeur.'));
       break;
-    }
     case 'ROM': {
       let g = '<div class="rom-grid"><span class="rg-h">ADR (4·2·1)</span><span class="rg-h">S1</span><span class="rg-h">S2</span>';
       for (let r = 0; r < 8; r++){
@@ -3151,20 +3210,11 @@ function openInspector(c){
     inp.addEventListener(inp.type === 'checkbox' || inp.tagName === 'SELECT' ? 'change' : 'input',
       () => applyInspector(c, inp));
   });
+  el.querySelectorAll('button[data-k]').forEach(b =>
+    b.addEventListener('click', () => applyInspector(c, b)));
 }
 function applyInspector(c, inp){
   const k = inp.dataset.k, romK = inp.dataset.rom, fsmK = inp.dataset.fsm;
-  if (inp.dataset.gr){
-    const [i, champ] = inp.dataset.gr.split(',');
-    const nb = grNb(c);
-    if (champ === 'tempo') grSet(c, +i, 'tempo', Math.max(0, Math.min(120, parseFloat(inp.value) || 0)));
-    else if (champ === 'cible' || champ === 'altCible')
-      grSet(c, +i, champ, Math.max(0, Math.min(nb - 1, parseInt(inp.value, 10) || 0)));
-    else if (GR_RECEPT.some(r => r[0] === inp.value) || inp.value === '-')
-      grSet(c, +i, champ, inp.value);
-    markDirty();
-    return;
-  }
   if (fsmK){
     const [st, kk] = fsmK.split(',').map(Number);
     if (!c.opt.tr) c.opt.tr = [[0,0,0,0],[1,1,1,1],[2,2,2,2],[3,3,3,3]];
@@ -3194,6 +3244,7 @@ function applyInspector(c, inp){
   else if (k === 'bfreq')c.opt.bfreq = clamp(parseInt(inp.value) || 349, 80, 2000);
   else if (k === 'val')  c.value = clamp(parseInt(inp.value) || 0, 0, 15);
   else if (k === 'coul'){ if (lampColor(inp.value)) c.opt.coul = inp.value; }
+  else if (k === 'gredit'){ openGrafcet(c); return; }
   else if (k === 'panne'){ setPanne(c, PANNES.some(x => x[0] === inp.value) ? inp.value : ''); openInspector(c); }
   else if (k === 'pannev'){ if (c.panne) c.panne.v = clamp(parseFloat(inp.value) || 0, -90, 200); }
   else if (k === 'chipname'){
@@ -3513,7 +3564,11 @@ canvas.addEventListener('dblclick', e => {
   const w = s2w(e.clientX, e.clientY);
   if (pickPin(w.x, w.y)) return;
   const cIns = pickComp(w.x, w.y);
-  if (cIns){ openInspector(cIns); return; }              // double-clic composant = inspecteur
+  if (cIns){                                            // double-clic composant = inspecteur
+    if (cIns.type === 'GRAFCET' && !cIns.locked) openGrafcet(cIns);
+    else openInspector(cIns);
+    return;
+  }
   const wpHit = pickWaypoint(w.x, w.y);
   if (wpHit){                                  // double-clic sur une poignée : la retirer
     wpHit.wire.wp.splice(wpHit.idx, 1);
@@ -3537,7 +3592,9 @@ addEventListener('keydown', e => {
   if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName || '')) return;
   if (e.key === 'Escape'){
     wiring = null; selRect = null; selection.clear(); updateSelHud(); closeInspector();
+    if (grOuvert() && grMode === 'link'){ grMode = ''; grLinkFrom = null; grSyncTools(); grRender(); return; }
     document.querySelectorAll('.modal-overlay.show').forEach(m => m.classList.remove('show'));
+    if (grComp) closeGrafcet();
   }
   if (e.key === 'Delete' || e.key === 'Backspace'){
     if (selection.size){ const n = deleteSelection(); if (n) toast(n + ' composant(s) supprimé(s).', 'info', 1800); }
@@ -5412,7 +5469,7 @@ const missions = [
   desc:"Découvre le langage des automaticiens. Pose un GRAFCET, règle-le sur 3 étapes, branche un BOUTON sur R1 et trois AMPOULES sur X0, X1, X2. Fais avancer le jeton d'étape en étape et observe : une seule étape est active à la fois. Mission libre.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
-    demo:{ comps:[{t: "GRAFCET", x: 260, y: 40, opt: {"nb": 3, "gr": [{"cond": "R1"}, {"cond": "R1"}, {"cond": "R1"}]}}, {t: "BUTTON", x: 0, y: 120}, {t: "LED", x: 620, y: 40, opt: {"coul": "vert"}}, {t: "LED", x: 620, y: 180, opt: {"coul": "orange"}}, {t: "LED", x: 620, y: 320, opt: {"coul": "rouge"}}],
+    demo:{ comps:[{t: "GRAFCET", x: 260, y: 40, opt: {"g": {"scan": 250, "st": [{"x":0,"y":0,"ini":1},{"x":0,"y":1},{"x":0,"y":2}], "tr": [{"de":[0],"a":[1],"r":"R1","t":0},{"de":[1],"a":[2],"r":"R1","t":0},{"de":[2],"a":[0],"r":"R1","t":0}]}}}, {t: "BUTTON", x: 0, y: 120}, {t: "LED", x: 620, y: 40, opt: {"coul": "vert"}}, {t: "LED", x: 620, y: 180, opt: {"coul": "orange"}}, {t: "LED", x: 620, y: 320, opt: {"coul": "rouge"}}],
            wires:[[1, 0, 0, 0], [0, 0, 2, 0], [0, 1, 3, 0], [0, 2, 4, 0]] },
     plan:["BOUTON ─▶ R1 du GRAFCET","X0, X1, X2 ─▶ trois AMPOULES de couleurs différentes"],
     steps:["Pose un GRAFCET (onglet Temps & automatisme) et règle-le sur <b>3 étapes</b> avec sa glissière.",
@@ -5439,7 +5496,7 @@ const missions = [
   desc:"Une machine de tri : après le contrôle, la pièce part au bac « bonne » ou au bac « rebut ». Utilise la colonne OU BIEN du GRAFCET pour ouvrir deux chemins depuis la même étape. Mission libre.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
-    demo:{ comps:[{t: "GRAFCET", x: 300, y: 40, opt: {"nb": 3, "gr": [{"cond": "R1", "cible": 1, "alt": "R2", "altCible": 2}, {"cond": "1", "tempo": 1, "cible": 0}, {"cond": "1", "tempo": 1, "cible": 0}]}}, {t: "SWITCH", x: 0, y: 60}, {t: "SWITCH", x: 0, y: 240}, {t: "LED", x: 680, y: 120, opt: {"coul": "vert"}}, {t: "LED", x: 680, y: 280, opt: {"coul": "rouge"}}],
+    demo:{ comps:[{t: "GRAFCET", x: 300, y: 40, opt: {"g": {"scan": 250, "st": [{"x":1,"y":0,"ini":1},{"x":0,"y":1},{"x":2,"y":1}], "tr": [{"de":[0],"a":[1],"r":"R1·/R2","t":0},{"de":[0],"a":[2],"r":"R2·/R1","t":0},{"de":[1],"a":[0],"r":"1","t":1},{"de":[2],"a":[0],"r":"1","t":1}]}}}, {t: "SWITCH", x: 0, y: 60}, {t: "SWITCH", x: 0, y: 240}, {t: "LED", x: 680, y: 120, opt: {"coul": "vert"}}, {t: "LED", x: 680, y: 280, opt: {"coul": "rouge"}}],
            wires:[[1, 0, 0, 0], [2, 0, 0, 1], [0, 1, 3, 0], [0, 2, 4, 0]] },
     plan:["X0 : contrôle · R1 = pièce bonne ─▶ X1 · OU BIEN R2 = pièce mauvaise ─▶ X2",
           "X1 et X2 rebouclent sur X0"],
@@ -5448,7 +5505,7 @@ const missions = [
       "Lignes X1 et X2 : réceptivité <code>=1</code> avec une temporisation de 1 s, cible <b>0</b>.",
       "Branche une ampoule verte sur X1 (« bac bonne ») et une rouge sur X2 (« bac rebut »).",
       "Bascule R1 : le jeton part à gauche. Bascule R2 : il part à droite. Les deux à la fois : la branche principale gagne."],
-    why:"C'est la <b>divergence en OU</b> du GRAFCET : depuis une même étape, plusieurs transitions concurrentes, dont une seule sera franchie. En norme, les réceptivités de ces transitions doivent être <b>exclusives</b> — deux chemins vrais en même temps, et le comportement dépendrait de l'ordre d'écriture, ce qu'on ne veut jamais sur une machine. Ici la branche principale est prioritaire, ce qui rend la chose déterministe ; sur un vrai automate, on écrirait plutôt R2·R̄1 pour lever toute ambiguïté." } },
+    why:"C'est la <b>divergence en OU</b> du GRAFCET : depuis une même étape, plusieurs transitions concurrentes, dont une seule doit être franchie. La norme exige que leurs réceptivités soient <b>exclusives</b> — c'est pourquoi on écrit <code>R1·/R2</code> et <code>R2·/R1</code> plutôt que <code>R1</code> et <code>R2</code>. Sans cette précaution, deux chemins peuvent être vrais en même temps : le jeton part <i>dans les deux</i>, la machine se retrouve dans deux états à la fois, et plus personne ne sait ce qu'elle fait. Essaie sans le complément pour le voir de tes yeux — c'est la faute la plus courante des débutants, et elle ne se manifeste qu'un jour sur dix." } },
 { id:"m146", ch:"Chapitre 30 · Dépanner", title:"Le capteur qui ment",
   desc:"🩺 Voici un four régulé qui NE marche pas : la température s'envole alors que la boucle a l'air correcte. Charge le montage avec 🧭, observe, et trouve l'organe fautif. Appuie sur P quand tu penses avoir trouvé — le simulateur te dira si tu avais raison. Mission libre.",
   inputs:0, outputs:0, tt:[], par:0,
@@ -7556,167 +7613,261 @@ defComp('TE', {
     real:'Dans une installation réelle, la répartition dépend des pertes de charge de chaque branche — on l’ajuste avec des vannes d’équilibrage. Ici, tu la règles directement.' }
 });
 /* ==================== GRAFCET (CEI 60848) ====================
-   Le langage de l'automatisme séquentiel : des ÉTAPES reliées par des
-   TRANSITIONS. Une étape est active ou non, et les ACTIONS qu'on lui associe
-   durent exactement le temps où elle l'est. Une transition est franchie
-   quand son étape amont est active ET que sa RÉCEPTIVITÉ est vraie : l'amont
-   s'éteint, l'aval s'allume. Cinq règles, et tout cycle de machine se décrit. */
-const GR_RECEPT = [
-  ['1',   '=1 (toujours)'],
-  ['R1',  'R1'], ['R2', 'R2'], ['R3', 'R3'], ['R4', 'R4'],
-  ['/R1', 'R1 à 0'], ['/R2', 'R2 à 0'], ['/R3', 'R3 à 0'], ['/R4', 'R4 à 0']
-];
-const GR_MAX = 6, GR_PAS = 38;
-function grNb(c){ return Math.max(2, Math.min(GR_MAX, (optOf(c, 'nb') | 0) || 4)); }
-function grPas(){ return GR_PAS; }
-/* Hauteur du boîtier : la colonne d'étapes, puis les sorties inutilisées */
-function grH(nb){ return 30 + (nb - 1) * GR_PAS + 30 + (GR_MAX - nb) * 12 + 18; }
-/* Étiquette d'une réceptivité, temporisation comprise */
-function grLabel(code, tempo){
-  const base = code === '1' ? '=1' : String(code).replace('/', '¬');
-  if (!tempo) return base;
-  const t = 't/' + tempo + 's';
-  return base === '=1' ? t : base + '·' + t;
+   Le langage de l'automatisme séquentiel. Un graphe d'ÉTAPES reliées par des
+   TRANSITIONS ; chaque transition porte une RÉCEPTIVITÉ. Elle est franchie
+   quand TOUTES ses étapes amont sont actives et que sa réceptivité est vraie :
+   les amont s'éteignent, les aval s'allument, simultanément.
+
+   Le modèle est celui de la norme, pas une simplification linéaire :
+   plusieurs étapes peuvent être actives en même temps (divergence ET), une
+   transition peut avoir plusieurs amont (convergence ET) et plusieurs
+   transitions peuvent partir d'une même étape (divergence OU).
+
+   Le graphe se construit dans son éditeur dédié (double-clic sur le boîtier). */
+const GR_MAX = 8;                 // huit étapes : X0…X7
+const GR_SCAN_DEF = 250;          // temps de scrutation par défaut (ms)
+
+/* ---- Le modèle, avec migration depuis l'ancien format linéaire ---- */
+function grModel(c){
+  if (!c.opt.g || !c.opt.g.st) c.opt.g = grMigrate(c);
+  const g = c.opt.g;
+  if (!Array.isArray(g.st) || !g.st.length) g.st = [{ x:0, y:0, ini:1 }];
+  if (!Array.isArray(g.tr)) g.tr = [];
+  return g;
 }
-/* Cette réceptivité est-elle vraie en ce moment ? */
-function grVrai(c, code){
-  if (code === '1') return true;
-  if (!code || code === '-') return false;
-  const neg = String(code).charAt(0) === '/';
-  const i = ['R1','R2','R3','R4'].indexOf(neg ? String(code).slice(1) : code);
-  if (i < 0) return false;
-  const v = c.inPins[i].state ? 1 : 0;
-  return neg ? !v : !!v;
+/* L'ancien GRAFCET ne connaissait qu'une suite d'étapes : on la relit en
+   graphe pour ne perdre aucun montage déjà enregistré. */
+function grMigrate(c){
+  const n = Math.max(2, Math.min(GR_MAX, (c.opt.nb | 0) || 4));
+  const vieux = Array.isArray(c.opt.gr) ? c.opt.gr : [];
+  const st = [], tr = [];
+  for (let i = 0; i < n; i++) st.push({ x:0, y:i, ini: i === 0 ? 1 : 0 });
+  for (let i = 0; i < n; i++){
+    const v = vieux[i] || {};
+    const cible = v.cible == null ? (i + 1) % n : Math.min(n - 1, v.cible | 0);
+    tr.push({ de:[i], a:[cible], r: grRecOld(v.cond), t: +v.tempo || 0 });
+    if (v.alt && v.alt !== '-')
+      tr.push({ de:[i], a:[v.altCible == null ? 0 : Math.min(n - 1, v.altCible | 0)],
+                r: grRecOld(v.alt), t:0 });
+  }
+  return { st, tr, scan:GR_SCAN_DEF };
 }
-/* Réglages d'une étape, avec les valeurs par défaut d'un cycle linéaire */
-function grStep(c, i){
-  const g = (c.opt.gr && c.opt.gr[i]) || {};
-  const nb = grNb(c), bornee = v => Math.max(0, Math.min(nb - 1, v | 0));
-  return { cond: g.cond || '1', tempo: +g.tempo || 0,
-           cible: g.cible == null ? (i + 1) % nb : bornee(g.cible),
-           alt:  g.alt || '-',
-           altCible: g.altCible == null ? 0 : bornee(g.altCible) };
+function grRecOld(cond){
+  if (!cond || cond === '-') return '0';
+  if (cond === '1') return '1';
+  return String(cond).replace('/', '/');
 }
-function grSet(c, i, k, v){
-  if (!c.opt.gr) c.opt.gr = [];
-  if (!c.opt.gr[i]) c.opt.gr[i] = {};
-  c.opt.gr[i][k] = v;
+function grNb(c){ return grModel(c).st.length; }
+function grScan(c){ const g = grModel(c); return Math.max(20, Math.min(3000, g.scan || GR_SCAN_DEF)); }
+
+/* ---- Réceptivités : une vraie petite expression booléenne ----
+   R1…R4 les entrées · X0…X7 l'activité d'une étape · / ou ! la négation
+   · ou * le ET · + le OU · parenthèses · 1 et 0 les constantes.
+   Priorité NON > ET > OU, comme en algèbre de Boole. */
+function grEval(c, expr){
+  const s = String(expr == null ? '' : expr).replace(/\s+/g, '');
+  if (!s) return false;
+  let i = 0;
+  const fin = () => i >= s.length;
+  function facteur(){
+    if (fin()) return false;
+    const ch = s[i];
+    if (ch === '/' || ch === '!' || ch === '¬'){ i++; return !facteur(); }
+    if (ch === '('){ i++; const v = ou(); if (s[i] === ')') i++; return v; }
+    const m = /^(X[0-7]|R[1-4]|1|0)/.exec(s.slice(i));
+    if (!m){ i++; return false; }
+    i += m[0].length;
+    const t = m[0];
+    if (t === '1') return true;
+    if (t === '0') return false;
+    if (t[0] === 'X') return !!(c.act && c.act[+t[1]]);
+    const pin = c.inPins[+t[1] - 1];
+    return !!(pin && pin.state);
+  }
+  function et(){
+    let v = facteur();
+    while (!fin() && (s[i] === '·' || s[i] === '*' || s[i] === '.' || s[i] === '&')){
+      i++; const b = facteur(); v = v && b;
+    }
+    return v;
+  }
+  function ou(){
+    let v = et();
+    while (!fin() && (s[i] === '+' || s[i] === '|')){ i++; const b = et(); v = v || b; }
+    return v;
+  }
+  return ou();
 }
+/* Étiquette d'une transition, temporisation comprise */
+function grLabel(tr){
+  const r = (tr.r == null || tr.r === '') ? '0' : String(tr.r);
+  const base = r.replace(/\//g, '¬').replace(/\*/g, '·');
+  if (!tr.t) return base;
+  const t = 't/' + tr.t + 's';
+  return base === '1' ? t : base + '·' + t;
+}
+/* Le pas de grille de l'éditeur, et la boîte englobante d'un graphe */
+const GR_GX = 116, GR_GY = 84;
+function grBBox(g){
+  const xs = g.st.map(e => e.x), ys = g.st.map(e => e.y);
+  return { x0:Math.min(...xs), y0:Math.min(...ys), x1:Math.max(...xs), y1:Math.max(...ys) };
+}
+
+/* ---- Édition du modèle (partagée par l'éditeur et les tests) ---- */
+function grAddStep(c, x, y){
+  const g = grModel(c);
+  if (g.st.length >= GR_MAX) return -1;
+  g.st.push({ x: x | 0, y: y | 0, ini:0 });
+  return g.st.length - 1;
+}
+function grDelStep(c, k){
+  const g = grModel(c);
+  if (g.st.length <= 1) return false;
+  g.st.splice(k, 1);
+  const dec = a => a.filter(v => v !== k).map(v => v > k ? v - 1 : v);
+  g.tr = g.tr.map(t => ({ ...t, de:dec(t.de), a:dec(t.a) }))
+             .filter(t => t.de.length && t.a.length);
+  if (!g.st.some(e => e.ini)) g.st[0].ini = 1;
+  return true;
+}
+function grAddTrans(c, de, a, r, t){
+  const g = grModel(c);
+  g.tr.push({ de:[...de], a:[...a], r: r == null ? 'R1' : r, t: +t || 0 });
+  return g.tr.length - 1;
+}
+function grDelTrans(c, k){ grModel(c).tr.splice(k, 1); }
+/* Remise à l'état initial */
+function grReset(c){
+  const g = grModel(c), now = Date.now();
+  c.act = g.st.map(e => e.ini ? 1 : 0);
+  if (!c.act.some(Boolean)) c.act[0] = 1;
+  c.tAct = c.act.map(() => now);
+  c.lastScan = now;
+}
+
 defComp('GRAFCET', {
   name:'GRAFCET (SÉQUENCEUR D’ÉTAPES)', short:'GRAFCET', family:'time',
   color:'#b18cff', cost:34, seq:true,
-  glyph:'⊟', w:230, h:grH(4), main:'nb',
+  glyph:'⊟', w:186, h:168,
   ins:[{ n:'R1' }, { n:'R2' }, { n:'R3' }, { n:'R4' }, { n:'INIT' }],
-  outs:[{ n:'X0' }, { n:'X1' }, { n:'X2' }, { n:'X3' }, { n:'X4' }, { n:'X5' }],
-  opts:[{ k:'nb', label:'Nombre d’étapes', min:2, max:GR_MAX, step:1, def:4, int:true,
-    hint:'Autant d’étapes que de phases dans le cycle. Chacune sort sur X0…X5.' }],
-  onOpt(c, k){ if (k === 'nb') c.h = grH(grNb(c)); },
-  init(c){ c.et = 0; c.tEt = 0; c.prevInit = 0; c.franchi = 0; },
-  save:c => ({ et: c.et || undefined }),
-  restore(c, s){ if (s && s.et != null) c.et = s.et; c.h = grH(grNb(c)); },
-  /* Les sorties d'étape s'alignent sur les cases dessinées : on lit le
-     diagramme et le câblage d'un seul coup d'œil. */
-  pinPos(comp, pin){
-    if (!pin.isOutput) return null;
-    const nb = grNb(comp);
-    if (pin.index < nb)
-      return { x: comp.x + comp.w, y: comp.y + 30 + pin.index * GR_PAS };
-    return { x: comp.x + comp.w,
-             y: comp.y + 30 + (nb - 1) * GR_PAS + 30 + (pin.index - nb) * 12 };
+  outs:[{ n:'X0' }, { n:'X1' }, { n:'X2' }, { n:'X3' },
+        { n:'X4' }, { n:'X5' }, { n:'X6' }, { n:'X7' }],
+  opts:[{ k:'scan', label:'Temps de scrutation (ms)', min:20, max:3000, step:10, def:GR_SCAN_DEF,
+    int:true, hint:'La période à laquelle l’automate relit ses entrées et franchit ses transitions. ' +
+    'Un vrai automate scrute en quelques millisecondes ; ici on ralentit pour voir le jeton avancer.' }],
+  onOpt(c, k){ if (k === 'scan') grModel(c).scan = optOf(c, 'scan'); },
+  init(c){ c.opt.g = { st:[{ x:0, y:0, ini:1 }, { x:0, y:1, ini:0 }],
+                       tr:[{ de:[0], a:[1], r:'R1', t:0 }, { de:[1], a:[0], r:'R2', t:0 }],
+                       scan:GR_SCAN_DEF };
+           grReset(c); },
+  save:c => ({ act: c.act ? c.act.slice() : undefined }),
+  restore(c, s){
+    grModel(c);
+    if (s && Array.isArray(s.act)) { c.act = s.act.slice(); c.tAct = c.act.map(() => Date.now()); c.lastScan = 0; }
+    else grReset(c);
+    c.opt.scan = grScan(c);
   },
   eval(c){
-    const nb = grNb(c);
-    c.outPins.forEach((p, i) => p.state = (i === c.et && i < nb) ? 1 : 0);
+    if (!c.act) grReset(c);
+    const n = grNb(c);
+    c.outPins.forEach((p, i) => p.state = (i < n && c.act[i]) ? 1 : 0);
   },
   commit(c){
-    const now = Date.now(), nb = grNb(c);
-    if (!c.tEt) c.tEt = now;
-    if (c.et >= nb){ c.et = 0; c.tEt = now; }
-    // INIT : retour forcé à l'étape initiale, sur front montant
+    const g = grModel(c), now = Date.now();
+    if (!c.act || c.act.length !== g.st.length) grReset(c);
+    // INIT : retour forcé à la situation initiale, sur front montant
     const ini = c.inPins[4].state ? 1 : 0;
-    if (ini && !c.prevInit){ c.et = 0; c.tEt = now; c.prevInit = ini; return; }
+    if (ini && !c.prevInit){ c.prevInit = 1; grReset(c); return; }
     c.prevInit = ini;
-    const g = grStep(c, c.et), ecoule = (now - c.tEt) / 1000;
-    // La branche principale est prioritaire : c'est le « choix de séquence »
-    const okA = grVrai(c, g.cond) && ecoule >= g.tempo;
-    const okB = g.alt !== '-' && grVrai(c, g.alt);
-    if (okA || okB){
-      c.et = Math.max(0, Math.min(nb - 1, okA ? g.cible : g.altCible));
-      c.tEt = now;
-      c.franchi = now;
-    }
+    // Temps de scrutation : sans lui, le graphe franchirait une transition à
+    // chaque image — soixante par seconde, illisible.
+    if (c.lastScan && now - c.lastScan < grScan(c)) return;
+    c.lastScan = now;
+    // Règle 4 : toutes les transitions franchissables le sont simultanément
+    const feu = g.tr.filter(t =>
+      t.de.length && t.a.length &&
+      t.de.every(k => c.act[k]) &&
+      (!t.t || t.de.every(k => (now - (c.tAct[k] || now)) / 1000 >= t.t)) &&
+      grEval(c, t.r));
+    if (!feu.length) return;
+    const off = new Set(), on = new Set();
+    feu.forEach(t => { t.de.forEach(k => off.add(k)); t.a.forEach(k => on.add(k)); });
+    // Règle 5 : une étape à la fois désactivée et activée reste active
+    off.forEach(k => { if (!on.has(k)) c.act[k] = 0; });
+    on.forEach(k => { if (!c.act[k]) c.tAct[k] = now; c.act[k] = 1; });
+    c.franchi = now;
   },
-  body(c, x, col, on, hov, t){
-    const nb = grNb(c), sx = c.x + 58, top = c.y + 30;
-    const flash = c.franchi && Date.now() - c.franchi < 260;
-    x.textBaseline = 'middle';
-    for (let i = 0; i < nb; i++){
-      const cy = top + i * GR_PAS, act = i === c.et, g = grStep(c, i), s2 = 22;
-      x.beginPath(); x.rect(sx - s2 / 2, cy - s2 / 2, s2, s2);
-      x.fillStyle = act ? c.hexA(col, .42) : 'rgba(255,255,255,.05)';
-      if (act){ x.shadowBlur = 14; x.shadowColor = col; }
-      x.fill(); x.shadowBlur = 0;
-      x.lineWidth = 1.4; x.strokeStyle = act ? col : 'rgba(255,255,255,.28)'; x.stroke();
-      if (i === 0){                        // étape initiale : double cadre
-        x.beginPath(); x.rect(sx - s2 / 2 - 4, cy - s2 / 2 - 4, s2 + 8, s2 + 8);
-        x.lineWidth = 1.3; x.strokeStyle = act ? col : 'rgba(255,255,255,.35)'; x.stroke();
-      }
-      x.font = "700 10px 'Chakra Petch', sans-serif"; x.textAlign = 'center';
-      x.fillStyle = act ? '#fff' : PAL.dim;
-      x.fillText(String(i), sx, cy + .5);
-      // liaison descendante, barre de transition, puis liaison vers l'étape suivante
-      const by = cy + GR_PAS / 2 - 2;
-      x.beginPath(); x.moveTo(sx, cy + s2 / 2); x.lineTo(sx, by);
-      if (i < nb - 1 && grStep(c, i).cible === i + 1)
-        { x.moveTo(sx, by); x.lineTo(sx, cy + GR_PAS - s2 / 2); }
-      x.lineWidth = 1.2; x.strokeStyle = 'rgba(255,255,255,.22)'; x.stroke();
-      const chaud = act && flash;
-      x.beginPath(); x.moveTo(sx - 11, by); x.lineTo(sx + 11, by);
-      x.lineWidth = chaud ? 2.8 : 1.8;
-      x.strokeStyle = chaud ? '#fff' : (act ? col : 'rgba(255,255,255,.35)');
+  /* Le boîtier montre une miniature fidèle du graphe : mêmes positions que
+     dans l'éditeur, à l'échelle. On lit l'état d'un coup d'œil. */
+  body(c, x, col, on2, hov, t){
+    const g = grModel(c), bb = grBBox(g);
+    const pad = 20, top = c.y + 20;
+    const lw = c.w - pad * 2, lh = c.h - 46;
+    const cols = bb.x1 - bb.x0 + 1, rows = bb.y1 - bb.y0 + 1;
+    const sx = cols > 1 ? lw / (cols - 1 + .8) : 0, sy = rows > 1 ? lh / (rows - 1 + .5) : 0;
+    const px = e => c.x + pad + (cols > 1 ? (e.x - bb.x0) * sx + sx * .4 : lw / 2);
+    const py = e => top + (rows > 1 ? (e.y - bb.y0) * sy + sy * .25 : lh / 2);
+    const flash = c.franchi && Date.now() - c.franchi < 220;
+    // liaisons
+    x.lineWidth = 1.1; x.strokeStyle = 'rgba(255,255,255,.2)';
+    g.tr.forEach(tr => {
+      const A = tr.de.map(k => g.st[k]).filter(Boolean), B = tr.a.map(k => g.st[k]).filter(Boolean);
+      if (!A.length || !B.length) return;
+      const ax = A.reduce((s2, e) => s2 + px(e), 0) / A.length;
+      const ay = A.reduce((s2, e) => s2 + py(e), 0) / A.length;
+      const bx = B.reduce((s2, e) => s2 + px(e), 0) / B.length;
+      const by = B.reduce((s2, e) => s2 + py(e), 0) / B.length;
+      const actif = tr.de.every(k => c.act && c.act[k]);
+      x.beginPath(); x.moveTo(ax, ay); x.lineTo(bx, by);
+      x.strokeStyle = actif ? c.hexA(col, .55) : 'rgba(255,255,255,.16)';
       x.stroke();
-      // réceptivité, à droite de la barre
-      x.textAlign = 'left'; x.fillStyle = act ? col : PAL.dim;
-      let lab = grLabel(g.cond, g.tempo);
-      if (g.cible !== (i + 1) % nb) lab += ' → ' + g.cible;
-      const dispo = c.w - (sx - c.x) - 34;
-      x.fillText(fitText(x, lab, dispo, '600', 8.5, "'IBM Plex Mono', monospace", 6),
-                 sx + 16, by - (g.alt !== '-' ? 5 : 0));
-      if (g.alt !== '-'){                  // divergence : le choix de séquence
-        x.fillStyle = act ? '#ffc23d' : 'rgba(255,194,61,.5)';
-        x.fillText(fitText(x, '⑂ ' + grLabel(g.alt, 0) + ' → ' + g.altCible, dispo,
-                           '600', 8.5, "'IBM Plex Mono', monospace", 6), sx + 16, by + 6);
+      const mx = (ax + bx) / 2, my = (ay + by) / 2;
+      x.beginPath(); x.moveTo(mx - 6, my); x.lineTo(mx + 6, my);
+      x.lineWidth = (actif && flash) ? 2.6 : 1.6;
+      x.strokeStyle = (actif && flash) ? '#fff' : (actif ? col : 'rgba(255,255,255,.3)');
+      x.stroke(); x.lineWidth = 1.1;
+    });
+    // étapes
+    g.st.forEach((e, i) => {
+      const cx = px(e), cy = py(e), act = c.act && c.act[i], s2 = 15;
+      x.beginPath(); x.rect(cx - s2 / 2, cy - s2 / 2, s2, s2);
+      x.fillStyle = act ? c.hexA(col, .45) : 'rgba(255,255,255,.06)';
+      if (act){ x.shadowBlur = 10; x.shadowColor = col; }
+      x.fill(); x.shadowBlur = 0;
+      x.lineWidth = 1.2; x.strokeStyle = act ? col : 'rgba(255,255,255,.26)'; x.stroke();
+      if (e.ini){
+        x.beginPath(); x.rect(cx - s2 / 2 - 3, cy - s2 / 2 - 3, s2 + 6, s2 + 6);
+        x.lineWidth = 1; x.stroke();
       }
-    }
-    // arc de rebouclage de la dernière transition, à gauche de la colonne
-    const bas = top + (nb - 1) * GR_PAS + GR_PAS / 2 - 2;
-    const cible = grStep(c, nb - 1).cible, yC = top + cible * GR_PAS;
-    const gx = c.x + 34;                 // couloir de retour, entre les pins et la colonne
-    x.beginPath();
-    x.moveTo(sx, bas); x.lineTo(gx, bas);
-    x.lineTo(gx, yC); x.lineTo(sx - 13, yC);
-    x.lineWidth = 1.2; x.strokeStyle = 'rgba(255,255,255,.24)'; x.stroke();
-    x.beginPath(); x.moveTo(sx - 12, yC); x.lineTo(sx - 18, yC - 3.5); x.lineTo(sx - 18, yC + 3.5);
-    x.fillStyle = 'rgba(255,255,255,.4)'; x.fill();
-    // pied : étape courante et temps passé dedans
+      x.font = "700 8px 'Chakra Petch', sans-serif"; x.textAlign = 'center'; x.textBaseline = 'middle';
+      x.fillStyle = act ? '#fff' : PAL.dim;
+      x.fillText(String(i), cx, cy + .5);
+    });
+    // pied : les étapes actives et le rythme de scrutation
+    const actives = (c.act || []).map((v, i) => v ? 'X' + i : null).filter(Boolean);
     x.font = "600 8px 'IBM Plex Mono', monospace"; x.textAlign = 'center'; x.textBaseline = 'top';
-    x.fillStyle = PAL.dim;
-    x.fillText('X' + c.et + ' actif · ' + ((Date.now() - (c.tEt || Date.now())) / 1000).toFixed(1) + ' s',
+    x.fillStyle = actives.length ? col : PAL.dim;
+    x.fillText(fitText(x, (actives.join(' ') || 'graphe à l’arrêt') + '  ·  ' + grScan(c) + ' ms',
+                       c.w - 16, '600', 8, "'IBM Plex Mono', monospace", 6),
                c.x + c.w / 2, c.y + c.h - 14);
   },
   tip(c){
-    const g = grStep(c, c.et), nb = grNb(c);
-    const l = ['Étape active : X' + c.et + ' (sur ' + nb + ')',
-      'Active depuis ' + ((Date.now() - (c.tEt || Date.now())) / 1000).toFixed(1) + ' s',
-      'Franchit vers ' + g.cible + ' quand : ' + grLabel(g.cond, g.tempo)];
-    if (g.alt !== '-') l.push('…ou vers ' + g.altCible + ' quand : ' + grLabel(g.alt, 0));
-    l.push('Les actions se câblent sur X0…X5 : elles durent tant que l’étape dure');
+    const g = grModel(c);
+    const actives = (c.act || []).map((v, i) => v ? i : -1).filter(i => i >= 0);
+    const l = ['Étapes actives : ' + (actives.length ? actives.map(i => 'X' + i).join(', ') : 'aucune'),
+               g.st.length + ' étapes · ' + g.tr.length + ' transitions · scrutation ' + grScan(c) + ' ms'];
+    const pretes = g.tr.filter(t => t.de.every(k => c.act && c.act[k]));
+    pretes.slice(0, 3).forEach(t =>
+      l.push('X' + t.de.join('+') + ' → X' + t.a.join('+') + ' quand ' + grLabel(t)));
+    if (!pretes.length) l.push('Aucune transition en aval des étapes actives');
+    l.push('Double-clic : ouvrir l’éditeur de graphe');
     return l;
   },
-  guide:{ txt:'Le <b>langage de l’automatisme séquentiel</b>, normalisé sous le nom GRAFCET (CEI 60848). Un cycle de machine ne se décrit pas en équations mais en <code>étapes</code> : une étape est active ou non, et les <b>actions</b> qu’on lui associe durent exactement le temps où elle l’est. Entre deux étapes, une <code>transition</code> — le petit trait horizontal — porte une <b>réceptivité</b>, la condition à remplir. Quand l’étape amont est active <i>et</i> que la réceptivité est vraie, la transition est franchie : l’amont s’éteint, l’aval s’allume. L’étape 0, à double cadre, est l’<b>étape initiale</b> : celle de la mise sous tension, et celle où <code>INIT</code> ramène.<br><br>Branche tes capteurs sur <code>R1…R4</code>, choisis pour chaque étape la réceptivité qui la fait avancer — avec sa <b>temporisation</b> éventuelle, le fameux <code>t/5s</code> — puis câble tes actionneurs sur <code>X0…X5</code>. Une seconde branche par étape ouvre le <b>choix de séquence</b> : « si la pièce est bonne, va à l’étape 4 ; sinon, à l’étape 5 ».<br><br>Pour une <b>action mémorisée</b> (qui survit à l’étape qui l’a déclenchée), câble l’étape sur le <code>S</code> d’une MÉMOIRE SR, et l’étape qui doit l’arrêter sur son <code>R</code> — c’est exactement la convention du métier.',
+  guide:{ txt:'Le <b>langage de l’automatisme séquentiel</b>, normalisé sous le nom GRAFCET (CEI 60848). Un cycle de machine ne se décrit pas en équations mais en <code>étapes</code> reliées par des <code>transitions</code> : une étape est active ou non, et les <b>actions</b> qu’on lui associe durent exactement le temps où elle l’est. Chaque transition porte une <b>réceptivité</b> — la condition à remplir. Elle est franchie quand toutes ses étapes amont sont actives <i>et</i> que sa réceptivité est vraie : les amont s’éteignent, les aval s’allument, dans le même instant.<br><br><b>Le graphe se dessine.</b> Double-clique le boîtier : une page dédiée s’ouvre, où l’on pose les étapes, on les relie, et l’on écrit les réceptivités. Le boîtier n’en montre qu’une miniature, mais fidèle — mêmes positions, jeton visible en temps réel.<br><br><b>Ce n’est pas un séquenceur linéaire.</b> Une transition peut avoir <b>plusieurs étapes aval</b> (divergence ET : deux branches tournent en parallèle) et <b>plusieurs étapes amont</b> (convergence ET : on attend que les deux branches soient finies). Deux transitions partant de la même étape font une <b>divergence OU</b> — le choix de séquence. Les réceptivités s’écrivent en clair : <code>R1</code>, <code>R1·R2</code>, <code>R1+/R2</code>, <code>X3</code> pour tester l’activité d’une étape, et une <b>temporisation</b> facultative donne le fameux <code>t/5s</code>.<br><br>Enfin, le <b>temps de scrutation</b> : la période à laquelle l’automate relit ses entrées et franchit ses transitions. Un vrai automate scrute en quelques millisecondes ; ici on ralentit pour voir le jeton avancer.',
     ex:'Perceuse : X0 attend le départ (R1), X1 descend la broche jusqu’au capteur bas (R2), X2 temporise 2 s en fond de trou, X3 remonte jusqu’au capteur haut (R3) et reboucle sur X0. Quatre étapes, quatre réceptivités, et le cycle tourne tout seul.',
     real:'Le GRAFCET est né en France en 1977 et est devenu une norme internationale. Sur une machine réelle, c’est le document que lit le dépanneur à 3 h du matin : il regarde quelle étape est allumée, lit la réceptivité qui bloque, et sait quel capteur est en défaut. Un automate ne « plante » pas mystérieusement — il attend une condition qui n’arrive jamais.' }
 });
+
 defComp('PID', {
   name:'RÉGULATEUR PID', short:'PID', family:'reg', color:'#ffc23d', cost:40, seq:true,
   glyph:'∑∫', w:148, h:126,
@@ -9270,6 +9421,7 @@ function buildGuide(){
     '<b>🔍 L’infobulle.</b> Survole n’importe quoi : un <b>composant</b> te donne l’état de chacune de ses ' +
     'entrées et sorties, ses réglages et son coût ; un <b>pin</b> dit à quoi il est relié ; un <b>câble</b> ' +
     'affiche la valeur qu’il transporte, dans son unité quand il en a une. C’est le réflexe à prendre quand un circuit ne fait pas ce que tu crois.<br><br>' +
+    '<b>⊟ L’éditeur de GRAFCET.</b> Le bloc GRAFCET a sa <b>page dédiée</b> : double-clique-le et le graphe s’ouvre en grand. On y pose les étapes à la souris, on les glisse pour les placer, on les <code>relie</code> par des transitions, et l’on écrit les réceptivités en clair — <code>R1</code>, <code>R1·/R2</code>, <code>R2+X3</code> — avec une temporisation facultative. Une transition à plusieurs étapes aval dessine la <b>double barre</b> de la divergence ET ; à plusieurs amont, celle de la convergence. Le graphe continue de tourner pendant qu’on l’édite : le jeton avance sous les yeux. Le boîtier, lui, n’en montre qu’une miniature — mais fidèle, positions comprises.<br><br>' +
     '<b>🩺 Les pannes.</b> Une installation qui marche n’apprend rien : ce qu’on apprend, c’est à trouver <b>pourquoi</b> elle ne marche plus. Double-clique n’importe quel composant et donne-lui une panne : <code>hors service</code> (plus rien ne sort), <code>mesure figée</code> (la valeur reste bloquée alors que le procédé continue), <code>dérive</code> (la mesure ment d’un pourcentage constant) ou <code>organe bloqué</code> (la vanne, le vérin ou le moteur ne bougent plus). Rien ne se voit sur le schéma — c’est le principe : la touche <code>P</code> révèle les composants en défaut, mais on ne s’en sert qu’<i>après</i> avoir cherché. La méthode tient en une phrase : remonte la chaîne depuis la demande jusqu’à l’effet, et cherche le <b>premier maillon</b> où « ce qui est ordonné » cesse de correspondre à « ce qui se produit ». Les pannes voyagent avec les sauvegardes 💾 : tu peux en piéger une et la faire chercher à quelqu’un.<br><br>' +
     '<b>⌨️ Les gestes qui font gagner du temps.</b> <code>Ctrl+Z</code> / <code>Ctrl+Y</code> annuler-refaire, ' +
     '<code>Ctrl+C</code> / <code>Ctrl+V</code> copier-coller, <code>Ctrl+D</code> dupliquer la sélection, ' +
@@ -9462,6 +9614,389 @@ function buildGuide(){
 }
 
 
+
+/* ==================== ÉDITEUR DE GRAFCET ====================
+   Une page dédiée où le graphe se construit à la souris : poser les étapes,
+   les relier, écrire les réceptivités. Le boîtier n'en montre qu'une
+   miniature — ici on travaille en grand, et le jeton continue de circuler
+   pendant qu'on édite. */
+let grComp = null;                 // le composant en cours d'édition
+let grSel = null;                  // { k:'st'|'tr', i:index }
+let grMode = '';                   // '' | 'link'
+let grLinkFrom = null;             // étape de départ pendant un raccordement
+let grDrag = null;
+const GR_PADX = 70, GR_PADY = 56;  // marge du dessin dans le SVG
+
+function grXY(e){ return { x: GR_PADX + e.x * GR_GX, y: GR_PADY + e.y * GR_GY }; }
+function grCellAt(px, py){
+  return { x: Math.max(0, Math.round((px - GR_PADX) / GR_GX)),
+           y: Math.max(0, Math.round((py - GR_PADY) / GR_GY)) };
+}
+/* Une case libre, pour poser une nouvelle étape sans qu'elle en recouvre une autre */
+function grFreeCell(g){
+  for (let y = 0; y < 20; y++)
+    for (let x = 0; x < 6; x++)
+      if (!g.st.some(e => e.x === x && e.y === y)) return { x, y };
+  return { x:0, y:g.st.length };
+}
+function openGrafcet(c){
+  if (!c || c.type !== 'GRAFCET') return;
+  grComp = c; grSel = null; grMode = ''; grLinkFrom = null;
+  grModel(c);
+  document.getElementById('gr-scan').value = grScan(c);
+  document.getElementById('grafcet-modal').classList.add('show');
+  grRender();
+  AudioSys.click();
+}
+function closeGrafcet(){
+  document.getElementById('grafcet-modal').classList.remove('show');
+  grComp = null; grSel = null; grMode = ''; grLinkFrom = null;
+  markDirty();
+}
+function grOuvert(){ return !!grComp && document.getElementById('grafcet-modal').classList.contains('show'); }
+
+/* ---- Géométrie d'une transition : la barre et ses liaisons ---- */
+function grTransGeo(g, tr){
+  const A = tr.de.map(k => g.st[k]).filter(Boolean).map(grXY);
+  const B = tr.a.map(k => g.st[k]).filter(Boolean).map(grXY);
+  if (!A.length || !B.length) return null;
+  const ay = Math.max(...A.map(p => p.y)), by = Math.min(...B.map(p => p.y));
+  const cx = ([...A, ...B].reduce((s, p) => s + p.x, 0)) / (A.length + B.length);
+  // la barre se pose à mi-chemin, ou juste sous l'amont si l'aval remonte
+  const y = (by > ay) ? (ay + by) / 2 : ay + GR_GY * .5;
+  return { A, B, y, cx, retour: by <= ay };
+}
+
+/* ---- Rendu SVG ---- */
+function grRender(){
+  if (!grComp) return;
+  const c = grComp, g = grModel(c);
+  const svg = document.getElementById('gr-svg');
+  const bb = grBBox(g);
+  const W2 = GR_PADX * 2 + (bb.x1 + 1) * GR_GX;
+  const H2 = GR_PADY * 2 + (bb.y1 + 1.4) * GR_GY;
+  svg.setAttribute('viewBox', '0 0 ' + W2 + ' ' + H2);
+  svg.setAttribute('width', Math.max(W2, 640));
+  svg.setAttribute('height', H2);
+  const P = [];
+  const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  // --- transitions
+  g.tr.forEach((tr, i) => {
+    const geo = grTransGeo(g, tr);
+    if (!geo) return;
+    const armee = tr.de.every(k => c.act && c.act[k]);
+    const col = armee ? '#b18cff' : 'rgba(255,255,255,.3)';
+    const sel = grSel && grSel.k === 'tr' && grSel.i === i;
+    const x0 = Math.min(...[...geo.A, ...geo.B].map(p => p.x)) - 26;
+    const x1 = Math.max(...[...geo.A, ...geo.B].map(p => p.x)) + 26;
+    // liaisons amont → barre
+    geo.A.forEach(p => P.push('<path d="M' + p.x + ' ' + (p.y + 17) +
+      ' V' + (geo.y - 10) + ' H' + geo.cx + ' V' + geo.y + '" fill="none" stroke="' + col +
+      '" stroke-width="1.6"/>'));
+    // barre de transition
+    P.push('<line x1="' + (geo.cx - 17) + '" y1="' + geo.y + '" x2="' + (geo.cx + 17) +
+      '" y2="' + geo.y + '" stroke="' + (sel ? '#fff' : col) + '" stroke-width="' + (sel ? 4 : 2.6) + '"/>');
+    // double barre si plusieurs branches : c'est le symbole ET de la norme
+    const et = tr.de.length > 1 || tr.a.length > 1;
+    if (et){
+      P.push('<line x1="' + x0 + '" y1="' + (geo.y + 12) + '" x2="' + x1 + '" y2="' + (geo.y + 12) +
+        '" stroke="' + col + '" stroke-width="2.4"/>');
+      P.push('<line x1="' + x0 + '" y1="' + (geo.y + 17) + '" x2="' + x1 + '" y2="' + (geo.y + 17) +
+        '" stroke="' + col + '" stroke-width="2.4"/>');
+    }
+    const yb = et ? geo.y + 17 : geo.y;
+    // barre → aval. Une étape aval SITUÉE PLUS HAUT est un rebouclage : on
+    // contourne par le côté, avec une flèche, comme sur un schéma de métier.
+    geo.B.forEach(p => {
+      if (p.y <= geo.y - GR_GY * .4){
+        const xr = x0 - 24;
+        P.push('<path d="M' + geo.cx + ' ' + yb + ' V' + (yb + 14) + ' H' + xr +
+          ' V' + p.y + ' H' + (p.x - 24) + '" fill="none" stroke="' + col + '" stroke-width="1.6"/>');
+        P.push('<path d="M' + (p.x - 24) + ' ' + p.y + ' l-7 -4 v8 z" fill="' + col + '"/>');
+      } else {
+        P.push('<path d="M' + geo.cx + ' ' + yb + (et ? ' V' + (yb + 4) + ' H' + p.x : '') +
+          ' V' + (p.y - 24) + (et ? '' : ' H' + p.x) + ' V' + (p.y - 17) +
+          '" fill="none" stroke="' + col + '" stroke-width="1.6"/>');
+      }
+    });
+    // zone de clic + étiquette
+    P.push('<rect class="gr-hit" data-tr="' + i + '" x="' + (geo.cx - 22) + '" y="' + (geo.y - 13) +
+      '" width="150" height="26" fill="transparent" style="cursor:pointer"/>');
+    P.push('<text x="' + (geo.cx + 26) + '" y="' + (geo.y + 4) + '" fill="' +
+      (armee ? '#d9c8ff' : '#7d8ba6') + '" font-family="IBM Plex Mono, monospace" font-size="13" ' +
+      'style="pointer-events:none">' + esc(grLabel(tr)) + '</text>');
+  });
+
+  // --- étapes
+  g.st.forEach((e, i) => {
+    const p = grXY(e), act = c.act && c.act[i];
+    const sel = grSel && grSel.k === 'st' && grSel.i === i;
+    const lien = grLinkFrom === i;
+    const s2 = 34;
+    if (e.ini) P.push('<rect x="' + (p.x - s2 / 2 - 5) + '" y="' + (p.y - s2 / 2 - 5) + '" width="' +
+      (s2 + 10) + '" height="' + (s2 + 10) + '" rx="3" fill="none" stroke="' +
+      (act ? '#b18cff' : 'rgba(255,255,255,.35)') + '" stroke-width="1.6"/>');
+    P.push('<rect class="gr-hit" data-st="' + i + '" x="' + (p.x - s2 / 2) + '" y="' + (p.y - s2 / 2) +
+      '" width="' + s2 + '" height="' + s2 + '" rx="3" fill="' +
+      (act ? 'rgba(177,140,255,.42)' : 'rgba(255,255,255,.06)') + '" stroke="' +
+      (sel || lien ? '#fff' : (act ? '#b18cff' : 'rgba(255,255,255,.3)')) +
+      '" stroke-width="' + (sel || lien ? 3 : 1.8) + '" style="cursor:grab"/>');
+    P.push('<text x="' + p.x + '" y="' + (p.y + 5) + '" text-anchor="middle" fill="' +
+      (act ? '#fff' : '#9fb0cc') + '" font-family="Chakra Petch, sans-serif" font-weight="700" ' +
+      'font-size="15" style="pointer-events:none">' + i + '</text>');
+    // rappel de la broche de sortie
+    P.push('<text x="' + (p.x + 26) + '" y="' + (p.y - 12) + '" fill="#5f6d85" ' +
+      'font-family="IBM Plex Mono, monospace" font-size="10" style="pointer-events:none">X' + i + '</text>');
+  });
+  svg.innerHTML = P.join('');
+  grPanel();
+  grFoot();
+}
+
+/* ---- Panneau latéral ---- */
+function grPanel(){
+  const c = grComp, g = grModel(c), el = document.getElementById('gr-panel');
+  const B = [];
+  if (!grSel){
+    B.push('<div class="gr-ptitle">Le graphe</div>');
+    B.push('<div class="gr-psub">' + g.st.length + ' étape' + (g.st.length > 1 ? 's' : '') + ' · ' +
+      g.tr.length + ' transition' + (g.tr.length > 1 ? 's' : '') + '.<br><br>' +
+      'Clique une <b>étape</b> ou une <b>transition</b> pour la régler. ' +
+      '<b>＋ Étape</b> en ajoute une, <b>Relier</b> trace une transition d’une étape vers une autre.</div>');
+    const orphelines = g.st.map((e, i) => i).filter(i =>
+      !g.tr.some(t => t.de.includes(i) || t.a.includes(i)));
+    if (orphelines.length)
+      B.push('<div class="gr-hintp gr-warn">⚠ Étape' + (orphelines.length > 1 ? 's' : '') + ' ' +
+        orphelines.map(i => 'X' + i).join(', ') + ' : reliée à rien, le jeton n’y arrivera jamais.</div>');
+    const toujours = g.tr.filter(t => (t.r === '1' || t.r === '') && !t.t);
+    if (toujours.length)
+      B.push('<div class="gr-hintp gr-warn">⚠ ' + toujours.length + ' transition' +
+        (toujours.length > 1 ? 's ont' : ' a') + ' une réceptivité toujours vraie et sans ' +
+        'temporisation : le jeton la franchira à chaque scrutation, sans jamais s’arrêter.</div>');
+  }
+  else if (grSel.k === 'st'){
+    const i = grSel.i, e = g.st[i];
+    B.push('<div class="gr-ptitle">Étape ' + i + '</div>');
+    B.push('<div class="gr-psub">Son activité sort sur la broche <b>X' + i + '</b> du boîtier : ' +
+      'branche-la sur l’actionneur qu’elle commande. L’action dure tant que l’étape est active.</div>');
+    B.push('<div class="gr-f"><label><input type="checkbox" data-grk="ini"' +
+      (e.ini ? ' checked' : '') + '> Étape initiale</label>' +
+      '<div class="gr-hintp">Celle qui est active à la mise sous tension, et où <code>INIT</code> ramène. ' +
+      'Elle se dessine à double cadre.</div></div>');
+    const amont = g.tr.map((t, k) => t.a.includes(i) ? k : -1).filter(k => k >= 0);
+    const aval  = g.tr.map((t, k) => t.de.includes(i) ? k : -1).filter(k => k >= 0);
+    B.push('<div class="gr-f"><label>Transitions amont</label><div class="gr-chips">' +
+      (amont.length ? amont.map(k => '<span class="gr-chip" data-gotr="' + k + '">' +
+        'X' + g.tr[k].de.join('+') + ' → ' + grLabel(g.tr[k]) + '</span>').join('')
+        : '<span class="gr-hintp">aucune</span>') + '</div></div>');
+    B.push('<div class="gr-f"><label>Transitions aval</label><div class="gr-chips">' +
+      (aval.length ? aval.map(k => '<span class="gr-chip" data-gotr="' + k + '">' +
+        grLabel(g.tr[k]) + ' → X' + g.tr[k].a.join('+') + '</span>').join('')
+        : '<span class="gr-hintp">aucune</span>') + '</div></div>');
+    B.push('<button class="gr-b" data-grk="suite" style="width:100%">＋ Étape suivante</button>');
+  }
+  else {
+    const i = grSel.i, t = g.tr[i];
+    B.push('<div class="gr-ptitle">Transition ' + i + '</div>');
+    B.push('<div class="gr-psub">Franchie quand <b>toutes</b> ses étapes amont sont actives ' +
+      '<i>et</i> que la réceptivité est vraie.</div>');
+    B.push('<div class="gr-f"><label>Réceptivité</label>' +
+      '<input type="text" data-grk="r" value="' + String(t.r || '').replace(/"/g, '&quot;') + '">' +
+      '<div class="gr-keys">' +
+      ['R1','R2','R3','R4','·','+','/','X0','X1','X2','X3','1']
+        .map(k => '<span class="gr-key" data-ins="' + k + '">' + k + '</span>').join('') +
+      '</div><div class="gr-hintp"><code>R1</code> une entrée · <code>/R1</code> son complément · ' +
+      '<code>R1·R2</code> le ET · <code>R1+R2</code> le OU · <code>X3</code> l’activité de l’étape 3 · ' +
+      '<code>1</code> toujours vraie.</div></div>');
+    B.push('<div class="gr-f"><label>Temporisation (s)</label>' +
+      '<input type="number" data-grk="t" value="' + (t.t || 0) + '" min="0" max="600" step="0.5">' +
+      '<div class="gr-hintp">Le <code>t/5s</code> du métier : la transition attend que l’étape amont ' +
+      'soit active depuis ce temps. 0 = pas de temporisation.</div></div>');
+    const chips = (champ) => g.st.map((e, k) =>
+      '<span class="gr-chip' + (t[champ].includes(k) ? ' on' : '') + '" data-gr' + champ + '="' + k +
+      '">X' + k + '</span>').join('');
+    B.push('<div class="gr-f"><label>Étapes amont</label><div class="gr-chips">' + chips('de') +
+      '</div><div class="gr-hintp">Plusieurs amont = <b>convergence ET</b> : on attend que toutes ' +
+      'les branches soient arrivées.</div></div>');
+    B.push('<div class="gr-f"><label>Étapes aval</label><div class="gr-chips">' + chips('a') +
+      '</div><div class="gr-hintp">Plusieurs aval = <b>divergence ET</b> : les branches partent ' +
+      'ensemble et tournent en parallèle.</div></div>');
+  }
+  el.innerHTML = B.join('');
+  grBindPanel();
+}
+function grBindPanel(){
+  const c = grComp, g = grModel(c), el = document.getElementById('gr-panel');
+  el.querySelectorAll('[data-grk]').forEach(n => {
+    const k = n.dataset.grk;
+    if (k === 'ini') n.addEventListener('change', () => {
+      g.st[grSel.i].ini = n.checked ? 1 : 0;
+      if (!g.st.some(e => e.ini)) g.st[0].ini = 1;
+      grReset(c); grRender(); markDirty();
+    });
+    else if (k === 'r') n.addEventListener('input', () => grSetRec(grSel.i, n.value));
+    else if (k === 't') n.addEventListener('input', () => grSetTempo(grSel.i, n.value));
+    else if (k === 'suite') n.addEventListener('click', grSuite);
+  });
+  el.querySelectorAll('[data-gotr]').forEach(n =>
+    n.addEventListener('click', () => { grSel = { k:'tr', i:+n.dataset.gotr }; grRender(); }));
+  el.querySelectorAll('[data-ins]').forEach(n => n.addEventListener('click', () => {
+    const inp = el.querySelector('[data-grk="r"]');
+    if (!inp) return;
+    const p = inp.selectionStart == null ? inp.value.length : inp.selectionStart;
+    inp.value = inp.value.slice(0, p) + n.dataset.ins + inp.value.slice(inp.selectionEnd == null ? p : inp.selectionEnd);
+    g.tr[grSel.i].r = inp.value;
+    inp.focus(); inp.setSelectionRange(p + n.dataset.ins.length, p + n.dataset.ins.length);
+    grRender();
+    const inp2 = document.getElementById('gr-panel').querySelector('[data-grk="r"]');
+    if (inp2){ inp2.focus(); inp2.setSelectionRange(p + n.dataset.ins.length, p + n.dataset.ins.length); }
+    markDirty();
+  }));
+  ['de', 'a'].forEach(champ => el.querySelectorAll('[data-gr' + champ + ']').forEach(n =>
+    n.addEventListener('click', () => grToggleBranch(grSel.i, champ, +n.dataset['gr' + champ]))));
+}
+function grFoot(){
+  const c = grComp, g = grModel(c);
+  const actives = (c.act || []).map((v, i) => v ? 'X' + i : null).filter(Boolean);
+  document.getElementById('gr-hint').innerHTML =
+    (grMode === 'link'
+      ? '<b class="gr-warn">Mode raccordement</b> — clique l’étape de départ, puis l’étape d’arrivée. Échap pour sortir.'
+      : '<b>Glisse</b> une étape pour la déplacer · <b>clique</b> une étape ou une transition pour la régler · ' +
+        '<b>Relier</b> pour tracer une transition') +
+    '<br>Le graphe tourne pendant que tu l’édites — étapes actives : <b>' +
+    (actives.join(' ') || 'aucune') + '</b>';
+}
+
+/* ---- Interactions sur le SVG ---- */
+function grStagePoint(ev){
+  const svg = document.getElementById('gr-svg');
+  const r = svg.getBoundingClientRect();
+  const vb = (svg.getAttribute('viewBox') || '0 0 100 100').split(' ').map(Number);
+  return { x: (ev.clientX - r.left) / r.width * vb[2], y: (ev.clientY - r.top) / r.height * vb[3] };
+}
+/* Les actions de l'éditeur, nommées : les boutons et le SVG les appellent,
+   et elles se vérifient sans passer par le DOM. */
+function grClickStep(i){
+  const c = grComp, g = grModel(c);
+  if (grMode === 'link'){
+    if (grLinkFrom == null){ grLinkFrom = i; grRender(); return; }
+    if (grLinkFrom === i) return;
+    grAddTrans(c, [grLinkFrom], [i], 'R1', 0);
+    grLinkFrom = null; grMode = ''; grSyncTools();
+    grSel = { k:'tr', i:g.tr.length - 1 };
+    grRender(); markDirty(); AudioSys.connect();
+    return;
+  }
+  grSel = { k:'st', i };
+  grRender();
+}
+function grClickTrans(i){ grSel = { k:'tr', i }; grRender(); }
+function grToolAdd(){
+  const g = grModel(grComp), cel = grFreeCell(g);
+  const k = grAddStep(grComp, cel.x, cel.y);
+  if (k < 0){ toast('⊟ Huit étapes au maximum : X0 à X7.', 'error', 3000); return -1; }
+  grSel = { k:'st', i:k }; grReset(grComp); grRender(); markDirty(); AudioSys.spawn();
+  return k;
+}
+function grToolLink(){ grMode = grMode === 'link' ? '' : 'link'; grLinkFrom = null; grSyncTools(); grRender(); }
+function grToolInit(){
+  if (!grSel || grSel.k !== 'st'){ toast('◧ Choisis d’abord une étape.', 'info', 2600); return; }
+  const g = grModel(grComp);
+  g.st[grSel.i].ini = g.st[grSel.i].ini ? 0 : 1;
+  if (!g.st.some(e => e.ini)) g.st[grSel.i].ini = 1;
+  grReset(grComp); grRender(); markDirty();
+}
+function grToolDel(){
+  if (!grSel){ toast('🗑 Choisis d’abord une étape ou une transition.', 'info', 2600); return; }
+  if (grSel.k === 'st'){
+    if (!grDelStep(grComp, grSel.i)){ toast('🗑 Il faut au moins une étape.', 'error', 2600); return; }
+  } else grDelTrans(grComp, grSel.i);
+  grSel = null; grReset(grComp); grRender(); markDirty(); AudioSys.del();
+}
+function grSetRec(i, txt){ grModel(grComp).tr[i].r = String(txt); grRender(); markDirty(); }
+function grSetTempo(i, v){
+  grModel(grComp).tr[i].t = Math.max(0, Math.min(600, parseFloat(v) || 0));
+  grRender(); markDirty();
+}
+function grToggleBranch(i, champ, k){
+  const t = grModel(grComp).tr[i], j = t[champ].indexOf(k);
+  if (j >= 0){ if (t[champ].length > 1) t[champ].splice(j, 1); }
+  else t[champ].push(k);
+  t[champ].sort((a, b) => a - b);
+  grRender(); markDirty();
+}
+function grSetScan(v){
+  const n = Math.max(20, Math.min(3000, parseInt(v, 10) || GR_SCAN_DEF));
+  grModel(grComp).scan = n; grComp.opt.scan = n; markDirty(); grFoot();
+  return n;
+}
+function grSuite(){
+  const g = grModel(grComp), e = g.st[grSel.i], depuis = grSel.i;
+  const k = grAddStep(grComp, e.x, e.y + 1);
+  if (k < 0){ toast('⊟ Huit étapes au maximum : X0 à X7.', 'error', 3000); return -1; }
+  while (g.st.some((o, j) => j !== k && o.x === g.st[k].x && o.y === g.st[k].y)) g.st[k].x++;
+  grAddTrans(grComp, [depuis], [k], 'R1', 0);
+  grSel = { k:'st', i:k };
+  grReset(grComp); grRender(); markDirty(); AudioSys.spawn();
+  return k;
+}
+function grInstallEvents(){
+  const svg = document.getElementById('gr-svg');
+  svg.addEventListener('pointerdown', ev => {
+    if (!grComp) return;
+    const g = grModel(grComp);
+    const cible = ev.target.closest ? ev.target.closest('[data-st],[data-tr]') : null;
+    if (cible && cible.dataset.st != null){
+      const i = +cible.dataset.st;
+      const glissable = grMode !== 'link';
+      grClickStep(i);
+      if (glissable){
+        grDrag = { i, p0:grStagePoint(ev), x0:g.st[i].x, y0:g.st[i].y, bouge:false };
+        svg.setPointerCapture(ev.pointerId);
+      }
+      return;
+    }
+    if (cible && cible.dataset.tr != null){ grClickTrans(+cible.dataset.tr); return; }
+    grSel = null; grLinkFrom = null; grRender();
+  });
+  svg.addEventListener('pointermove', ev => {
+    if (!grDrag || !grComp) return;
+    const g = grModel(grComp), p = grStagePoint(ev);
+    const nx = Math.max(0, grDrag.x0 + Math.round((p.x - grDrag.p0.x) / GR_GX));
+    const ny = Math.max(0, grDrag.y0 + Math.round((p.y - grDrag.p0.y) / GR_GY));
+    const e = g.st[grDrag.i];
+    if (e.x !== nx || e.y !== ny){
+      if (!g.st.some((o, j) => j !== grDrag.i && o.x === nx && o.y === ny)){
+        e.x = nx; e.y = ny; grDrag.bouge = true; grRender(); markDirty();
+      }
+    }
+  });
+  svg.addEventListener('pointerup', () => { grDrag = null; });
+  const b = (id, fn) => document.getElementById(id).addEventListener('click', fn);
+  b('gr-add', grToolAdd);
+  b('gr-link', grToolLink);
+  b('gr-init', grToolInit);
+  b('gr-del', grToolDel);
+  b('gr-reset', () => { grReset(grComp); grRender(); markDirty(); AudioSys.click(); });
+  b('gr-close', closeGrafcet);
+  document.getElementById('gr-scan').addEventListener('input', e2 => grSetScan(e2.target.value));
+  document.getElementById('grafcet-modal').addEventListener('click', ev => {
+    if (ev.target.id === 'grafcet-modal') closeGrafcet();
+  });
+}
+function grSyncTools(){
+  document.getElementById('gr-link').classList.toggle('on', grMode === 'link');
+}
+/* Le jeton continue de circuler pendant l'édition : on rafraîchit le dessin */
+function grTick(){
+  if (!grOuvert()) return;
+  const c = grComp;
+  const cle = (c.act || []).join('') + '|' + (grMode || '');
+  if (cle !== grLastKey){ grLastKey = cle; grRender(); }
+}
+let grLastKey = '';
+
 /* ==================== INFOBULLE DE SURVOL ====================
    Elle lit ce que le moteur sait déjà (hoveredComp / hoveredPin /
    hoveredWire) : nom, état de chaque pin, réglages, valeur transportée.
@@ -9638,6 +10173,7 @@ function refreshTip(){
 }
 /* Rafraîchit le contenu (les états changent en permanence) */
 setInterval(() => { if (tipShown && tipFor) refreshTip(); }, 400);
+grInstallEvents();
 
 /* ---------- Étiquettes sous les composants : toujours / au survol ---------- */
 let labelsMode = localStorage.getItem('al2_labels') !== 'hover';   // true = toujours
@@ -9877,6 +10413,7 @@ function render(t){
 
   drawScene(t);
   liveTick();
+  grTick();                       // l'éditeur de GRAFCET suit le jeton en direct
   updateTruthHighlight();
   updateStats();
   requestAnimationFrame(render);
