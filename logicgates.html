@@ -2068,7 +2068,7 @@ function loadExample(i){
 function serializeGroup(list){
   const arr = [...list];
   return {
-    comps: arr.map(c => ({ t:c.type, x:c.x, y:c.y,
+    comps: arr.map(c => Object.assign({ t:c.type, x:c.x, y:c.y,
       s: c.type === 'NIBBLE' ? c.value : c.state, ci:c.clockIdx,
       bits: c.type === 'SEQ' ? c.bits.slice() : undefined,
       key:  c.type === 'KEY' ? c.key : undefined,
@@ -2076,7 +2076,8 @@ function serializeGroup(list){
       opt:  Object.keys(c.opt || {}).length ? JSON.parse(JSON.stringify(c.opt)) : undefined,
       lbl:  c.customLabel || undefined,
       lk:   c.locked || undefined,
-      obs:  c.obs || undefined })),
+      obs:  c.obs || undefined },
+      (REG[c.type] && REG[c.type].save) ? REG[c.type].save(c) : null)),
     wires: wires.filter(w => arr.includes(w.outPin.comp) && arr.includes(w.inPin.comp))
       .map(w => [arr.indexOf(w.outPin.comp), w.outPin.index,
                  arr.indexOf(w.inPin.comp),  w.inPin.index,
@@ -4433,7 +4434,7 @@ defComp('EDGE', {
     c.prevIn = c.pendIn;
   },
   value:c => (Date.now() - (c.flash || 0) < 220) ? '⚡' : '—',
-  sub:() => 'montant / descendant',
+  sub:() => '↑ et ↓',
   expr:(c, i, A) => (i === 0 ? 'front↑(' : 'front↓(') + A(0) + ')',
   guide:{ txt:'Deux sorties qui émettent une <code>impulsion très brève</code> : l’une quand l’entrée passe de 0 à 1 (front montant ↑), l’autre quand elle retombe (front descendant ↓). Tu l’as construit à la main avec un RETARD et un XOR — le voici en boîte.',
     ex:'Interrupteur → FRONTS → deux compteurs : l’un compte les ouvertures, l’autre les fermetures.',
@@ -4454,7 +4455,7 @@ defComp('SRMEM', {
     c.outPins[0].state = c.q; c.outPins[1].state = c.q ? 0 : 1;
   },
   value:c => c.q ? 'MARCHE' : 'ARRÊT',
-  sub:c => optOf(c, 'dom') === 's' ? 'S prioritaire' : 'R prioritaire',
+  sub:c => optOf(c, 'dom') === 's' ? 'S prior.' : 'R prior.',
   expr:(c, i, A) => (i ? '¬' : '') + 'mém[S=' + A(0) + ', R=' + A(1) + ']',
   guide:{ txt:'Le verrou SR que tu as câblé avec deux NOR, en un seul boîtier — et avec le réglage qui manque toujours aux débutants : <code>qui gagne</code> si Set et Reset arrivent ensemble. En sécurité machine, c’est l’arrêt.',
     ex:'Bouton MARCHE → S, bouton ARRÊT → R, Q → moteur : le montage marche/arrêt le plus courant de toute l’industrie.',
@@ -4497,7 +4498,7 @@ defComp('WDOG', {
     c.prevIn = c.pendIn;
   },
   value:c => c.alarm ? 'ALERTE' : 'veille',
-  sub:c => optOf(c, 'sec') + ' s sans signe de vie',
+  sub:c => 'seuil ' + optOf(c, 'sec') + ' s',
   bar:c => c.last ? Math.min(1, (Date.now() - c.last) / (optOf(c, 'sec') * 1000)) : 0,
   guide:{ txt:'Il surveille qu’un signal <code>continue de bouger</code>. Chaque front remet son sablier à zéro ; si plus rien ne vient pendant le délai, il lève une alarme. Un système figé est souvent plus dangereux qu’un système à l’arrêt.',
     ex:'Capteur de rotation d’un tapis → chien de garde (2 s) → sirène : le tapis bloqué déclenche l’alerte, même si rien n’a « échoué » explicitement.',
@@ -4513,7 +4514,7 @@ defComp('DEC24', {
     c.outPins.forEach((p, i) => p.state = (en && i === k) ? 1 : 0);
   },
   value:c => c.inPins[2].state ? String((c.inPins[0].state ? 2 : 0) + (c.inPins[1].state ? 1 : 0)) : '—',
-  sub:() => 'une sortie active',
+  sub:() => '1 parmi 4',
   expr:(c, i, A) => 'décode' + i + '(' + A(0) + ',' + A(1) + ')',
   guide:{ txt:'Deux bits d’<code>adresse</code> désignent une sortie parmi quatre : elle passe à 1, les trois autres restent à 0. L’entrée <code>EN</code> (validation) éteint tout quand elle vaut 0.',
     ex:'Clavier 4 bits (2 bits du bas) → décodeur → 4 ampoules : le code binaire devient une position.',
@@ -4547,7 +4548,7 @@ defComp('ENC42', {
   },
   value:c => { let k = -1; for (let i = 3; i >= 0; i--) if (c.inPins[i].state){ k = i; break; }
     return k < 0 ? '—' : String(k); },
-  sub:() => 'priorité au plus haut',
+  sub:() => 'prioritaire',
   expr:(c, i, A) => 'encode' + i + '(…)',
   guide:{ txt:'L’opération inverse du décodeur : quatre entrées, et la sortie donne le <code>numéro</code> de celle qui est active, en binaire. Si plusieurs sont actives, la plus haute l’emporte — d’où le mot « prioritaire ». La sortie <code>V</code> dit si au moins une entrée est active.',
     ex:'Quatre boutons d’étage → encodeur → afficheur : l’ascenseur sait quel étage est demandé, et privilégie le plus haut.',
@@ -4639,7 +4640,7 @@ defComp('REGB', {
     c.prevClk = c.pendClk;
   },
   value:c => String(c.val),
-  sub:() => 'photographie au front ▷',
+  sub:() => 'capture au ▷',
   expr:(c, i, A) => 'mém[' + A(0) + ']',
   guide:{ txt:'Une rangée de bascules D partageant la même horloge : au <code>front montant</code> de ▷, le registre photographie la valeur présente sur le bus D et la garde. <code>RZ</code> le remet à zéro.',
     ex:'Compteur → registre, avec un bouton sur ▷ : tu figes la valeur au moment exact où tu appuies. C’est une fonction « mémoire » de chronomètre.',
@@ -4675,6 +4676,7 @@ defComp('RAM16', {
   glyph:'▦', w:126, h:126,
   ins:[{n:'ADR', bus:true},{n:'D', bus:true},{n:'W'},{n:'▷'}], outs:[{n:'Q', bus:true}],
   init(c){ c.cells = new Array(16).fill(0); c.prevClk = null; },
+  save:c => ({ cells: c.cells.some(v => v) ? c.cells.slice() : undefined }),
   restore(c, s){ if (s.cells) c.cells = s.cells.slice(); },
   eval(c){
     const a = (c.inPins[0].state | 0) & 15;
@@ -4691,11 +4693,358 @@ defComp('RAM16', {
     c.prevClk = c.pendClk;
   },
   value:c => '[' + (c.adr || 0) + '] = ' + (c.cells[c.adr || 0] || 0),
-  sub:c => c.pendW ? 'écriture au prochain ▷' : 'lecture',
+  sub:c => c.pendW ? 'écriture ▷' : 'lecture',
   tip:c => ['Contenu : ' + c.cells.join(' ')],
   guide:{ txt:'Seize cases de 4 bits. L’adresse choisit la case, qui est <code>lue en permanence</code> sur Q ; pour écrire, il faut mettre <code>W</code> à 1 et donner un front d’horloge. Lecture immédiate, écriture volontaire : c’est tout le contrat d’une mémoire vive.',
     ex:'Compteur → ADR : tu balayes la mémoire et tu lis son contenu case par case, comme un processeur lit son programme.',
     real:'Volatile : coupe le courant, tout disparaît. C’est la différence entre la RAM et la ROM que tu as programmée au chapitre 14 — et c’est pour cela qu’un ordinateur « perd » ce qui n’est pas enregistré.' }
+});
+/* ---------- Entrées d'atelier ---------- */
+defComp('ESTOP', {
+  name:'ARRÊT D’URGENCE', short:'ARRÊT U.', family:'in', color:'#ff5c69',
+  glyph:'⏹', w:86, h:84, ins:[], outs:[{n:'OK'}],
+  init(c){ c.pressed = 0; },
+  save:c => ({ pressed: c.pressed || undefined }),
+  restore(c, s){ if (s.pressed) c.pressed = 1; },
+  eval(c){ c.outPins[0].state = c.pressed ? 0 : 1; },
+  click(c){ c.pressed = c.pressed ? 0 : 1; },
+  tip:c => [c.pressed ? 'Enfoncé : la sortie OK est à 0' : 'Armé : la sortie OK est à 1',
+            'Clic pour enfoncer, nouveau clic pour déverrouiller'],
+  body(c, x, col, on, hov, t){
+    const cx = c.x + c.w / 2, cy = c.y + c.h / 2 - 4;
+    x.beginPath(); x.arc(cx, cy, 22, 0, 7);
+    x.fillStyle = 'rgba(255,255,255,.05)'; x.fill();
+    x.lineWidth = 1.4; x.strokeStyle = 'rgba(255,255,255,.18)'; x.stroke();
+    const r = c.pressed ? 14 : 18;
+    x.beginPath(); x.arc(cx, cy, r, 0, 7);
+    x.fillStyle = c.pressed ? '#7a1420' : '#e03445';
+    if (!c.pressed){ x.shadowBlur = 14; x.shadowColor = '#ff5c69'; }
+    x.fill(); x.shadowBlur = 0;
+    x.lineWidth = 1.6; x.strokeStyle = c.pressed ? '#ff8a94' : '#ffd8dc'; x.stroke();
+    x.font = "700 8px 'IBM Plex Mono', monospace"; x.textAlign = 'center'; x.textBaseline = 'top';
+    x.fillStyle = c.pressed ? '#ff8a94' : PAL.dim;
+    x.fillText(c.pressed ? 'ENFONCÉ' : 'ARMÉ', cx, c.y + c.h - 15);
+  },
+  guide:{ txt:'Le champignon rouge des machines. Sa sortie <code>OK</code> vaut 1 quand tout va bien et tombe à 0 quand on l’enfonce : c’est un contact <b>normalement fermé</b>. Un clic l’enfonce et il <code>reste</code> enfoncé ; un second clic le déverrouille, comme le quart de tour réel.',
+    ex:'ARRÊT D’URGENCE → entrée R d’une MÉMOIRE SR qui commande un moteur : la machine s’arrête et ne peut pas redémarrer toute seule.',
+    real:'Pourquoi un contact fermé au repos ? Parce qu’un fil coupé ou un faux contact produit alors le même effet qu’un appui : l’arrêt. Une sécurité doit tomber du bon côté quand elle casse.' }
+});
+defComp('DIP8', {
+  name:'INTERRUPTEURS DIP 8', short:'DIP 8', family:'in', color:'#38e1ff',
+  glyph:'▤', w:96, h:200, ins:[],
+  outs:[{n:'128'},{n:'64'},{n:'32'},{n:'16'},{n:'8'},{n:'4'},{n:'2'},{n:'1'}],
+  init(c){ c.bits = [0,0,0,0,0,0,0,0]; },
+  save:c => ({ dip: c.bits.slice() }),
+  restore(c, s){ if (s.dip) c.bits = s.dip.slice(); },
+  eval(c){ c.outPins.forEach((p, i) => p.state = c.bits[i]); },
+  click(c, wx, wy){
+    const i = Math.floor((wy - (c.y + 12)) / 22);
+    if (i >= 0 && i < 8) c.bits[i] ^= 1;
+  },
+  tip:c => ['Valeur : ' + c.bits.reduce((a, b, i) => a + (b ? 128 >> i : 0), 0)],
+  body(c, x, col, on, hov, t){
+    for (let i = 0; i < 8; i++){
+      const y = c.y + 12 + i * 22, b = c.bits[i];
+      x.beginPath(); x.roundRect(c.x + 26, y, 34, 16, 8);
+      x.fillStyle = b ? 'rgba(61,255,158,.22)' : 'rgba(255,255,255,.06)'; x.fill();
+      x.lineWidth = 1.2; x.strokeStyle = b ? PAL.pinOn : 'rgba(255,255,255,.18)'; x.stroke();
+      x.beginPath(); x.arc(c.x + 26 + (b ? 26 : 8), y + 8, 5.5, 0, 7);
+      x.fillStyle = b ? PAL.pinOn : '#8698ba'; x.fill();
+    }
+    x.font = "600 8px 'IBM Plex Mono', monospace"; x.textAlign = 'center'; x.textBaseline = 'top';
+    x.fillStyle = PAL.dim;
+    x.fillText(String(c.bits.reduce((a, b, i) => a + (b ? 128 >> i : 0), 0)), c.x + c.w / 2, c.y + c.h - 14);
+  },
+  guide:{ txt:'Huit micro-interrupteurs dans un seul boîtier, de poids 128 à 1. Clique sur celui que tu veux basculer. C’est la façon la plus rapide de composer un octet à la main.',
+    ex:'DIP 8 → AFFICHEUR OCTET : compose 10101010 et lis 170. Puis cherche 255, puis 1.',
+    real:'Avant les menus de configuration, les cartes d’extension, les modems et les bornes d’arcade se réglaient exactement comme ça — et certains appareils industriels en ont encore.' }
+});
+defComp('SEL3', {
+  name:'SÉLECTEUR 3 POSITIONS', short:'SÉLECT. 3', family:'in', color:'#38e1ff',
+  glyph:'⭯', w:92, h:104, ins:[], outs:[{n:'I'},{n:'II'},{n:'III'}],
+  init(c){ c.pos = 0; },
+  save:c => ({ pos: c.pos || undefined }),
+  restore(c, s){ if (s.pos != null) c.pos = s.pos; },
+  eval(c){ c.outPins.forEach((p, i) => p.state = (i === c.pos) ? 1 : 0); },
+  click(c){ c.pos = (c.pos + 1) % 3; },
+  tip:c => ['Position ' + ['I','II','III'][c.pos]],
+  body(c, x, col, on, hov, t){
+    const cx = c.x + c.w / 2, cy = c.y + c.h / 2 - 2;
+    x.beginPath(); x.arc(cx, cy, 19, 0, 7);
+    x.fillStyle = 'rgba(255,255,255,.05)'; x.fill();
+    x.lineWidth = 1.4; x.strokeStyle = c.hexA ? 'rgba(56,225,255,.5)' : col; x.stroke();
+    const a = -Math.PI / 2 + (c.pos - 1) * 0.9;
+    x.beginPath(); x.moveTo(cx, cy);
+    x.lineTo(cx + Math.cos(a) * 15, cy + Math.sin(a) * 15);
+    x.lineWidth = 3; x.strokeStyle = col; x.lineCap = 'round'; x.stroke();
+    x.font = "600 7px 'IBM Plex Mono', monospace"; x.textAlign = 'center'; x.textBaseline = 'middle';
+    ['I','II','III'].forEach((lab, i) => {
+      const aa = -Math.PI / 2 + (i - 1) * 0.9;
+      x.fillStyle = i === c.pos ? col : PAL.dim;
+      x.fillText(lab, cx + Math.cos(aa) * 26, cy + Math.sin(aa) * 26);
+    });
+  },
+  guide:{ txt:'Un commutateur rotatif à trois positions : une seule sortie active à la fois, jamais deux. Clique pour tourner d’un cran.',
+    ex:'SÉLECTEUR → trois branches d’un circuit : mode <b>manuel</b>, mode <b>arrêt</b>, mode <b>automatique</b>. C’est le sélecteur qu’on trouve sur toutes les armoires de commande.',
+    real:'L’exclusivité est <b>mécanique</b>, pas logique : impossible de demander deux modes à la fois, même en cas de fausse manœuvre. Une sécurité obtenue par la forme de l’objet.' }
+});
+defComp('IMPBTN', {
+  name:'BOUTON À IMPULSION', short:'IMPUL.', family:'in', color:'#38e1ff',
+  glyph:'⏻', w:82, h:76, ins:[], outs:[{n:'S'}],
+  init(c){ c.until = 0; },
+  eval(c){ c.outPins[0].state = (Date.now() < c.until) ? 1 : 0; },
+  click(c){ c.until = Date.now() + 320; },
+  tip:() => ['Chaque clic envoie une impulsion de 0,3 s'],
+  body(c, x, col, on, hov, t){
+    const cx = c.x + c.w / 2, cy = c.y + c.h / 2 - 2;
+    drawLamp(x, cx, cy, on ? 15 : 13, on, col);
+    x.font = "600 8px 'IBM Plex Mono', monospace"; x.textAlign = 'center'; x.textBaseline = 'top';
+    x.fillStyle = on ? col : PAL.dim;
+    x.fillText(on ? 'TOP !' : 'CLIC', cx, c.y + c.h - 14);
+  },
+  guide:{ txt:'Un bouton qui envoie une <code>impulsion calibrée</code> à chaque clic, sans qu’on ait à maintenir le doigt. Idéal pour cadencer une bascule ou un compteur à la main.',
+    ex:'BOUTON À IMPULSION → ▷ d’un COMPTEUR 4 BITS : chaque clic avance le compte d’exactement un.',
+    real:'Un vrai bouton « rebondit » : le contact s’ouvre et se referme plusieurs fois en quelques millisecondes. Les circuits comptent alors plusieurs appuis. On corrige ça avec… un TON de quelques dizaines de millisecondes.' }
+});
+
+/* ---------- Actionneurs ---------- */
+defComp('RELAY', {
+  name:'RELAIS', short:'RELAIS', family:'act', color:'#ffc23d',
+  glyph:'⧉', w:110, h:96,
+  ins:[{n:'CMD'},{n:'E'}], outs:[{n:'NO'},{n:'NF'}],
+  eval(c){
+    const cmd = c.inPins[0].state ? 1 : 0, e = c.inPins[1].state | 0;
+    c.outPins[0].state = cmd ? e : 0;
+    c.outPins[1].state = cmd ? 0 : e;
+    c.on = cmd;
+  },
+  expr:(c, i, A) => (i === 0 ? '' : '¬') + '(' + A(0) + ')·' + A(1),
+  tip:c => [c.on ? 'Bobine excitée : NO passant' : 'Au repos : NF passant'],
+  body(c, x, col, on, hov, t){
+    const bx = c.x + 22, by = c.y + 18;
+    x.beginPath(); x.roundRect(bx, by, 26, 40, 4);
+    x.fillStyle = c.on ? 'rgba(255,194,61,.25)' : 'rgba(255,255,255,.06)'; x.fill();
+    x.lineWidth = 1.3; x.strokeStyle = c.on ? col : 'rgba(255,255,255,.2)'; x.stroke();
+    for (let i = 0; i < 4; i++){
+      x.beginPath(); x.moveTo(bx, by + 7 + i * 9); x.lineTo(bx + 26, by + 3 + i * 9);
+      x.lineWidth = 1.1; x.strokeStyle = c.on ? col : 'rgba(255,255,255,.28)'; x.stroke();
+    }
+    const px = bx + 40, py = c.y + c.h / 2;
+    x.beginPath(); x.arc(px, py, 3, 0, 7); x.fillStyle = PAL.dim; x.fill();
+    x.beginPath(); x.moveTo(px, py);
+    x.lineTo(px + 30, py + (c.on ? -16 : 16));
+    x.lineWidth = 2.4; x.strokeStyle = col; x.lineCap = 'round'; x.stroke();
+    x.font = "600 7px 'IBM Plex Mono', monospace"; x.textAlign = 'left'; x.textBaseline = 'middle';
+    x.fillStyle = PAL.dim;
+    x.fillText('NO', px + 32, py - 18); x.fillText('NF', px + 32, py + 18);
+  },
+  guide:{ txt:'Une bobine (<code>CMD</code>) déplace un contact : le courant présent sur <code>E</code> ressort par <code>NO</code> (normalement ouvert) quand la bobine est excitée, et par <code>NF</code> (normalement fermé) sinon. C’est un interrupteur commandé électriquement — et le tout premier composant logique de l’histoire.',
+    ex:'Un interrupteur sur CMD, VRAI·1 sur E, deux ampoules sur NO et NF : tu as fabriqué un aiguillage. Rebouclé sur lui-même, le relais devient une mémoire.',
+    real:'Les premiers ordinateurs (Zuse Z3, Harvard Mark I) étaient faits de milliers de relais qui claquaient. Le relais isole aussi la commande de la puissance : un signal minuscule commande une machine énorme.' }
+});
+defComp('MOTOR', {
+  name:'MOTEUR', short:'MOTEUR', family:'act', color:'#3dff9e',
+  glyph:'⚙', w:104, h:92, ins:[{n:'M'},{n:'S'}], outs:[],
+  init(c){ c.ang = 0; c.lastT = 0; },
+  eval(c){ c.run = c.inPins[0].state ? 1 : 0; c.rev = c.inPins[1].state ? 1 : 0; },
+  commit(c){
+    const now = Date.now(), dt = c.lastT ? Math.min(200, now - c.lastT) : 0;
+    c.lastT = now;
+    if (c.run) c.ang += (c.rev ? -1 : 1) * dt * 0.006;
+  },
+  tip:c => [c.run ? ('En rotation, sens ' + (c.rev ? 'inverse (S=1)' : 'direct (S=0)')) : 'À l’arrêt'],
+  body(c, x, col, on, hov, t){
+    const cx = c.x + c.w / 2, cy = c.y + c.h / 2 - 2;
+    x.beginPath(); x.arc(cx, cy, 22, 0, 7);
+    x.fillStyle = 'rgba(255,255,255,.05)'; x.fill();
+    x.lineWidth = 1.6; x.strokeStyle = c.run ? col : 'rgba(255,255,255,.22)';
+    if (c.run){ x.shadowBlur = 12; x.shadowColor = col; }
+    x.stroke(); x.shadowBlur = 0;
+    x.save(); x.translate(cx, cy); x.rotate(c.ang || 0);
+    for (let i = 0; i < 3; i++){
+      x.rotate(Math.PI * 2 / 3);
+      x.beginPath(); x.moveTo(0, 0); x.lineTo(0, -18);
+      x.lineWidth = 3.4; x.strokeStyle = c.run ? col : 'rgba(255,255,255,.3)';
+      x.lineCap = 'round'; x.stroke();
+    }
+    x.restore();
+    x.font = "600 8px 'IBM Plex Mono', monospace"; x.textAlign = 'center'; x.textBaseline = 'top';
+    x.fillStyle = c.run ? col : PAL.dim;
+    x.fillText(c.run ? (c.rev ? '◀ INVERSE' : 'DIRECT ▶') : 'ARRÊT', cx, c.y + c.h - 14);
+  },
+  guide:{ txt:'Deux entrées : <code>M</code> pour tourner, <code>S</code> pour choisir le sens. Le rotor tourne vraiment à l’écran — c’est le meilleur moyen de voir ce que fait ta logique.',
+    ex:'MÉMOIRE SR → M, et un SÉLECTEUR sur S : marche/arrêt à deux boutons avec choix du sens. Ajoute un ARRÊT D’URGENCE sur R.',
+    real:'Inverser un moteur, c’est inverser deux fils — en pratique on utilise deux relais montés en « inverseur ». Et il faut absolument s’interdire de les activer ensemble : c’est le rôle d’un verrouillage logique.' }
+});
+defComp('JACK', {
+  name:'VÉRIN', short:'VÉRIN', family:'act', color:'#3dff9e',
+  glyph:'⇔', w:132, h:96,
+  ins:[{n:'+'},{n:'−'}], outs:[{n:'S0'},{n:'S1'}],
+  opts:[{ k:'sec', label:'Course complète (s)', min:0.3, max:10, step:0.1, def:1.5,
+    hint:'Temps que met la tige pour sortir entièrement.' }],
+  init(c){ c.pos = 0; c.lastT = 0; },
+  save:c => ({ pos: c.pos || undefined }),
+  restore(c, s){ if (s.pos != null) c.pos = s.pos; },
+  eval(c){
+    c.pOut = c.inPins[0].state ? 1 : 0; c.pIn = c.inPins[1].state ? 1 : 0;
+    c.outPins[0].state = c.pos <= 0.02 ? 1 : 0;      // fin de course « rentré »
+    c.outPins[1].state = c.pos >= 0.98 ? 1 : 0;      // fin de course « sorti »
+  },
+  commit(c){
+    const now = Date.now(), dt = c.lastT ? Math.min(200, now - c.lastT) : 0;
+    c.lastT = now;
+    const step = dt / (optOf(c, 'sec') * 1000);
+    if (c.pOut && !c.pIn) c.pos = Math.min(1, c.pos + step);
+    else if (c.pIn && !c.pOut) c.pos = Math.max(0, c.pos - step);
+  },
+  tip:c => ['Position : ' + Math.round(c.pos * 100) + ' %',
+            c.pos <= 0.02 ? 'Fin de course RENTRÉ (S0)' : (c.pos >= 0.98 ? 'Fin de course SORTI (S1)' : 'En mouvement')],
+  body(c, x, col, on, hov, t){
+    const cy = c.y + c.h / 2, x0 = c.x + 24, len = 62;
+    x.beginPath(); x.roundRect(x0, cy - 13, 44, 26, 4);
+    x.fillStyle = 'rgba(255,255,255,.06)'; x.fill();
+    x.lineWidth = 1.4; x.strokeStyle = 'rgba(255,255,255,.25)'; x.stroke();
+    const tip = x0 + 44 + c.pos * len;
+    x.beginPath(); x.moveTo(x0 + 40, cy); x.lineTo(tip, cy);
+    x.lineWidth = 6; x.strokeStyle = col; x.lineCap = 'round'; x.stroke();
+    x.beginPath(); x.roundRect(tip - 2, cy - 10, 8, 20, 3);
+    x.fillStyle = col; x.fill();
+    // fins de course
+    [[x0 + 44, c.pos <= 0.02], [x0 + 44 + len, c.pos >= 0.98]].forEach(([px, act]) => {
+      x.beginPath(); x.arc(px, cy - 20, 3.2, 0, 7);
+      x.fillStyle = act ? PAL.pinOn : 'rgba(255,255,255,.2)'; x.fill();
+    });
+    x.font = "600 8px 'IBM Plex Mono', monospace"; x.textAlign = 'center'; x.textBaseline = 'top';
+    x.fillStyle = PAL.dim;
+    x.fillText(Math.round(c.pos * 100) + ' %', c.x + c.w / 2, c.y + c.h - 14);
+  },
+  guide:{ txt:'Un vérin avec ses <code>deux fins de course intégrées</code> : <b>+</b> le fait sortir, <b>−</b> le fait rentrer, et il signale lui-même quand il est arrivé (<code>S0</code> rentré, <code>S1</code> sorti). Les deux commandes ensemble ne font rien : c’est bloqué, comme dans la réalité.',
+    ex:'S1 → − et S0 → + : le vérin fait des allers-retours sans fin, tout seul. Ajoute un TON entre les deux pour le faire attendre à chaque extrémité.',
+    real:'Un automate ne commande jamais un vérin « à l’aveugle » : il attend la confirmation du capteur de fin de course. Sans cette boucle de retour, impossible de savoir si la pièce est vraiment arrivée.' }
+});
+defComp('VALVE', {
+  name:'ÉLECTROVANNE', short:'VANNE', family:'act', color:'#3dff9e',
+  glyph:'⧖', w:100, h:88, ins:[{n:'CMD'}], outs:[],
+  eval(c){ c.open = c.inPins[0].state ? 1 : 0; },
+  tip:c => [c.open ? 'Ouverte : le fluide passe' : 'Fermée'],
+  body(c, x, col, on, hov, t){
+    const cx = c.x + c.w / 2, cy = c.y + c.h / 2;
+    x.beginPath(); x.moveTo(c.x + 16, cy); x.lineTo(c.x + c.w - 16, cy);
+    x.lineWidth = 9; x.strokeStyle = 'rgba(255,255,255,.10)'; x.lineCap = 'butt'; x.stroke();
+    if (c.open){
+      x.beginPath(); x.moveTo(c.x + 16, cy); x.lineTo(c.x + c.w - 16, cy);
+      x.lineWidth = 5; x.strokeStyle = col; x.setLineDash([6, 8]);
+      x.lineDashOffset = -(t || 0) * 0.06; x.stroke(); x.setLineDash([]);
+    }
+    x.save(); x.translate(cx, cy); x.rotate(c.open ? 0 : Math.PI / 2);
+    x.beginPath(); x.moveTo(0, -11); x.lineTo(0, 11);
+    x.lineWidth = 3.4; x.strokeStyle = c.open ? col : '#8698ba'; x.lineCap = 'round'; x.stroke();
+    x.restore();
+    x.font = "600 8px 'IBM Plex Mono', monospace"; x.textAlign = 'center'; x.textBaseline = 'top';
+    x.fillStyle = c.open ? col : PAL.dim;
+    x.fillText(c.open ? 'OUVERTE' : 'FERMÉE', cx, c.y + c.h - 14);
+  },
+  guide:{ txt:'Une vanne commandée électriquement : à 1 elle s’ouvre et laisse passer le fluide, à 0 elle se ferme. Le débit est visible à l’écran.',
+    ex:'Capteur de niveau bas → vanne de remplissage, capteur de niveau haut → arrêt : un remplissage automatique de cuve, en trois composants.',
+    real:'Machine à laver, arrosage automatique, chauffage : partout où un liquide ou un gaz doit obéir à un circuit, il y a une électrovanne.' }
+});
+defComp('PUMP', {
+  name:'POMPE', short:'POMPE', family:'act', color:'#3dff9e',
+  glyph:'◍', w:100, h:92, ins:[{n:'M'}], outs:[],
+  init(c){ c.ang = 0; c.lastT = 0; },
+  eval(c){ c.run = c.inPins[0].state ? 1 : 0; },
+  commit(c){
+    const now = Date.now(), dt = c.lastT ? Math.min(200, now - c.lastT) : 0;
+    c.lastT = now;
+    if (c.run) c.ang += dt * 0.009;
+  },
+  tip:c => [c.run ? 'En marche' : 'Arrêtée'],
+  body(c, x, col, on, hov, t){
+    const cx = c.x + c.w / 2, cy = c.y + c.h / 2 - 2;
+    x.beginPath(); x.arc(cx, cy, 20, 0, 7);
+    x.fillStyle = c.run ? 'rgba(61,255,158,.12)' : 'rgba(255,255,255,.05)'; x.fill();
+    x.lineWidth = 1.6; x.strokeStyle = c.run ? col : 'rgba(255,255,255,.22)'; x.stroke();
+    x.save(); x.translate(cx, cy); x.rotate(c.ang || 0);
+    for (let i = 0; i < 4; i++){
+      x.rotate(Math.PI / 2);
+      x.beginPath(); x.moveTo(0, 0); x.quadraticCurveTo(7, -9, 0, -16);
+      x.lineWidth = 2.6; x.strokeStyle = c.run ? col : 'rgba(255,255,255,.28)'; x.stroke();
+    }
+    x.restore();
+    x.font = "600 8px 'IBM Plex Mono', monospace"; x.textAlign = 'center'; x.textBaseline = 'top';
+    x.fillStyle = c.run ? col : PAL.dim;
+    x.fillText(c.run ? 'DÉBIT' : 'ARRÊT', cx, c.y + c.h - 14);
+  },
+  guide:{ txt:'Elle tourne tant que son entrée vaut 1. Rien de plus — mais elle rend visible ce que commande ta logique.',
+    ex:'Deux capteurs de niveau + une MÉMOIRE SR + la pompe : le circuit de vidange automatique d’un puisard.',
+    real:'Faire tourner une pompe à vide (sans liquide) la détruit. C’est pour cela qu’un capteur de niveau bas est presque toujours câblé en sécurité sur son arrêt.' }
+});
+defComp('SIREN', {
+  name:'SIRÈNE & GYROPHARE', short:'SIRÈNE', family:'act', color:'#ff5c69',
+  glyph:'🚨', w:96, h:88, ins:[{n:'CMD'}], outs:[],
+  eval(c){ c.on2 = c.inPins[0].state ? 1 : 0; },
+  tip:c => [c.on2 ? 'Alarme active' : 'Silencieuse'],
+  body(c, x, col, on, hov, t){
+    const cx = c.x + c.w / 2, cy = c.y + c.h / 2 + 2;
+    const ph = ((t || 0) * 0.004) % (Math.PI * 2);
+    if (c.on2){
+      const halo = x.createRadialGradient(cx, cy, 2, cx, cy, 34);
+      halo.addColorStop(0, 'rgba(255,92,105,.55)'); halo.addColorStop(1, 'transparent');
+      x.fillStyle = halo; x.fillRect(cx - 36, cy - 36, 72, 72);
+      x.save(); x.translate(cx, cy); x.rotate(ph);
+      x.beginPath(); x.moveTo(0, 0); x.arc(0, 0, 30, -0.35, 0.35); x.closePath();
+      x.fillStyle = 'rgba(255,92,105,.35)'; x.fill();
+      x.restore();
+    }
+    x.beginPath(); x.roundRect(cx - 15, cy - 12, 30, 22, 6);
+    x.fillStyle = c.on2 ? '#e03445' : 'rgba(255,255,255,.08)'; x.fill();
+    x.lineWidth = 1.4; x.strokeStyle = c.on2 ? '#ffd8dc' : 'rgba(255,255,255,.25)'; x.stroke();
+    x.font = "600 8px 'IBM Plex Mono', monospace"; x.textAlign = 'center'; x.textBaseline = 'top';
+    x.fillStyle = c.on2 ? col : PAL.dim;
+    x.fillText(c.on2 ? 'ALARME' : 'VEILLE', cx, c.y + c.h - 14);
+  },
+  guide:{ txt:'Le signal d’alerte : gyrophare tournant tant que l’entrée vaut 1. À brancher au bout de toutes tes chaînes de sécurité.',
+    ex:'CHIEN DE GARDE → SIRÈNE : si le circuit surveillé se fige, l’alarme part toute seule.',
+    real:'Un signal d’alarme doit être perceptible autrement que par le son : dans une usine bruyante, c’est le gyrophare qui prévient réellement.' }
+});
+defComp('STEPPER', {
+  name:'MOTEUR PAS À PAS', short:'PAS-À-PAS', family:'act', color:'#3dff9e',
+  glyph:'⟳', w:110, h:96, ins:[{n:'▷'},{n:'S'}], outs:[{n:'POS', bus:true}],
+  init(c){ c.step = 0; c.prevClk = null; },
+  save:c => ({ step: c.step || undefined }),
+  restore(c, s){ if (s.step != null) c.step = s.step; },
+  eval(c){
+    c.pendClk = c.inPins[0].state ? 1 : 0; c.rev = c.inPins[1].state ? 1 : 0;
+    c.outPins[0].state = c.step & 15;
+  },
+  commit(c){
+    if (c.prevClk !== null && c.pendClk && !c.prevClk){
+      c.step = (c.step + (c.rev ? 15 : 1)) & 15;
+      c.flash = Date.now();
+    }
+    c.prevClk = c.pendClk;
+  },
+  tip:c => ['Position : pas ' + (c.step & 15) + ' sur 16'],
+  body(c, x, col, on, hov, t){
+    const cx = c.x + c.w / 2, cy = c.y + c.h / 2 - 2;
+    x.beginPath(); x.arc(cx, cy, 21, 0, 7);
+    x.fillStyle = 'rgba(255,255,255,.05)'; x.fill();
+    x.lineWidth = 1.5; x.strokeStyle = 'rgba(255,255,255,.22)'; x.stroke();
+    for (let i = 0; i < 16; i++){
+      const a = i * Math.PI / 8 - Math.PI / 2;
+      x.beginPath(); x.arc(cx + Math.cos(a) * 21, cy + Math.sin(a) * 21, 1.6, 0, 7);
+      x.fillStyle = (i === (c.step & 15)) ? col : 'rgba(255,255,255,.18)'; x.fill();
+    }
+    const a = (c.step & 15) * Math.PI / 8 - Math.PI / 2;
+    x.beginPath(); x.moveTo(cx, cy); x.lineTo(cx + Math.cos(a) * 16, cy + Math.sin(a) * 16);
+    x.lineWidth = 3; x.strokeStyle = col; x.lineCap = 'round'; x.stroke();
+    x.font = "600 8px 'IBM Plex Mono', monospace"; x.textAlign = 'center'; x.textBaseline = 'top';
+    x.fillStyle = PAL.dim;
+    x.fillText('PAS ' + (c.step & 15), cx, c.y + c.h - 14);
+  },
+  guide:{ txt:'Il n’avance que d’un <code>pas</code> à chaque front d’horloge — 16 pas par tour ici — et l’entrée <code>S</code> choisit le sens. Sa position exacte est connue sans aucun capteur : elle se compte.',
+    ex:'HORLOGE → ▷ : rotation régulière. Remplace l’horloge par un BOUTON À IMPULSION : tu positionnes le moteur pas par pas, exactement comme une imprimante 3D.',
+    real:'Imprimantes, scanners, machines à commande numérique : tous utilisent des moteurs pas à pas, parce qu’on peut leur ordonner « avance de 137 pas » sans jamais mesurer où ils en sont.' }
 });
 /* @@COMPOSANTS@@ */
 registerComponents();
@@ -4704,6 +5053,18 @@ registerComponents();
    Boîtier + noms de pins + glyphe + valeur + sous-titre + jauge.
    La plupart des composants n'ont donc aucun code de dessin à écrire ;
    ceux qui en ont besoin fournissent body(). */
+/* Réduit puis tronque un texte pour qu'il tienne dans la largeur donnée */
+function fitText(c, txt, maxW, weight, size, family, minSize){
+  let sz = size;
+  const set = () => c.font = weight + ' ' + sz + 'px ' + family;
+  set();
+  while (c.measureText(txt).width > maxW && sz > (minSize || 6)){ sz -= .5; set(); }
+  if (c.measureText(txt).width > maxW){
+    while (txt.length > 2 && c.measureText(txt + '…').width > maxW) txt = txt.slice(0, -1);
+    txt += '…';
+  }
+  return txt;
+}
 function drawRegistryBody(comp, c, col, hov, t, d){
   const on = comp.active;
   const cx = comp.x + comp.w / 2, cy = comp.y + comp.h / 2;
@@ -4747,15 +5108,17 @@ function drawRegistryBody(comp, c, col, hov, t, d){
       c.fillStyle = comp.hexA(col, .6);
       c.fillText(d.glyph, cx, comp.y + 14);
     }
-    c.font = "700 14px 'Chakra Petch', sans-serif"; c.textBaseline = 'middle';
+    c.textBaseline = 'middle';
+    const vt = fitText(c, String(val), comp.w - 22, '700', 14, "'Chakra Petch', sans-serif", 9);
     c.fillStyle = on ? col : comp.hexA(col, .55);
     if (on){ c.shadowBlur = 10; c.shadowColor = col; }
-    c.fillText(String(val), cx, y); c.shadowBlur = 0;
+    c.fillText(vt, cx, y); c.shadowBlur = 0;
   }
   if (sub != null){
-    c.font = "600 7.5px 'IBM Plex Mono', monospace"; c.textBaseline = 'middle';
+    c.textBaseline = 'middle';
+    const st = fitText(c, String(sub), comp.w - 14, '600', 7.5, "'IBM Plex Mono', monospace", 5.5);
     c.fillStyle = PAL.dim;
-    c.fillText(String(sub), cx, y + 13);
+    c.fillText(st, cx, y + 13);
   }
   if (bar != null){
     const bw = comp.w - 26, bx = cx - bw / 2, by = comp.y + comp.h - 13;

@@ -1122,6 +1122,146 @@ T('T82 RAM 16 × 4 : écriture au front, lecture immédiate', () => {
   eq(lire(3), 9, 'écriture refusée quand W=0');
 });
 
+T('T83 entrées d’atelier : arrêt d’urgence, DIP 8, sélecteur, impulsion', () => {
+  board();
+  const es = mk('ESTOP', 0, 0), dip = mk('DIP8', 200, 0), sel = mk('SEL3', 400, 0), imp = mk('IMPBTN', 600, 0);
+  sim();
+  eq(es.outPins[0].state, 1, 'arrêt d’urgence armé : contact fermé');
+  REG.ESTOP.click(es); sim();
+  eq(es.outPins[0].state, 0, 'enfoncé : le contact s’ouvre');
+  REG.ESTOP.click(es); sim();
+  eq(es.outPins[0].state, 1, 'déverrouillé');
+  REG.DIP8.click(dip, dip.x + 40, dip.y + 12 + 2 * 22);   // 3e interrupteur
+  REG.DIP8.click(dip, dip.x + 40, dip.y + 12 + 7 * 22);   // 8e interrupteur
+  sim();
+  deq(dip.outPins.map(p => p.state), [0,0,1,0,0,0,0,1], 'DIP : deux bits levés');
+  deq(sel.outPins.map(p => p.state), [1,0,0], 'sélecteur en position I');
+  REG.SEL3.click(sel); sim();
+  deq(sel.outPins.map(p => p.state), [0,1,0], 'position II');
+  REG.SEL3.click(sel); REG.SEL3.click(sel); sim();
+  deq(sel.outPins.map(p => p.state), [1,0,0], 'retour en I après trois crans');
+  sim(); eq(imp.outPins[0].state, 0, 'bouton à impulsion au repos');
+  REG.IMPBTN.click(imp); sim();
+  eq(imp.outPins[0].state, 1, 'impulsion émise');
+  __advance(400); sim();
+  eq(imp.outPins[0].state, 0, 'impulsion terminée toute seule');
+});
+
+T('T84 relais : contacts NO et NF', () => {
+  board();
+  const cmd = mk('SWITCH', 0, 0), src = mk('HIGH', 0, 200), r = mk('RELAY', 300, 0);
+  const no = mk('LED', 600, 0), nf = mk('LED', 600, 200);
+  link(cmd, 0, r, 0); link(src, 0, r, 1);
+  link(r, 0, no, 0); link(r, 1, nf, 0);
+  sim();
+  eq(no.inPins[0].state ? 1 : 0, 0, 'au repos : NO ouvert');
+  eq(nf.inPins[0].state ? 1 : 0, 1, 'au repos : NF passant');
+  cmd.state = 1; sim();
+  eq(no.inPins[0].state ? 1 : 0, 1, 'excité : NO passant');
+  eq(nf.inPins[0].state ? 1 : 0, 0, 'excité : NF ouvert');
+});
+
+T('T85 vérin : course, fins de course et blocage', () => {
+  board();
+  const out = mk('SWITCH', 0, 0), inn = mk('SWITCH', 0, 200), j = mk('JACK', 300, 0);
+  link(out, 0, j, 0); link(inn, 0, j, 1);
+  applyInspector(j, fld('o_sec', 1));
+  sim();
+  eq(j.outPins[0].state, 1, 'au départ : fin de course rentré');
+  eq(j.outPins[1].state, 0, 'pas encore sorti');
+  out.state = 1;
+  for (let i = 0; i < 4; i++){ __advance(150); sim(); }
+  ok(j.pos > 0.4 && j.pos < 0.8, 'la tige est en mouvement (' + j.pos.toFixed(2) + ')');
+  eq(j.outPins[0].state, 0, 'plus en fin de course');
+  for (let i = 0; i < 6; i++){ __advance(150); sim(); }
+  eq(j.pos, 1, 'course terminée');
+  sim();
+  eq(j.outPins[1].state, 1, 'fin de course SORTI');
+  out.state = 0; inn.state = 1;
+  for (let i = 0; i < 10; i++){ __advance(150); sim(); }
+  eq(j.pos, 0, 'retour complet');
+  // les deux commandes ensemble : rien ne bouge
+  out.state = 1; inn.state = 1;
+  for (let i = 0; i < 5; i++){ __advance(150); sim(); }
+  eq(j.pos, 0, 'commandes contradictoires : vérin bloqué');
+});
+
+T('T86 moteur pas à pas : un pas par front, sens réversible', () => {
+  board();
+  const clk = mk('SWITCH', 0, 0), dir = mk('SWITCH', 0, 200), st = mk('STEPPER', 300, 0);
+  link(clk, 0, st, 0); link(dir, 0, st, 1);
+  clk.state = 0; sim();
+  for (let i = 0; i < 5; i++){ clk.state = 1; sim(); clk.state = 0; sim(); }
+  eq(st.step, 5, 'cinq pas en avant');
+  dir.state = 1;
+  for (let i = 0; i < 2; i++){ clk.state = 1; sim(); clk.state = 0; sim(); }
+  eq(st.step, 3, 'deux pas en arrière');
+  sim();
+  eq(st.outPins[0].state, 3, 'position publiée sur le bus');
+});
+
+T('T87 état propre des composants : sauvegardé et restauré', () => {
+  board();
+  const dip = mk('DIP8', 0, 0), sel = mk('SEL3', 200, 0), es = mk('ESTOP', 400, 0);
+  const st = mk('STEPPER', 600, 0), j = mk('JACK', 800, 0);
+  dip.bits = [1,0,0,1,0,1,1,0]; sel.pos = 2; es.pressed = 1; st.step = 7; j.pos = 0.5;
+  const ram = mk('RAM16', 1000, 0);
+  ram.cells[4] = 12; ram.cells[9] = 3;
+  const data = serializeGroup(components);
+  board();
+  spawnGroup(data, 0, 0, false);
+  const g = t => components.find(c => c.type === t);
+  deq(g('DIP8').bits, [1,0,0,1,0,1,1,0], 'DIP restauré');
+  eq(g('SEL3').pos, 2, 'sélecteur restauré');
+  eq(g('ESTOP').pressed, 1, 'arrêt d’urgence restauré');
+  eq(g('STEPPER').step, 7, 'position du pas-à-pas restaurée');
+  eq(g('JACK').pos, 0.5, 'position du vérin restaurée');
+  eq(g('RAM16').cells[4], 12, 'contenu de la RAM restauré');
+  eq(g('RAM16').cells[9], 3, 'contenu de la RAM restauré (2)');
+});
+
+T('T88 chaîne d’automatisme complète : marche/arrêt, sécurité, va-et-vient', () => {
+  board();
+  // Marche / arrêt avec arrêt d'urgence prioritaire, pilotant un va-et-vient de vérin
+  const marche = mk('SWITCH', 0, 0), arret = mk('SWITCH', 0, 120), es = mk('ESTOP', 0, 240);
+  const notEs = mk('NOT', 200, 240), ouArret = mk('OR', 380, 180);
+  const mem = mk('SRMEM', 560, 60), j = mk('JACK', 760, 60);
+  const sens = mk('SRMEM', 560, 400);          // mémoire de sens : sortir / rentrer
+  const etOut = mk('AND', 980, 0), etIn = mk('AND', 980, 200), nSens = mk('NOT', 780, 400);
+  link(marche, 0, mem, 0);
+  link(arret, 0, ouArret, 0);
+  link(es, 0, notEs, 0); link(notEs, 0, ouArret, 1);
+  link(ouArret, 0, mem, 1);
+  // Les fins de course mémorisent le sens : sans cette mémoire, la commande
+  // s'annulerait dès que la tige quitte son point de départ.
+  link(j, 1, sens, 0);                        // sorti  -> il faut rentrer
+  link(j, 0, sens, 1);                        // rentré -> il faut sortir
+  link(sens, 0, nSens, 0);
+  link(mem, 0, etOut, 0); link(nSens, 0, etOut, 1);
+  link(mem, 0, etIn, 0);  link(sens, 0, etIn, 1);
+  link(etOut, 0, j, 0); link(etIn, 0, j, 1);
+  applyInspector(j, fld('o_sec', 1));
+  sim();
+  eq(mem.q, 0, 'à l’arrêt au départ');
+  marche.state = 1; sim(); marche.state = 0; sim();
+  eq(mem.q, 1, 'la marche se maintient');
+  let sorti = false, revenu = false, cycles = 0;
+  for (let i = 0; i < 60; i++){
+    __advance(150); sim();
+    if (j.pos > 0.97 && !sorti) sorti = true;
+    if (sorti && j.pos < 0.03 && !revenu){ revenu = true; cycles++; }
+  }
+  ok(sorti, 'le vérin est allé jusqu’au bout tout seul');
+  ok(revenu, 'puis il est revenu : le va-et-vient s’entretient sans horloge');
+  ok(j.pos > 0.03, 'et il est reparti pour un tour');
+  REG.ESTOP.click(es); sim();
+  eq(mem.q, 0, 'l’arrêt d’urgence coupe tout');
+  marche.state = 1; sim();
+  eq(mem.q, 0, 'et empêche le redémarrage tant qu’il est enfoncé');
+  REG.ESTOP.click(es); sim();
+  eq(mem.q, 1, 'redémarrage possible une fois déverrouillé');
+});
+
 /* ===================== 7. Interface & export ===================== */
 console.log('— Interface & export —');
 
