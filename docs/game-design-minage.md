@@ -238,6 +238,8 @@ splits des 18 niveaux défilent, les médailles tombent, le temps total s'affich
 
 ## 5. Les bonus temporaires
 
+> Catalogue complet et chiffré : [bonus-et-passifs.md](bonus-et-passifs.md).
+
 Trouvés dans les blocs, à raison d'**un toutes les 15 à 25 secondes**. Ce sont eux qui
 créent les pics de fun.
 
@@ -267,6 +269,8 @@ faire fermer le jeu.
 ---
 
 ## 6. Passifs : un choix à chaque niveau
+
+> Catalogue complet et chiffré : [bonus-et-passifs.md](bonus-et-passifs.md).
 
 - **Avant la partie** : un métier parmi 3 (Bourrin : force ×2, vitesse −20 % · Furieux :
   vitesse ×1,5 · Chanceux : +50 % de bonus · Prospecteur : voit le minerai à travers la
