@@ -2763,6 +2763,8 @@ T('T60 le guide documente les ateliers, les unités, les seuils et la tuyauterie
    ['premier maillon', 'la méthode de diagnostic'],
    ['éditeur de GRAFCET', 'l’éditeur de GRAFCET'],
    ['divergence ET', 'les divergences ET'],
+   ['tracé des câbles', 'le tracé des câbles'],
+   ['angles arrondis', 'les angles arrondis'],
    ['BRIDÉ', 'le bridage d’un tuyau trop étroit']]
     .forEach(([txt, what]) => ok(html.includes(txt), 'le guide parle de ' + what));
   ok(/TUYAU/.test(__el('guide-body').innerHTML), 'et présente le tuyau lui-même');
@@ -3436,6 +3438,101 @@ T('T165 un GRAFCET neuf ne s’emballe pas', () => {
   }
   ok(sauts <= 5, 'au plus quelques franchissements par seconde (' + sauts + '), pas soixante');
   ok(sauts >= 2, 'mais le graphe avance quand même (' + sauts + ')');
+});
+
+T('T166 le tracé des câbles : angles droits, contournement et couloirs', () => {
+  const mode0 = wireMode;
+  board();
+  setWireMode('ortho');
+  const a = mk('SWITCH', 0, 0), b = mk('LED', 500, 300);
+  const w = link(a, 0, b, 0);
+  sim();
+  const P = w.route();
+  ok(P.length >= 4, 'un itinéraire à plusieurs segments (' + P.length + ')');
+  // tous les segments intermédiaires sont horizontaux ou verticaux
+  let obliques = 0;
+  for (let i = 1; i < P.length - 2; i++)
+    if (Math.abs(P[i].x - P[i+1].x) > .6 && Math.abs(P[i].y - P[i+1].y) > .6) obliques++;
+  eq(obliques, 0, 'aucun segment oblique');
+  eq(Math.round(P[0].x), Math.round(a.outPins[0].x), 'il part de la broche de sortie');
+  eq(Math.round(P[P.length-1].y), Math.round(b.inPins[0].y), 'et arrive sur la broche d’entrée');
+  // l'amorce quitte la broche dans sa direction
+  ok(P[1].x > P[0].x, 'l’amorce sort vers la droite d’une broche de sortie');
+
+  // --- rétroaction : la cible est derrière, l’itinéraire contourne
+  board();
+  const g1 = mk('AND', 400, 200), g2 = mk('NOT', 100, 200);
+  const w2 = link(g1, 0, g2, 0);
+  sim();
+  const R = w2.route();
+  const yMax = Math.max(...R.map(p => p.y)), yMin = Math.min(...R.map(p => p.y));
+  ok(yMax > g1.y + g1.h - 1 || yMin < g1.y + 1,
+     'le retour passe au-dessus ou au-dessous des boîtiers');
+  let obl2 = 0;
+  for (let i = 1; i < R.length - 2; i++)
+    if (Math.abs(R[i].x - R[i+1].x) > .6 && Math.abs(R[i].y - R[i+1].y) > .6) obl2++;
+  eq(obl2, 0, 'et reste à angles droits');
+
+  // --- deux câbles dans le même couloir sont écartés
+  board();
+  const s1 = mk('SWITCH', 0, 0), s2 = mk('SWITCH', 0, 120);
+  const l1 = mk('LED', 600, 0), l2 = mk('LED', 600, 120);
+  link(s1, 0, l2, 0); link(s2, 0, l1, 0);        // deux trajets qui se croisent
+  sim();
+  spreadRoutes();
+  const colonnes = wires.map(w3 => {
+    const P3 = w3._rp;
+    for (let i = 1; i < P3.length - 2; i++)
+      if (Math.abs(P3[i].x - P3[i+1].x) < .6 && Math.abs(P3[i].y - P3[i+1].y) > 20) return P3[i].x;
+    return null;
+  }).filter(v => v != null);
+  eq(colonnes.length, 2, 'les deux câbles ont un segment vertical');
+  ok(Math.abs(colonnes[0] - colonnes[1]) >= WIRE_ECART - .01,
+     'et ils ne se superposent pas (' + Math.abs(colonnes[0] - colonnes[1]).toFixed(1) + ' px)');
+
+  // --- les trois modes, et le choix mémorisé
+  setWireMode('direct');
+  const d = wires[0].route();
+  eq(d.length, 2, 'mode direct : un seul segment');
+  eq(localStorage.getItem('al2_wire'), 'direct', 'le mode est mémorisé');
+  setWireMode('courbe');
+  ok(typeof wires[0].segCtrl === 'function', 'mode courbe : les contrôles de Bézier restent');
+  setWireMode('pasunmode');
+  eq(wireMode, 'courbe', 'un mode inconnu est refusé');
+  const suivant = cycleWireMode();
+  ok(suivant && suivant[0] !== 'courbe', 'le bouton fait défiler les modes');
+  setWireMode(mode0);
+});
+
+T('T167 les poignées posent un itinéraire à la main, au bon endroit', () => {
+  const mode0 = wireMode;
+  setWireMode('ortho');
+  board();
+  const a = mk('SWITCH', 0, 0), b = mk('LED', 600, 300);
+  const w = link(a, 0, b, 0);
+  sim();
+  // un point pris au milieu du tracé désigne le bon tronçon
+  const ech = w.segPoints(8);
+  const mil = ech[Math.floor(ech.length / 2)];
+  eq(mil.seg, 0, 'sans poignée, tout le fil est le tronçon 0');
+  w.wp.splice(mil.seg, 0, { x:320, y:160 });
+  eq(w.wp.length, 1, 'la poignée est posée');
+  const P = w.route();
+  ok(P.some(p => Math.abs(p.x - 320) < .6 && Math.abs(p.y - 160) < .6),
+     'et l’itinéraire passe bien par elle');
+  let obl = 0;
+  for (let i = 1; i < P.length - 2; i++)
+    if (Math.abs(P[i].x - P[i+1].x) > .6 && Math.abs(P[i].y - P[i+1].y) > .6) obl++;
+  eq(obl, 0, 'le tracé reste à angles droits de part et d’autre');
+  // les tronçons sont maintenant numérotés de part et d’autre de la poignée
+  const legs = [...new Set(w.segPoints(8).map(p => p.seg))].sort();
+  deq(legs, [0, 1], 'deux tronçons, avant et après la poignée');
+  // une seconde poignée s’insère du bon côté
+  const apres = w.segPoints(8).filter(p => p.seg === 1);
+  w.wp.splice(apres[0].seg, 0, { x:480, y:240 });
+  eq(w.wp.length, 2, 'deux poignées');
+  deq(w.wp.map(p => p.x), [320, 480], 'insérée après la première, pas avant');
+  setWireMode(mode0);
 });
 
 /* ===================== bilan ===================== */

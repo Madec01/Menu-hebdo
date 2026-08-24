@@ -106,6 +106,15 @@ boucle — et l'**enregistreur de courbes** trace deux mesures dans le temps pou
 juger une régulation à sa forme : montée, dépassement, oscillation, écart
 résiduel.
 
+**Le tracé des câbles.** Un schéma se lit parce que ses fils sont horizontaux
+ou verticaux : le regard suit un couloir, et un croisement se repère parce
+qu'il est à angle droit. C'est le tracé par défaut — amorce dans la direction
+de chaque broche, segments à angle droit, angles arrondis — et les câbles qui
+empruntent le même couloir s'écartent automatiquement au lieu de se
+superposer. Un fil qui revient en arrière contourne les boîtiers. Trois modes
+au choix (`⌐` angles droits, `∿` courbes, `／` direct), et le double-clic sur
+un câble pose une poignée à glisser pour reprendre la main.
+
 **Confort.** Infobulle au survol (état de chaque pin, réglages, valeur d'un
 câble), rotation par quarts de tour et miroir (`R`, `M`), noms de composants
 masquables (`N`), recadrage automatique (`F`), niveau de détail au zoom,
@@ -124,7 +133,7 @@ concatène entre `test/pre.js` (stubs DOM / Canvas / Audio / localStorage, plus
 une horloge `Date.now` pilotable) et `test/post.js` (les tests), puis exécute le
 tout dans un contexte `vm`. Aucun navigateur, aucune dépendance npm.
 
-164 tests couvrent le moteur, le séquentiel, les blocs numériques, l'analogique
+166 tests couvrent le moteur, le séquentiel, les blocs numériques, l'analogique
 et la régulation (dont une boucle fermée four + thermostat), l'édition,
 l'orientation, les tunnels, les puces, l'interface, le balisage et le guide.
 Deux tests valident automatiquement **tout** nouveau composant du registre
@@ -148,6 +157,7 @@ d'outils, inspecteur, analyseur, guide et sérialisation compris.
 | `al2_saves` | montages nommés |
 | `al2_sandbox` | bac à sable courant (auto-sauvegardé) |
 | `al2_mode` | atelier courant (électronique / process / tout) |
+| `al2_wire` | mode de tracé des câbles |
 | `al2_mute`, `al2_snap`, `al2_labels` | préférences |
 
 `versions/` conserve des copies figées des versions précédentes ; elles restent
