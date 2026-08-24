@@ -406,6 +406,18 @@ table.tab tr:hover td{background:rgba(255,255,255,.028)}
 .cfEtoiles{font-size:11px;color:var(--or);letter-spacing:.05em}
 .clientFid.fache .cfEtoiles{color:var(--rouge)}
 .cfMot{font-size:11px;color:var(--texte-faible);line-height:1.35;margin-top:2px}
+
+/* ---------- L'épilogue ---------- */
+.epiLogo{display:block;margin:0 auto 6px}
+.epiChiffres{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:14px 0}
+.epiTuile{background:var(--fond3);border:1px solid var(--bord);border-radius:var(--r);padding:11px 12px;text-align:left}
+.epiVal{font-size:21px;font-weight:600;color:var(--or);font-variant-numeric:tabular-nums;line-height:1.1}
+.epiLib{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--texte-faible);margin-top:4px}
+.epiMention{font-size:15px;color:var(--texte-doux);line-height:1.55;margin:10px 0 4px}
+.epiLigne{display:flex;justify-content:space-between;font-size:12.5px;padding:5px 0;
+  border-bottom:1px solid rgba(255,255,255,.05);color:var(--texte-doux)}
+.epiLigne:last-child{border-bottom:none}
+.epiLigne span:last-child{color:var(--texte-faible)}
 .labResume{font-size:11px;color:var(--texte-faible);line-height:1.4;margin:3px 0}
 .labCond{font-size:11px;color:var(--texte-doux);line-height:1.4}
 .label.obtenu .labCond{color:var(--vert)}
@@ -654,6 +666,7 @@ table.tab tr:hover td{background:rgba(255,255,255,.028)}
 <div class="overlay" id="ecranStats"></div>
 <div class="overlay" id="ecranRecherche"></div>
 <div class="overlay" id="ecranSortieRecette"></div>
+<div class="overlay" id="ecranEpilogue"></div>
 <div id="panneauDev"></div>
 
 <script>
@@ -968,9 +981,10 @@ const AGES = [
     debloque:["recherche","silo","bureau"],
     intro:"On ne se contente plus de fabriquer ce que les autres ont inventé. On crée nos recettes, et le public tranche." },
 
-  { n:5, nom:"Le groupe", largeur:48, hauteur:36,
-    objectif:{ texte:"Ouvrir un deuxième site", type:"aVenir", cible:1 },
-    debloque:[], intro:"" }
+  { n:5, nom:"La maison", largeur:64, hauteur:44,
+    objectif:{ texte:"Devenir la marque de référence", type:"marque", cible:1 },
+    debloque:[],
+    intro:"L'usine tourne, les recettes plaisent. Il reste une chose à faire : que le nom sur le mur soit celui qu'on cite en premier." }
 ];
 
 /* ------------------------------------------------------------------ Clients */
@@ -3931,6 +3945,11 @@ function progressionObjectif(){
   else if (o.type === "vendus") val = etat.progression.vendus[o.produit] || 0;
   else if (o.type === "produitsSemaine") val = etat.progression.produitsSemaine[o.produit] || 0;
   else if (o.type === "argent") val = etat.finances.solde;
+  else if (o.type === "marque"){
+    // Le dernier objectif ne se compte pas en kilos : il se lit sur la marque.
+    const c = conditionsMaison();
+    val = c.filter(x => x.ok).length; cible = c.length;
+  }
   else val = 0;
   let p = clamp(val/cible, 0, 1);
   if (o.secours && o.secours.type === "argent")
@@ -3938,8 +3957,24 @@ function progressionObjectif(){
   return { valeur:val, cible, part:p, texte:age.objectif.texte };
 }
 
+/** Les quatre conditions de la dernière ligne droite. Chacune se lit en clair,
+ *  et chacune s'appuie sur un système différent du jeu. */
+function conditionsMaison(){
+  const part = partMarche();
+  return [
+    { nom:"Être connu de tous", ok: notoriete() >= 80,
+      dit: Math.round(notoriete()) + " sur 100, il en faut 80" },
+    { nom:"Une réputation sans tache", ok: confianceEffective() >= 85,
+      dit: Math.round(confianceEffective()) + " sur 100, il en faut 85" },
+    { nom:"Tenir le rayon", ok: part >= 0.6,
+      dit: Math.round(part*100) + " % du rayon, il en faut 60" },
+    { nom:"Un atelier certifié", ok: labelObtenu("atelier"),
+      dit: labelObtenu("atelier") ? "obtenu" : "le label n'est pas décroché" }
+  ];
+}
+
 function verifierObjectif(){
-  if (etat.meta.age >= AGES.length) return;
+  if (etat.progression.termine) return;
   const p = progressionObjectif();
   etat.progression.jaugeObjectif = p.part;
   if (p.part >= 1 && !etat.progression.objectifsCompletes.includes(etat.meta.age))
@@ -3949,11 +3984,9 @@ function verifierObjectif(){
 function passerAgeSuivant(){
   etat.progression.objectifsCompletes.push(etat.meta.age);
   const ancien = AGES[etat.meta.age-1];
-  if (etat.meta.age >= 3){
-    // Les âges 3 à 5 sont décrits au document mais pas encore construits.
-    notif("Bravo", "Vous avez bouclé « " + ancien.nom + " ». La suite (l'hygiène, la saison, les autres sites) reste à bâtir : la partie continue en mode libre.", "ok");
-    paroleContexte("fin_contenu", {});
-    etat.meta.age = Math.min(etat.meta.age, AGES.length);
+  // Le dernier âge bouclé, c'est la fin de l'histoire.
+  if (etat.meta.age >= AGES.length){
+    ouvrirEpilogue();
     return;
   }
   etat.meta.age++;
@@ -8954,6 +8987,20 @@ function SECTIONS_GUIDE(){
     "traînent. C'est le chiffre à surveiller quand la caisse se vide sans qu'on comprenne pourquoi.</p>"+
     "<p><kbd>C</kbd> masque le bandeau.</p>" },
 
+  { titre:"Les cinq âges, et la fin", corps:
+    "<p>Chaque âge a un objectif, affiché en permanence dans l'onglet Détail. Le boucler agrandit "+
+    "l'atelier et ouvre de nouvelles machines.</p>"+
+    "<p><b>La friterie</b> — livrer 1 500 kg de chips.<br>"+
+    "<b>La fabrique</b> — sortir 8 000 sachets en une semaine.<br>"+
+    "<b>La PME</b> — honorer une grosse commande sans une seule réclamation.<br>"+
+    "<b>L'industrie</b> — sortir une recette maison dont le public redemande.<br>"+
+    "<b>La maison</b> — devenir la marque de référence.</p>"+
+    "<p>Le dernier ne se compte pas en kilos : il se lit sur la marque. <b>Quatre conditions</b>, "+
+    "chacune sur un système différent — être connu de tous (80 de notoriété), une réputation sans "+
+    "tache (85 de confiance), tenir le rayon (60 % face au concurrent), et le label Atelier "+
+    "certifié. Quand les quatre sont réunies, la partie se conclut par un bilan de ce qu'est "+
+    "devenue la maison — et rien n'empêche de continuer à jouer ensuite.</p>" },
+
   { titre:"Le temps qui passe", corps:
     "<p>Une journée de travail fait <b>8 heures</b>, et dure <b>40 secondes</b> à la vitesse ×1. "+
     "La semaine fait <b>5 jours</b>, du lundi au vendredi.</p>"+
@@ -10759,6 +10806,97 @@ function motRival(r){
   return r.nom + " vous suit sur le même terrain. C'est là que ça se joue au coude à coude.";
 }
 
+/* ============================================================ L'épilogue
+   La dernière ligne droite bouclée, on s'arrête et on regarde ce que la
+   maison est devenue. Pas un tableau de scores : un bilan qu'on lit. */
+function ouvrirEpilogue(){
+  etat.progression.termine = true;
+  etat.progression.objectifsCompletes.push(etat.meta.age);
+  const z = $("#ecranEpilogue");
+  const m = etat.marque;
+  const semaines = etat.stats.historiqueSemaines.length;
+  const ca = Math.round(etat.finances.totalVentes);
+  const meilleure = (etat.recherche.recettes || []).slice().sort((a,b) => b.note - a.note)[0];
+  const equipe = U().ouvriers.length;
+  const part = Math.round(partMarche()*100);
+
+  z.innerHTML = `
+    <div class="feuille" style="max-width:640px;margin-top:5vh;text-align:center">
+      <canvas class="epiLogo" id="epiLogo" width="180" height="180"></canvas>
+      <div style="font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--texte-faible)">
+        La maison</div>
+      <h1 style="font-size:38px;font-weight:300;margin:6px 0 4px;color:var(--or)" id="epiNom"></h1>
+      <p class="epiMention" id="epiMention"></p>
+      <div class="epiChiffres" id="epiChiffres"></div>
+      <div class="volet" style="text-align:left;margin-bottom:18px">
+        <h2>Ce qu'on retiendra</h2>
+        <div id="epiFaits"></div>
+      </div>
+      <button class="bt plein large" id="btContinuer">Continuer à jouer</button>
+      <button class="bt large" id="btNouvelleFin" style="margin-top:9px">Repartir de zéro</button>
+    </div>`;
+
+  const g = $("#epiLogo").getContext("2d");
+  g.clearRect(0,0,180,180);
+  dessinerLogo(g, m, 90, 90, 74);
+  $("#epiNom").textContent = m.nom;
+  $("#epiMention").textContent = mentionFinale();
+
+  const tuile = (val, lib) => {
+    const d = document.createElement("div");
+    d.className = "epiTuile";
+    d.innerHTML = '<div class="epiVal"></div><div class="epiLib"></div>';
+    d.querySelector(".epiVal").textContent = val;
+    d.querySelector(".epiLib").textContent = lib;
+    $("#epiChiffres").appendChild(d);
+  };
+  tuile(semaines + " " + pluriel(semaines,"semaine"), "de production");
+  tuile(euros(ca), "de chiffre d'affaires");
+  tuile(part + " %", "du rayon");
+  tuile(equipe + " " + pluriel(equipe,"personne"), "dans l'atelier");
+
+  const ligne2 = (a, b) => {
+    const d = document.createElement("div");
+    d.className = "epiLigne";
+    d.innerHTML = "<span></span><span></span>";
+    d.children[0].textContent = a;
+    d.children[1].textContent = b;
+    $("#epiFaits").appendChild(d);
+  };
+  ligne2("On vous connaît", Math.round(notoriete()) + " sur 100");
+  ligne2("On vous fait confiance", Math.round(confianceEffective()) + " sur 100");
+  ligne2("Votre place dans le rayon", motStanding(standing()));
+  if (meilleure) ligne2("Votre meilleure recette", "« " + meilleure.nom + " », " + meilleure.note + " sur 100");
+  const lab = labelsObtenus();
+  ligne2("Vos labels", lab.length ? lab.map(l => l.nom).join(", ") : "aucun");
+  if (etat.rival)
+    ligne2("En face", etat.rival.nom + " — " + Math.round((1-partMarche())*100) + " % du rayon");
+  const gros = Object.entries(etat.stats.clients).sort((a,b) => b[1].ca - a[1].ca)[0];
+  if (gros) ligne2("Votre meilleur client", gros[0] + " · " + euros(gros[1].ca));
+
+  $("#btContinuer").onclick = () => {
+    fermer("#ecranEpilogue");
+    etat.meta.vitesse = 1;
+    majBandeau(); majPanneau();
+  };
+  $("#btNouvelleFin").onclick = () => { location.reload(); };
+
+  etat.meta.vitesse = 0;
+  ouvrir("#ecranEpilogue");
+  son("age");
+  sauvegardeAuto();
+}
+
+/** Une phrase qui résume la partie, d'après ce qu'on est devenu. */
+function mentionFinale(){
+  const s = standing(), n = notoriete();
+  if (s >= 75 && n >= 80) return "Une grande maison. On cite votre nom avant les autres, et on paie pour ça.";
+  if (s >= 75) return "Une maison rare. Peu de volume, beaucoup d'égards.";
+  if (s <= 32) return "Le premier prix du rayon — et le plus gros volume. Tout le monde en mange.";
+  if (n >= 80) return "Un nom que tout le monde connaît, du bourg jusqu'à l'export.";
+  return "Une maison solide, qui livre et qu'on rappelle. C'est déjà beaucoup.";
+}
+
 /* ============================================================================
    AUDIO — tout est synthétisé à la volée, aucun fichier (§13)
    ========================================================================== */
@@ -11220,6 +11358,7 @@ function initClavier(){
       if ($("#panneauDev").classList.contains("visible")) return basculerDev();
       if (vue.convDepart){ annulerTrace(); return; }
       if ($("#ecranSortieRecette").classList.contains("visible")) return fermerSortieRecette();
+      if ($("#ecranEpilogue").classList.contains("visible")) return;   // on ne s'en échappe pas au hasard
       if (unEcranOuvert() && $("#ecranStats").classList.contains("visible")) fermer("#ecranStats");
       else if (unEcranOuvert() && $("#ecranRecherche").classList.contains("visible")) fermer("#ecranRecherche");
       else if (unEcranOuvert() && $("#ecranMenu").classList.contains("visible")) fermer("#ecranMenu");

@@ -198,11 +198,19 @@ cas("qualite-age3", async (nav) => {
     for (let t=0;t<CONFIG.ticksParJour;t++) simTick();
     document.querySelector('#ecranVendredi')?.classList.remove('visible');
     const op = f.operateurId != null ? ouvrierParId(f.operateurId) : null;
-    return { huile: f.fraicheurHuile, arret, pendant, taux: tauxRebut(f, op) };
+    // On compare à saleté et usure identiques : sinon une journée de crasse en
+    // plus peut annuler le gain, et le test bascule au hasard.
+    const neuve = tauxRebut(f, op);
+    const memoire = f.fraicheurHuile;
+    f.fraicheurHuile = 0.1;
+    const usee = tauxRebut(f, op);
+    f.fraicheurHuile = memoire;
+    return { huile: f.fraicheurHuile, arret, pendant, taux: neuve, usee };
   })()`);
   v("le bain repart quasi neuf", apres.huile > 0.65, "fraîcheur " + apres.huile.toFixed(2));
   v.egal("la friteuse s'arrête pendant la vidange", apres.pendant, "arret");
-  v("la qualité remonte", apres.taux < r.taux, apres.taux.toFixed(3) + " vs " + r.taux.toFixed(3));
+  v("l'huile neuve fait remonter la qualité", apres.taux < apres.usee,
+    "rebut " + apres.taux.toFixed(3) + " avec l'huile neuve contre " + apres.usee.toFixed(3) + " fatiguée");
 
   // Le raté part chez le client tant qu'on ne trie pas
   const rec = await jeu(`(() => {
@@ -263,7 +271,7 @@ cas("saut-de-niveau", async (nav) => {
   await page.close();
   return { echecs: v.echecs.concat(erreurs), note: "5 âges" };
 });
-const AGES_ATTENDUS = ["15x12","20x16","32x24","48x36","48x36"];
+const AGES_ATTENDUS = ["15x12","20x16","32x24","48x36","64x44"];
 
 cas("auto-verifications", async (nav) => {
   const { page, jeu, sim, erreurs } = await contexte(nav);
@@ -1601,6 +1609,87 @@ cas("clients-et-cadres", async (nav) => {
   for (const t of inv) v("invariant : " + t.nom, t.ok, t.detail);
   await page.close();
   return { echecs: v.echecs.concat(erreurs), note: "fidélité, bouderie, 3 cadres" };
+});
+
+cas("la-fin", async (nav) => {
+  const { page, jeu, erreurs } = await contexte(nav);
+  const v = verif();
+
+  // Les cinq âges s'enchaînent vraiment : l'âge 4 était inatteignable en jeu.
+  const ch = await jeu(`(() => {
+    etat.finances.solde = 500000;
+    const suite = [etat.meta.age];
+    // âge 1 → 2
+    etat.progression.vendus.chips_vrac = 99999; verifierObjectif(); suite.push(etat.meta.age);
+    // âge 2 → 3
+    etat.progression.produitsSemaine.sachet = 99999; verifierObjectif(); suite.push(etat.meta.age);
+    // âge 3 → 4
+    etat.progression.compteurs.grosseCommande = 5; verifierObjectif(); suite.push(etat.meta.age);
+    // âge 4 → 5
+    etat.progression.compteurs.recetteReussie = 5; verifierObjectif(); suite.push(etat.meta.age);
+    for (const id of ['#ecranMenu','#ecranVendredi']) document.querySelector(id)?.classList.remove('visible');
+    return { suite, termine: !!etat.progression.termine };
+  })()`);
+  v.egal("les cinq âges s'enchaînent", ch.suite.join("→"), "1→2→3→4→5");
+  v("et l'âge 5 n'est pas la fin tout de suite", !ch.termine);
+
+  // Le dernier objectif se lit sur la marque, pas sur des kilos.
+  const c = await jeu(`(() => {
+    const depart = conditionsMaison();
+    etat.recherche.notoriete = 85; etat.reputation = 90;
+    etat.rival.notoriete = 5; etat.rival.confiance = 30; etat.rival.standing = 50;
+    etat.marque.standing = 55;
+    etat.labels.obtenus = [];
+    const presque = conditionsMaison();
+    etat.labels.obtenus = ['atelier'];
+    const toutes = conditionsMaison();
+    return { depart: depart.map(x=>x.ok), presque: presque.map(x=>x.ok), toutes: toutes.map(x=>x.ok),
+             noms: toutes.map(x=>x.nom), dit: depart[0].dit,
+             part: progressionObjectif() };
+  })()`);
+  v.egal("quatre conditions", ch.suite.length && c.noms.length, 4);
+  v("aucune n'est remplie au départ", c.depart.every(x => !x));
+  v("le label manque encore", c.presque.filter(x=>x).length === 3, c.presque.join(","));
+  v("puis tout est là", c.toutes.every(Boolean));
+  v("chaque condition dit où l'on en est", /sur 100/.test(c.dit), c.dit);
+  v.egal("la jauge d'objectif suit les conditions", c.part.cible, 4);
+
+  // Tout réuni : l'épilogue s'ouvre et dit ce qu'est devenue la maison.
+  const fin = await jeu(`(() => {
+    etat.marque.nom = "Croq'Bassin";
+    etat.recherche.recettes.push({ id:'x', nom:'Sardine du Port', note:94, traits:{}, avis:[], pistes:[] });
+    etat.stats.clients['Épicerie Vidal'] = { ca:12000, commandes:9, reclamations:0, serie:6, ratees:0, bouderie:0 };
+    verifierObjectif();
+    const z = document.querySelector('#ecranEpilogue');
+    return { visible: z.classList.contains('visible'),
+             termine: !!etat.progression.termine,
+             nom: document.querySelector('#epiNom')?.textContent,
+             mention: document.querySelector('#epiMention')?.textContent || "",
+             tuiles: document.querySelectorAll('.epiTuile').length,
+             lignes: [...document.querySelectorAll('.epiLigne')].map(l => l.children[0].textContent),
+             vitesse: etat.meta.vitesse };
+  })()`);
+  v("l'épilogue s'ouvre", fin.visible && fin.termine);
+  v.egal("il porte le nom de la marque", fin.nom, "Croq'Bassin");
+  v("il résume la partie en une phrase", fin.mention.length > 25, fin.mention);
+  v.egal("quatre chiffres", fin.tuiles, 4);
+  v("il cite la meilleure recette", fin.lignes.includes("Votre meilleure recette"), fin.lignes.join(" · "));
+  v("le meilleur client", fin.lignes.includes("Votre meilleur client"));
+  v("le concurrent", fin.lignes.includes("En face"));
+  v.egal("et le jeu s'arrête pour qu'on lise", fin.vitesse, 0);
+
+  // On ne rejoue pas la fin en boucle.
+  const encore = await jeu(`(() => {
+    document.querySelector('#ecranEpilogue').classList.remove('visible');
+    verifierObjectif();
+    return document.querySelector('#ecranEpilogue').classList.contains('visible');
+  })()`);
+  v("elle ne se rouvre pas toute seule", !encore);
+
+  const inv = await jeu("verifierPartie()");
+  for (const t of inv) v("invariant : " + t.nom, t.ok, t.detail);
+  await page.close();
+  return { echecs: v.echecs.concat(erreurs), note: "5 âges, 4 conditions, épilogue" };
 });
 
 /* ============================================================== Exécution ==*/

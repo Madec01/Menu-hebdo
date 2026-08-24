@@ -222,23 +222,26 @@ sachets se comptent à l'unité.
 - Sauvegarde automatique, 3 emplacements manuels, export/import de fichier,
   champ `version` et fonction de migration
 
-**Progression disponible** : âge 1 (La friterie) → âge 2 (La fabrique) →
-âge 3 (La PME). Une fois l'âge 3 bouclé, la partie continue en mode libre.
+- **Une fin.** Le dernier âge ne se compte pas en kilos : quatre conditions, une
+  par système — être connu de tous, une réputation sans tache, tenir le rayon
+  face au concurrent, et décrocher le label Atelier certifié. Les quatre
+  réunies, la partie se conclut par un bilan de ce qu'est devenue la maison :
+  le logo en grand, les chiffres, la meilleure recette, le meilleur client, et
+  ce que le concurrent a laissé. On peut continuer à jouer ensuite.
+
+**Progression** : les **cinq âges** s'enchaînent — La friterie → La fabrique →
+La PME → L'industrie → La maison.
 
 ## Ce qui reste à faire
 
-Les lots 3 et 4 sont faits (la qualité, les gros clients, la recherche).
-Reste le lot 5, et l'amont agricole.
-Adaptés au métier, ils donneraient :
+Les cinq âges sont bâtis, de la friterie à la marque de référence, et la partie
+a une fin. Ce qui a été volontairement écarté :
 
 - **L'amont agricole** : contrats pluriannuels avec les producteurs, variétés
-  de pommes de terre, récolte saisonnière, silos. De quoi donner du sens au
-  prix de la matière, qui n'est aujourd'hui qu'un cours qui oscille.
-- **Âge 5 — Le groupe** : multi-sites, logistique inter-usines, export, et une
-  deuxième famille de produits (snacks soufflés, biscuits apéritif).
-
-L'âge 5 est déjà déclaré dans la table `AGES` avec leur surface et
-leur objectif ; il reste à écrire les systèmes correspondants.
+  de pommes de terre, récolte saisonnière. Ça a été conçu puis mis de côté : la
+  profondeur est venue de la marque plutôt que du champ.
+- **Le multi-site** : deux usines, c'est la même boucle jouée deux fois, pour
+  le double de travail. L'agrandissement de l'atelier joue ce rôle.
 
 Autres pistes laissées de côté : la date limite de consommation et le rappel
 de lot (l'un des deux systèmes « fraîcheur » du métier — la qualité couvre
@@ -268,12 +271,12 @@ réelles** à la vitesse ×1.
 
 ## Tests
 
-`node tests/suite.mjs` pilote le jeu dans un vrai navigateur : vingt-cinq cas qui
+`node tests/suite.mjs` pilote le jeu dans un vrai navigateur : vingt-six cas qui
 couvrent le didacticiel, la chaîne, la conservation de la matière, le réseau de
 convoyeurs, la qualité, les modes, les cinq âges, les auto-vérifications, la
 sauvegarde, le rythme, la performance, la recherche, le raccord entre bandes,
 les quais et rangements, les bâtiments d'équipe, la cour, le garde-manger du
-labo, les raccords courts, les croisements, l'équipe, les stocks, la marque, les labels, le concurrent, les clients et les cadres. Voir [`tests/README.md`](tests/README.md).
+labo, les raccords courts, les croisements, l'équipe, les stocks, la marque, les labels, le concurrent, les clients, les cadres et la fin de partie. Voir [`tests/README.md`](tests/README.md).
 
 ## Organisation du code
 

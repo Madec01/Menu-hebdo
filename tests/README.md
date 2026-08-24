@@ -40,6 +40,7 @@ La suite sort en code 1 si un cas échoue.
 | `labels` | un label se tient plusieurs semaines, se demande, se paie, et se perd |
 | `le-concurrent` | il se démarque de vous, fait ses coups, et prend le rayon qu'on lui laisse |
 | `clients-et-cadres` | la fidélité monte et se casse, et chaque cadre a un effet mesurable |
+| `la-fin` | les cinq âges s'enchaînent, et l'épilogue dit ce qu'est devenue la maison |
 
 ## Les invariants, aussi dans le jeu
 
