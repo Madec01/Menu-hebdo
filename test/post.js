@@ -22,6 +22,12 @@ function eq(got, want, msg){
   if (got !== want) fail('Assertion : ' + (msg || '') + ' — attendu ' + JSON.stringify(want) +
     ', obtenu ' + JSON.stringify(got));
 }
+/* Comparaison à tolérance : la chaîne de mesure est continue, pas entière */
+function near(got, want, tol, msg){
+  if (!(Math.abs(got - want) <= (tol == null ? 0.5 : tol)))
+    fail('Assertion : ' + (msg || '') + ' — attendu ' + want + ' ± ' + (tol == null ? 0.5 : tol) +
+      ', obtenu ' + got);
+}
 function deq(got, want, msg){
   const a = JSON.stringify(got), b = JSON.stringify(want);
   if (a !== b) fail('Assertion : ' + (msg || '') + ' — attendu ' + b + ', obtenu ' + a);
@@ -1298,9 +1304,10 @@ T('T90 conversions CAN et CNA : aller-retour sans perte', () => {
   [0, 25, 50, 75, 100].forEach(pc => {
     applyInspector(pot, fld('o_val', pc)); sim();
     const brut = phys2raw(pc, { min:0, max:100 });
-    eq(can.raw, brut, pc + ' % → ' + brut);
-    eq(cna.outPins[0].state, brut, 'reconverti à l’identique');
-    eq(jauge.raw, brut, 'la jauge reçoit la valeur');
+    near(can.inPins[0].state, brut, 0.01, pc + ' % arrive en continu (' + brut + ')');
+    eq(can.raw, Math.round(brut), 'le CAN quantifie sur 8 bits : ' + Math.round(brut));
+    eq(cna.outPins[0].state, Math.round(brut), 'reconverti à l’identique');
+    eq(jauge.raw, Math.round(brut), 'la jauge reçoit la valeur');
   });
   applyInspector(pot, fld('o_val', 100)); sim();
   deq(can.outPins.map(p => p.state), [1,1,1,1,1,1,1,1], '255 = 11111111');
@@ -2353,7 +2360,7 @@ T('T132 débits dosables : vanne, pompe et cuve', () => {
   const plein = cuve.niv;
   ok(plein > 25, 'à pleine commande, ça monte vite (' + Math.round(plein) + ' %)');
   sim();                                       // les sorties publient l’état après le commit
-  eq(cuve.outPins[3].state, Math.round(cuve.niv * 2.55), 'la pression suit le niveau');
+  near(cuve.outPins[3].state, cuve.niv * 2.55, 0.01, 'la pression suit le niveau');
   board();
   const g = mk('GROUP', 0, 0), sw2 = [0,1,2,3].map(i => mk('SWITCH', -200, i * 70));
   const cuve2 = mk('CUVE', 300, 0);
@@ -2436,7 +2443,7 @@ T('T136 boucle de vitesse : le tachymètre régule le moteur', () => {
   link(reg, 0, pwm, 0); link(en, 0, pwm, 1); link(pwm, 0, m, 0);
   // le régulateur voit une vitesse en tr/min : la consigne se donne en tr/min
   applyInspector(reg, fld('o_cons', 1765)); applyInspector(reg, fld('o_gain', 4));
-  eq(optOf(reg, 'cons'), 150, '1765 tr/min → 150 en interne');
+  near(optOf(reg, 'cons'), 150, 0.1, '1765 tr/min → 150 en interne');
   applyInspector(m, fld('o_inert', .5));
   applyInspector(pwm, fld('o_hz', 20));
   for (let i = 0; i < 120; i++){ __advance(100); sim(); }
@@ -2647,7 +2654,7 @@ T('T144 tuyauterie : raccords fluides, bridage et répartition', () => {
   cuve.niv = 0;
   for (let i = 0; i < 30; i++){ __advance(150); sim(); }   // le temps que la pompe s'établisse
   ok(tu.bride, 'le tuyau bride le débit');
-  eq(tu.outPins[0].state, tu.max, 'débit plafonné à la section');
+  near(tu.outPins[0].state, tu.max, 0.1, 'débit plafonné à la section');
   cuve.niv = 0;
   for (let i = 0; i < 12; i++){ __advance(150); sim(); }
   const lent = cuve.niv;
@@ -2783,7 +2790,7 @@ T('T148 les réglages se donnent dans l’unité de la mesure branchée', () => 
   // sans rien de branché : on parle en % de l'échelle
   eq(optScale(th, REG.THERMO.opts[0]).unit, '%', 'par défaut : % de l’échelle');
   applyInspector(th, fld('o_cons', 50));
-  eq(optOf(th, 'cons'), 128, '50 % → 128 en interne');
+  eq(optOf(th, 'cons'), 127.5, '50 % → 127,5 en interne : plus d’arrondi');
   // branché sur un four (0-250 °C) : la consigne se donne en °C
   link(four, 0, th, 0);
   const sc = optScale(th, REG.THERMO.opts[0]);
@@ -2794,7 +2801,7 @@ T('T148 les réglages se donnent dans l’unité de la mesure branchée', () => 
   eq(optTxt(th, 'cons'), '47 °C', 'et relu en °C');
   // l'hystérésis est un écart : on convertit l'amplitude, pas le zéro
   applyInspector(th, fld('o_hyst', 10));
-  eq(optOf(th, 'hyst'), Math.round(10 / 250 * 255), '10 °C d’écart → 10 en brut');
+  near(optOf(th, 'hyst'), 10 / 250 * 255, 0.01, '10 °C d’écart converti sans perte');
   eq(optTxt(th, 'hyst'), '10 °C', 'relu comme un écart');
   // le champ de l'inspecteur porte l'unité, pas « 0-255 »
   const html = regOptField(th, REG.THERMO.opts[0]);
@@ -2874,6 +2881,48 @@ T('T150 les exemples hydrauliques tournent vraiment', () => {
   eq(vanne.open, 0, 'la vanne se referme');
   cuve.niv = 50; sim();
   eq(sr.outPins[0].state, 0, 'et reste fermée en redescendant dans la zone morte');
+});
+
+T('T151 aucune valeur affichée ne déborde en décimales', () => {
+  const sale = /\d+[.,]\d{2,}/;                 // 128.4 passe, 128.4567 non
+  const fautifs = [];
+  Object.keys(REG).forEach(id => {
+    board();
+    const c = mk(id, 0, 0);
+    // on injecte une mesure volontairement « moche » sur chaque entrée
+    c.inPins.forEach(p => p.state = 123.456789);
+    try { c.evaluate(); c.commit && c.commit(); c.evaluate(); } catch (e){ return; }
+    const d = REG[id];
+    const bouts = [];
+    try { if (d.value) bouts.push(d.value(c)); } catch (e){}
+    try { if (d.sub)   bouts.push(d.sub(c)); } catch (e){}
+    try { if (d.tip)   bouts.push((d.tip(c) || []).join(' | ')); } catch (e){}
+    bouts.filter(x => x != null).forEach(x => {
+      if (sale.test(String(x))) fautifs.push(id + ' : ' + x);
+    });
+  });
+  ok(!fautifs.length, 'affichages non arrondis —\n      ' + fautifs.join('\n      '));
+});
+
+T('T152 la mesure garde sa finesse d’un bout à l’autre de la chaîne', () => {
+  board();
+  // un thermocouple 0-400 °C : un pas entier vaudrait 1,57 °C
+  const four = mk('THERMOC', 0, 0);
+  const th = mk('THERMO', 400, 0);
+  link(four, 0, th, 0);
+  applyInspector(four, fld('o_val', 100.4));
+  sim();
+  const brut = four.outPins[0].state;
+  ok(!Number.isInteger(brut), 'la sortie du capteur n’est plus quantifiée (' + brut + ')');
+  near(raw2phys(brut, { min:0, max:400 }), 100.4, 0.01, '100,4 °C traverse le câble sans perte');
+  // deux mesures séparées de moins d’un pas entier restent distinctes
+  applyInspector(four, fld('o_val', 100.9));
+  sim();
+  ok(four.outPins[0].state !== brut, '100,9 °C se distingue de 100,4 °C');
+  // et la consigne se pose au même endroit
+  applyInspector(th, fld('o_cons', 100.4));
+  near(raw2phys(optOf(th, 'cons'), { min:0, max:400 }), 100.4, 0.01,
+       'la consigne vise exactement la même valeur');
 });
 
 /* ===================== bilan ===================== */

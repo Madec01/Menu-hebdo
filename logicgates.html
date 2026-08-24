@@ -827,7 +827,7 @@ class Pin {
   /* Débit que ce port accepte d'absorber (écrit par le composant, lu par l'amont) */
   get libre(){ return this.accept == null ? ANA_MAX : this.accept; }
   /* Débit que ce port de sortie CHERCHE à faire passer, avant tout bridage aval */
-  get dispo(){ return this.dem == null ? (this.state | 0) : this.dem; }
+  get dispo(){ return this.dem == null ? ana(this) : this.dem; }
   /* Direction sortante du pin (vers l'extérieur du boîtier), après rotation */
   dir(){
     const c = this.comp;
@@ -952,7 +952,7 @@ class Wire {
     const mx = (P[i].x + P[i+1].x) / 2, my = (P[i].y + P[i+1].y) / 2;
     const ph = physOf(this.state, pinInfo(this.outPin) ||
       (this.flu ? { unit:'L/min', min:0, max:50 } : null));
-    const txt = ph ? ph.txt : String(this.state);
+    const txt = ph ? ph.txt : fmtRaw(this.state);
     c.save();
     c.font = "600 10px 'IBM Plex Mono', monospace";
     const w = c.measureText(txt).width + 12;
@@ -1067,7 +1067,7 @@ function pinInfo(pin){
 function sourceOf(inPin){
   const w = wires.find(x => x.inPin === inPin);
   if (!w) return null;
-  return { pin:w.outPin, comp:w.outPin.comp, info:pinInfo(w.outPin), val:w.outPin.state | 0 };
+  return { pin:w.outPin, comp:w.outPin.comp, info:pinInfo(w.outPin), val:ana(w.outPin) };
 }
 /* Met une valeur brute 0-255 à l'échelle physique de sa source */
 function physOf(raw, info){
@@ -1099,8 +1099,10 @@ function raw2phys(raw, info, span){
   return span ? r : info.min + r;
 }
 function phys2raw(v, info, span){
-  if (!info || info.max === info.min) return Math.round(v);
-  const r = Math.round((span ? v : v - info.min) / (info.max - info.min) * ANA_MAX);
+  if (!info || info.max === info.min) return v;
+  // on garde trois décimales : assez fin pour tout capteur, assez court pour
+  // que les montages sérialisés restent lisibles
+  const r = +((span ? v : v - info.min) / (info.max - info.min) * ANA_MAX).toFixed(3);
   return Math.max(0, Math.min(ANA_MAX, r));
 }
 /* Un nombre physique mis en forme, sans son unité */
@@ -1115,7 +1117,7 @@ function optTxt(c, k){
 /* La valeur brute qui circule sur une entrée, dite dans l'unité de sa source */
 function mesTxt(c, i){
   const s = sourceOf(c.inPins[i]);
-  const raw = c.inPins[i].state | 0;
+  const raw = ana(c.inPins[i]);
   const sc = (s && s.info) || ECHELLE_PCT;
   return physNum(raw2phys(raw, sc), sc) + (sc.unit ? ' ' + sc.unit : '');
 }
@@ -1450,7 +1452,7 @@ class Component {
       return;
     }
     if (this.type === 'UNGROUP'){
-      const val = this.inPins[0].state | 0;
+      const val = Math.round(ana(this.inPins[0]));
       this.outPins.forEach((p, i) => p.state = (val >> (3 - i)) & 1);
       return;
     }
@@ -2049,7 +2051,7 @@ class Component {
         }
       }
       if (type === 'GROUP' || type === 'UNGROUP'){
-        const bval = type === 'GROUP' ? (this.outPins[0].state | 0) : (this.inPins[0].state | 0);
+        const bval = Math.round(type === 'GROUP' ? this.outPins[0].state : this.inPins[0].state) | 0;
         c.font = "700 13px 'IBM Plex Mono', monospace";
         c.fillStyle = bval ? '#ffd97a' : PAL.dim;
         c.fillText(String(bval), cx, cy + 16);
@@ -5316,9 +5318,12 @@ function regOptApply(c, key, raw){
   else if (o.type === 'select') c.opt[o.k] = isNaN(+raw) ? raw : +raw;
   else {
     const sc = optScale(c, o);
-    let v = (sc || (o.step && o.step < 1)) ? parseFloat(raw) : parseInt(raw, 10);
+    // On accepte toujours les décimales : « 100,4 °C » est une consigne légitime.
+    // Le pas déclaré n'est qu'une granularité de confort pour les flèches du champ.
+    let v = parseFloat(raw);
     if (isNaN(v)) v = sc ? raw2phys(o.def, sc, o.span) : o.def;
     if (sc) v = phys2raw(v, sc, o.span);       // la saisie est physique, le stockage reste brut
+    if (o.int) v = Math.round(v);              // les rares réglages qui comptent des crans
     c.opt[o.k] = Math.max(o.min, Math.min(o.max, v));
   }
   if (d.onOpt) d.onOpt(c, o.k);
@@ -5343,7 +5348,8 @@ const FAM_SECTIONS = [
   { key:'reg', t:'Régulation — maintenir une consigne',
     p:'Réguler, c\u2019est corriger en permanence l\u2019écart entre ce qu\u2019on veut et ce qu\u2019on mesure. Du simple thermostat au PID, ces blocs ferment la boucle entre un capteur et un actionneur.<br><br>' +
       '<b>Les réglages parlent en unités réelles.</b> Une consigne se donne en <code>°C</code>, en <code>bar</code>, en <code>%</code> ou en <code>tr/min</code> — jamais en valeur brute. Chaque régulateur regarde ce qui est branché sur son entrée de mesure, en reprend l\u2019unité et l\u2019étendue, et t\u2019ouvre un champ gradué dans cette unité : branche un four qui mesure de 0 à 250 °C, et le thermostat te demande une consigne <b>entre 0 et 250 °C</b>. Les seuils, l\u2019hystérésis et les limites suivent la même règle ; l\u2019hystérésis étant un <i>écart</i>, « ± 10 °C » veut bien dire dix degrés. Tant que rien n\u2019est branché, faute de mieux le réglage s\u2019exprime en <b>% de l\u2019échelle</b> — branche une mesure et il bascule tout seul dans la bonne unité.<br><br>' +
-      'La conversion se fait à la saisie comme à la lecture : la glissière de réglage, l\u2019inspecteur et l\u2019infobulle affichent tous la même valeur physique. Ce que le circuit transporte en interne reste une grandeur numérique — c\u2019est exactement ce que fait un automate réel, qui convertit ses entrées analogiques en grandeurs métier avant toute décision. On appelle ça la <b>mise à l\u2019échelle</b>.' },
+      'La conversion se fait à la saisie comme à la lecture : la glissière de réglage, l\u2019inspecteur et l\u2019infobulle affichent tous la même valeur physique. Ce que le circuit transporte en interne reste une grandeur numérique — c\u2019est exactement ce que fait un automate réel, qui convertit ses entrées analogiques en grandeurs métier avant toute décision. On appelle ça la <b>mise à l\u2019échelle</b>.<br><br>' +
+      '<b>Et la mesure ne perd rien en chemin.</b> Un fil de mesure porte une valeur <i>continue</i> : une consigne de <code>100,4 °C</code> vise bien 100,4 °C, pas le palier le plus proche. Seuls les blocs qui travaillent sur des <b>bits</b> arrondissent, et c\u2019est leur rôle : brancher un <b>CAN</b> sur une sonde, c\u2019est précisément choisir de découper l\u2019étendue en 256 crans — regarde la valeur se figer par paliers à sa sortie. C\u2019est la <b>résolution</b> d\u2019un convertisseur, et c\u2019est le premier chiffre d\u2019une fiche technique d\u2019automate.' },
   { key:'calc', t:'Calcul & données — les blocs assemblés (suite)',
     p:'Des blocs numériques plus larges : décoder, coder, aiguiller, mémoriser des octets. Tous restent démontables en portes — leur coût affiché est celui du circuit qu\u2019ils remplacent.' },
   { key:'mem', t:'Mémoire — registres et bascules (suite)',
@@ -5512,7 +5518,7 @@ defComp('SRMEM', {
 defComp('DIVN', {
   name:'DIVISEUR DE FRÉQUENCE', short:'÷N', family:'time', color:'#5aa2ff', cost:10, seq:true,
   glyph:'÷', w:100, h:74, ins:[{n:'▷'}], outs:[{n:'S'}],
-  opts:[{ k:'n', label:'Diviser par', min:2, max:64, step:1, def:2,
+  opts:[{ k:'n', label:'Diviser par', min:2, max:64, step:1, def:2, int:true,
     hint:'La sortie change d’état tous les N fronts montants.' }],
   init(c){ c.prevClk = null; c.n = 0; c.q = 0; },
   eval(c){ c.pendClk = c.inPins[0].state ? 1 : 0; c.outPins[0].state = c.q; },
@@ -5861,7 +5867,7 @@ defComp('RELAY', {
   glyph:'⧉', w:110, h:96,
   ins:[{n:'CMD'},{n:'E'}], outs:[{n:'NO'},{n:'NF'}],
   eval(c){
-    const cmd = c.inPins[0].state ? 1 : 0, e = c.inPins[1].state | 0;
+    const cmd = c.inPins[0].state ? 1 : 0, e = ana(c.inPins[1]);
     c.outPins[0].state = cmd ? e : 0;
     c.outPins[1].state = cmd ? 0 : e;
     c.on = cmd;
@@ -5900,7 +5906,7 @@ defComp('MOTOR', {
   eval(c){
     c.cmd = anaIn(c.inPins[0]);
     c.rev = c.inPins[1].state ? 1 : 0;
-    c.outPins[0].state = Math.round(c.vit);
+    c.outPins[0].state = c.vit;
     c.outPins[1].state = c.tr;                       // une impulsion par tour : tachymètre
   },
   commit(c){
@@ -5961,7 +5967,7 @@ defComp('JACK', {
     c.pOut = anaIn(c.inPins[0]); c.pIn = anaIn(c.inPins[1]);
     c.outPins[0].state = c.pos <= 0.02 ? 1 : 0;         // fin de course « rentré »
     c.outPins[1].state = c.pos >= 0.98 ? 1 : 0;         // fin de course « sorti »
-    c.outPins[2].state = Math.round(c.pos * ANA_MAX);   // position mesurée
+    c.outPins[2].state = c.pos * ANA_MAX;              // position mesurée
   },
   commit(c){
     const now = Date.now(), dt = c.lastT ? Math.min(200, now - c.lastT) : 0;
@@ -6008,7 +6014,7 @@ defComp('VALVE', {
     const raccorde = wires.some(w => w.inPin === c.inPins[1]);
     // raccordée : elle transmet ce qui arrive, dans la limite de son ouverture
     // libre : elle sert de robinet de source, comme avant
-    c.deb = raccorde ? Math.min(c.inPins[1].state | 0, c.ouv) : c.ouv;
+    c.deb = raccorde ? Math.min(ana(c.inPins[1]), c.ouv) : c.ouv;
     c.outPins[1].dem = raccorde ? Math.min(amontDem(c.inPins[1]), c.ouv) : c.ouv;
     c.outPins[0].state = c.deb;
     c.outPins[1].state = c.deb;
@@ -6048,13 +6054,13 @@ defComp('PUMP', {
   eval(c){
     c.cmd = anaIn(c.inPins[0]);
     // ce qu'elle peut aspirer : la source branchée, ou l'air libre si rien n'est raccordé
-    const amont = wires.some(w => w.inPin === c.inPins[1]) ? (c.inPins[1].state | 0) : ANA_MAX;
+    const amont = wires.some(w => w.inPin === c.inPins[1]) ? ana(c.inPins[1]) : ANA_MAX;
     c.cible = Math.min(c.cmd, amont, avalLibre(c.outPins[1]) || (wires.some(w => w.outPin === c.outPins[1]) ? 0 : c.cmd));
     c.inPins[1].accept = c.cmd;                // elle demande à l'amont ce qu'elle veut débiter
     c.outPins[1].dem = Math.min(c.cmd, amont);  // ce qu'elle POUSSERAIT si l'aval suivait
     c.run = c.cmd > 0 ? 1 : 0;
-    c.outPins[0].state = Math.round(c.deb);
-    c.outPins[1].state = Math.round(c.deb);
+    c.outPins[0].state = c.deb;
+    c.outPins[1].state = c.deb;
   },
   commit(c){
     const now = Date.now(), dt = c.lastT ? Math.min(200, now - c.lastT) : 0;
@@ -6155,17 +6161,36 @@ defComp('STEPPER', {
     real:'Imprimantes, scanners, machines à commande numérique : tous utilisent des moteurs pas à pas, parce qu’on peut leur ordonner « avance de 137 pas » sans jamais mesurer où ils en sont.' }
 });
 /* ==================== SIGNAL ANALOGIQUE ====================
-   Un fil transporte une valeur entière 0-255. Les capteurs mesurent une
-   grandeur physique (°C, cm, lux…), l'affichent dans son unité et sortent
-   la valeur brute correspondante — exactement ce que fait un convertisseur
-   d'entrée d'automate. */
+   Un fil de mesure transporte une valeur CONTINUE dans l'échelle 0-255.
+   Les capteurs mesurent une grandeur physique (°C, cm, lux…), l'affichent
+   dans son unité et sortent la valeur correspondante — exactement ce que
+   fait un convertisseur d'entrée d'automate.
+   L'échelle reste 0-255 pour que « 1 = pleine puissance » garde son sens,
+   mais rien n'est arrondi en chemin : une sonde 0-400 °C rendait autrefois
+   des paliers de 1,6 °C, elle rend maintenant la valeur exacte. Seuls les
+   blocs qui manipulent des BITS (CAN, GROUPER, compteurs, adresses) et les
+   affichages arrondissent, chacun pour son propre compte. */
 const ANA_MAX = 255;
 /* Convention des commandes d'actionneur :
      0        → arrêt
      1        → pleine puissance (le monde booléen : un interrupteur sur ON)
      2 … 255  → dosage proportionnel (PWM, CNA, régulateur…)
    Un actionneur se commande donc aussi bien en tout ou rien qu'en analogique. */
-const anaIn = pin => { const v = (pin.state | 0); return v <= 0 ? 0 : (v === 1 ? ANA_MAX : Math.min(ANA_MAX, v)); };
+const anaIn = pin => { const v = ana(pin); return v <= 0 ? 0 : (v === 1 ? ANA_MAX : Math.min(ANA_MAX, v)); };
+/* Lecture d'un bus de mesure : une valeur CONTINUE dans l'échelle 0-255.
+   L'ancien « | 0 » tronquait à l'entier et bornait la résolution de toute
+   mesure à 1/255 de son étendue — 1,6 °C sur un thermocouple 0-400 °C.
+   Les consommateurs qui ont besoin d'un entier (bits, compteurs, adresses)
+   arrondissent explicitement ; la chaîne de mesure, elle, reste continue. */
+function ana(pin){
+  const v = pin ? +pin.state : 0;
+  return v > 0 ? Math.min(ANA_MAX, v) : 0;
+}
+/* Une valeur brute affichée sans traîne de décimales */
+function fmtRaw(v){
+  const x = +v || 0;
+  return Number.isInteger(x) ? String(x) : x.toFixed(1);
+}
 const fmtPhys = (v, unit, dec) => (dec ? v.toFixed(dec) : Math.round(v)) + (unit ? ' ' + unit : '');
 
 /* Fabrique de capteurs : mesure + seuil, tous bâtis sur le même moule */
@@ -6195,7 +6220,7 @@ function defSensor(id, o){
         // Mesure réelle : on lit la grandeur du procédé dans SON unité, puis on la
         // rapporte à l'étendue de mesure du capteur. Hors gamme, il sature — comme
         // un vrai instrument dont on a mal choisi la plage.
-        const raw = Math.max(0, Math.min(ANA_MAX, c.inPins[0].state | 0));
+        const raw = ana(c.inPins[0]);
         const ph = src.info ? physOf(raw, src.info) : null;
         const brut = ph && src.info.unit === o.unit ? ph.v : (o.min + raw / ANA_MAX * (o.max - o.min));
         c.direct = true;
@@ -6308,7 +6333,7 @@ defComp('CAN', {
   glyph:'A→D', w:118, h:200, ins:[{ n:'A', bus:true }],
   outs:[{n:'128'},{n:'64'},{n:'32'},{n:'16'},{n:'8'},{n:'4'},{n:'2'},{n:'1'}],
   eval(c){
-    const v = Math.max(0, Math.min(255, c.inPins[0].state | 0));
+    const v = Math.round(ana(c.inPins[0]));   // huit bits : il faut un entier
     c.raw = v;
     c.outPins.forEach((p, i) => p.state = (v >> (7 - i)) & 1);
   },
@@ -6344,7 +6369,7 @@ defComp('PWM', {
     hint:'Nombre de cycles par seconde. En vrai on monte à plusieurs kHz — ici on ralentit pour voir.' }],
   eval(c){
     const en = c.inPins[1].state ? 1 : 0;
-    const duty = Math.max(0, Math.min(255, c.inPins[0].state | 0)) / 255;
+    const duty = ana(c.inPins[0]) / ANA_MAX;
     c.duty = duty;
     const p = 1000 / optOf(c, 'hz');
     c.outPins[0].state = (en && duty > 0 && ((Date.now() % p) / p) < duty) ? 1 : 0;
@@ -6372,7 +6397,7 @@ defComp('THERMO', {
   ],
   init(c){ c.q = 0; },
   eval(c){
-    const v = c.inPins[0].state | 0, s = optOf(c, 'cons'), h = optOf(c, 'hyst');
+    const v = ana(c.inPins[0]), s = optOf(c, 'cons'), h = optOf(c, 'hyst');
     if (optOf(c, 'sens') === 'chauf'){
       if (v < s - h) c.q = 1;
       else if (v > s + h) c.q = 0;
@@ -6404,7 +6429,7 @@ defComp('SCHMITT', {
   ],
   init(c){ c.q = 0; },
   eval(c){
-    const v = c.inPins[0].state | 0;
+    const v = ana(c.inPins[0]);
     if (v >= optOf(c, 'haut')) c.q = 1;
     else if (v <= optOf(c, 'bas')) c.q = 0;
     c.mes = v;
@@ -6429,7 +6454,7 @@ defComp('LIMIT', {
     { k:'max', label:'Maximum', min:0, max:255, step:1, def:200, mes:0 }
   ],
   eval(c){
-    const v = c.inPins[0].state | 0;
+    const v = ana(c.inPins[0]);
     c.out = Math.max(optOf(c, 'min'), Math.min(optOf(c, 'max'), v));
     c.outPins[0].state = c.out;
   },
@@ -6450,7 +6475,7 @@ defComp('RAMPE', {
   opts:[{ k:'vit', label:'Pente', min:5, max:255, step:5, def:60, mes:0, span:true, suffix:'/s',
     hint:'Vitesse maximale de variation de la sortie.' }],
   init(c){ c.val = 0; c.lastT = 0; },
-  eval(c){ c.cible = c.inPins[0].state | 0; c.outPins[0].state = Math.round(c.val); },
+  eval(c){ c.cible = ana(c.inPins[0]); c.outPins[0].state = c.val; },
   commit(c){
     const now = Date.now(), dt = c.lastT ? Math.min(200, now - c.lastT) : 0;
     c.lastT = now;
@@ -6478,7 +6503,7 @@ defComp('PROP', {
       hint:'Plus le gain est fort, plus la correction est vive — et plus le système risque d’osciller.' }
   ],
   eval(c){
-    const v = c.inPins[0].state | 0, s = optOf(c, 'cons');
+    const v = ana(c.inPins[0]), s = optOf(c, 'cons');
     c.err = s - v;
     c.cmd = Math.max(0, Math.min(255, Math.round(c.err * optOf(c, 'gain'))));
     c.outPins[0].state = c.cmd;
@@ -6511,7 +6536,7 @@ defComp('FOUR', {
   restore(c, s){ if (s.temp != null) c.temp = s.temp; },
   eval(c){
     c.pwr = anaIn(c.inPins[0]);            // 1 = pleine chauffe, valeur dosée = puissance réglée
-    c.outPins[0].state = Math.round(c.temp);
+    c.outPins[0].state = c.temp;
     c.outPins[1].state = c.temp >= optOf(c, 'alerte') ? 1 : 0;
   },
   commit(c){
@@ -6547,17 +6572,17 @@ defComp('CUVE', {
   eval(c){
     // Arrivée : commande électrique OU tuyau raccordé. Elle n'accepte plus rien une fois pleine.
     c.inPins[2].accept = c.niv >= 99.5 ? 0 : ANA_MAX;
-    c.entree = Math.max(anaIn(c.inPins[0]), c.inPins[2].state | 0);
+    c.entree = Math.max(anaIn(c.inPins[0]), ana(c.inPins[2]));
     // Départ par gravité : d'autant plus fort que la cuve est pleine, limité par l'aval
     c.outPins[4].dem = Math.round(c.niv * 2.55);        // ce que la colonne d'eau pousserait
     c.sortie = Math.min(Math.round(c.niv * 2.55), avalLibre(c.outPins[4]));
     c.fill = c.entree;
     c.drain = Math.max(anaIn(c.inPins[1]), c.sortie);
-    c.outPins[0].state = Math.round(c.niv * 2.55);
+    c.outPins[0].state = c.niv * 2.55;
     c.outPins[1].state = c.niv >= optOf(c, 'haut') ? 1 : 0;
     c.outPins[2].state = c.niv <= optOf(c, 'bas') ? 1 : 0;
     // pression au fond = hauteur de colonne d'eau : elle suit le niveau
-    c.outPins[3].state = Math.round(c.niv * 2.55);
+    c.outPins[3].state = c.niv * 2.55;
     c.outPins[4].state = c.sortie;
   },
   commit(c){
@@ -6568,7 +6593,7 @@ defComp('CUVE', {
     else if (c.drain && !c.fill) c.niv = Math.max(0, c.niv - d * c.drain / ANA_MAX);
   },
   tip:c => ['Niveau : ' + Math.round(c.niv) + ' %',
-            'Pression au fond : ' + (c.niv / 100 * 0.1).toFixed(2) + ' bar — proportionnelle à la hauteur',
+            'Pression au fond : ' + (c.niv / 100 * 10).toFixed(1) + ' bar — proportionnelle à la hauteur',
             'Seuils : bas ' + optOf(c, 'bas') + ' % · haut ' + optOf(c, 'haut') + ' %',
             'Débits dosables : une commande à mi-valeur remplit deux fois moins vite'],
   body(c, x, col, on, hov, t){
@@ -6613,7 +6638,7 @@ defComp('JAUGE', {
     { k:'ech', label:'Pleine échelle (0 = auto)', min:0, max:9999, step:1, def:0 }
   ],
   eval(c){
-    c.raw = Math.max(0, Math.min(255, c.inPins[0].state | 0));
+    c.raw = ana(c.inPins[0]);
     const src = sourceOf(c.inPins[0]);
     const fU = String(optOf(c, 'unit') || '').trim(), fE = optOf(c, 'ech') | 0;
     let info = src && src.info;
@@ -6654,8 +6679,8 @@ defComp('SERVO', {
   outs:[{ n:'POS', bus:true, unit:'°', min:0, max:180 }],
   init(c){ c.ang = 0; c.lastT = 0; },
   eval(c){
-    c.cible = Math.max(0, Math.min(255, c.inPins[0].state | 0)) / 255 * Math.PI;
-    c.outPins[0].state = Math.round((c.ang || 0) / Math.PI * ANA_MAX);   // position atteinte
+    c.cible = ana(c.inPins[0]) / ANA_MAX * Math.PI;
+    c.outPins[0].state = (c.ang || 0) / Math.PI * ANA_MAX;              // position atteinte
   },
   commit(c){
     const now = Date.now(), dt = c.lastT ? Math.min(200, now - c.lastT) : 0;
@@ -6702,7 +6727,7 @@ defComp('TUNNEL', {
     hint:'Tous les tunnels portant ce nom sont reliés entre eux, sans câble.' }],
   eval(c){
     const n = String(optOf(c, 'nom') || 'A').toUpperCase();
-    const v = c.inPins[0].state | 0;
+    const v = ana(c.inPins[0]);
     if (v) TUN_NOW[n] = Math.max(TUN_NOW[n] || 0, v);
     c.val = TUN_PREV[n] || 0;
     c.outPins[0].state = c.val;
@@ -6789,7 +6814,7 @@ defComp('AIR', {
   restore(c, s){ if (s.bar != null) c.bar = s.bar; },
   eval(c){
     c.comp = anaIn(c.inPins[0]); c.use = anaIn(c.inPins[1]);
-    c.outPins[0].state = Math.round(c.bar / 10 * ANA_MAX);
+    c.outPins[0].state = c.bar / 10 * ANA_MAX;
     c.outPins[1].state = c.bar >= optOf(c, 'haut') ? 1 : 0;
     c.outPins[2].state = c.bar <= optOf(c, 'bas') ? 1 : 0;
     // piquage : il distribue d'autant plus d'air qu'il est sous pression
@@ -6852,7 +6877,7 @@ defComp('CONV', {
   restore(c, s){ if (s.n) c.n = s.n; },
   eval(c){
     c.cmd = anaIn(c.inPins[0]);
-    c.outPins[0].state = Math.round(c.vit);
+    c.outPins[0].state = c.vit;
     c.outPins[1].state = c.piece;
   },
   commit(c){
@@ -6912,8 +6937,7 @@ defComp('COURBE', {
   opts:[{ k:'duree', label:'Fenêtre (s)', min:5, max:180, step:5, def:30,
     hint:'Durée visible à l’écran. Une régulation lente demande une grande fenêtre.' }],
   init(c){ c.buf1 = []; c.buf2 = []; c.lastS = 0; },
-  eval(c){ c.v1 = Math.max(0, Math.min(255, c.inPins[0].state | 0));
-           c.v2 = Math.max(0, Math.min(255, c.inPins[1].state | 0)); },
+  eval(c){ c.v1 = ana(c.inPins[0]); c.v2 = ana(c.inPins[1]); },
   commit(c){
     const now = Date.now();
     const pas = optOf(c, 'duree') * 1000 / 180;      // 180 points sur la fenêtre
@@ -6922,7 +6946,7 @@ defComp('COURBE', {
     c.buf1.push(c.v1); c.buf2.push(c.v2);
     if (c.buf1.length > 180){ c.buf1.shift(); c.buf2.shift(); }
   },
-  tip:c => ['V1 = ' + (c.v1 || 0) + '  ·  V2 = ' + (c.v2 || 0),
+  tip:c => ['V1 = ' + fmtRaw(c.v1) + '  ·  V2 = ' + fmtRaw(c.v2),
             'Fenêtre : ' + optOf(c, 'duree') + ' s — ' + c.buf1.length + ' points',
             'Branche la mesure sur V1 et la consigne sur V2 : l’écart saute aux yeux'],
   body(c, x, col, on, hov, t){
@@ -6974,7 +6998,7 @@ defComp('ECRAN', {
     c.voies = c.inPins.map((p, i) => {
       const src = sourceOf(p);
       if (!src) return null;
-      const raw = Math.max(0, Math.min(ANA_MAX, p.state | 0));
+      const raw = ana(p);
       const forceU = String(optOf(c, 'unite') || '').trim();
       const forceE = optOf(c, 'ech') | 0;
       let info = src.info;
@@ -7062,7 +7086,7 @@ defComp('TUYAU', {
   eval(c){
     c.max = Math.round(ANA_MAX * optOf(c, 'dn') / 100);     // débit maximal admissible
     c.inPins[0].accept = Math.min(c.max, avalLibre(c.outPins[0]));
-    const e = Math.max(0, Math.min(ANA_MAX, c.inPins[0].state | 0));
+    const e = ana(c.inPins[0]);
     c.dem = amontDem(c.inPins[0]);                           // ce que l'amont voudrait pousser
     c.deb = Math.min(e, c.max);
     c.bride = c.dem > c.max;                                 // le tuyau bride l'écoulement
@@ -7111,14 +7135,14 @@ defComp('TE', {
   eval(c){
     const capa = avalLibre(c.outPins[0]) + avalLibre(c.outPins[1]);
     c.inPins[0].accept = capa; c.inPins[1].accept = capa;
-    const tot = Math.min(ANA_MAX, (c.inPins[0].state | 0) + (c.inPins[1].state | 0));
+    const tot = Math.min(ANA_MAX, ana(c.inPins[0]) + ana(c.inPins[1]));
     const r = optOf(c, 'rep') / 100;
     c.tot = tot;
     const dem = Math.min(ANA_MAX, amontDem(c.inPins[0]) + amontDem(c.inPins[1]));
     c.outPins[0].dem = Math.round(dem * r);
     c.outPins[1].dem = Math.round(dem * (1 - r));
-    c.outPins[0].state = Math.round(tot * r);
-    c.outPins[1].state = Math.round(tot * (1 - r));
+    c.outPins[0].state = tot * r;
+    c.outPins[1].state = tot * (1 - r);
     c.outPins[2].state = tot;
   },
   value:c => (physOf(c.tot || 0, { unit:'L/min', min:0, max:50 }) || {}).txt,
@@ -7147,9 +7171,9 @@ defComp('PID', {
   ],
   init(c){ c.integ = 0; c.prevErr = null; c.lastT = 0; c.cmd = 0; c.p = 0; c.i = 0; c.dd = 0; },
   eval(c){
-    c.mes = Math.max(0, Math.min(ANA_MAX, c.inPins[0].state | 0));
+    c.mes = ana(c.inPins[0]);
     c.raz = c.inPins[1].state ? 1 : 0;
-    c.outPins[0].state = Math.round(c.cmd);
+    c.outPins[0].state = c.cmd;
   },
   commit(c){
     const now = Date.now();
