@@ -218,6 +218,9 @@ table.tt tr.tt-fail td:first-child::before{content:'✗ ';color:var(--red)}
   border-radius:7px;color:#dbe6f5;font-family:var(--mono);font-size:12px;padding:6px 8px;outline:none}
 .insp-field input:focus,.insp-field select:focus{border-color:var(--cyan)}
 .insp-hint{font-size:10px;color:var(--dim);line-height:1.45;margin-top:-4px;margin-bottom:8px}
+.fsm-grid{display:grid;grid-template-columns:auto repeat(4,1fr);gap:3px;align-items:center;
+  font-family:var(--mono);font-size:9.5px;color:var(--dim);margin-top:4px}
+.fsm-grid select{font-size:10px;padding:2px}
 .rom-grid{display:grid;grid-template-columns:auto 1fr 1fr;gap:3px 8px;align-items:center;
   font-family:var(--mono);font-size:10.5px;color:#a9b8d4}
 .rom-grid .rg-h{color:var(--violet);font-size:9px;letter-spacing:.1em}
@@ -2604,6 +2607,21 @@ function openInspector(c){
     case 'NIBBLE':
       num('val', 'Valeur (0-15)', c.value, 0, 15, 1);
       break;
+    case 'FSM': {
+      let g = '<div class="fsm-grid"><span class="rg-h">ÉTAT</span><span class="rg-h">A0 B0</span>' +
+              '<span class="rg-h">A0 B1</span><span class="rg-h">A1 B0</span><span class="rg-h">A1 B1</span>';
+      for (let st = 0; st < 4; st++){
+        g += '<span>' + st + '</span>';
+        for (let k = 0; k < 4; k++){
+          const v = (c.opt.tr && c.opt.tr[st] && c.opt.tr[st][k]) | 0;
+          g += '<select data-fsm="' + st + ',' + k + '">' + [0,1,2,3].map(o =>
+            '<option value="' + o + '"' + (o === v ? ' selected' : '') + '>' + o + '</option>').join('') + '</select>';
+        }
+      }
+      B.push(inspField('Table de transitions', g + '</div>',
+        'Pour chaque état (ligne) et chaque combinaison des entrées A et B (colonne), l\u2019état suivant.'));
+      break;
+    }
     case 'ROM': {
       let g = '<div class="rom-grid"><span class="rg-h">ADR (4·2·1)</span><span class="rg-h">S1</span><span class="rg-h">S2</span>';
       for (let r = 0; r < 8; r++){
@@ -2648,7 +2666,14 @@ function openInspector(c){
   });
 }
 function applyInspector(c, inp){
-  const k = inp.dataset.k, romK = inp.dataset.rom;
+  const k = inp.dataset.k, romK = inp.dataset.rom, fsmK = inp.dataset.fsm;
+  if (fsmK){
+    const [st, kk] = fsmK.split(',').map(Number);
+    if (!c.opt.tr) c.opt.tr = [[0,0,0,0],[1,1,1,1],[2,2,2,2],[3,3,3,3]];
+    c.opt.tr[st][kk] = Math.max(0, Math.min(3, parseInt(inp.value, 10) || 0));
+    markDirty();
+    return;
+  }
   const clamp = (v, mn, mx) => Math.max(mn, Math.min(mx, v));
   if (romK){
     const [r, kk] = romK.split(',').map(Number);
@@ -2726,6 +2751,7 @@ function connectWire(outPin, inPin){
 function simulate(passes){
   for (let p = 0; p < passes; p++){
     components.forEach(c => c.inPins.forEach(pin => { pin.state = 0; pin.busWarn = 0; }));
+    tunnelSwap();                       // les nœuds nommés propagent d'une passe à l'autre
     wires.forEach(w => w.update());
     components.forEach(c => c.evaluate());
   }
@@ -5689,6 +5715,88 @@ defComp('SERVO', {
     ex:'POTAR → SERVO : le bras suit le bouton. Puis COMPTEUR → CNA → SERVO : il balaye par crans réguliers.',
     real:'Le servomoteur contient lui-même une boucle de régulation : un capteur d’angle, un comparateur avec la consigne, et un moteur qui corrige. C’est une régulation complète dans un boîtier de 3 cm.' }
 });
+/* ==================== TUNNELS (nœuds nommés) ====================
+   Tous les tunnels qui portent le même nom sont reliés entre eux, sans
+   fil. C'est la réponse classique des schémas électroniques aux câbles
+   qui traversent tout l'écran. La valeur circule d'une passe de
+   simulation à la suivante. */
+let TUN_NOW = {}, TUN_PREV = {};
+function tunnelSwap(){ TUN_PREV = TUN_NOW; TUN_NOW = {}; }
+defComp('TUNNEL', {
+  name:'TUNNEL (NŒUD NOMMÉ)', short:'TUNNEL', family:'calc', color:'#38e1ff', glyph:'⇢',
+  w:112, h:74, ins:[{ n:'E', bus:true }], outs:[{ n:'S', bus:true }],
+  opts:[{ k:'nom', label:'Nom du nœud', type:'text', max:8, def:'A',
+    hint:'Tous les tunnels portant ce nom sont reliés entre eux, sans câble.' }],
+  eval(c){
+    const n = String(optOf(c, 'nom') || 'A').toUpperCase();
+    const v = c.inPins[0].state | 0;
+    if (v) TUN_NOW[n] = Math.max(TUN_NOW[n] || 0, v);
+    c.val = TUN_PREV[n] || 0;
+    c.outPins[0].state = c.val;
+  },
+  value:c => String(optOf(c, 'nom') || 'A').toUpperCase(),
+  sub:c => 'valeur ' + (c.val || 0),
+  tip:c => ['Nœud « ' + String(optOf(c, 'nom')).toUpperCase() + ' » — valeur ' + (c.val || 0),
+            'Relié sans fil à tous les tunnels de même nom'],
+  expr:(c, i, A) => 'nœud[' + String(optOf(c, 'nom')).toUpperCase() + ']',
+  guide:{ txt:'Un <b>nœud nommé</b> : ce qui entre dans un tunnel ressort de <code>tous</code> les tunnels portant le même nom, sans le moindre câble. Deux tunnels « HORLOGE » aux deux bouts de l’écran, et le signal traverse — le schéma respire.',
+    ex:'Pose un tunnel nommé CLK à côté de ton horloge, et un autre à côté de chaque bascule : plus un seul fil d’horloge à travers tout le montage.',
+    real:'Les schématiciens professionnels appellent ça un « net label » ou un tunnel. Sur les grands schémas, presque tous les signaux communs (horloge, alimentation, remise à zéro) sont câblés ainsi.' }
+});
+
+/* ==================== MACHINE À ÉTATS ====================
+   Quatre états, une table de transitions programmable : c'est le cœur de
+   tout automate — et une alternative honnête au micro-contrôleur. */
+defComp('FSM', {
+  name:'MACHINE À ÉTATS', short:'AUTOMATE', family:'time', color:'#b18cff', cost:30, seq:true,
+  glyph:'◉', w:128, h:150,
+  ins:[{ n:'A' }, { n:'B' }, { n:'▷' }, { n:'RZ' }],
+  outs:[{ n:'É0' }, { n:'É1' }, { n:'É2' }, { n:'É3' }],
+  init(c){ c.st = 0; c.prevClk = null; c.opt.tr = [[0,0,0,0],[1,1,1,1],[2,2,2,2],[3,3,3,3]]; },
+  save:c => ({ st: c.st || undefined }),
+  restore(c, s){ if (s.st != null) c.st = s.st; },
+  eval(c){
+    c.pendA = c.inPins[0].state ? 1 : 0; c.pendB = c.inPins[1].state ? 1 : 0;
+    c.pendClk = c.inPins[2].state ? 1 : 0; c.pendRst = c.inPins[3].state ? 1 : 0;
+    c.outPins.forEach((p, i) => p.state = (i === c.st) ? 1 : 0);
+  },
+  commit(c){
+    if (c.pendRst){ c.st = 0; c.prevClk = c.pendClk; return; }
+    if (c.prevClk !== null && c.pendClk && !c.prevClk){
+      const combo = c.pendA * 2 + c.pendB;
+      const row = (c.opt.tr && c.opt.tr[c.st]) || [0,0,0,0];
+      c.st = Math.max(0, Math.min(3, row[combo] | 0));
+      c.justLatched = Date.now();
+    }
+    c.prevClk = c.pendClk;
+  },
+  body(c, x, col, on, hov, t){
+    const cx = c.x + c.w / 2, cy = c.y + 52, r = 30;
+    for (let i = 0; i < 4; i++){
+      const a = -Math.PI / 2 + i * Math.PI / 2;
+      const px = cx + Math.cos(a) * r, py = cy + Math.sin(a) * r;
+      const act = i === c.st;
+      x.beginPath(); x.arc(px, py, act ? 13 : 10, 0, 7);
+      x.fillStyle = act ? c.hexA(col, .35) : 'rgba(255,255,255,.05)';
+      if (act){ x.shadowBlur = 12; x.shadowColor = col; }
+      x.fill(); x.shadowBlur = 0;
+      x.lineWidth = 1.4; x.strokeStyle = act ? col : 'rgba(255,255,255,.22)'; x.stroke();
+      x.font = "700 10px 'Chakra Petch', sans-serif"; x.textAlign = 'center'; x.textBaseline = 'middle';
+      x.fillStyle = act ? '#fff' : PAL.dim;
+      x.fillText(String(i), px, py);
+    }
+    x.font = "600 8px 'IBM Plex Mono', monospace"; x.textAlign = 'center'; x.textBaseline = 'top';
+    x.fillStyle = PAL.dim;
+    x.fillText('ÉTAT ' + c.st, cx, c.y + c.h - 16);
+  },
+  tip:c => ['État courant : ' + c.st,
+            'Transitions depuis cet état : ' +
+            ((c.opt.tr && c.opt.tr[c.st]) || []).map((v, i) =>
+              ['00','01','10','11'][i] + '→' + v).join('  ')],
+  guide:{ txt:'Quatre états, et une <code>table de transitions</code> que tu programmes toi-même : pour chaque état et chaque combinaison des entrées A et B, tu choisis l’état suivant. À chaque front d’horloge, la machine avance ; <code>RZ</code> la ramène à l’état 0. Une sortie par état.<br>C’est le cœur de tout automate : un feu tricolore, un cycle de machine à laver, un distributeur — tous se décrivent ainsi.',
+    ex:'Programme 0→1→2→3→0 quelles que soient les entrées, branche une horloge sur ▷ et les quatre sorties sur un FEU et une BARRIÈRE : ton passage à niveau se déroule tout seul.',
+    real:'Dessiner la machine à états AVANT de câbler quoi que ce soit, c’est la méthode enseignée dans toutes les écoles d’ingénieurs. Le circuit n’est plus qu’une traduction mécanique du diagramme.' }
+});
 /* @@COMPOSANTS@@ */
 registerComponents();
 
@@ -5897,13 +6005,67 @@ function createChip(name){
   CHIPS.push(def); saveChips();
   return { def };
 }
+/* Crée une puce à partir de la SÉLECTION : les câbles qui franchissent la
+   frontière deviennent les pins. C'est la vraie réponse à l'encombrement :
+   on encapsule au lieu d'afficher. */
+function createChipFromSelection(name){
+  if (currentIdx !== -1) return { err:'Les puces se créent dans le bac à sable (sandbox).' };
+  const list = [...selection].filter(c => !c.locked);
+  if (list.length < 2) return { err:'Sélectionne au moins deux composants à encapsuler.' };
+  if (!list.some(c => LOGIC_TYPES.includes(c.type)))
+    return { err:'La sélection ne contient aucune logique : la puce n\u2019aurait aucun intérêt.' };
+  name = (name || '').trim().slice(0, 16);
+  if (!name) return { err:'Il faut un nom !' };
+  if (CHIPS.some(c => c.name.toLowerCase() === name.toLowerCase()))
+    return { err:'Une puce « ' + name + ' » existe déjà.' };
+  const inside = new Set(list);
+  const bornesIn = [], bornesOut = [];
+  list.forEach((c, i) => {
+    c.inPins.forEach((p, pi) => {
+      const w = wires.find(x => x.inPin === p);
+      if (!w || !inside.has(w.outPin.comp)) bornesIn.push({ i, pi, y:p.y, x:p.x });
+    });
+    c.outPins.forEach((p, pi) => {
+      const dehors = wires.some(x => x.outPin === p && !inside.has(x.inPin.comp));
+      const dedans = wires.some(x => x.outPin === p && inside.has(x.inPin.comp));
+      if (dehors || !dedans) bornesOut.push({ i, pi, y:p.y, x:p.x, dehors });
+    });
+  });
+  if (!bornesIn.length || !bornesOut.length)
+    return { err:'Il faut au moins une entrée et une sortie libres sur la frontière de la sélection.' };
+  bornesIn.sort((a, b) => a.y - b.y);
+  bornesOut.sort((a, b) => a.y - b.y);
+  const data = serializeGroup(list);          // composants + câbles internes
+  const comps = data.comps.slice(), wr = data.wires.map(w => w.slice(0, 4));
+  const bb = groupBBox(data.comps);
+  const insIdx = [], outsIdx = [];
+  bornesIn.forEach((b, k) => {
+    comps.push({ t:'SWITCH', x: bb.x0 - 180, y: bb.y0 + k * 90 });
+    const si = comps.length - 1;
+    insIdx.push(si);
+    wr.push([si, 0, b.i, b.pi]);
+  });
+  bornesOut.forEach((b, k) => {
+    comps.push({ t:'LED', x: bb.x0 + bb.w + 120, y: bb.y0 + k * 90 });
+    const li = comps.length - 1;
+    outsIdx.push(li);
+    wr.push([b.i, b.pi, li, 0]);
+  });
+  const def = { name, ins:insIdx.length, outs:outsIdx.length, insIdx, outsIdx,
+                src:{ comps, wires: wr } };
+  CHIPS.push(def); saveChips();
+  return { def };
+}
 function makeChipDialog(){
   AudioSys.click();
-  const name = (typeof prompt === 'function')
-    ? prompt('Nom de la puce (les interrupteurs deviennent ses entrées, les ampoules ses sorties, triés de haut en bas) :', '')
-    : null;
+  const surSelection = selection.size >= 2;
+  const invite = surSelection
+    ? 'Nom de la puce — les ' + selection.size + ' composants sélectionnés seront encapsulés, ' +
+      'et les câbles qui franchissent la frontière deviendront ses pins :'
+    : 'Nom de la puce (les interrupteurs deviennent ses entrées, les ampoules ses sorties, triés de haut en bas) :';
+  const name = (typeof prompt === 'function') ? prompt(invite, '') : null;
   if (name == null) return;
-  const r = createChip(name);
+  const r = surSelection ? createChipFromSelection(name) : createChip(name);
   if (r.err){ toast('🧩 ' + r.err, 'error', 4200); AudioSys.error(); return; }
   toast('🧩 Puce « ' + r.def.name + ' » créée : ' + r.def.ins + ' entrée(s), ' +
         r.def.outs + ' sortie(s). Retrouve-la dans l\u2019onglet Mémoire & puces !', 'info', 5200);
@@ -6965,6 +7127,11 @@ function buildGuide(){
     'en <b>fantômes</b> sur ton plan de travail, étape par étape, en expliquant chaque geste. Tu peux poser une ' +
     'étape, la sauter pour la faire toi-même, ou tout poser d’un coup. Sur une mission « NAND uniquement », il ' +
     'convertit tout seul sa solution dans la base imposée. Et sur une boîte noire 🕵️, il refuse : ce serait tricher.<br><br>' +
+    '<b>🧩 Encapsuler pour respirer.</b> Quand le plan devient touffu, sélectionne un bloc entier et clique ' +
+    '<code>＋ PUCE</code> : les câbles qui franchissent la frontière de la sélection deviennent automatiquement ' +
+    'les pins de la puce. Le circuit disparaît dans un boîtier réutilisable — c’est la démarche même de ' +
+    'l’ingénieur, et le meilleur remède à l’encombrement. Le <b>TUNNEL</b> joue le même rôle pour les signaux ' +
+    'communs : deux tunnels de même nom sont reliés sans aucun fil.<br><br>' +
     '<b>🔍 L’infobulle.</b> Survole n’importe quoi : un <b>composant</b> te donne l’état de chacune de ses ' +
     'entrées et sorties, ses réglages et son coût ; un <b>pin</b> dit à quoi il est relié ; un <b>câble</b> ' +
     'affiche la valeur qu’il transporte. C’est le réflexe à prendre quand un circuit ne fait pas ce que tu crois.<br><br>' +

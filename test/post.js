@@ -2001,6 +2001,115 @@ T('T117 orientation : dessin et cadrage tiennent compte du boîtier tourné', ()
     'changement de repère réversible');
 });
 
+/* ===================== 6sexies. Tunnels, puces, automate ===================== */
+console.log('— Tunnels, puces, automate —');
+
+T('T118 tunnels : le signal traverse sans fil', () => {
+  board();
+  const a = mk('SWITCH', 0, 0), t1 = mk('TUNNEL', 200, 0);
+  const t2 = mk('TUNNEL', 800, 300), led = mk('LED', 1000, 300);
+  link(a, 0, t1, 0); link(t2, 0, led, 0);
+  applyInspector(t1, Object.assign(fld('o_nom', 'CLK'), { type:'text' }));
+  applyInspector(t2, Object.assign(fld('o_nom', 'clk'), { type:'text' }));
+  a.state = 1; sim(); sim();
+  eq(led.inPins[0].state ? 1 : 0, 1, 'la valeur passe d’un tunnel à l’autre (nom insensible à la casse)');
+  a.state = 0; sim(); sim();
+  eq(led.inPins[0].state ? 1 : 0, 0, 'et suit les changements');
+  // un nom différent ne reçoit rien
+  applyInspector(t2, Object.assign(fld('o_nom', 'AUTRE'), { type:'text' }));
+  a.state = 1; sim(); sim();
+  eq(led.inPins[0].state ? 1 : 0, 0, 'nom différent : aucun lien');
+  // trois tunnels du même nom : tous reçoivent
+  applyInspector(t2, Object.assign(fld('o_nom', 'CLK'), { type:'text' }));
+  const t3 = mk('TUNNEL', 800, 600), led2 = mk('LED', 1000, 600);
+  applyInspector(t3, Object.assign(fld('o_nom', 'CLK'), { type:'text' }));
+  link(t3, 0, led2, 0);
+  sim(); sim();
+  eq(led2.inPins[0].state ? 1 : 0, 1, 'tous les tunnels du même nom sont reliés');
+  // un bus passe aussi
+  board();
+  const sw = [0,1,2,3].map(i => mk('SWITCH', 0, i * 70));
+  const g = mk('GROUP', 200, 0), ta = mk('TUNNEL', 400, 0), tb = mk('TUNNEL', 700, 0);
+  const ug = mk('UNGROUP', 900, 0);
+  sw.forEach((x, i) => link(x, 0, g, i));
+  link(g, 0, ta, 0); link(tb, 0, ug, 0);
+  applyInspector(ta, Object.assign(fld('o_nom', 'BUS'), { type:'text' }));
+  applyInspector(tb, Object.assign(fld('o_nom', 'BUS'), { type:'text' }));
+  drive(sw, [1,0,1,1]); sim();
+  eq(tb.val, 11, 'un bus traverse le tunnel');
+});
+
+T('T119 puce depuis une sélection : les câbles frontière deviennent les pins', () => {
+  board();
+  CHIPS = CHIPS.filter(c => c.name !== 'TEST-SEL');
+  const a = mk('SWITCH', 0, 0), b = mk('SWITCH', 0, 200);
+  const x1 = mk('XOR', 300, 0), x2 = mk('AND', 300, 300), o = mk('OR', 560, 150);
+  const led = mk('LED', 800, 150);
+  link(a, 0, x1, 0); link(b, 0, x1, 1);
+  link(a, 0, x2, 0); link(b, 0, x2, 1);
+  link(x1, 0, o, 0); link(x2, 0, o, 1);
+  link(o, 0, led, 0);
+  selection.clear(); [x1, x2, o].forEach(c => selection.add(c));
+  const r = createChipFromSelection('TEST-SEL');
+  ok(r.def, 'puce créée : ' + (r.err || ''));
+  eq(r.def.ins, 4, 'quatre entrées franchissent la frontière');
+  eq(r.def.outs, 1, 'une seule sortie');
+  // la puce reproduit le comportement du bloc encapsulé (ici : A+B, car XOR+ET puis OU)
+  board();
+  const chip = spawnChip('TEST-SEL');
+  const s1 = mk('SWITCH', 0, 0), s2 = mk('SWITCH', 0, 200), out = mk('LED', 700, 0);
+  link(s1, 0, chip, 0); link(s2, 0, chip, 1);
+  link(s1, 0, chip, 2); link(s2, 0, chip, 3);
+  link(chip, 0, out, 0);
+  deq(measure([s1, s2], [out]).map(v => v[0]), [0,1,1,1], 'la puce se comporte comme le bloc d’origine');
+  eq(chip.chipCost, 3, 'coût réel : trois portes');
+  CHIPS = CHIPS.filter(c => c.name !== 'TEST-SEL'); saveChips();
+});
+
+T('T120 puce depuis sélection : refus argumentés', () => {
+  board();
+  selection.clear();
+  ok(createChipFromSelection('X').err, 'sélection vide refusée');
+  const a = mk('SWITCH', 0, 0), b = mk('SWITCH', 0, 100);
+  selection.add(a); selection.add(b);
+  ok(/logique/.test(createChipFromSelection('X').err || ''), 'deux interrupteurs : rien à encapsuler');
+  loadMission(1);
+  selection.clear();
+  ok(/sandbox/i.test(createChipFromSelection('X').err || ''), 'interdit en mission');
+  loadMission(-1);
+});
+
+T('T121 machine à états : transitions programmables, horloge et remise à zéro', () => {
+  board();
+  const A = mk('SWITCH', 0, 0), B = mk('SWITCH', 0, 100);
+  const clk = mk('SWITCH', 0, 200), rst = mk('SWITCH', 0, 300);
+  const f = mk('FSM', 300, 0);
+  link(A, 0, f, 0); link(B, 0, f, 1); link(clk, 0, f, 2); link(rst, 0, f, 3);
+  // cycle 0→1→2→3→0 quelles que soient les entrées
+  [0,1,2,3].forEach(st => [0,1,2,3].forEach(k =>
+    applyInspector(f, { dataset:{ fsm: st + ',' + k }, value:String((st + 1) % 4) })));
+  clk.state = 0; sim();
+  eq(f.st, 0, 'état initial');
+  const vus = [];
+  for (let i = 0; i < 5; i++){ clk.state = 1; sim(); clk.state = 0; sim(); vus.push(f.st); }
+  deq(vus, [1,2,3,0,1], 'le cycle se déroule au rythme de l’horloge');
+  sim();
+  deq(f.outPins.map(p => p.state), [0,1,0,0], 'sortie one-hot de l’état courant');
+  rst.state = 1; sim();
+  eq(f.st, 0, 'remise à zéro');
+  rst.state = 0;
+  // transitions conditionnelles : depuis 0, aller en 2 seulement si A=1
+  applyInspector(f, { dataset:{ fsm:'0,0' }, value:'0' });
+  applyInspector(f, { dataset:{ fsm:'0,1' }, value:'0' });
+  applyInspector(f, { dataset:{ fsm:'0,2' }, value:'2' });
+  applyInspector(f, { dataset:{ fsm:'0,3' }, value:'2' });
+  clk.state = 1; sim(); clk.state = 0; sim();
+  eq(f.st, 0, 'A=0 : on reste en 0');
+  A.state = 1;
+  clk.state = 1; sim(); clk.state = 0; sim();
+  eq(f.st, 2, 'A=1 : on part en 2');
+});
+
 /* ===================== 7. Guide ===================== */
 console.log('— Guide —');
 
