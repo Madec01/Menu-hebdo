@@ -16,6 +16,14 @@ git clone <ce depot> && cd Menu-hebdo
 xdg-open index.html      # ou double-clic sur le fichier
 ```
 
+**`core.html`** est le meme jeu en **un seul fichier autonome** (65 Ko, tous les scripts
+inlines) : pratique pour l'envoyer, l'heberger ou le poser sur une cle. Il se regenere
+apres n'importe quelle modification du code avec :
+
+```
+node build.js
+```
+
 ## Commandes
 
 | Touche | Effet |
@@ -59,6 +67,8 @@ src/main.js         boucle principale et entrees clavier
 src/rng.js          aleatoire deterministe (seed)
 src/audio.js        sons de synthese, sans aucun fichier
 src/save.js         records locaux
+build.js            genere core.html, le fichier unique autonome
+core.html           le jeu entier en un seul fichier (genere)
 ```
 
 **Tout l'equilibrage tient dans `src/config.js` et `src/content.js`.** Le reste n'en depend

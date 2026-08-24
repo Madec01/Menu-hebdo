@@ -1,0 +1,1709 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>CORE — jusqu'au centre de la planete</title>
+<style>
+  :root{
+    --bg:#0b0c0f; --panel:#14161b; --panel2:#1c2028; --line:#2a2f39;
+    --txt:#e8eaee; --dim:#8b93a1; --acc:#ff8a3d; --acc2:#5ff0e0;
+    --or:#ffd24a; --argent:#c9d3dd; --bronze:#c08050;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--txt);
+    font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;overflow:hidden}
+  canvas{display:block;position:absolute;inset:0}
+  .overlay{position:absolute;inset:0;pointer-events:none}
+
+  /* ---------------- HUD ---------------- */
+  #hud{position:absolute;inset:0;pointer-events:none;padding:14px}
+  #depth{position:absolute;top:10px;left:50%;transform:translateX(-50%);text-align:center}
+  #depth .m{font-size:44px;font-weight:700;letter-spacing:-1px;line-height:1;
+    text-shadow:0 2px 12px rgba(0,0,0,.8)}
+  #depth .t{font-size:20px;color:var(--acc2);margin-top:2px;font-variant-numeric:tabular-nums}
+  #depth .goal{font-size:11px;color:var(--dim);margin-top:2px}
+  #left{position:absolute;top:14px;left:14px;font-size:12px;line-height:1.7}
+  #left .lvl{font-size:18px;font-weight:700}
+  #right{position:absolute;top:14px;right:14px;text-align:right;font-size:12px;line-height:1.7}
+  #gold{font-size:20px;font-weight:700;color:var(--or)}
+  #buffs{position:absolute;top:60px;right:14px;display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+  .buff{display:flex;align-items:center;gap:6px;background:rgba(12,14,18,.75);
+    border:1px solid var(--line);border-radius:4px;padding:3px 7px;font-size:11px}
+  .buff .ic{font-weight:700}
+  .buff .bar{width:44px;height:3px;background:#333;border-radius:2px;overflow:hidden}
+  .buff .bar i{display:block;height:100%}
+  #bars{position:absolute;bottom:16px;left:14px;width:190px;font-size:10px;color:var(--dim)}
+  .meter{height:7px;background:#22252c;border:1px solid var(--line);border-radius:3px;
+    overflow:hidden;margin:3px 0 8px}
+  .meter i{display:block;height:100%;transition:width .06s linear}
+  #passivelist{position:absolute;bottom:16px;right:14px;text-align:right;font-size:10px;
+    color:var(--dim);line-height:1.6;max-width:230px}
+  #quota{position:absolute;top:112px;left:50%;transform:translateX(-50%);
+    font-size:12px;color:#ff6a7d;text-align:center}
+
+  /* ---------------- ECRANS ---------------- */
+  .screen{position:absolute;inset:0;background:rgba(7,8,11,.93);display:none;
+    align-items:center;justify-content:center;pointer-events:auto;overflow-y:auto;padding:24px}
+  .screen.on{display:flex}
+  .box{width:min(940px,96vw)}
+  h1{font-size:52px;letter-spacing:10px;font-weight:800;text-align:center}
+  h1 span{color:var(--acc)}
+  .sub{text-align:center;color:var(--dim);font-size:13px;margin:6px 0 26px;line-height:1.8}
+  h2{font-size:13px;letter-spacing:2px;color:var(--dim);text-transform:uppercase;
+    margin:22px 0 10px;font-weight:600}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px;
+    cursor:pointer;transition:.12s;position:relative;overflow:hidden}
+  .card:hover{border-color:var(--acc);transform:translateY(-3px)}
+  .card.sel{border-color:var(--acc);background:#221a12}
+  .card.off{opacity:.35;pointer-events:none}
+  .card .fam{font-size:10px;letter-spacing:1.5px;color:var(--dim)}
+  .card .nm{font-size:17px;font-weight:700;margin:6px 0 8px}
+  .card .ds{font-size:12px;color:#b9c0cb;line-height:1.6}
+  .card .rar{position:absolute;top:12px;right:12px;font-size:9px;letter-spacing:1px;
+    padding:2px 6px;border-radius:3px}
+  .r0{background:#2a2f39;color:#aab2be}
+  .r1{background:#1d3a52;color:#7ec8ff}
+  .r2{background:#4a2a12;color:#ffb03d}
+  .shop{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+  .part{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:12px;
+    cursor:pointer;transition:.12s}
+  .part:hover{border-color:var(--or)}
+  .part.no{opacity:.4;cursor:not-allowed}
+  .part .pn{font-size:14px;font-weight:700}
+  .part .pd{font-size:11px;color:var(--dim);margin:4px 0 8px}
+  .part .pc{font-size:13px;color:var(--or);font-weight:700}
+  .btn{display:block;width:100%;margin-top:24px;padding:15px;background:var(--acc);
+    color:#140c05;border:0;border-radius:8px;font:inherit;font-size:16px;font-weight:800;
+    letter-spacing:2px;cursor:pointer}
+  .btn:disabled{background:#3a3f48;color:#7b828d;cursor:not-allowed}
+  .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--txt);font-size:13px}
+  .res{display:flex;gap:26px;justify-content:center;align-items:baseline;margin-bottom:6px}
+  .res b{font-size:40px;font-variant-numeric:tabular-nums}
+  .medal{font-size:13px;letter-spacing:3px;text-transform:uppercase;font-weight:700}
+  .m-or{color:var(--or)} .m-argent{color:var(--argent)} .m-bronze{color:var(--bronze)}
+  .m-none{color:var(--dim)}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  td{padding:6px 8px;border-bottom:1px solid var(--line)}
+  td:last-child{text-align:right;font-variant-numeric:tabular-nums}
+  .keys{display:flex;gap:20px;justify-content:center;flex-wrap:wrap;font-size:12px;
+    color:var(--dim);margin-top:18px}
+  .keys b{color:var(--txt)}
+  .goldtag{color:var(--or);font-weight:700}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="hud" class="overlay">
+  <div id="left"><div class="lvl" id="lvlName">1-1</div><div id="lvlSub"></div></div>
+  <div id="depth"><div class="m"><span id="mDepth">0</span><small style="font-size:18px">m</small></div>
+    <div class="t" id="mTime">0.0</div><div class="goal" id="mGoal"></div></div>
+  <div id="right"><div id="gold">0 $</div><div id="oreCount"></div></div>
+  <div id="buffs"></div>
+  <div id="quota"></div>
+  <div id="bars">
+    ELAN<div class="meter"><i id="elanBar" style="background:linear-gradient(90deg,#ff8a3d,#ffd24a)"></i></div>
+    TURBO<div class="meter"><i id="turboBar" style="background:linear-gradient(90deg,#5ff0e0,#7ec8ff)"></i></div>
+  </div>
+  <div id="passivelist"></div>
+</div>
+
+<div class="screen on" id="scMenu"><div class="box">
+  <h1>C<span>O</span>RE</h1>
+  <div class="sub">Tu pilotes une foreuse. Le centre de la planete est a 1 300 metres.<br>
+    Il n'y a pas de vie, pas d'energie, pas de game over : ton seul adversaire est le chrono.</div>
+  <h2>Choisis ton metier</h2>
+  <div class="cards" id="jobs"></div>
+  <div class="keys">
+    <span><b>Z Q S D</b> / fleches — diriger et forer</span>
+    <span><b>2 touches</b> — forer en diagonale</span>
+    <span><b>Espace</b> — turbo</span>
+    <span><b>R</b> — recommencer le niveau</span>
+    <span><b>M</b> — son</span>
+  </div>
+  <div class="sub" id="bestTotal" style="margin-top:18px"></div>
+</div></div>
+
+<div class="screen" id="scStation"><div class="box">
+  <h2 style="text-align:center;margin-top:0">Station de forage</h2>
+  <div class="res">
+    <div><b id="stTime">0.0</b><span style="color:var(--dim)">s</span></div>
+    <div class="medal" id="stMedal"></div>
+    <div style="color:var(--dim);font-size:12px" id="stBest"></div>
+  </div>
+  <h2>Choisis un passif</h2>
+  <div class="cards" id="stCards"></div>
+  <h2>Boutique — <span class="goldtag" id="stGold">0 $</span></h2>
+  <div class="shop" id="stShop"></div>
+  <button class="btn" id="stNext" disabled>CHOISIS UNE CARTE</button>
+</div></div>
+
+<div class="screen" id="scEnd"><div class="box">
+  <h1 id="endTitle">LE C<span>OE</span>UR</h1>
+  <div class="sub" id="endSub"></div>
+  <table id="endTable"></table>
+  <button class="btn" id="endAgain">REJOUER</button>
+</div></div>
+
+<script>
+/* ============================ src/config.js ============================ */
+/* CORE — constantes de gameplay.
+   Tout ce qui s'equilibre est ici. Voir docs/game-design-minage.md. */
+window.CORE = window.CORE || {};
+(function (CORE) {
+  'use strict';
+
+  var CFG = {
+    TILE: 22,              // px par bloc
+    LEVEL_W: 60,           // largeur du puits, en blocs
+    DRILL_W: 2,            // la foreuse fait 2x2
+    DRILL_H: 2,
+    GRAVITY: 46,           // blocs/s^2
+    TERMINAL: 30,          // vitesse de chute max
+    UP_PENALTY: 0.5,       // forer vers le haut coute le double
+    SURFACE_ROWS: 4,       // ciel au depart d'un niveau
+    BEDROCK_ROWS: 3,       // socle en bas
+    PICKUP_MAGNET_BASE: 1.6,
+
+    // Stats de depart de la foreuse
+    BASE: {
+      force: 2,
+      speed: 3.0,          // coups par seconde
+      width: 2,            // largeur de taille (blocs)
+      length: 1,           // profondeur mordue par coup
+      roll: 9,             // deplacement dans les galeries (blocs/s)
+      climb: 5.5,          // remontee (blocs/s)
+      rot: 0.20,           // temps de pivot de la tete (s)
+      elanMax: 0.5,        // plafond du bonus d'elan
+      elanRise: 3.0,       // secondes pour atteindre le plafond
+      elanLoss: 0.5,       // part d'elan perdue en changeant de direction
+      turboDur: 2.0,
+      turboCd: 15.0,
+      turboMult: 2.0,
+      magnet: 1.6,
+      vision: 13,
+      luck: 1.0,
+      value: 1.0
+    }
+  };
+
+  // durete(p) = 1 + 100 * (p / 4000)^2
+  CFG.hardnessAt = function (depth) {
+    var r = depth / 4000;
+    return 1 + 100 * r * r;
+  };
+
+  // Les couches. MVP : les deux premieres.
+  CFG.LAYERS = [
+    {
+      id: 1, name: 'LA TERRE', from: 0, to: 650,
+      bg: '#20150f', fog: '#2c1d13', dark: 0.0,
+      soft: '#6b4a2f', med: '#82603c', hard: '#77736c',
+      ore: '#d68b3f', oreName: 'cuivre', oreValue: 19,
+      wSoft: 0.62, wMed: 0.28, wHard: 0.10,
+      veins: 13, caves: 4, bonuses: 13, traps: 3
+    },
+    {
+      id: 2, name: 'LES SEDIMENTS', from: 650, to: 1300,
+      bg: '#171a1d', fog: '#232a2f', dark: 0.18,
+      soft: '#8a8175', med: '#666158', hard: '#9ba3ab',
+      ore: '#e0b23c', oreName: 'fer', oreValue: 33,
+      wSoft: 0.50, wMed: 0.33, wHard: 0.17,
+      veins: 15, caves: 5, bonuses: 15, traps: 5
+    }
+  ];
+
+  CFG.layerAt = function (depth) {
+    for (var i = 0; i < CFG.LAYERS.length; i++) {
+      if (depth < CFG.LAYERS[i].to) return CFG.LAYERS[i];
+    }
+    return CFG.LAYERS[CFG.LAYERS.length - 1];
+  };
+
+  // Les 6 niveaux du MVP. or/argent/bronze = objectifs de temps en secondes.
+  CFG.LEVELS = [
+    { id: '1-1', layer: 1, name: 'Premiere coupe',  type: 'descente', top: 0,    height: 200, gold: 28, silver: 40, bronze: 56 },
+    { id: '1-2', layer: 1, name: 'Le gisement',     type: 'gisement', top: 200,  height: 200, quota: 12, gold: 42, silver: 58, bronze: 82 },
+    { id: '1-3', layer: 1, name: 'Le Sceau d\'argile', type: 'sceau', top: 400,  height: 250, sealHard: 6,  gold: 35, silver: 49, bronze: 69 },
+    { id: '2-1', layer: 2, name: 'Bancs de gres',   type: 'descente', top: 650,  height: 200, gold: 29, silver: 41, bronze: 57 },
+    { id: '2-2', layer: 2, name: 'Veines de fer',   type: 'gisement', top: 850,  height: 200, quota: 18, gold: 52, silver: 74, bronze: 104 },
+    { id: '2-3', layer: 2, name: 'Le Sceau calcaire', type: 'sceau',  top: 1050, height: 250, sealHard: 16, gold: 36, silver: 52, bronze: 73 }
+  ];
+
+  CORE.CFG = CFG;
+})(window.CORE);
+
+/* ============================ src/rng.js ============================ */
+/* Generateur pseudo-aleatoire deterministe (mulberry32). */
+window.CORE = window.CORE || {};
+(function (CORE) {
+  'use strict';
+
+  function makeRng(seed) {
+    var a = seed >>> 0;
+    function next() {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      var t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    }
+    return {
+      f: next,
+      range: function (lo, hi) { return lo + next() * (hi - lo); },
+      int: function (lo, hi) { return Math.floor(lo + next() * (hi - lo + 1)); },
+      pick: function (arr) { return arr[Math.floor(next() * arr.length)]; },
+      chance: function (p) { return next() < p; },
+      shuffle: function (arr) {
+        for (var i = arr.length - 1; i > 0; i--) {
+          var j = Math.floor(next() * (i + 1));
+          var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+        }
+        return arr;
+      }
+    };
+  }
+
+  CORE.makeRng = makeRng;
+})(window.CORE);
+
+/* ============================ src/content.js ============================ */
+/* CORE — catalogue MVP : bonus, malus, passifs, pieces, metiers.
+   Reference complete : docs/bonus-et-passifs.md */
+window.CORE = window.CORE || {};
+(function (CORE) {
+  'use strict';
+
+  /* ---------------------------------------------------------------- BONUS */
+  /* mult / add s'appliquent aux stats effectives ; niveaux I -> III. */
+  var BONUS = [
+    { id: 'B-01', name: 'Frenesie',    icon: '>>', color: '#ff8a3d', dur: 20, weight: 22,
+      desc: 'Vitesse de forage', tiers: [1.8, 2.2, 2.8], apply: function (s, t) { s.speed *= t; } },
+    { id: 'B-02', name: 'Titan',       icon: '##', color: '#ff4d5e', dur: 15, weight: 20,
+      desc: 'Force', tiers: [2.5, 3.5, 5.0], apply: function (s, t) { s.force *= t; } },
+    { id: 'B-03', name: 'Expansion',   icon: '<>', color: '#5ddc7a', dur: 20, weight: 18,
+      desc: 'Largeur de taille', tiers: [2, 3, 4], apply: function (s, t) { s.width += t; } },
+    { id: 'B-04', name: 'Perforation', icon: '=>', color: '#7ec8ff', dur: 20, weight: 14,
+      desc: 'Longueur de taille', tiers: [1, 2, 3], apply: function (s, t) { s.length += t; } },
+    { id: 'B-05', name: 'Aimant',      icon: '(o)', color: '#b48dff', dur: 30, weight: 14,
+      desc: 'Ramassage a distance', tiers: [6, 10, 15], apply: function (s, t) { s.magnet = Math.max(s.magnet, t); } },
+    { id: 'B-14', name: 'Sablier fele', icon: '[]', color: '#5ff0e0', dur: 10, weight: 6,
+      desc: 'Le chrono se fige', tiers: [10, 13, 16], freeze: true, apply: function () {} }
+  ];
+
+  var MALUS = [
+    { id: 'M-01', name: 'Etourdissement', icon: '!!', color: '#8a8f98', dur: 2, weight: 10,
+      desc: 'Foreuse a l\'arret', stun: true, apply: function (s) { s.speed = 0; s.roll = 0; } },
+    { id: 'M-02', name: 'Rouille', icon: '~~', color: '#9c6b3f', dur: 8, weight: 12,
+      desc: 'Vitesse divisee par deux', apply: function (s) { s.speed *= 0.5; } }
+  ];
+
+  var BONUS_BY_ID = {};
+  BONUS.concat(MALUS).forEach(function (b) { BONUS_BY_ID[b.id] = b; });
+
+  /* -------------------------------------------------------------- PASSIFS */
+  /* rar : 0 commun, 1 rare, 2 epique/legendaire.
+     max : nombre de fois qu'on peut prendre la carte.
+     apply(s, n) : n = nombre d'exemplaires possedes. */
+  var PASSIVES = [
+    { id: 'V-01', fam: 'MOTEUR', name: 'Injection', rar: 0, max: 99,
+      desc: 'Vitesse de forage +12 %',
+      apply: function (s, n) { s.speed *= Math.pow(1.12, n); } },
+
+    { id: 'V-04', fam: 'MOTEUR', name: 'Second souffle', rar: 0, max: 1,
+      desc: 'A l\'expiration d\'un bonus : +30 % de vitesse pendant 5 s',
+      flag: 'secondSouffle', apply: function () {} },
+
+    { id: 'V-05', fam: 'MOTEUR', name: 'Metronome', rar: 1, max: 1,
+      desc: 'L\'elan monte deux fois plus vite',
+      apply: function (s) { s.elanRise *= 0.5; } },
+
+    { id: 'V-06', fam: 'MOTEUR', name: 'Volant d\'inertie', rar: 1, max: 1,
+      desc: 'On ne perd plus que 20 % d\'elan en changeant de direction',
+      apply: function (s) { s.elanLoss = 0.2; } },
+
+    { id: 'F-01', fam: 'TETE', name: 'Bras de fer', rar: 0, max: 99,
+      desc: 'Force +2',
+      apply: function (s, n) { s.force += 2 * n; } },
+
+    { id: 'F-02', fam: 'TETE', name: 'Carbure', rar: 0, max: 99,
+      desc: 'Force +15 %',
+      apply: function (s, n) { s.force *= Math.pow(1.15, n); } },
+
+    { id: 'F-05', fam: 'TETE', name: 'Brise-roche', rar: 1, max: 3,
+      desc: '15 % de chance de detruire un bloc d\'un seul coup',
+      apply: function (s, n) { s.crit = (s.crit || 0) + 0.15 * n; } },
+
+    { id: 'Z-01', fam: 'ZONE', name: 'Tunnelier', rar: 0, max: 4,
+      desc: 'Largeur +1, vitesse -10 %',
+      apply: function (s, n) { s.width += n; s.speed *= Math.pow(0.9, n); } },
+
+    { id: 'Z-03', fam: 'ZONE', name: 'Elargisseur', rar: 1, max: 4,
+      desc: 'Largeur de taille +1 (max 6)',
+      apply: function (s, n) { s.width += n; } },
+
+    { id: 'Z-04', fam: 'ZONE', name: 'Perforateur', rar: 1, max: 3,
+      desc: 'Longueur de taille +1 (max 4)',
+      apply: function (s, n) { s.length += n; } },
+
+    { id: 'P-01', fam: 'PILOTAGE', name: 'Chenilles crantees', rar: 0, max: 4,
+      desc: 'Deplacement dans les galeries x1,5',
+      apply: function (s, n) { s.roll *= Math.pow(1.5, n); s.climb *= Math.pow(1.4, n); } },
+
+    { id: 'P-06', fam: 'PILOTAGE', name: 'Gyroscope', rar: 1, max: 1,
+      desc: 'La tete pivote instantanement',
+      apply: function (s) { s.rot = 0.02; } },
+
+    { id: 'P-07', fam: 'PILOTAGE', name: 'Turbocompresseur', rar: 1, max: 2,
+      desc: 'Recharge du turbo divisee par deux',
+      apply: function (s, n) { s.turboCd *= Math.pow(0.5, n); } },
+
+    { id: 'O-01', fam: 'BUTIN', name: 'Aimant permanent', rar: 0, max: 4,
+      desc: 'Rayon de ramassage +4',
+      apply: function (s, n) { s.magnet += 4 * n; } },
+
+    { id: 'O-02', fam: 'BUTIN', name: 'Cupidite', rar: 0, max: 3,
+      desc: 'Valeur du minerai +40 %, vitesse -10 %',
+      apply: function (s, n) { s.value *= Math.pow(1.4, n); s.speed *= Math.pow(0.9, n); } },
+
+    { id: 'C-01', fam: 'CHANCE', name: 'Flair', rar: 0, max: 4,
+      desc: '+25 % de bonus generes dans les niveaux suivants',
+      apply: function (s, n) { s.luck *= Math.pow(1.25, n); } },
+
+    { id: 'P-09', fam: 'PILOTAGE', name: 'Foreuse gravitationnelle', rar: 2, max: 1,
+      desc: 'En chute, on fore vers le bas a pleine vitesse sans ralentir',
+      flag: 'gravDrill', apply: function () {} }
+  ];
+
+  var PASSIVE_BY_ID = {};
+  PASSIVES.forEach(function (p) { PASSIVE_BY_ID[p.id] = p; });
+
+  /* --------------------------------------------------------- PIECES (shop) */
+  var PARTS = [
+    { id: 'tete', name: 'Tete de forage', desc: 'Force +2,5', cost: 190, growth: 1.7, max: 10,
+      apply: function (s, n) { s.force += 2.5 * n; } },
+    { id: 'moteur', name: 'Moteur', desc: 'Vitesse +0,35', cost: 190, growth: 1.7, max: 10,
+      apply: function (s, n) { s.speed += 0.35 * n; } },
+    { id: 'elargisseur', name: 'Elargisseur', desc: 'Largeur +1', cost: 700, growth: 2.3, max: 4,
+      apply: function (s, n) { s.width += n; } },
+    { id: 'chenilles', name: 'Chenilles', desc: 'Deplacement +2,5', cost: 160, growth: 1.6, max: 6,
+      apply: function (s, n) { s.roll += 2.5 * n; s.climb += 1.5 * n; } }
+  ];
+
+  /* ------------------------------------------------------------- METIERS */
+  var JOBS = [
+    { id: 'MT-1', name: 'Le Bourrin', desc: 'Force x2, vitesse -10 %',
+      apply: function (s) { s.force *= 2; s.speed *= 0.9; } },
+    { id: 'MT-2', name: 'Le Furieux', desc: 'Vitesse de forage x1,5',
+      apply: function (s) { s.speed *= 1.5; } },
+    { id: 'MT-3', name: 'Le Chanceux', desc: '50 % de bonus en plus dans la roche',
+      apply: function (s) { s.luck *= 1.5; } }
+  ];
+
+  /* --------------------------------------------------------------- TIRAGE */
+  // Poids de rarete, glissant avec la profondeur (couche 1 -> 6).
+  function rarityWeights(layerId) {
+    var t = Math.min(1, (layerId - 1) / 5);
+    return [60 - 25 * t, 30 + 10 * t, 9 + 11 * t];
+  }
+
+  function draw(rng, owned, layerId, count) {
+    var w = rarityWeights(layerId);
+    var pool = PASSIVES.filter(function (p) {
+      return (owned[p.id] || 0) < p.max;
+    });
+    var out = [];
+    for (var k = 0; k < count && pool.length; k++) {
+      var weighted = [];
+      pool.forEach(function (p) {
+        var n = Math.max(1, Math.round(w[p.rar]));
+        for (var i = 0; i < n; i++) weighted.push(p);
+      });
+      var chosen = rng.pick(weighted);
+      out.push(chosen);
+      pool = pool.filter(function (p) { return p !== chosen; });
+    }
+    return out;
+  }
+
+  function rollBonus(rng, allowMalus) {
+    var table = allowMalus ? BONUS.concat(MALUS) : BONUS;
+    var weighted = [];
+    table.forEach(function (b) {
+      for (var i = 0; i < b.weight; i++) weighted.push(b);
+    });
+    return rng.pick(weighted);
+  }
+
+  CORE.CONTENT = {
+    BONUS: BONUS, MALUS: MALUS, BONUS_BY_ID: BONUS_BY_ID,
+    PASSIVES: PASSIVES, PASSIVE_BY_ID: PASSIVE_BY_ID,
+    PARTS: PARTS, JOBS: JOBS,
+    draw: draw, rollBonus: rollBonus,
+    RAR_NAME: ['commun', 'rare', 'legendaire'],
+    partCost: function (part, owned) {
+      return Math.round(part.cost * Math.pow(part.growth, owned));
+    }
+  };
+})(window.CORE);
+
+/* ============================ src/world.js ============================ */
+/* CORE — generation d'un niveau.
+   Grille de blocs, veines de minerai, cavernes, bonus enfouis, sceau et sortie. */
+window.CORE = window.CORE || {};
+(function (CORE) {
+  'use strict';
+
+  var CFG = CORE.CFG;
+
+  var T = { EMPTY: 0, SOFT: 1, MED: 2, HARD: 3, ORE: 4, BEDROCK: 5, SEAL: 6, LOCK: 7 };
+  var DESTRUCTIBLE = { 1: true, 2: true, 3: true, 4: true, 6: true };
+
+  var KIND = { BONUS: 1, PEPITE: 2, TEMPS: 3 };
+
+  function valueNoise(rng, w, h, cell) {
+    var gw = Math.ceil(w / cell) + 2, gh = Math.ceil(h / cell) + 2;
+    var g = new Float32Array(gw * gh);
+    for (var i = 0; i < g.length; i++) g[i] = rng.f();
+    return function (x, y) {
+      var fx = x / cell, fy = y / cell;
+      var x0 = Math.floor(fx), y0 = Math.floor(fy);
+      var tx = fx - x0, ty = fy - y0;
+      tx = tx * tx * (3 - 2 * tx); ty = ty * ty * (3 - 2 * ty);
+      function at(cx, cy) {
+        cx = Math.min(gw - 1, Math.max(0, cx)); cy = Math.min(gh - 1, Math.max(0, cy));
+        return g[cy * gw + cx];
+      }
+      var a = at(x0, y0), b = at(x0 + 1, y0), c = at(x0, y0 + 1), d = at(x0 + 1, y0 + 1);
+      return (a + (b - a) * tx) + ((c + (d - c) * tx) - (a + (b - a) * tx)) * ty;
+    };
+  }
+
+  function generate(def, layer, seed, luck) {
+    var rng = CORE.makeRng(seed);
+    var W = CFG.LEVEL_W;
+    var top = CFG.SURFACE_ROWS;
+    var H = top + def.height + CFG.BEDROCK_ROWS;
+
+    var world = {
+      def: def, layer: layer, w: W, h: H, top: top, rng: rng,
+      type: new Uint8Array(W * H),
+      hard: new Float32Array(W * H),
+      prog: new Float32Array(W * H),
+      items: new Map(),
+      oreTotal: 0,
+      exitX: 0, exitW: 5, exitRow: top + def.height,
+      idx: function (x, y) { return y * W + x; },
+      inside: function (x, y) { return x >= 0 && y >= 0 && x < W && y < H; },
+      at: function (x, y) { return (x < 0 || y < 0 || x >= W || y >= H) ? T.BEDROCK : world.type[y * W + x]; },
+      solid: function (x, y) { return world.at(x, y) !== T.EMPTY; },
+      depthAt: function (row) { return def.top + Math.max(0, row - top); }
+    };
+
+    var noise = valueNoise(rng, W, H, 5);
+
+    // --- roche de base -----------------------------------------------------
+    for (var y = 0; y < H; y++) {
+      for (var x = 0; x < W; x++) {
+        var i = y * W + x;
+        if (y < top) { world.type[i] = T.EMPTY; continue; }
+        if (x === 0 || x === W - 1 || y >= top + def.height) { world.type[i] = T.BEDROCK; continue; }
+        var n = noise(x, y) * 0.75 + rng.f() * 0.25;
+        var t = n < layer.wSoft ? T.SOFT : (n < layer.wSoft + layer.wMed ? T.MED : T.HARD);
+        world.type[i] = t;
+        var base = CFG.hardnessAt(world.depthAt(y));
+        var mult = t === T.SOFT ? 0.8 : (t === T.MED ? 1.15 : 1.7);
+        world.hard[i] = Math.max(1, base * mult);
+      }
+    }
+
+    // --- cavernes ----------------------------------------------------------
+    for (var c = 0; c < layer.caves; c++) {
+      var cx = rng.int(6, W - 7);
+      var cy = rng.int(top + 20, top + def.height - 12);
+      var rx = rng.int(4, 11), ry = rng.int(3, 8);
+      for (var oy = -ry; oy <= ry; oy++) {
+        for (var ox = -rx; ox <= rx; ox++) {
+          if ((ox * ox) / (rx * rx) + (oy * oy) / (ry * ry) > 1) continue;
+          var px = cx + ox, py = cy + oy;
+          if (px <= 0 || px >= W - 1 || py < top || py >= top + def.height) continue;
+          world.type[py * W + px] = T.EMPTY;
+        }
+      }
+    }
+
+    // --- veines de minerai (marche aleatoire orientee) ---------------------
+    var veins = Math.round(layer.veins);
+    for (var v = 0; v < veins; v++) {
+      var vx = rng.int(3, W - 4);
+      var vy = rng.int(top + 8, top + def.height - 6);
+      var dir = rng.f() * Math.PI * 2;
+      var len = rng.int(6, 16);
+      for (var s = 0; s < len; s++) {
+        dir += rng.range(-0.5, 0.5);
+        // les veines sont majoritairement horizontales : on ecrase le dy
+        vx += Math.cos(dir) * 1.2;
+        vy += Math.sin(dir) * 0.55;
+        var ix = Math.round(vx), iy = Math.round(vy);
+        for (var k = 0; k < 3; k++) {
+          var ax = ix + (k === 1 ? 1 : 0), ay = iy + (k === 2 ? 1 : 0);
+          if (ax <= 0 || ax >= W - 1 || ay < top + 4 || ay >= top + def.height) continue;
+          var ai = ay * W + ax;
+          if (world.type[ai] === T.EMPTY || world.type[ai] === T.BEDROCK) continue;
+          if (k > 0 && !rng.chance(0.45)) continue;
+          world.type[ai] = T.ORE;
+          world.hard[ai] = Math.max(1, CFG.hardnessAt(world.depthAt(ay)) * 1.1);
+          world.oreTotal++;
+        }
+      }
+    }
+
+    // --- bonus et pieges enfouis ------------------------------------------
+    function scatter(count, kindFn) {
+      var placed = 0, guard = 0;
+      while (placed < count && guard++ < count * 60) {
+        var bx = rng.int(2, W - 3);
+        var by = rng.int(top + 6, top + def.height - 4);
+        var bi = by * W + bx;
+        if (!DESTRUCTIBLE[world.type[bi]]) continue;
+        if (world.items.has(bi)) continue;
+        world.items.set(bi, kindFn(rng));
+        placed++;
+      }
+    }
+
+    scatter(Math.round(layer.bonuses * (luck || 1)), function (r) {
+      return { kind: KIND.BONUS, bonus: CORE.CONTENT.rollBonus(r, false) };
+    });
+    scatter(layer.traps, function (r) {
+      return { kind: KIND.BONUS, bonus: r.pick(CORE.CONTENT.MALUS) };
+    });
+    scatter(Math.round(layer.bonuses * 0.8), function () {
+      return { kind: KIND.PEPITE };
+    });
+    scatter(3, function () { return { kind: KIND.TEMPS }; });
+
+    // --- le Sceau ----------------------------------------------------------
+    if (def.type === 'sceau') {
+      var sealTop = top + def.height - 6;
+      for (var sy = sealTop; sy < top + def.height; sy++) {
+        for (var sx = 1; sx < W - 1; sx++) {
+          var si = sy * W + sx;
+          world.type[si] = T.SEAL;
+          world.hard[si] = def.sealHard;
+          world.items.delete(si);
+        }
+      }
+    }
+
+    // --- la sortie ---------------------------------------------------------
+    world.exitX = rng.int(6, W - 6 - world.exitW);
+    var exitType = (def.type === 'gisement') ? T.LOCK : T.EMPTY;
+    for (var ey = world.exitRow; ey < H; ey++) {
+      for (var ex = world.exitX; ex < world.exitX + world.exitW; ex++) {
+        world.type[ey * W + ex] = ey === world.exitRow ? exitType : T.EMPTY;
+      }
+    }
+    world.locked = (def.type === 'gisement');
+
+    return world;
+  }
+
+  function unlockExit(world) {
+    if (!world.locked) return;
+    world.locked = false;
+    for (var ex = world.exitX; ex < world.exitX + world.exitW; ex++) {
+      world.type[world.exitRow * world.w + ex] = T.EMPTY;
+    }
+  }
+
+  CORE.WORLD = { generate: generate, unlockExit: unlockExit, T: T, KIND: KIND, DESTRUCTIBLE: DESTRUCTIBLE };
+})(window.CORE);
+
+/* ============================ src/audio.js ============================ */
+/* CORE — sons de synthese (WebAudio), sans aucun fichier. */
+window.CORE = window.CORE || {};
+(function (CORE) {
+  'use strict';
+
+  var ctx = null, master = null, drillGain = null, drillSrc = null, enabled = true;
+
+  function init() {
+    if (ctx) return;
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) { enabled = false; return; }
+    ctx = new AC();
+    master = ctx.createGain();
+    master.gain.value = 0.5;
+    master.connect(ctx.destination);
+
+    // bruit blanc en boucle pour le forage
+    var len = ctx.sampleRate * 2;
+    var buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    var data = buf.getChannelData(0);
+    for (var i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * 0.6;
+    drillSrc = ctx.createBufferSource();
+    drillSrc.buffer = buf; drillSrc.loop = true;
+    var lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = 700;
+    drillGain = ctx.createGain();
+    drillGain.gain.value = 0;
+    drillSrc.connect(lp); lp.connect(drillGain); drillGain.connect(master);
+    drillSrc.start();
+  }
+
+  function blip(freq, dur, type, vol, slide) {
+    if (!enabled) return;
+    init();
+    if (!ctx) return;
+    var o = ctx.createOscillator(), gn = ctx.createGain();
+    o.type = type || 'square';
+    o.frequency.setValueAtTime(freq, ctx.currentTime);
+    if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(20, slide), ctx.currentTime + dur);
+    gn.gain.setValueAtTime(vol || 0.18, ctx.currentTime);
+    gn.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+    o.connect(gn); gn.connect(master);
+    o.start(); o.stop(ctx.currentTime + dur + 0.02);
+  }
+
+  CORE.SFX = {
+    init: init,
+    toggle: function () { enabled = !enabled; if (master) master.gain.value = enabled ? 0.5 : 0; return enabled; },
+    enabled: function () { return enabled; },
+    drill: function (on, intensity) {
+      if (!ctx || !enabled) return;
+      drillGain.gain.value = on ? Math.min(0.22, 0.05 + intensity * 0.05) : 0;
+    },
+    breakBlock: function () { blip(180 + Math.random() * 60, 0.07, 'square', 0.10, 70); },
+    ore: function () { blip(880, 0.10, 'triangle', 0.16, 1320); },
+    gold: function () { blip(660, 0.09, 'triangle', 0.2, 990); setTimeout(function () { blip(990, 0.12, 'triangle', 0.18, 1480); }, 70); },
+    bonus: function () { blip(520, 0.09, 'sawtooth', 0.14, 1040); setTimeout(function () { blip(1040, 0.14, 'square', 0.12, 1560); }, 60); },
+    malus: function () { blip(200, 0.25, 'sawtooth', 0.16, 60); },
+    stall: function () { blip(90, 0.12, 'square', 0.12, 60); },
+    turbo: function () { blip(300, 0.3, 'sawtooth', 0.14, 900); },
+    land: function () { blip(120, 0.12, 'square', 0.12, 60); },
+    level: function () {
+      [523, 659, 784, 1047].forEach(function (f, i) {
+        setTimeout(function () { blip(f, 0.16, 'triangle', 0.16); }, i * 90);
+      });
+    }
+  };
+})(window.CORE);
+
+/* ============================ src/drill.js ============================ */
+/* CORE — la foreuse : physique, forage directionnel, elan, turbo. */
+window.CORE = window.CORE || {};
+(function (CORE) {
+  'use strict';
+
+  var CFG = CORE.CFG, W = CORE.WORLD;
+  var DW = CFG.DRILL_W, DH = CFG.DRILL_H;
+
+  function create(world) {
+    return {
+      x: world.exitX + 1, y: 1,
+      vx: 0, vy: 0,
+      fx: 0, fy: 1,          // direction de la tete
+      rotT: 0, elan: 0,
+      turboT: 0, turboCd: 0,
+      prog: 0, progKey: '', crit: false,
+      drilling: false, grounded: false, falling: false,
+      stall: 0, bit: 0
+    };
+  }
+
+  function overlapsSolid(world, x, y) {
+    var x0 = Math.floor(x + 1e-6), x1 = Math.floor(x + DW - 1e-6);
+    var y0 = Math.floor(y + 1e-6), y1 = Math.floor(y + DH - 1e-6);
+    for (var cy = y0; cy <= y1; cy++) {
+      for (var cx = x0; cx <= x1; cx++) if (world.solid(cx, cy)) return true;
+    }
+    return false;
+  }
+
+  /* Cellules visees par la tete, selon la direction, la largeur et la longueur. */
+  function targets(d, fx, fy, width, length) {
+    var cells = [];
+    var x0 = Math.floor(d.x + 1e-6), x1 = Math.floor(d.x + DW - 1e-6);
+    var y0 = Math.floor(d.y + 1e-6), y1 = Math.floor(d.y + DH - 1e-6);
+    var extra = Math.max(0, Math.round(width) - 2);
+    var padA = Math.floor(extra / 2), padB = extra - padA;
+    var L = Math.max(1, Math.round(length));
+    var l, cx, cy;
+
+    if (fx !== 0) {
+      var col = fx > 0 ? x1 + 1 : x0 - 1;
+      for (l = 0; l < L; l++) {
+        for (cy = y0 - padA; cy <= y1 + padB; cy++) cells.push([col + fx * l, cy]);
+      }
+    }
+    if (fy !== 0) {
+      var row = fy > 0 ? y1 + 1 : y0 - 1;
+      for (l = 0; l < L; l++) {
+        for (cx = x0 - padA; cx <= x1 + padB; cx++) cells.push([cx, row + fy * l]);
+      }
+    }
+    return cells;
+  }
+
+  function update(d, world, input, s, dt, hooks) {
+    var i;
+
+    // ---- direction de la tete -------------------------------------------
+    if (input.dx !== 0 || input.dy !== 0) {
+      if (input.dx !== d.fx || input.dy !== d.fy) {
+        d.fx = input.dx; d.fy = input.dy;
+        d.rotT = s.rot;
+        d.elan *= (1 - s.elanLoss);
+        d.prog = 0; d.progKey = '';
+      }
+    }
+    if (d.rotT > 0) d.rotT -= dt;
+
+    // ---- turbo ------------------------------------------------------------
+    if (d.turboCd > 0) d.turboCd -= dt;
+    if (input.turbo && d.turboT <= 0 && d.turboCd <= 0) {
+      d.turboT = s.turboDur; d.turboCd = s.turboCd + s.turboDur;
+      if (hooks.onTurbo) hooks.onTurbo();
+    }
+    if (d.turboT > 0) d.turboT -= dt;
+    var turbo = d.turboT > 0 ? s.turboMult : 1;
+
+    // ---- cible de forage (calculee avant le deplacement) -------------------
+    var cells = null, solidCount = 0, breakable = 0, maxHard = 0;
+    if (input.dx !== 0 || input.dy !== 0) {
+      cells = targets(d, d.fx, d.fy, s.width, s.length);
+      for (i = 0; i < cells.length; i++) {
+        var ct = world.at(cells[i][0], cells[i][1]);
+        if (ct === W.T.EMPTY) continue;
+        solidCount++;
+        if (W.DESTRUCTIBLE[ct]) {
+          breakable++;
+          var ch = world.hard[world.idx(cells[i][0], cells[i][1])];
+          if (ch > maxHard) maxHard = ch;
+        }
+      }
+    }
+    d.lastHard = maxHard || 1;
+    // Tant qu'il reste de la roche a percer, la foreuse s'ancre : elle ne glisse
+    // pas le long de l'obstacle. C'est ce qui rend le forage en diagonale possible.
+    var anchored = breakable > 0 && d.rotT <= 0;
+
+    // ---- deplacement ------------------------------------------------------
+    d.vx = anchored ? 0 : input.dx * s.roll * (d.turboT > 0 ? 1.4 : 1);
+    if (input.dy < 0) {
+      d.vy = -s.climb;
+    } else {
+      d.vy += CFG.GRAVITY * dt;
+      if (input.dy > 0) d.vy = Math.max(d.vy, s.roll * 0.9);
+      if (d.vy > CFG.TERMINAL) d.vy = CFG.TERMINAL;
+    }
+
+    var nx = d.x + d.vx * dt;
+    if (!overlapsSolid(world, nx, d.y)) {
+      d.x = nx;
+    } else if (d.vx !== 0) {
+      d.x = d.vx > 0 ? Math.floor(nx + DW) - DW - 0.002 : Math.floor(nx) + 1 + 0.002;
+      d.vx = 0;
+    }
+
+    var ny = d.y + d.vy * dt;
+    var wasFalling = d.vy > 8;
+    if (!overlapsSolid(world, d.x, ny)) {
+      d.y = ny;
+    } else {
+      if (d.vy > 0) {
+        d.y = Math.floor(ny + DH) - DH - 0.002;
+        if (wasFalling && hooks.onLand) hooks.onLand(d.vy);
+      } else if (d.vy < 0) {
+        d.y = Math.floor(ny) + 1 + 0.002;
+      }
+      d.vy = 0;
+    }
+    d.x = Math.max(0.05, Math.min(world.w - DW - 0.05, d.x));
+
+    d.grounded = overlapsSolid(world, d.x, d.y + 0.08);
+    d.falling = !d.grounded && d.vy > 6;
+
+    // ---- forage -----------------------------------------------------------
+    d.drilling = false;
+    if (d.stall > 0) d.stall -= dt;
+
+    if (cells) {
+      if (solidCount > 0 && breakable === 0) {
+        if (d.stall <= 0) { d.stall = 0.35; d.elan *= 0.5; if (hooks.onStall) hooks.onStall(); }
+      } else if (breakable > 0 && d.rotT <= 0) {
+        var key = d.fx + ',' + d.fy + ',' + cells[0][0] + ',' + cells[0][1];
+        if (key !== d.progKey) {
+          d.progKey = key; d.prog = 0;
+          d.crit = Math.random() < (s.crit || 0);
+        }
+        var hits = d.crit ? 1 : Math.max(1, Math.ceil(maxHard / Math.max(0.1, s.force)));
+        var rate = s.speed * (1 + d.elan * s.elanMax) * turbo;
+        if (d.fy < 0) rate *= CFG.UP_PENALTY;
+        if (s.gravDrill && d.falling && d.fy > 0) rate *= 2;
+        d.prog += rate * dt;
+        d.drilling = true;
+        d.bit += rate * dt * 12;
+
+        if (d.prog >= hits) {
+          d.prog = 0; d.progKey = '';
+          var keepFall = s.gravDrill && d.falling;
+          for (i = 0; i < cells.length; i++) {
+            var bx = cells[i][0], by = cells[i][1];
+            if (!world.inside(bx, by)) continue;
+            var bi = world.idx(bx, by);
+            var bt = world.type[bi];
+            if (!W.DESTRUCTIBLE[bt]) continue;
+            world.type[bi] = W.T.EMPTY;
+            if (hooks.onBreak) hooks.onBreak(bx, by, bt, world.items.get(bi));
+            world.items.delete(bi);
+          }
+          if (keepFall) d.vy = Math.max(d.vy, 12);
+        }
+      }
+    } else {
+      d.progKey = '';
+    }
+
+    // ---- elan -------------------------------------------------------------
+    var moving = Math.abs(d.vx) > 0.5 || Math.abs(d.vy) > 0.5;
+    if (d.drilling || moving) {
+      d.elan = Math.min(1, d.elan + dt / s.elanRise);
+    } else {
+      d.elan = Math.max(0, d.elan - dt * 0.4);
+    }
+  }
+
+  CORE.DRILL = { create: create, update: update, targets: targets, overlapsSolid: overlapsSolid };
+})(window.CORE);
+
+/* ============================ src/save.js ============================ */
+/* CORE — records locaux. */
+window.CORE = window.CORE || {};
+(function (CORE) {
+  'use strict';
+  var KEY = 'core.records.v1';
+
+  function load() {
+    try { return JSON.parse(localStorage.getItem(KEY)) || { levels: {}, total: null }; }
+    catch (e) { return { levels: {}, total: null }; }
+  }
+  function save(d) { try { localStorage.setItem(KEY, JSON.stringify(d)); } catch (e) {} }
+
+  CORE.SAVE = {
+    all: load,
+    record: function (levelId, time, medal) {
+      var d = load();
+      var cur = d.levels[levelId];
+      if (!cur || time < cur.time) d.levels[levelId] = { time: time, medal: medal };
+      save(d);
+    },
+    recordTotal: function (t) {
+      var d = load();
+      if (d.total === null || t < d.total) d.total = t;
+      save(d);
+    },
+    best: function (levelId) { return load().levels[levelId] || null; },
+    bestTotal: function () { return load().total; }
+  };
+})(window.CORE);
+
+/* ============================ src/game.js ============================ */
+/* CORE — etat de jeu : run, niveaux, stats effectives, bonus, butin. */
+window.CORE = window.CORE || {};
+(function (CORE) {
+  'use strict';
+
+  var CFG = CORE.CFG, W = CORE.WORLD, C = CORE.CONTENT, SFX = CORE.SFX;
+
+  var G = {
+    state: 'menu',          // menu | play | station | end
+    run: null,
+    world: null, drill: null,
+    buffs: [], pickups: [], parts: [],
+    time: 0, levelTime: 0, freeze: 0, souffle: 0,
+    ore: 0, shake: 0, currentHard: 1,
+    cam: { x: 0, y: 0 }, dpr: 1,
+    stats: null, drawnCards: [], cardChosen: false, lastResult: null
+  };
+
+  /* ------------------------------------------------------------- STATS */
+  function computeStats() {
+    var s = {};
+    for (var k in CFG.BASE) s[k] = CFG.BASE[k];
+    s.crit = 0; s.gravDrill = false; s.visionPenalty = 0;
+    var run = G.run;
+    if (!run) return s;
+
+    // pieces de foreuse
+    C.PARTS.forEach(function (p) {
+      var n = run.parts[p.id] || 0;
+      if (n > 0) p.apply(s, n);
+    });
+
+    // passifs
+    C.PASSIVES.forEach(function (p) {
+      var n = run.passives[p.id] || 0;
+      if (n <= 0) return;
+      if (p.flag) s[p.flag] = true;
+      p.apply(s, n);
+    });
+
+    // metier
+    if (run.job) run.job.apply(s);
+
+    // bonus temporaires
+    G.buffs.forEach(function (b) {
+      var tier = b.def.tiers ? b.def.tiers[b.level - 1] : undefined;
+      b.def.apply(s, tier);
+    });
+
+    if (G.souffle > 0) s.speed *= 1.3;
+
+    s.width = Math.max(1, Math.min(6, Math.round(s.width)));
+    s.length = Math.max(1, Math.min(4, Math.round(s.length)));
+    s.crit = Math.min(0.6, s.crit);
+    return s;
+  }
+
+  /* --------------------------------------------------------------- RUN */
+  function startRun(job) {
+    G.run = {
+      job: job, parts: {}, passives: {}, gold: 0,
+      levelIndex: 0, splits: [], medals: [], total: 0,
+      seed: (Math.random() * 1e9) | 0
+    };
+    startLevel(0);
+  }
+
+  function startLevel(index) {
+    var def = CFG.LEVELS[index];
+    var layer = CFG.LAYERS[def.layer - 1];
+    var stats = computeStats();
+    G.run.levelIndex = index;
+    G.world = W.generate(def, layer, G.run.seed + index * 7919, stats.luck);
+    G.drill = CORE.DRILL.create(G.world);
+    G.buffs = []; G.pickups = []; G.parts = [];
+    G.levelTime = 0; G.freeze = 0; G.souffle = 0; G.ore = 0; G.shake = 0;
+    G.cam.x = G.drill.x * CFG.TILE - 300;
+    G.cam.y = 0;
+    G.stats = computeStats();
+    G.state = 'play';
+  }
+
+  /* ------------------------------------------------------------- BONUS */
+  function addBuff(def) {
+    var found = null;
+    for (var i = 0; i < G.buffs.length; i++) if (G.buffs[i].def.id === def.id) found = G.buffs[i];
+    var maxLvl = def.tiers ? def.tiers.length : 1;
+    if (found) {
+      found.level = Math.min(maxLvl, found.level + 1);
+      found.t = def.freeze ? def.tiers[found.level - 1] : def.dur;
+    } else {
+      G.buffs.push({
+        def: def, level: 1,
+        t: def.freeze ? def.tiers[0] : def.dur,
+        malus: def.stun || def.id.charAt(0) === 'M'
+      });
+    }
+  }
+
+  function spawnPickup(cx, cy, item) {
+    var p = { x: cx + 0.5, y: cy + 0.5, kind: item.kind, bonus: item.bonus, t: 0 };
+    if (item.kind === W.KIND.BONUS) {
+      p.color = item.bonus.color; p.label = item.bonus.icon;
+    } else if (item.kind === W.KIND.PEPITE) {
+      p.color = '#ffd24a'; p.label = '$';
+    } else {
+      p.color = '#5ff0e0'; p.label = '-5';
+    }
+    G.pickups.push(p);
+  }
+
+  function burst(cx, cy, color, n) {
+    for (var i = 0; i < n; i++) {
+      if (G.parts.length > 260) return;
+      G.parts.push({
+        x: cx + 0.5, y: cy + 0.5,
+        vx: (Math.random() - 0.5) * 9, vy: (Math.random() - 0.9) * 9,
+        s: 2 + Math.random() * 3, color: color,
+        life: 0.35 + Math.random() * 0.4, max: 0.75
+      });
+    }
+  }
+
+  /* ------------------------------------------------------------ UPDATE */
+  function update(dt, input) {
+    if (G.state !== 'play') return;
+    G.time += dt;
+
+    var stats = computeStats();
+    G.stats = stats;
+    var world = G.world, d = G.drill;
+
+    var hooks = {
+      onBreak: function (cx, cy, type, item) {
+        burst(cx, cy, type === W.T.ORE ? world.layer.ore : world.layer.med, type === W.T.ORE ? 7 : 3);
+        if (type === W.T.ORE) {
+          G.ore++;
+          G.run.gold += Math.round(world.layer.oreValue * stats.value);
+          SFX.ore();
+          G.shake = Math.max(G.shake, 3);
+          if (world.locked && G.ore >= (world.def.quota || 0)) {
+            W.unlockExit(world);
+            SFX.level();
+          }
+        } else {
+          SFX.breakBlock();
+        }
+        if (item) spawnPickup(cx, cy, item);
+      },
+      onStall: function () { G.shake = Math.max(G.shake, 7); SFX.stall(); },
+      onLand: function (v) { G.shake = Math.max(G.shake, Math.min(9, v * 0.28)); SFX.land(); },
+      onTurbo: function () { G.shake = Math.max(G.shake, 6); SFX.turbo(); }
+    };
+
+    CORE.DRILL.update(d, world, input, stats, dt, hooks);
+    G.currentHard = d.lastHard || 1;
+    SFX.drill(d.drilling, d.elan);
+
+    // --- bonus actifs -----------------------------------------------------
+    for (var i = G.buffs.length - 1; i >= 0; i--) {
+      var b = G.buffs[i];
+      b.t -= dt;
+      if (b.t <= 0) {
+        G.buffs.splice(i, 1);
+        if (!b.malus && G.run.passives['V-04']) G.souffle = 5;
+      }
+    }
+    if (G.souffle > 0) G.souffle -= dt;
+
+    // --- chrono ------------------------------------------------------------
+    var frozen = false;
+    G.buffs.forEach(function (b) { if (b.def.freeze) frozen = true; });
+    if (!frozen) G.levelTime += dt;
+
+    // --- ramassage ---------------------------------------------------------
+    var dcx = d.x + CFG.DRILL_W / 2, dcy = d.y + CFG.DRILL_H / 2;
+    for (var pi = G.pickups.length - 1; pi >= 0; pi--) {
+      var p = G.pickups[pi];
+      p.t += dt;
+      var dx = dcx - p.x, dy = dcy - p.y;
+      var dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < stats.magnet + 1.2) {
+        var pull = Math.min(1, dt * 9);
+        p.x += dx * pull; p.y += dy * pull;
+      }
+      if (dist < 1.4) {
+        G.pickups.splice(pi, 1);
+        if (p.kind === W.KIND.BONUS) {
+          addBuff(p.bonus);
+          if (p.bonus.stun || p.bonus.id.charAt(0) === 'M') { SFX.malus(); G.shake = 10; }
+          else { SFX.bonus(); G.shake = Math.max(G.shake, 5); }
+        } else if (p.kind === W.KIND.PEPITE) {
+          G.run.gold += Math.round(world.layer.oreValue * 2 * stats.value);
+          SFX.gold();
+        } else {
+          G.levelTime = Math.max(0, G.levelTime - 5);
+          SFX.gold();
+        }
+      }
+    }
+
+    // --- particules --------------------------------------------------------
+    for (var qi = G.parts.length - 1; qi >= 0; qi--) {
+      var q = G.parts[qi];
+      q.life -= dt;
+      if (q.life <= 0) { G.parts.splice(qi, 1); continue; }
+      q.vy += 30 * dt;
+      q.x += q.vx * dt; q.y += q.vy * dt;
+    }
+
+    // --- sortie ------------------------------------------------------------
+    if (!world.locked && d.y + CFG.DRILL_H > world.exitRow + 0.6) {
+      var cx0 = Math.floor(d.x), cx1 = Math.floor(d.x + CFG.DRILL_W - 0.01);
+      if (cx0 >= world.exitX - 1 && cx1 <= world.exitX + world.exitW) finishLevel();
+    }
+  }
+
+  /* ------------------------------------------------------- FIN DE NIVEAU */
+  function medalFor(def, t) {
+    if (t <= def.gold) return 'or';
+    if (t <= def.silver) return 'argent';
+    if (t <= def.bronze) return 'bronze';
+    return null;
+  }
+
+  function finishLevel() {
+    var def = CFG.LEVELS[G.run.levelIndex];
+    var t = G.levelTime;
+    var medal = medalFor(def, t);
+    G.run.splits.push(t);
+    G.run.medals.push(medal);
+    G.run.total += t;
+    CORE.SAVE.record(def.id, t, medal);
+    SFX.drill(false, 0);
+    SFX.level();
+
+    var rng = CORE.makeRng((G.run.seed + G.run.levelIndex * 131) | 0);
+    G.drawnCards = C.draw(rng, G.run.passives, def.layer, 3);
+    G.cardChosen = false;
+    G.lastResult = { def: def, time: t, medal: medal, ore: G.ore, last: G.run.levelIndex >= CFG.LEVELS.length - 1 };
+    G.state = 'station';
+  }
+
+  function chooseCard(passive) {
+    if (G.cardChosen) return;
+    G.run.passives[passive.id] = (G.run.passives[passive.id] || 0) + 1;
+    G.cardChosen = true;
+  }
+
+  function buyPart(part) {
+    var owned = G.run.parts[part.id] || 0;
+    if (owned >= part.max) return false;
+    var cost = C.partCost(part, owned);
+    if (G.run.gold < cost) return false;
+    G.run.gold -= cost;
+    G.run.parts[part.id] = owned + 1;
+    return true;
+  }
+
+  function nextLevel() {
+    if (G.run.levelIndex >= CFG.LEVELS.length - 1) {
+      CORE.SAVE.recordTotal(G.run.total);
+      G.state = 'end';
+      return;
+    }
+    startLevel(G.run.levelIndex + 1);
+  }
+
+  CORE.GAME = {
+    G: G, startRun: startRun, startLevel: startLevel, update: update,
+    computeStats: computeStats, chooseCard: chooseCard, buyPart: buyPart,
+    nextLevel: nextLevel, medalFor: medalFor
+  };
+})(window.CORE);
+
+/* ============================ src/render.js ============================ */
+/* CORE — rendu canvas. */
+window.CORE = window.CORE || {};
+(function (CORE) {
+  'use strict';
+
+  var CFG = CORE.CFG, W = CORE.WORLD;
+
+  function shade(hex, k) {
+    var n = parseInt(hex.slice(1), 16);
+    var r = Math.min(255, Math.max(0, ((n >> 16) & 255) * k));
+    var g = Math.min(255, Math.max(0, ((n >> 8) & 255) * k));
+    var b = Math.min(255, Math.max(0, (n & 255) * k));
+    return 'rgb(' + (r | 0) + ',' + (g | 0) + ',' + (b | 0) + ')';
+  }
+
+  function hash(x, y) {
+    var h = (x * 374761393 + y * 668265263) ^ 0;
+    h = (h ^ (h >> 13)) * 1274126177;
+    return ((h ^ (h >> 16)) >>> 0) / 4294967296;
+  }
+
+  function draw(ctx, cv, g, dt) {
+    var world = g.world, d = g.drill, layer = world.layer, T = CFG.TILE;
+    var vw = cv.width / g.dpr, vh = cv.height / g.dpr;
+
+    // --- camera ------------------------------------------------------------
+    var tx = (d.x + CFG.DRILL_W / 2) * T - vw / 2;
+    var ty = (d.y + CFG.DRILL_H / 2) * T - vh / 2.1;
+    g.cam.x += (tx - g.cam.x) * Math.min(1, dt * 9);
+    g.cam.y += (ty - g.cam.y) * Math.min(1, dt * 9);
+    g.cam.x = Math.max(0, Math.min(world.w * T - vw, g.cam.x));
+    g.cam.y = Math.max(-40, Math.min(world.h * T - vh, g.cam.y));
+
+    var sx = 0, sy = 0;
+    if (g.shake > 0) {
+      sx = (Math.random() - 0.5) * g.shake;
+      sy = (Math.random() - 0.5) * g.shake;
+      g.shake = Math.max(0, g.shake - dt * 26);
+    }
+    var camX = Math.round(g.cam.x + sx), camY = Math.round(g.cam.y + sy);
+
+    // --- fond ---------------------------------------------------------------
+    var grd = ctx.createLinearGradient(0, 0, 0, vh);
+    grd.addColorStop(0, layer.fog);
+    grd.addColorStop(1, layer.bg);
+    ctx.fillStyle = grd;
+    ctx.fillRect(0, 0, vw, vh);
+
+    ctx.save();
+    ctx.translate(-camX, -camY);
+
+    var c0 = Math.max(0, Math.floor(camX / T)), c1 = Math.min(world.w - 1, Math.ceil((camX + vw) / T));
+    var r0 = Math.max(0, Math.floor(camY / T)), r1 = Math.min(world.h - 1, Math.ceil((camY + vh) / T));
+    var x, y, t, px, py;
+
+    // --- blocs ---------------------------------------------------------------
+    for (y = r0; y <= r1; y++) {
+      for (x = c0; x <= c1; x++) {
+        t = world.type[y * world.w + x];
+        if (t === W.T.EMPTY) continue;
+        px = x * T; py = y * T;
+        var col;
+        if (t === W.T.SOFT) col = layer.soft;
+        else if (t === W.T.MED) col = layer.med;
+        else if (t === W.T.HARD) col = layer.hard;
+        else if (t === W.T.ORE) col = layer.ore;
+        else if (t === W.T.BEDROCK) col = '#2b2b33';
+        else if (t === W.T.SEAL) col = '#b04a5e';
+        else col = '#4a4f8a';
+
+        var v = 0.86 + hash(x, y) * 0.28;
+        ctx.fillStyle = shade(col, v);
+        ctx.fillRect(px, py, T, T);
+
+        // relief
+        ctx.fillStyle = 'rgba(255,255,255,0.06)';
+        ctx.fillRect(px, py, T, 2);
+        ctx.fillStyle = 'rgba(0,0,0,0.16)';
+        ctx.fillRect(px, py + T - 2, T, 2);
+
+        if (t === W.T.ORE) {
+          ctx.fillStyle = 'rgba(255,255,255,0.35)';
+          ctx.fillRect(px + 5, py + 5, 4, 4);
+          ctx.fillRect(px + T - 9, py + T - 10, 3, 3);
+        }
+      }
+    }
+
+    // --- bonus enfouis : ils doivent attirer -------------------------------
+    var pulse = 0.55 + 0.45 * Math.sin(g.time * 4);
+    world.items.forEach(function (item, idx) {
+      var ix = idx % world.w, iy = (idx / world.w) | 0;
+      if (ix < c0 - 1 || ix > c1 + 1 || iy < r0 - 1 || iy > r1 + 1) return;
+      var color = item.kind === W.KIND.BONUS ? item.bonus.color
+        : (item.kind === W.KIND.PEPITE ? '#ffd24a' : '#5ff0e0');
+      px = ix * T + T / 2; py = iy * T + T / 2;
+      var rg = ctx.createRadialGradient(px, py, 1, px, py, T * 1.5);
+      rg.addColorStop(0, color);
+      rg.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.globalAlpha = 0.22 + 0.3 * pulse;
+      ctx.fillStyle = rg;
+      ctx.fillRect(px - T * 1.5, py - T * 1.5, T * 3, T * 3);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = color;
+      ctx.fillRect(px - 3, py - 3, 6, 6);
+    });
+
+    // --- cellules en cours de forage ---------------------------------------
+    if (d.drilling) {
+      var stats = g.stats;
+      var cells = CORE.DRILL.targets(d, d.fx, d.fy, stats.width, stats.length);
+      var hits = Math.max(1, Math.ceil(g.currentHard / Math.max(0.1, stats.force)));
+      var frac = Math.min(1, d.prog / hits);
+      for (var ci = 0; ci < cells.length; ci++) {
+        var cx = cells[ci][0], cy = cells[ci][1];
+        if (!world.inside(cx, cy)) continue;
+        if (!W.DESTRUCTIBLE[world.type[world.idx(cx, cy)]]) continue;
+        ctx.fillStyle = 'rgba(255,255,255,' + (0.10 + frac * 0.35) + ')';
+        ctx.fillRect(cx * T, cy * T, T, T);
+        ctx.strokeStyle = 'rgba(0,0,0,' + (0.2 + frac * 0.5) + ')';
+        ctx.lineWidth = 1 + frac * 2;
+        ctx.beginPath();
+        ctx.moveTo(cx * T + 3, cy * T + T - 4);
+        ctx.lineTo(cx * T + T * 0.5, cy * T + 4);
+        ctx.lineTo(cx * T + T - 3, cy * T + T - 5);
+        ctx.stroke();
+      }
+    }
+
+    // --- sortie --------------------------------------------------------------
+    var ex = world.exitX * T, ey = world.exitRow * T;
+    var ew = world.exitW * T;
+    ctx.fillStyle = world.locked ? 'rgba(255,90,110,' + (0.25 + 0.2 * pulse) + ')'
+      : 'rgba(120,255,180,' + (0.20 + 0.25 * pulse) + ')';
+    ctx.fillRect(ex, ey - 6, ew, T + 12);
+    ctx.strokeStyle = world.locked ? '#ff5a6e' : '#78ffb4';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(ex + 1, ey - 5, ew - 2, T + 10);
+
+    // --- pickups au sol -------------------------------------------------------
+    for (var pi = 0; pi < g.pickups.length; pi++) {
+      var p = g.pickups[pi];
+      var s2 = 5 + Math.sin(g.time * 6 + pi) * 1.5;
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x * T, p.y * T, s2 + 3, 0, 6.284);
+      ctx.globalAlpha = 0.25;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.beginPath();
+      ctx.arc(p.x * T, p.y * T, s2, 0, 6.284);
+      ctx.fill();
+      if (p.label) {
+        ctx.fillStyle = '#0d0d10';
+        ctx.font = 'bold 9px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(p.label, p.x * T, p.y * T + 3);
+      }
+    }
+    ctx.textAlign = 'left';
+
+    // --- particules ------------------------------------------------------------
+    for (var qi = 0; qi < g.parts.length; qi++) {
+      var q = g.parts[qi];
+      ctx.globalAlpha = Math.max(0, q.life / q.max);
+      ctx.fillStyle = q.color;
+      ctx.fillRect(q.x * T, q.y * T, q.s, q.s);
+    }
+    ctx.globalAlpha = 1;
+
+    // --- la foreuse ---------------------------------------------------------
+    drawDrill(ctx, g, T);
+
+    ctx.restore();
+
+    // --- obscurite -------------------------------------------------------------
+    var dark = layer.dark + (g.stats.visionPenalty || 0);
+    if (dark > 0.01) {
+      var dx = (d.x + CFG.DRILL_W / 2) * T - camX;
+      var dy = (d.y + CFG.DRILL_H / 2) * T - camY;
+      var rad = g.stats.vision * T;
+      var vg = ctx.createRadialGradient(dx, dy, rad * 0.25, dx, dy, rad);
+      vg.addColorStop(0, 'rgba(0,0,0,0)');
+      vg.addColorStop(1, 'rgba(0,0,0,' + Math.min(0.94, dark * 3.6) + ')');
+      ctx.fillStyle = vg;
+      ctx.fillRect(0, 0, vw, vh);
+    }
+
+    // --- surchauffe (4 bonus et plus) --------------------------------------
+    if (g.buffs.filter(function (b) { return !b.def.stun && !b.malus; }).length >= 3) {
+      ctx.fillStyle = 'rgba(255,140,60,' + (0.05 + 0.05 * pulse) + ')';
+      ctx.fillRect(0, 0, vw, vh);
+    }
+  }
+
+  function drawDrill(ctx, g, T) {
+    var d = g.drill;
+    var cx = (d.x + CFG.DRILL_W / 2) * T;
+    var cy = (d.y + CFG.DRILL_H / 2) * T;
+    var ang = Math.atan2(d.fy, d.fx);
+
+    ctx.save();
+    ctx.translate(cx, cy);
+
+    // halo turbo
+    if (d.turboT > 0) {
+      ctx.globalAlpha = 0.4;
+      ctx.fillStyle = '#ffb03d';
+      ctx.beginPath();
+      ctx.arc(0, 0, T * 1.6, 0, 6.284);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    ctx.rotate(ang);
+    // chassis
+    ctx.fillStyle = '#3a4048';
+    ctx.fillRect(-T * 0.95, -T * 0.9, T * 1.9, T * 1.8);
+    ctx.fillStyle = '#565f6b';
+    ctx.fillRect(-T * 0.85, -T * 0.8, T * 1.5, T * 1.6);
+    ctx.fillStyle = '#ffcf5c';
+    ctx.fillRect(-T * 0.5, -T * 0.35, T * 0.7, T * 0.7);
+    // chenilles
+    ctx.fillStyle = '#22262c';
+    ctx.fillRect(-T * 0.95, -T * 0.95, T * 1.9, T * 0.22);
+    ctx.fillRect(-T * 0.95, T * 0.73, T * 1.9, T * 0.22);
+    // tete de forage
+    var spin = Math.sin(d.bit) * 0.5 + 0.5;
+    ctx.fillStyle = d.rotT > 0 ? '#7a7f88' : '#d8dde4';
+    ctx.beginPath();
+    ctx.moveTo(T * 0.85, -T * 0.62);
+    ctx.lineTo(T * 1.55 + spin * 3, 0);
+    ctx.lineTo(T * 0.85, T * 0.62);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.fillRect(T * 0.9, -T * 0.5 + spin * T * 0.4, T * 0.5, 3);
+    ctx.restore();
+  }
+
+  CORE.RENDER = { draw: draw };
+})(window.CORE);
+
+/* ============================ src/ui.js ============================ */
+/* CORE — HUD et ecrans (DOM). */
+window.CORE = window.CORE || {};
+(function (CORE) {
+  'use strict';
+
+  var CFG = CORE.CFG, C = CORE.CONTENT, GAME = CORE.GAME, G = GAME.G;
+  var $ = function (id) { return document.getElementById(id); };
+
+  function fmt(t) { return t.toFixed(1); }
+  function fmtLong(t) {
+    var m = Math.floor(t / 60), s = t - m * 60;
+    return m > 0 ? m + 'm ' + s.toFixed(1) + 's' : s.toFixed(1) + 's';
+  }
+
+  function show(id) {
+    ['scMenu', 'scStation', 'scEnd'].forEach(function (s) { $(s).classList.remove('on'); });
+    if (id) $(id).classList.add('on');
+    $('hud').style.display = id ? 'none' : 'block';
+  }
+
+  /* ---------------------------------------------------------------- MENU */
+  function buildMenu() {
+    var host = $('jobs');
+    host.innerHTML = '';
+    C.JOBS.forEach(function (job) {
+      var el = document.createElement('div');
+      el.className = 'card';
+      el.innerHTML = '<div class="fam">METIER</div><div class="nm">' + job.name +
+        '</div><div class="ds">' + job.desc + '</div>';
+      el.onclick = function () {
+        CORE.SFX.init();
+        GAME.startRun(job);
+        show(null);
+      };
+      host.appendChild(el);
+    });
+    var bt = CORE.SAVE.bestTotal();
+    $('bestTotal').textContent = bt ? 'Meilleure expedition : ' + fmtLong(bt) : '';
+    show('scMenu');
+  }
+
+  /* -------------------------------------------------------------- STATION */
+  function buildStation() {
+    var r = G.lastResult;
+    $('stTime').textContent = fmt(r.time);
+    var med = r.medal || 'none';
+    $('stMedal').className = 'medal m-' + med;
+    $('stMedal').textContent = r.medal ? 'medaille ' + r.medal : 'hors delai';
+    var best = CORE.SAVE.best(r.def.id);
+    $('stBest').textContent = 'record ' + (best ? fmt(best.time) + 's' : '-') +
+      '  ·  or ' + r.def.gold + 's  ·  minerai ' + r.ore;
+
+    var cards = $('stCards');
+    cards.innerHTML = '';
+    G.drawnCards.forEach(function (p) {
+      var owned = G.run.passives[p.id] || 0;
+      var el = document.createElement('div');
+      el.className = 'card';
+      el.innerHTML = '<span class="rar r' + p.rar + '">' + C.RAR_NAME[p.rar] + '</span>' +
+        '<div class="fam">' + p.fam + (owned ? ' · deja x' + owned : '') + '</div>' +
+        '<div class="nm">' + p.name + '</div><div class="ds">' + p.desc + '</div>';
+      el.onclick = function () {
+        if (G.cardChosen) return;
+        GAME.chooseCard(p);
+        Array.prototype.forEach.call(cards.children, function (c) { c.classList.add('off'); });
+        el.classList.remove('off');
+        el.classList.add('sel');
+        CORE.SFX.bonus();
+        refreshNext();
+        buildShop();
+      };
+      cards.appendChild(el);
+    });
+
+    buildShop();
+    refreshNext();
+    show('scStation');
+  }
+
+  function refreshNext() {
+    var btn = $('stNext');
+    btn.disabled = !G.cardChosen;
+    btn.textContent = G.cardChosen
+      ? (G.lastResult.last ? 'PERCER LE COEUR' : 'NIVEAU SUIVANT')
+      : 'CHOISIS UNE CARTE';
+  }
+
+  function buildShop() {
+    $('stGold').textContent = G.run.gold + ' $';
+    var host = $('stShop');
+    host.innerHTML = '';
+    C.PARTS.forEach(function (part) {
+      var owned = G.run.parts[part.id] || 0;
+      var cost = C.partCost(part, owned);
+      var maxed = owned >= part.max;
+      var can = !maxed && G.run.gold >= cost;
+      var el = document.createElement('div');
+      el.className = 'part' + (can ? '' : ' no');
+      el.innerHTML = '<div class="pn">' + part.name + ' <span style="color:var(--dim)">x' + owned + '</span></div>' +
+        '<div class="pd">' + part.desc + '</div>' +
+        '<div class="pc">' + (maxed ? 'MAX' : cost + ' $') + '</div>';
+      el.onclick = function () {
+        if (GAME.buyPart(part)) { CORE.SFX.gold(); buildShop(); }
+      };
+      host.appendChild(el);
+    });
+  }
+
+  /* ------------------------------------------------------------------ FIN */
+  function buildEnd() {
+    var run = G.run;
+    $('endSub').innerHTML = 'Expedition terminee en <b style="color:var(--acc);font-size:20px">' +
+      fmtLong(run.total) + '</b>' +
+      (CORE.SAVE.bestTotal() === run.total ? '<br><span style="color:var(--or)">nouveau record</span>' : '');
+    var t = $('endTable');
+    t.innerHTML = '';
+    CFG.LEVELS.forEach(function (def, i) {
+      var tr = document.createElement('tr');
+      var med = run.medals[i] || 'none';
+      tr.innerHTML = '<td>' + def.id + ' · ' + def.name + '</td>' +
+        '<td class="medal m-' + med + '" style="font-size:11px">' + (run.medals[i] || '-') + '</td>' +
+        '<td>' + fmt(run.splits[i]) + 's</td>';
+      t.appendChild(tr);
+    });
+    show('scEnd');
+  }
+
+  /* ------------------------------------------------------------------ HUD */
+  function updateHud() {
+    if (G.state !== 'play') return;
+    var d = G.drill, w = G.world, def = w.def, s = G.stats;
+    var depth = Math.max(0, Math.round(def.top + d.y - w.top));
+    $('mDepth').textContent = depth;
+    $('mTime').textContent = fmt(G.levelTime);
+    var goal = G.levelTime <= def.gold ? 'OR ' + def.gold + 's'
+      : (G.levelTime <= def.silver ? 'ARGENT ' + def.silver + 's'
+        : (G.levelTime <= def.bronze ? 'BRONZE ' + def.bronze + 's' : 'hors delai'));
+    $('mGoal').textContent = goal;
+    $('mTime').style.color = G.buffs.some(function (b) { return b.def.freeze; }) ? '#5ff0e0' : '';
+
+    $('lvlName').textContent = def.id + ' · ' + def.name;
+    $('lvlSub').innerHTML = w.layer.name + '<br>force ' + s.force.toFixed(1) +
+      ' · vitesse ' + s.speed.toFixed(1) + '<br>taille ' + s.width + ' x ' + s.length;
+    $('gold').textContent = G.run.gold + ' $';
+    $('oreCount').textContent = 'minerai ' + G.ore;
+
+    $('quota').textContent = w.locked
+      ? 'SORTIE SCELLEE — ' + G.ore + ' / ' + def.quota + ' minerai'
+      : (def.type === 'sceau' ? 'un sceau barre le fond du puits' : '');
+
+    var el = G.buffs.map(function (b) {
+      var total = b.def.freeze ? b.def.tiers[b.level - 1] : b.def.dur;
+      var pct = Math.max(0, Math.min(1, b.t / total)) * 100;
+      var lvl = ['I', 'II', 'III'][b.level - 1] || 'I';
+      return '<div class="buff" style="border-color:' + b.def.color + '">' +
+        '<span class="ic" style="color:' + b.def.color + '">' + b.def.icon + '</span>' +
+        b.def.name + ' ' + lvl +
+        '<span class="bar"><i style="width:' + pct + '%;background:' + b.def.color + '"></i></span></div>';
+    }).join('');
+    $('buffs').innerHTML = el;
+
+    $('elanBar').style.width = (d.elan * 100).toFixed(0) + '%';
+    var tb = d.turboT > 0 ? 100 : (d.turboCd > 0 ? (1 - d.turboCd / (s.turboCd + s.turboDur)) * 100 : 100);
+    $('turboBar').style.width = tb.toFixed(0) + '%';
+
+    var list = [];
+    for (var id in G.run.passives) {
+      var p = C.PASSIVE_BY_ID[id];
+      list.push(p.name + (G.run.passives[id] > 1 ? ' x' + G.run.passives[id] : ''));
+    }
+    $('passivelist').textContent = list.join(' · ');
+  }
+
+  CORE.UI = {
+    buildMenu: buildMenu, buildStation: buildStation, buildEnd: buildEnd,
+    updateHud: updateHud, show: show, fmt: fmt, fmtLong: fmtLong,
+    bind: function () {
+      $('stNext').onclick = function () {
+        GAME.nextLevel();
+        if (G.state === 'end') buildEnd(); else show(null);
+      };
+      $('endAgain').onclick = function () { buildMenu(); };
+    }
+  };
+})(window.CORE);
+
+/* ============================ src/main.js ============================ */
+/* CORE — boucle principale, entrees clavier, redimensionnement. */
+(function (CORE) {
+  'use strict';
+
+  var GAME = CORE.GAME, G = GAME.G, UI = CORE.UI;
+  var cv = document.getElementById('cv');
+  var ctx = cv.getContext('2d');
+
+  function resize() {
+    G.dpr = Math.min(2, window.devicePixelRatio || 1);
+    cv.width = Math.floor(window.innerWidth * G.dpr);
+    cv.height = Math.floor(window.innerHeight * G.dpr);
+    cv.style.width = window.innerWidth + 'px';
+    cv.style.height = window.innerHeight + 'px';
+    ctx.setTransform(G.dpr, 0, 0, G.dpr, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  /* ------------------------------------------------------------- ENTREES */
+  var keys = {};
+  var CODE = {
+    up: ['KeyZ', 'KeyW', 'ArrowUp'],
+    down: ['KeyS', 'ArrowDown'],
+    left: ['KeyQ', 'KeyA', 'ArrowLeft'],
+    right: ['KeyD', 'ArrowRight'],
+    turbo: ['Space']
+  };
+  function held(list) {
+    for (var i = 0; i < list.length; i++) if (keys[list[i]]) return true;
+    return false;
+  }
+  window.addEventListener('keydown', function (e) {
+    if (e.code === 'KeyM') { CORE.SFX.toggle(); return; }
+    if (e.code === 'KeyR' && G.state === 'play') { GAME.startLevel(G.run.levelIndex); return; }
+    if (e.code === 'Escape' && G.state === 'play') { CORE.SFX.drill(false, 0); UI.buildMenu(); prevState = 'menu'; G.state = 'menu'; return; }
+    keys[e.code] = true;
+    if (e.code === 'Space' || e.code.indexOf('Arrow') === 0) e.preventDefault();
+    CORE.SFX.init();
+  });
+  window.addEventListener('keyup', function (e) { keys[e.code] = false; });
+  window.addEventListener('blur', function () { keys = {}; });
+
+  var input = { dx: 0, dy: 0, turbo: false };
+  function readInput() {
+    input.dx = (held(CODE.right) ? 1 : 0) - (held(CODE.left) ? 1 : 0);
+    input.dy = (held(CODE.down) ? 1 : 0) - (held(CODE.up) ? 1 : 0);
+    input.turbo = held(CODE.turbo);
+  }
+
+  /* --------------------------------------------------------------- BOUCLE */
+  var last = performance.now(), acc = 0, hudAcc = 0;
+  var prevState = G.state;
+
+  function frame(now) {
+    var dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+
+    if (G.state === 'play') {
+      readInput();
+      GAME.update(dt, input);
+      CORE.RENDER.draw(ctx, cv, G, dt);
+      hudAcc += dt;
+      if (hudAcc > 0.06) { hudAcc = 0; UI.updateHud(); }
+    } else if (G.world) {
+      CORE.RENDER.draw(ctx, cv, G, 0);
+    }
+
+    if (G.state !== prevState) {
+      if (G.state === 'station') UI.buildStation();
+      else if (G.state === 'end') UI.buildEnd();
+      else if (G.state === 'play') UI.show(null);
+      prevState = G.state;
+    }
+
+    requestAnimationFrame(frame);
+  }
+
+  UI.bind();
+  UI.buildMenu();
+  requestAnimationFrame(frame);
+})(window.CORE);
+
+</script>
+
+</body>
+</html>
