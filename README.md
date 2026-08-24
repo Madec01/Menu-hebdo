@@ -1,9 +1,9 @@
-# Cadence
+# Croustille
 
-Jeu de gestion d'usine agroalimentaire, en navigateur. On démarre seul dans un
-hangar à éplucher des pommes de terre, et on regarde la ligne grandir.
+Jeu de gestion d'usine à chips, en navigateur. On démarre seul dans un hangar à
+éplucher des pommes de terre, et on finit par voir son nom peint sur le mur.
 
-**Le jeu tient dans un seul fichier : [`cadence.html`](cadence.html).**
+**Le jeu tient dans un seul fichier : [`croustille.html`](croustille.html).**
 Double-clic pour jouer. Aucune installation, aucune dépendance, aucun réseau —
 il fonctionne hors ligne.
 

@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Cadence</title>
+<title>Croustille</title>
 <style>
 /* ============================================================
-   CADENCE — feuille de style unique
+   CROUSTILLE — feuille de style unique
    L'interface de gestion est en DOM/CSS, la vue usine en Canvas.
    ============================================================ */
 
@@ -596,7 +596,7 @@ table.tab tr:hover td{background:rgba(255,255,255,.028)}
 
   <!-- ===================== BARRE HAUTE ===================== -->
   <header id="barreHaute">
-    <div class="marque">CADENCE</div>
+    <div class="marque">CROUSTILLE</div>
 
     <div class="indic" id="indArgent"><span class="lab">Caisse</span><span class="val">8 000 €</span></div>
     <div class="indic" id="indDate"><span class="lab">Date</span><span class="val">Semaine 1 · Lundi 8 h</span></div>
@@ -726,6 +726,7 @@ const CONFIG = {
   chargeHuile: 60,             // kilos pour refaire un bain
   arretChangementHuile: 45,    // minutes de jeu, friteuse à l'arrêt
   rebutMax: 0.5,
+  // La clé ne change pas avec le nom du jeu : une partie en cours se relit.
   sauvegarde: "cadence_save_v1",
   version: 7
 };
@@ -1663,7 +1664,7 @@ function nouvellePartie(nomEntreprise, modeChoisi){
   etat = {
     version: CONFIG.version,
     meta: {
-      nomEntreprise: nomEntreprise || "Chips Cadence",
+      nomEntreprise: nomEntreprise || "Chips du Bassin",
       tempsJeu: 0,
       vitesse: 0,
       age: 1,
@@ -1726,7 +1727,7 @@ function standing(){ return etat.marque ? etat.marque.standing : CONFIG.standing
 
 function marqueParDefaut(nom){
   return {
-    nom: nom || "Chips Cadence",
+    nom: nom || "Chips du Bassin",
     logo: "patate", c1:"#e2b62c", c2:"#3a2c14",
     fond:"jaune", motif:"uni", styleNom:"batons",
     standing: CONFIG.standingDepart,
@@ -8239,12 +8240,12 @@ function ouvrirTitre(){
   const sauve = localStorage.getItem(CONFIG.sauvegarde);
   z.innerHTML = `
     <div class="feuille">
-      <h1>CADENCE</h1>
+      <h1>CROUSTILLE</h1>
       <div class="accroche">
         Un hangar, un bain d'huile, cinquante kilos de pommes de terre.<br>
         Trente ans plus tard, on verra bien.
       </div>
-      <input class="champTexte" id="champNom" maxlength="28" placeholder="Nom de l'entreprise" value="Chips Cadence">
+      <input class="champTexte" id="champNom" maxlength="28" placeholder="Nom de l'entreprise" value="Chips du Bassin">
       <div id="choixMode"></div>
       <button class="bt plein" id="btNouvelle">Nouvelle partie</button>
       <button class="bt" id="btContinuer">Reprendre la dernière partie</button>
@@ -8279,7 +8280,7 @@ function ouvrirTitre(){
   desc.textContent = MODES.normal.resume;
 
   $("#btNouvelle").onclick = () => {
-    nouvellePartie($("#champNom").value.trim() || "Chips Cadence", modeChoisi);
+    nouvellePartie($("#champNom").value.trim() || "Chips du Bassin", modeChoisi);
     fermer("#ecranTitre");
     demarrer();
   };
@@ -10714,7 +10715,7 @@ function panneauMarque(z){
   champ.maxLength = 20;
   champ.placeholder = "Le nom de la marque";
   champ.value = m.nom;
-  champ.oninput = () => { m.nom = champ.value; etat.meta.nomEntreprise = champ.value || "Chips Cadence";
+  champ.oninput = () => { m.nom = champ.value; etat.meta.nomEntreprise = champ.value || "Chips du Bassin";
                           redessinerMarque(); majBandeau(); };
   ba.appendChild(champ);
 
@@ -11259,7 +11260,7 @@ function importerFichier(){
           demarrer();
           notif("Partie chargée", etat.meta.nomEntreprise + ", semaine " + (semaineCourante()+1) + ".", "ok");
         }
-      } catch (e){ notif("Fichier illisible", "Ce n'est pas une sauvegarde de Cadence.", "ko"); }
+      } catch (e){ notif("Fichier illisible", "Ce n'est pas une sauvegarde de Croustille.", "ko"); }
     };
     r.readAsText(f);
   };

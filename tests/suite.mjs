@@ -1,5 +1,5 @@
 /* ============================================================================
-   Cadence — suite de tests
+   Croustille — suite de tests
    ----------------------------------------------------------------------------
    Pilote le jeu dans un vrai navigateur : on pose des machines, on fait tourner
    la simulation, et on vérifie ce qui en sort. Chaque cas ouvre une page neuve.
@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 
 const RACINE = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const JEU = "file://" + resolve(RACINE, "cadence.html");
+const JEU = "file://" + resolve(RACINE, "croustille.html");
 
 /* ------------------------------------------------------------- Utilitaires */
 const CAS = [];
@@ -1698,7 +1698,7 @@ const choisis = filtre.length ? CAS.filter(c => filtre.some(f => c.nom.includes(
 
 const nav = await chromium.launch();
 let rates = 0;
-console.log("\n  Cadence — " + choisis.length + " cas\n");
+console.log("\n  Croustille — " + choisis.length + " cas\n");
 for (const c of choisis){
   const t0 = Date.now();
   let r;
