@@ -914,7 +914,8 @@ class Wire {
   drawBusValue(c){
     const P = this.points(), i = Math.max(0, Math.floor((P.length - 2) / 2));
     const mx = (P[i].x + P[i+1].x) / 2, my = (P[i].y + P[i+1].y) / 2;
-    const txt = String(this.state);
+    const ph = physOf(this.state, pinInfo(this.outPin));
+    const txt = ph ? ph.txt : String(this.state);
     c.save();
     c.font = "600 10px 'IBM Plex Mono', monospace";
     const w = c.measureText(txt).width + 12;
@@ -974,6 +975,30 @@ class Wire {
       });
     }
   }
+}
+/* Ce que « raconte » un pin : unité et échelle physique, quand il en a une.
+   Les composants historiques n'en déclarent pas, sauf ceux-ci. */
+const LEGACY_UNITS = { BARRIER:{ o:[{ unit:'°', min:0, max:90 }] } };
+function pinInfo(pin){
+  if (!pin || !pin.isOutput) return null;
+  const c = pin.comp;
+  const d = REG[c.type];
+  const arr = d ? d.outs : (LEGACY_UNITS[c.type] || {}).o;
+  const m = arr && arr[pin.index];
+  return (m && m.unit != null) ? { unit:m.unit, min:m.min, max:m.max, nom:m.n || '' } : null;
+}
+/* Remonte le câble branché sur une entrée : d'où vient la mesure ? */
+function sourceOf(inPin){
+  const w = wires.find(x => x.inPin === inPin);
+  if (!w) return null;
+  return { pin:w.outPin, comp:w.outPin.comp, info:pinInfo(w.outPin), val:w.outPin.state | 0 };
+}
+/* Met une valeur brute 0-255 à l'échelle physique de sa source */
+function physOf(raw, info){
+  if (!info) return null;
+  const v = info.min + (Math.max(0, Math.min(ANA_MAX, raw)) / ANA_MAX) * (info.max - info.min);
+  const dec = (info.max - info.min) <= 20 ? 1 : 0;
+  return { v, txt: (dec ? v.toFixed(1) : Math.round(v)) + (info.unit ? ' ' + info.unit : '') };
 }
 /* Une valeur de bus arrivant sur ce pin sera-t-elle ramenée à 0/1 ? */
 function busNormalized(pin){
@@ -2194,7 +2219,149 @@ const EXAMPLES = [
 { name:'Oscillateur en anneau', icon:'🌀', diff:'Intermédiaire',
   desc:'Trois NON en boucle : le circuit se contredit sans fin et oscille tout seul. L\u2019oscilloscope révèle son battement.',
   data:{ comps:[{t:'NOT',x:0,y:32},{t:'NOT',x:208,y:32},{t:'NOT',x:416,y:32},{t:'SCOPE',x:208,y:192}],
-    wires:[[0,0,1,0],[1,0,2,0],[2,0,0,0],[2,0,3,0]] }}
+    wires:[[0,0,1,0],[1,0,2,0],[2,0,0,0],[2,0,3,0]] }},
+/* ================= PROCÉDÉS TOUT PRÊTS ================= */
+{ name:'Station de pompage', icon:'💧', diff:'Procédé',
+  desc:'Une pompe alimente une cuve à travers un tuyau. Les seuils haut et bas commandent la pompe par mémoire SR — et l’écran affiche niveau et pression en clair. Élargis le tuyau pour voir le remplissage s’accélérer.',
+  data:{ comps:[
+    {t:'CUVE',x:700,y:120,niv:6,opt:{debit:26,haut:85,bas:20}},
+    {t:'SRMEM',x:180,y:150},
+    {t:'PUMP',x:390,y:140},
+    {t:'TUYAU',x:520,y:150,opt:{dn:30}},
+    {t:'ECRAN',x:900,y:100,opt:{titre:'CUVE'}},
+    {t:'BUTTON',x:20,y:300}],
+   wires:[[0,2,1,0],[0,1,1,1],[1,0,2,0],[2,0,3,0],[3,0,0,0],[0,0,4,0],[0,3,4,1],[5,0,1,0]] }},
+{ name:'Four régulé — tout ou rien', icon:'🔥', diff:'Régulation',
+  desc:'La boucle fermée la plus simple : le four mesure sa température, le thermostat coupe et relance. L’enregistreur montre la dent de scie caractéristique. Change l’hystérésis et regarde la courbe changer.',
+  data:{ comps:[
+    {t:'FOUR',x:470,y:80,opt:{inert:5,alerte:200}},
+    {t:'THERMO',x:170,y:90,opt:{cons:150,hyst:12,sens:'chauf'}},
+    {t:'COURBE',x:700,y:250,opt:{duree:60}},
+    {t:'ECRAN',x:700,y:60,opt:{titre:'FOUR'}},
+    {t:'POT',x:170,y:300,opt:{val:59}}],
+   wires:[[0,0,1,0],[1,0,0,0],[0,0,2,0],[4,0,2,1],[0,0,3,0]] }},
+{ name:'Four régulé — proportionnel', icon:'📈', diff:'Régulation',
+  desc:'La même boucle, mais le régulateur DOSE la chauffe au lieu de la couper. La courbe se lisse et se pose sous la consigne. Monte le gain à 10 : elle se met à osciller. Compare avec l’exemple précédent.',
+  data:{ comps:[
+    {t:'FOUR',x:560,y:80,opt:{inert:5}},
+    {t:'PROP',x:150,y:90,opt:{cons:150,gain:3}},
+    {t:'PWM',x:340,y:100,opt:{hz:8}},
+    {t:'HIGH',x:340,y:280},
+    {t:'COURBE',x:790,y:250,opt:{duree:60}},
+    {t:'POT',x:150,y:300,opt:{val:59}},
+    {t:'ECRAN',x:790,y:60,opt:{titre:'FOUR P'}}],
+   wires:[[0,0,1,0],[1,0,2,0],[3,0,2,1],[2,0,0,0],[0,0,4,0],[5,0,4,1],[0,0,6,0],[1,0,6,1]] }},
+{ name:'Poste pneumatique', icon:'💨', diff:'Procédé',
+  desc:'Un compresseur maintient la pression entre 5 et 8 bar — il redémarre tout seul à cause des fuites. L’air alimente un vérin qui fait des allers-retours grâce à ses fins de course et une mémoire de sens.',
+  data:{ comps:[
+    {t:'AIR',x:120,y:80,opt:{debit:2,haut:8,bas:5,fuite:4}},
+    {t:'SRMEM',x:340,y:100},
+    {t:'JACK',x:840,y:120,opt:{sec:2}},
+    {t:'SRMEM',x:560,y:330},
+    {t:'NOT',x:740,y:340},
+    {t:'AND',x:700,y:60},
+    {t:'AND',x:700,y:230},
+    {t:'HIGH',x:520,y:60},
+    {t:'ECRAN',x:120,y:330,opt:{titre:'AIR'}}],
+   wires:[[0,2,1,0],[0,1,1,1],[1,0,0,0],
+          [2,1,3,0],[2,0,3,1],[3,0,4,0],
+          [7,0,5,0],[4,0,5,1],[7,0,6,0],[3,0,6,1],
+          [5,0,2,0],[6,0,2,1],
+          [0,0,8,0],[2,2,8,1]] }},
+{ name:'Convoyeur et évacuation', icon:'📦', diff:'Procédé',
+  desc:'Le tapis avance, compte les pièces, et à la quatrième il s’arrête pendant qu’un vérin évacue le lot. Le bouton relance un cycle. Le compte se lit sur l’afficheur.',
+  data:{ comps:[
+    {t:'CONV',x:330,y:120,opt:{esp:2}},
+    {t:'CNT4',x:620,y:100},
+    {t:'SRMEM',x:120,y:140},
+    {t:'BUTTON',x:20,y:340},
+    {t:'JACK',x:840,y:300,opt:{sec:1}},
+    {t:'DEC',x:640,y:330},
+    {t:'ECRAN',x:330,y:330,opt:{titre:'TAPIS'}}],
+   wires:[[3,0,2,0],[1,1,2,1],[2,0,0,0],[0,1,1,0],[3,0,1,1],
+          [1,1,4,0],[1,0,5,0],[1,1,5,1],[1,2,5,2],[1,3,5,3],
+          [0,0,6,0]] }},
+{ name:'Vitesse moteur asservie', icon:'⚙️', diff:'Régulation',
+  desc:'Le moteur renvoie sa vitesse réelle ; le régulateur la compare à la consigne et corrige par PWM. Change l’inertie du moteur : la vitesse met plus de temps à s’établir, mais elle arrive toujours au même endroit.',
+  data:{ comps:[
+    {t:'MOTOR',x:640,y:100,opt:{inert:1.5}},
+    {t:'PROP',x:130,y:110,opt:{cons:170,gain:4}},
+    {t:'PWM',x:380,y:120,opt:{hz:20}},
+    {t:'HIGH',x:380,y:300},
+    {t:'COURBE',x:600,y:320,opt:{duree:30}},
+    {t:'ECRAN',x:880,y:100,opt:{titre:'MOTEUR'}}],
+   wires:[[0,0,1,0],[1,0,2,0],[3,0,2,1],[2,0,0,0],[0,0,4,0],[1,0,4,1],[0,0,5,0]] }},
+{ name:'Serre automatisée', icon:'🌱', diff:'Expert',
+  desc:'Trois régulations en parallèle : le chauffage suit la température, la ventilation suit l’humidité, l’arrosage suit le niveau de la cuve. Un seul écran surveille les quatre grandeurs. Fais varier les capteurs pour voir la serre réagir.',
+  data:{ comps:[
+    {t:'TEMPC',x:60,y:60,opt:{val:14,seuil:18}},
+    {t:'HUM',x:60,y:230,opt:{val:80,seuil:70}},
+    {t:'NIV',x:60,y:400,opt:{val:40,seuil:25}},
+    {t:'NOT',x:250,y:70},
+    {t:'FOUR',x:430,y:40,opt:{inert:6}},
+    {t:'MOTOR',x:430,y:230,opt:{inert:1}},
+    {t:'NOT',x:250,y:410},
+    {t:'VALVE',x:430,y:400},
+    {t:'ECRAN',x:700,y:180,opt:{titre:'SERRE'}}],
+   wires:[[0,1,3,0],[3,0,4,0],
+          [1,1,5,0],
+          [2,1,6,0],[6,0,7,0],
+          [0,0,8,0],[1,0,8,1],[2,0,8,2],[4,0,8,3]] }},
+{ name:'Carrefour piloté par automate', icon:'🚦', diff:'Avancé',
+  desc:'Une machine à états programmée en 0→1→2→3 pilote deux feux en opposition. Ouvre sa table de transitions au double-clic : tu peux allonger une phase sans toucher au câblage.',
+  data:{ comps:[
+    {t:'CLOCK',x:60,y:180,ci:0},
+    {t:'FSM',x:250,y:120},
+    {t:'TRAFFIC',x:560,y:60},
+    {t:'TRAFFIC',x:560,y:280},
+    {t:'OR',x:430,y:200},
+    {t:'OR',x:430,y:380}],
+   wires:[[0,0,1,2],
+          [1,0,2,0],[1,1,2,1],[1,2,4,0],[1,3,4,1],[4,0,2,2],
+          [1,2,3,0],[1,3,3,1],[1,0,5,0],[1,1,5,1],[5,0,3,2]] }},
+{ name:'Four régulé — PID complet', icon:'🎯', diff:'Régulation',
+  desc:'La régulation industrielle : un capteur mesure le four, le PID dose la chauffe avec ses trois termes P, I et D. Les barres du boîtier montrent la part de chacun. Mets Ki à 0 : l\u2019écart résiduel réapparaît. Monte Kd : le dépassement diminue.',
+  data:{ comps:[
+    {t:'FOUR',x:640,y:60,opt:{inert:6}},
+    {t:'THERMOC',x:880,y:60,opt:{seuil:200}},
+    {t:'PID',x:150,y:60,opt:{cons:130,kp:2.5,ki:0.5,kd:1.5}},
+    {t:'PWM',x:400,y:80,opt:{hz:10}},
+    {t:'HIGH',x:400,y:270},
+    {t:'COURBE',x:600,y:300,opt:{duree:90}},
+    {t:'ECRAN',x:880,y:250,opt:{titre:'PID'}}],
+   wires:[[0,0,1,0],[1,0,2,0],[2,0,3,0],[4,0,3,1],[3,0,0,0],
+          [1,0,5,0],[2,0,5,1],[1,0,6,0],[0,0,6,1],[2,0,6,2]] }},
+{ name:'Capteurs en prise directe', icon:'🔬', diff:'Procédé',
+  desc:'Les mêmes capteurs, mais branchés sur les procédés : le thermomètre lit le four, le capteur de niveau lit la cuve. Ils ne se règlent plus à la main — ils mesurent. Note le thermomètre qui sature en ambre : son étendue s\u2019arrête à 50 °C.',
+  data:{ comps:[
+    {t:'FOUR',x:120,y:60,opt:{inert:4}},
+    {t:'TEMPC',x:400,y:60,opt:{seuil:30}},
+    {t:'THERMOC',x:400,y:200,opt:{seuil:200}},
+    {t:'HIGH',x:120,y:300},
+    {t:'CUVE',x:120,y:380,niv:5,opt:{debit:14}},
+    {t:'NIV',x:400,y:400,opt:{seuil:70}},
+    {t:'ECRAN',x:720,y:180,opt:{titre:'PROCÉDÉS'}}],
+   wires:[[3,0,0,0],[0,0,1,0],[0,0,2,0],[3,0,4,0],[4,0,5,0],
+          [1,0,6,0],[2,0,6,1],[5,0,6,2],[4,3,6,3]] }},
+{ name:'Atelier complet', icon:'🏭', diff:'Expert',
+  desc:'Une petite usine : une cuve alimentée par pompe, un four régulé, un convoyeur qui compte les pièces, et un écran central qui surveille les quatre grandeurs. Tout tourne en même temps — observe, puis modifie.',
+  data:{ comps:[
+    {t:'PUMP',x:60,y:60},
+    {t:'TUYAU',x:210,y:70,opt:{dn:40}},
+    {t:'CUVE',x:400,y:40,niv:6,opt:{debit:18,haut:85,bas:20}},
+    {t:'SRMEM',x:60,y:230},
+    {t:'FOUR',x:400,y:280,opt:{inert:6}},
+    {t:'THERMO',x:180,y:300,opt:{cons:160,hyst:14}},
+    {t:'CONV',x:380,y:500,opt:{esp:2.5}},
+    {t:'CNT4',x:640,y:480},
+    {t:'HIGH',x:180,y:520},
+    {t:'ECRAN',x:820,y:180,opt:{titre:'ATELIER'}},
+    {t:'COURBE',x:820,y:400,opt:{duree:60}}],
+   wires:[[3,0,0,0],[0,0,1,0],[1,0,2,0],[2,2,3,0],[2,1,3,1],
+          [4,0,5,0],[5,0,4,0],
+          [8,0,6,0],[6,1,7,0],
+          [2,0,9,0],[4,0,9,1],[6,0,9,2],[2,3,9,3],
+          [4,0,10,0],[2,0,10,1]] }}
 ];
 /* ---------- Sauvegardes nommées ---------- */
 let SAVES = [];
@@ -4687,7 +4854,64 @@ const missions = [
       "Remplace le thermostat par un RÉGULATEUR PROPORTIONNEL suivi d'un PWM : la courbe se lisse et se pose sous la consigne.",
       "Monte le gain à 10 : la courbe se met à onduler. Redescends à 1 : elle rampe sans jamais arriver.",
       "Change l'inertie du four et refais l'expérience : plus le procédé est lent, plus les dépassements sont grands."],
-    why:"Un automaticien ne juge jamais une régulation sur une valeur instantanée, mais sur sa <b>courbe</b> : le temps de montée, le dépassement, l'amplitude des oscillations, l'écart résiduel. Ces quatre grandeurs tiennent dans un seul tracé — c'est pour cela que les salles de contrôle sont tapissées d'enregistreurs, et que régler un PID s'apprend l'œil sur la courbe, pas la calculatrice à la main."} }
+    why:"Un automaticien ne juge jamais une régulation sur une valeur instantanée, mais sur sa <b>courbe</b> : le temps de montée, le dépassement, l'amplitude des oscillations, l'écart résiduel. Ces quatre grandeurs tiennent dans un seul tracé — c'est pour cela que les salles de contrôle sont tapissées d'enregistreurs, et que régler un PID s'apprend l'œil sur la courbe, pas la calculatrice à la main."} },
+{ id:"m136", ch:"Chapitre 28 · L'usine", title:"Brancher un vrai capteur",
+  desc:"Jusqu'ici tu réglais la mesure à la main. Branche maintenant la sortie T° d'un FOUR sur l'entrée PROC d'un CAPTEUR DE TEMPÉRATURE : il mesure en direct, sa glissière disparaît. Chauffe le four et regarde-le saturer en ambre au-delà de 50 °C.",
+  inputs:0, outputs:0, tt:[], par:0,
+  sol:{
+    plan:["VRAI·1 ─▶ CHF du FOUR","FOUR (T°) ─▶ PROC du CAPTEUR","CAPTEUR (MES) ─▶ ÉCRAN"],
+    steps:["Pose un FOUR, un CAPTEUR DE TEMPÉRATURE (onglet Capteurs) et un ÉCRAN DE MESURE.",
+      "Câble une constante VRAI·1 sur l'entrée CHF du four : il chauffe à pleine puissance.",
+      "Câble la sortie T° du four sur l'entrée PROC du capteur.",
+      "Le capteur affiche « ⟵ en direct » : il n'est plus réglable, il mesure.",
+      "Branche sa sortie MES sur l'écran : la température monte en degrés, sans que tu règles quoi que ce soit.",
+      "Attends : au-dessus de 50 °C, le capteur passe en ambre. Son étendue de mesure est dépassée."],
+    why:"Un capteur n'est pas une source de valeurs : c'est un <b>traducteur</b> branché sur un procédé. Et il a une <b>étendue de mesure</b> — une plage au-delà de laquelle il ne sait plus rien dire. Choisir un capteur dont la plage couvre le procédé est la première décision d'une installation : un thermomètre de chambre froide dans un four ne renvoie qu'un maximum figé, et la régulation devient aveugle."} },
+{ id:"m137", ch:"Chapitre 28 · L'usine", title:"La boucle qui passe par le capteur",
+  desc:"🏆 Refais la régulation du four, mais avec un vrai capteur dans la boucle : FOUR → CAPTEUR → THERMOSTAT → FOUR. Attention : la consigne se règle désormais dans l'échelle du CAPTEUR, pas dans celle du four.",
+  inputs:0, outputs:0, tt:[], par:0,
+  sol:{
+    plan:["FOUR (T°) ─▶ CAPTEUR (PROC)","CAPTEUR (MES) ─▶ THERMOSTAT (MES)","THERMOSTAT (CDE) ─▶ FOUR (CHF)"],
+    steps:["Pose un FOUR, un CAPTEUR DE TEMPÉRATURE, un THERMOSTAT et un ENREGISTREUR.",
+      "Câble la boucle : T° du four → PROC du capteur, MES du capteur → MES du thermostat, CDE du thermostat → CHF du four.",
+      "Règle la consigne du thermostat à 150 : dans l'échelle du capteur (−10 à 50 °C), cela correspond à environ 25 °C.",
+      "Branche MES sur l'enregistreur pour voir la dent de scie.",
+      "Change le capteur pour un modèle à plus grande étendue si tu veux réguler plus haut."],
+    why:"C'est la chaîne complète d'une régulation industrielle : <b>procédé → capteur → régulateur → actionneur → procédé</b>. Le point délicat est la <b>mise à l'échelle</b> : le régulateur ne voit pas des degrés, il voit la valeur que lui envoie le capteur. Consigne et mesure doivent parler la même langue — c'est le premier réglage d'un automate, et la première source d'erreur des débutants."} },
+{ id:"m138", ch:"Chapitre 28 · L'usine", title:"Le PID, terme par terme",
+  desc:"🏆 Remplace le thermostat par un RÉGULATEUR PID. Commence avec Kp seul : il reste un écart. Ajoute Ki : l'écart s'efface. Ajoute Kd : la montée est mieux amortie. Les trois barres du boîtier montrent la part de chaque terme.",
+  inputs:0, outputs:0, tt:[], par:0,
+  sol:{
+    plan:["FOUR (T°) ─▶ PID (MES)","PID (CDE) ─▶ PWM (VAL)","VRAI·1 ─▶ PWM (EN)","PWM ─▶ FOUR (CHF)"],
+    steps:["Pose un FOUR (inertie 6 s), un RÉGULATEUR PID, un MODULATEUR PWM, une constante VRAI·1 et un ENREGISTREUR.",
+      "Câble la boucle et branche la mesure sur l'enregistreur.",
+      "Règle Kp = 2, Ki = 0, Kd = 0 : la température se stabilise SOUS la consigne. Regarde la barre P seule travailler.",
+      "Monte Ki à 0,5 : la barre I grandit lentement et pousse la mesure jusqu'à la consigne exacte.",
+      "Ajoute Kd = 1,5 : pendant la montée, la barre D devient négative — elle freine avant l'arrivée.",
+      "Pousse Kp à 8 : le système se met à osciller. C'est la limite de stabilité."],
+    why:"Les trois termes répondent à trois questions différentes : <b>P</b> « quel est l'écart maintenant ? », <b>I</b> « depuis combien de temps est-ce que je me trompe ? », <b>D</b> « est-ce que ça va trop vite ? ». P seul laisse toujours une erreur, puisqu'il faut de l'erreur pour produire de la commande. I l'efface mais peut faire dépasser. D amortit mais amplifie le bruit. Régler un PID, c'est arbitrer entre ces trois défauts — et cela se fait l'œil sur la courbe, pas la calculatrice à la main."} },
+{ id:"m139", ch:"Chapitre 28 · L'usine", title:"Le tuyau qui bride",
+  desc:"Une POMPE à fond, un TUYAU étroit, une CUVE : le remplissage plafonne. Le tuyau affiche « BRIDÉ ». Élargis son diamètre et regarde le débit repartir. Change la pompe n'y changera rien.",
+  inputs:0, outputs:0, tt:[], par:0,
+  sol:{
+    plan:["VRAI·1 ─▶ POMPE","POMPE (DÉB) ─▶ TUYAU ─▶ CUVE (REMP)","TUYAU ─▶ ÉCRAN"],
+    steps:["Pose une POMPE, un TUYAU, une CUVE et un ÉCRAN DE MESURE.",
+      "Câble : VRAI·1 → M de la pompe, DÉB de la pompe → E du tuyau, S du tuyau → REMP de la cuve.",
+      "Règle le diamètre du tuyau à 20 mm avec sa glissière : il passe en ambre et affiche BRIDÉ.",
+      "Branche le débit du tuyau et le niveau de la cuve sur l'écran : tu lis des L/min et des %.",
+      "Élargis le tuyau à 80 mm : le débit double et la cuve se remplit bien plus vite."],
+    why:"L'erreur la plus fréquente des installations : on change la pompe pour gagner du débit, alors que c'est la <b>tuyauterie</b> qui limite. Le débit dépend de la section, de la longueur et de la pression disponible — jamais de la seule pompe. Un tuyau sous-dimensionné transforme n'importe quelle machine en goulot d'étranglement."} },
+{ id:"m140", ch:"Chapitre 28 · L'usine", title:"Ton atelier",
+  desc:"🏆 Mission finale : assemble ton propre atelier. Au moins un procédé régulé (four, cuve ou réservoir d'air), un capteur en prise directe, un actionneur commandé, un ÉCRAN qui surveille tout et un ENREGISTREUR sur la grandeur qui t'intéresse. Charge l'exemple « Atelier complet » 📦 si tu veux un point de départ.",
+  inputs:0, outputs:0, tt:[], par:0,
+  sol:{
+    plan:["POMPE ─▶ TUYAU ─▶ CUVE (régulée par ses seuils)","FOUR ─▶ CAPTEUR ─▶ PID ─▶ PWM ─▶ FOUR","CONVOYEUR ─▶ COMPTEUR","ÉCRAN 4 voies + ENREGISTREUR"],
+    steps:["Ouvre les exemples 📦 et charge « Atelier complet » pour voir une installation qui tourne.",
+      "Repère les trois boucles indépendantes : le remplissage, la régulation de température, le comptage des pièces.",
+      "Ajoute ta propre boucle : par exemple un réservoir d'air qui alimente un vérin.",
+      "Branche tout ce qui t'intéresse sur l'écran (jusqu'à quatre voies) et sur l'enregistreur (deux voies).",
+      "Enregistre ton montage sous un nom avec 💾 : tu pourras y revenir et l'exporter."],
+    why:"Une usine n'est pas un grand circuit : c'est un <b>ensemble de boucles</b> qui tournent chacune de leur côté, reliées par la matière qui circule et par quelques sécurités communes. Tu possèdes maintenant les cinq briques de n'importe laquelle : mesurer, comparer à une consigne, décider, agir, et vérifier que l'action a produit son effet. Le reste n'est qu'une question d'échelle."} }
 ];
 
 /* ---------- Progression (localStorage) ---------- */
@@ -4887,7 +5111,9 @@ function optOf(c, k){
 /* Sections de guide engendrées par le registre, dans cet ordre */
 const FAM_SECTIONS = [
   { key:'sense', t:'Les capteurs — mesurer le monde',
-    p:'Un capteur transforme une grandeur physique (lumière, chaleur, distance…) en signal. Chacun donne DEUX sorties : la <b>valeur</b> mesurée sur un bus, et un <b>seuil</b> booléen — « il fait plus chaud que la consigne ». Règle la consigne au double-clic : c\u2019est le premier réflexe de l\u2019automaticien.' },
+    p:'Un capteur transforme une grandeur physique (lumière, chaleur, distance…) en signal. Chacun donne DEUX sorties : la <b>valeur</b> mesurée sur un bus, et un <b>seuil</b> booléen — « il fait plus chaud que la consigne ».<br><br>' +
+      '<b>Deux façons de s\u2019en servir.</b> Laissé <b>libre</b>, il simule : tu fixes la valeur toi-même (glissière, clic ou double-clic) pour tester ta logique. <b>Branché</b> sur l\u2019entrée <code>PROC</code> à la sortie d\u2019un procédé — la température d\u2019un four, le niveau d\u2019une cuve, la vitesse d\u2019un moteur — il devient un <b>vrai instrument</b> : il mesure en direct ce que fait l\u2019installation, et la glissière disparaît puisque c\u2019est le procédé qui commande.<br><br>' +
+      '<b>Attention à l\u2019étendue de mesure.</b> Un thermomètre gradué de −10 à 50 °C plongé dans un four à 200 °C sature : il affiche 50 et passe en ambre. C\u2019est le vrai piège du métier — choisir un capteur adapté à la plage du procédé.' },
   { key:'time', t:'Temps & automatisme — attendre, compter, séquencer',
     p:'Les vrais automates ne raisonnent pas qu\u2019en 0 et 1 : ils <b>attendent</b>. Temporisations, impulsions calibrées, mémoires d\u2019état — voici la boîte à outils exacte des automates programmables industriels, en version démontable.' },
   { key:'reg', t:'Régulation — maintenir une consigne',
@@ -5437,7 +5663,7 @@ defComp('RELAY', {
 defComp('MOTOR', {
   name:'MOTEUR', short:'MOTEUR', family:'act', color:'#3dff9e',
   glyph:'⚙', w:118, h:104, ins:[{ n:'M', bus:true },{ n:'S' }],
-  outs:[{ n:'VIT', bus:true },{ n:'TR' }],
+  outs:[{ n:'VIT', bus:true, unit:'tr/min', min:0, max:3000 },{ n:'TR' }],
   opts:[{ k:'inert', label:'Inertie (s)', min:0.1, max:10, step:0.1, def:1,
     hint:'Temps que met le moteur à atteindre sa vitesse. Rien ne démarre instantanément.' }],
   init(c){ c.ang = 0; c.lastT = 0; c.vit = 0; c.tours = 0; c.tr = 0; },
@@ -5494,7 +5720,7 @@ defComp('JACK', {
   name:'VÉRIN', short:'VÉRIN', family:'act', color:'#3dff9e',
   glyph:'⇔', w:132, h:96,
   ins:[{n:'+', bus:true},{n:'−', bus:true}],
-  outs:[{n:'S0'},{n:'S1'},{n:'POS', bus:true}],
+  outs:[{n:'S0'},{n:'S1'},{n:'POS', bus:true, unit:'%', min:0, max:100}],
   opts:[{ k:'sec', label:'Course complète (s)', min:0.3, max:10, step:0.1, def:1.5,
     hint:'Temps que met la tige pour sortir entièrement.' }],
   init(c){ c.pos = 0; c.lastT = 0; },
@@ -5541,7 +5767,8 @@ defComp('JACK', {
 });
 defComp('VALVE', {
   name:'ÉLECTROVANNE', short:'VANNE', family:'act', color:'#3dff9e',
-  glyph:'⧖', w:110, h:92, ins:[{n:'CMD', bus:true}], outs:[{n:'DÉB', bus:true}],
+  glyph:'⧖', w:110, h:92, ins:[{n:'CMD', bus:true}],
+  outs:[{n:'DÉB', bus:true, unit:'L/min', min:0, max:50}],
   eval(c){
     c.ouv = anaIn(c.inPins[0]);
     c.open = c.ouv > 0 ? 1 : 0;
@@ -5574,7 +5801,8 @@ defComp('VALVE', {
 });
 defComp('PUMP', {
   name:'POMPE', short:'POMPE', family:'act', color:'#3dff9e',
-  glyph:'◍', w:108, h:96, ins:[{n:'M', bus:true}], outs:[{n:'DÉB', bus:true}],
+  glyph:'◍', w:108, h:96, ins:[{n:'M', bus:true}],
+  outs:[{n:'DÉB', bus:true, unit:'L/min', min:0, max:50}],
   init(c){ c.ang = 0; c.lastT = 0; c.deb = 0; },
   eval(c){
     c.cmd = anaIn(c.inPins[0]);
@@ -5640,7 +5868,8 @@ defComp('SIREN', {
 });
 defComp('STEPPER', {
   name:'MOTEUR PAS À PAS', short:'PAS-À-PAS', family:'act', color:'#3dff9e',
-  glyph:'⟳', w:110, h:96, ins:[{n:'▷'},{n:'S'}], outs:[{n:'POS', bus:true}],
+  glyph:'⟳', w:110, h:96, ins:[{n:'▷'},{n:'S'}],
+  outs:[{n:'POS', bus:true, unit:'pas', min:0, max:15}],
   init(c){ c.step = 0; c.prevClk = null; },
   save:c => ({ step: c.step || undefined }),
   restore(c, s){ if (s.step != null) c.step = s.step; },
@@ -5697,7 +5926,12 @@ const fmtPhys = (v, unit, dec) => (dec ? v.toFixed(dec) : Math.round(v)) + (unit
 function defSensor(id, o){
   return defComp(id, {
     name:o.name, short:o.short, family:'sense', color:'#38e1ff', glyph:o.glyph,
-    w:o.w || 116, h:96, ins:[], outs:[{ n:'MES', bus:true }, { n:o.seuilPin || 'SEU' }],
+    w:o.w || 120, h:100,
+    ins:[{ n:'PROC', bus:true }],          // branché sur un procédé : mesure en direct
+    outs:[{ n:'MES', bus:true, unit:o.unit, min:o.min, max:o.max },
+          { n:o.seuilPin || 'SEU' }],
+    /* Quand le capteur est branché, sa valeur ne se règle plus à la main */
+    noDrag:c => !!sourceOf(c.inPins[0]),
     opts:[
       { k:'val', label:'Mesure (' + o.unit + ')', min:o.min, max:o.max, step:o.step || 1, def:o.def,
         hint:'La grandeur que « voit » le capteur. Fais-la varier pour tester ton circuit.' },
@@ -5705,23 +5939,48 @@ function defSensor(id, o){
         hint:'La sortie booléenne passe à 1 au-dessus de ce seuil.' }
     ],
     eval(c){
-      const v = optOf(c, 'val'), s = optOf(c, 'seuil');
+      const src = sourceOf(c.inPins[0]);
+      let v;
+      if (src){
+        // Mesure réelle : on lit la grandeur du procédé dans SON unité, puis on la
+        // rapporte à l'étendue de mesure du capteur. Hors gamme, il sature — comme
+        // un vrai instrument dont on a mal choisi la plage.
+        const raw = Math.max(0, Math.min(ANA_MAX, c.inPins[0].state | 0));
+        const ph = src.info ? physOf(raw, src.info) : null;
+        const brut = ph && src.info.unit === o.unit ? ph.v : (o.min + raw / ANA_MAX * (o.max - o.min));
+        c.direct = true;
+        c.horsGamme = brut < o.min - 1e-9 || brut > o.max + 1e-9;
+        v = Math.max(o.min, Math.min(o.max, brut));
+        c.brut = brut;
+      } else {
+        c.direct = false; c.horsGamme = false;
+        v = optOf(c, 'val');
+      }
+      c.mes = v;
+      const s = optOf(c, 'seuil');
       c.raw = phys2raw(v, o.min, o.max);
       c.outPins[0].state = c.raw;
       c.outPins[1].state = v >= s ? 1 : 0;
     },
-    click(c){                       // clic : balaye l'échelle par dixièmes
+    click(c){                       // clic : balaye l'échelle (seulement s'il est libre)
+      if (sourceOf(c.inPins[0])) return;
       const step = (o.max - o.min) / 10;
       let v = optOf(c, 'val') + step;
       if (v > o.max) v = o.min;
       c.opt.val = Math.round(v * 10) / 10;
     },
-    value:c => fmtPhys(optOf(c, 'val'), o.unit, o.step && o.step < 1 ? 1 : 0),
-    sub:c => 'seuil ' + fmtPhys(optOf(c, 'seuil'), o.unit, 0) + (c.outPins[1].state ? ' ✓' : ''),
-    bar:c => (optOf(c, 'val') - o.min) / (o.max - o.min),
-    tip:c => ['Mesure : ' + fmtPhys(optOf(c, 'val'), o.unit, 1) + '  →  valeur brute ' + c.raw + ' / 255',
-              'Seuil : ' + fmtPhys(optOf(c, 'seuil'), o.unit, 0) + (c.outPins[1].state ? ' — dépassé' : ' — non atteint'),
-              'Clic : balaye l’échelle · double-clic : valeur exacte'],
+    value:c => fmtPhys(c.mes != null ? c.mes : optOf(c, 'val'), o.unit, o.step && o.step < 1 ? 1 : 0),
+    sub:c => (c.direct ? '⟵ en direct' : 'simulé') +
+             ' · seuil ' + fmtPhys(optOf(c, 'seuil'), o.unit, 0) + (c.outPins[1].state ? ' ✓' : ''),
+    bar:c => ((c.mes != null ? c.mes : optOf(c, 'val')) - o.min) / (o.max - o.min),
+    tip:c => [
+      (c.direct ? 'MESURE EN DIRECT sur le procédé' : 'Valeur simulée à la main (rien n’est branché sur PROC)'),
+      'Mesure : ' + fmtPhys(c.mes != null ? c.mes : optOf(c, 'val'), o.unit, 1) +
+        '  →  valeur brute ' + c.raw + ' / 255',
+      (c.horsGamme ? '⚠ hors gamme : le procédé vaut ' + fmtPhys(c.brut, o.unit, 1) +
+        ', le capteur sature (étendue ' + o.min + ' … ' + o.max + ' ' + o.unit + ')' :
+        'Étendue de mesure : ' + o.min + ' … ' + o.max + ' ' + o.unit),
+      'Seuil : ' + fmtPhys(optOf(c, 'seuil'), o.unit, 0) + (c.outPins[1].state ? ' — dépassé' : ' — non atteint')],
     expr:(c, i, A) => i === 0 ? 'mesure(' + o.short + ')' : 'seuil(' + o.short + ')',
     guide:o.guide
   });
@@ -5738,6 +5997,11 @@ defSensor('TEMPC', { name:'CAPTEUR DE TEMPÉRATURE', short:'TEMP.', glyph:'🌡'
   guide:{ txt:'La température ambiante, de −10 à 50 °C. La sortie <code>MES</code> donne la valeur, la sortie booléenne dit « il fait plus chaud que la consigne ».',
     ex:'TEMP. → THERMOSTAT → VENTILATEUR : la climatisation la plus simple du monde.',
     real:'Un capteur ne « sait » pas ce qu’est un degré : il fournit une tension, et c’est l’étalonnage — la correspondance choisie par l’ingénieur — qui la transforme en température.' }});
+defSensor('THERMOC', { name:'THERMOCOUPLE (HAUTE T°)', short:'THERMOC.', glyph:'🌡', unit:'°C',
+  min:0, max:400, def:20, seuil:150, w:126,
+  guide:{ txt:'Un thermocouple : il mesure de <code>0 à 400 °C</code>, là où le thermomètre ambiant sature à 50. Même composant, autre <b>étendue de mesure</b> — et c\u2019est tout ce qui compte quand on choisit un capteur.',
+    ex:'Branche-le sur la sortie T° d\u2019un FOUR : il suit toute la montée sans saturer, alors que le CAPTEUR DE TEMPÉRATURE passe en ambre dès 50 °C.',
+    real:'Un thermocouple est une simple soudure entre deux métaux différents : l\u2019écart de température y crée quelques millivolts. Robuste, bon marché, il équipe les fours, les moteurs et les turbines — au prix d\u2019une précision moindre que la sonde de platine.' }});
 defSensor('DIST', { name:'CAPTEUR DE DISTANCE', short:'DISTANCE', glyph:'⇥', unit:'cm', min:0, max:400, def:120, seuil:60,
   guide:{ txt:'Un télémètre à ultrasons : il mesure la distance de l’obstacle le plus proche, de 0 à 400 cm. Attention à la logique : ici, un obstacle <b>proche</b> donne une <b>petite</b> valeur.',
     ex:'DISTANCE → seuil → NON → sirène de recul : l’alarme se déclenche quand l’obstacle passe SOUS le seuil.',
@@ -5967,7 +6231,8 @@ defComp('PROP', {
 defComp('FOUR', {
   name:'FOUR (PROCÉDÉ THERMIQUE)', short:'FOUR', family:'act', color:'#ff6bc1', seq:true,
   glyph:'🔥', w:132, h:104,
-  ins:[{ n:'CHF', bus:true }], outs:[{ n:'T°', bus:true }, { n:'CHAUD' }],
+  ins:[{ n:'CHF', bus:true }],
+  outs:[{ n:'T°', bus:true, unit:'°C', min:0, max:250 }, { n:'CHAUD' }],
   opts:[
     { k:'inert', label:'Inertie (s)', min:1, max:60, step:1, def:8,
       hint:'Temps de réaction du procédé : plus il est grand, plus la régulation est difficile.' },
@@ -6001,7 +6266,8 @@ defComp('CUVE', {
   name:'CUVE (PROCÉDÉ HYDRAULIQUE)', short:'CUVE', family:'act', color:'#5aa2ff', seq:true,
   glyph:'🛢', w:126, h:132,
   ins:[{ n:'REMP', bus:true }, { n:'VID', bus:true }],
-  outs:[{ n:'NIV', bus:true }, { n:'HAUT' }, { n:'BAS' }, { n:'PRES', bus:true }],
+  outs:[{ n:'NIV', bus:true, unit:'%', min:0, max:100 }, { n:'HAUT' }, { n:'BAS' },
+        { n:'PRES', bus:true, unit:'bar', min:0, max:10 }],
   opts:[
     { k:'debit', label:'Débit (%/s)', min:2, max:100, step:2, def:20 },
     { k:'haut', label:'Seuil haut (%)', min:10, max:100, step:5, def:90 },
@@ -6067,11 +6333,20 @@ defComp('JAUGE', {
   name:'JAUGE À AIGUILLE', short:'JAUGE', family:'out', color:'#3dff9e',
   glyph:'◔', w:118, h:104, ins:[{ n:'A', bus:true }], outs:[],
   opts:[
-    { k:'unit', label:'Unité affichée', type:'text', max:6, def:'%' },
-    { k:'ech', label:'Valeur en pleine échelle', min:1, max:1000, step:1, def:100 }
+    { k:'unit', label:'Unité (vide = celle de la source)', type:'text', max:6, def:'' },
+    { k:'ech', label:'Pleine échelle (0 = auto)', min:0, max:9999, step:1, def:0 }
   ],
-  eval(c){ c.raw = Math.max(0, Math.min(255, c.inPins[0].state | 0)); },
-  tip:c => ['Valeur brute : ' + (c.raw || 0) + ' / 255'],
+  eval(c){
+    c.raw = Math.max(0, Math.min(255, c.inPins[0].state | 0));
+    const src = sourceOf(c.inPins[0]);
+    const fU = String(optOf(c, 'unit') || '').trim(), fE = optOf(c, 'ech') | 0;
+    let info = src && src.info;
+    if (fU || fE || !info) info = { unit:fU || (info ? info.unit : ''), min:0, max:fE || (info ? info.max : 100) };
+    c.info = info;
+    c.ph = physOf(c.raw, info);
+  },
+  tip:c => ['Affiché : ' + (c.ph ? c.ph.txt : (c.raw || 0)) + '  (brut ' + (c.raw || 0) + '/255)',
+            'Échelle : ' + (c.info ? c.info.min + ' … ' + c.info.max + ' ' + c.info.unit : 'auto')],
   body(c, x, col, on, hov, t){
     const cx = c.x + c.w / 2, cy = c.y + c.h - 26, r = 32;
     x.beginPath(); x.arc(cx, cy, r, Math.PI, 0); x.lineWidth = 2;
@@ -6089,17 +6364,18 @@ defComp('JAUGE', {
     x.lineWidth = 2.6; x.strokeStyle = col; x.lineCap = 'round';
     x.shadowBlur = 8; x.shadowColor = col; x.stroke(); x.shadowBlur = 0;
     x.beginPath(); x.arc(cx, cy, 3, 0, 7); x.fillStyle = col; x.fill();
-    const val = Math.round(f * optOf(c, 'ech'));
     x.font = "700 13px 'Chakra Petch', sans-serif"; x.textAlign = 'center'; x.textBaseline = 'middle';
     x.fillStyle = col;
-    x.fillText(val + ' ' + (optOf(c, 'unit') || ''), cx, c.y + 20);
+    x.fillText(fitText(x, c.ph ? c.ph.txt : String(c.raw || 0), c.w - 18,
+      '700', 13, "'Chakra Petch', sans-serif", 9), cx, c.y + 20);
   },
-  guide:{ txt:'Elle affiche une valeur de bus sous forme d’aiguille, avec l’<code>unité</code> et la <code>pleine échelle</code> de ton choix. Le moyen le plus rapide de voir ce que transporte vraiment un bus.',
-    ex:'POTAR → JAUGE réglée sur 400 cm : tu as reconstitué l’affichage d’un télémètre.' }
+  guide:{ txt:'Une aiguille pour lire un bus d’un coup d’œil. Par défaut elle <code>lit l’unité et l’échelle de la source</code> à laquelle tu la branches ; tu peux les imposer au double-clic pour détourner l’usage.',
+    ex:'Branche-la sur la PRES d’un réservoir : elle affiche des bar sans que tu règles quoi que ce soit.' }
 });
 defComp('SERVO', {
   name:'SERVOMOTEUR', short:'SERVO', family:'act', color:'#3dff9e',
-  glyph:'⟀', w:128, h:108, ins:[{ n:'CON', bus:true }], outs:[{ n:'POS', bus:true }],
+  glyph:'⟀', w:128, h:108, ins:[{ n:'CON', bus:true }],
+  outs:[{ n:'POS', bus:true, unit:'°', min:0, max:180 }],
   init(c){ c.ang = 0; c.lastT = 0; },
   eval(c){
     c.cible = Math.max(0, Math.min(255, c.inPins[0].state | 0)) / 255 * Math.PI;
@@ -6223,7 +6499,7 @@ defComp('AIR', {
   name:'RÉSERVOIR D’AIR COMPRIMÉ', short:'AIR COMP.', family:'act', color:'#5aa2ff', seq:true,
   glyph:'🛢', w:130, h:120,
   ins:[{ n:'COMP', bus:true }, { n:'USE', bus:true }],
-  outs:[{ n:'PRES', bus:true }, { n:'HAUT' }, { n:'BAS' }],
+  outs:[{ n:'PRES', bus:true, unit:'bar', min:0, max:10 }, { n:'HAUT' }, { n:'BAS' }],
   opts:[
     { k:'debit', label:'Remplissage (bar/s)', min:0.1, max:5, step:0.1, def:1 },
     { k:'haut', label:'Seuil haut (bar)', min:1, max:10, step:0.5, def:8 },
@@ -6286,7 +6562,8 @@ defComp('AIR', {
 defComp('CONV', {
   name:'CONVOYEUR', short:'CONVOYEUR', family:'act', color:'#ffc23d', seq:true,
   glyph:'▭', w:190, h:104,
-  ins:[{ n:'M', bus:true }], outs:[{ n:'VIT', bus:true }, { n:'PIÈCE' }],
+  ins:[{ n:'M', bus:true }],
+  outs:[{ n:'VIT', bus:true, unit:'m/min', min:0, max:20 }, { n:'PIÈCE' }],
   opts:[{ k:'esp', label:'Espacement des pièces (s)', min:0.5, max:20, step:0.5, def:3,
     hint:'Temps entre deux pièces au bout du tapis, à pleine vitesse.' }],
   init(c){ c.pos = 0; c.lastT = 0; c.vit = 0; c.piece = 0; c.n = 0; },
@@ -6400,6 +6677,234 @@ defComp('COURBE', {
     ex:'Branche la température d’un FOUR sur V1 et la consigne (une constante via un CNA) sur V2 : tu vois la mesure poursuivre la consigne. Change le gain du régulateur et regarde la courbe changer de caractère.',
     real:'Dans une salle de contrôle, ce sont ces courbes qu’on regarde — pas les valeurs instantanées. Un dépassement de 3 % ou une oscillation lente ne se voient que sur la durée.' }
 });
+/* ---------- L'écran de mesure : se branche partout, comprend ce qu'il lit ---------- */
+defComp('ECRAN', {
+  name:'ÉCRAN DE MESURE', short:'ÉCRAN', family:'out', color:'#3dff9e',
+  glyph:'🖵', w:210, h:132,
+  ins:[{ n:'1', bus:true }, { n:'2', bus:true }, { n:'3', bus:true }, { n:'4', bus:true }],
+  outs:[],
+  opts:[
+    { k:'titre', label:'Titre de l’écran', type:'text', max:14, def:'MESURES' },
+    { k:'unite', label:'Unité imposée (vide = auto)', type:'text', max:8, def:'' },
+    { k:'ech', label:'Pleine échelle imposée (0 = auto)', min:0, max:9999, step:1, def:0,
+      hint:'Laisse à 0 : l’écran lit l’unité et l’échelle du capteur auquel il est branché.' }
+  ],
+  eval(c){
+    c.voies = c.inPins.map((p, i) => {
+      const src = sourceOf(p);
+      if (!src) return null;
+      const raw = Math.max(0, Math.min(ANA_MAX, p.state | 0));
+      const forceU = String(optOf(c, 'unite') || '').trim();
+      const forceE = optOf(c, 'ech') | 0;
+      let info = src.info;
+      if (forceU || forceE) info = { unit:forceU || (info ? info.unit : ''), min:0, max:forceE || (info ? info.max : ANA_MAX) };
+      const ph = physOf(raw, info);
+      return { nom:(src.comp.customLabel || SHORT[src.comp.type] || '?').slice(0, 12),
+               pin:pinLabelOf(src.comp, src.pin), raw,
+               txt: ph ? ph.txt : String(raw), f: raw / ANA_MAX };
+    });
+    c.actives = c.voies.filter(Boolean);
+  },
+  tip:c => (c.actives && c.actives.length)
+      ? c.actives.map(v => v.nom + ' · ' + v.pin + ' : ' + v.txt + '  (brut ' + v.raw + ')')
+      : ['Rien de branché — relie une sortie de mesure à l’une des quatre entrées'],
+  body(c, x, col, on, hov, t){
+    const gx = c.x + 12, gy = c.y + 12, gw = c.w - 24, gh = c.h - 24;
+    x.beginPath(); x.roundRect(gx, gy, gw, gh, 7);
+    x.fillStyle = 'rgba(4,10,8,.92)'; x.fill();
+    x.lineWidth = 1.3; x.strokeStyle = c.hexA(col, .45); x.stroke();
+    const titre = String(optOf(c, 'titre') || '').toUpperCase();
+    x.font = "600 8px 'IBM Plex Mono', monospace"; x.textAlign = 'left'; x.textBaseline = 'top';
+    x.fillStyle = c.hexA(col, .6);
+    if (titre) x.fillText(titre, gx + 8, gy + 6);
+    const v = c.actives || [];
+    if (!v.length){
+      x.font = "600 9px 'IBM Plex Mono', monospace"; x.textAlign = 'center'; x.textBaseline = 'middle';
+      x.fillStyle = 'rgba(255,255,255,.25)';
+      x.fillText('— rien de branché —', gx + gw / 2, gy + gh / 2);
+      return;
+    }
+    if (v.length === 1){                       // une seule voie : gros affichage
+      const m = v[0];
+      x.font = "700 26px 'Chakra Petch', sans-serif"; x.textAlign = 'center'; x.textBaseline = 'middle';
+      x.fillStyle = col; x.shadowBlur = 12; x.shadowColor = col;
+      x.fillText(fitText(x, m.txt, gw - 20, '700', 26, "'Chakra Petch', sans-serif", 13),
+        gx + gw / 2, gy + gh / 2 - 6);
+      x.shadowBlur = 0;
+      x.font = "600 8.5px 'IBM Plex Mono', monospace"; x.fillStyle = PAL.dim;
+      x.fillText(m.nom + ' · ' + m.pin, gx + gw / 2, gy + gh / 2 + 18);
+      const bw = gw - 28, bx = gx + 14, by = gy + gh - 14;
+      x.beginPath(); x.roundRect(bx, by, bw, 5, 2.5);
+      x.fillStyle = 'rgba(255,255,255,.09)'; x.fill();
+      x.beginPath(); x.roundRect(bx, by, Math.max(2, bw * m.f), 5, 2.5);
+      x.fillStyle = col; x.fill();
+      return;
+    }
+    v.slice(0, 4).forEach((m, i) => {          // plusieurs voies : tableau de supervision
+      const ly = gy + 20 + i * 22;
+      x.font = "600 9px 'IBM Plex Mono', monospace"; x.textAlign = 'left'; x.textBaseline = 'middle';
+      x.fillStyle = PAL.dim;
+      x.fillText(fitText(x, m.nom, 64, '600', 9, "'IBM Plex Mono', monospace", 6.5), gx + 8, ly);
+      x.textAlign = 'right';
+      x.font = "700 11px 'Chakra Petch', sans-serif"; x.fillStyle = col;
+      x.fillText(m.txt, gx + gw - 8, ly);
+      const bx = gx + 76, bw = gw - 84 - Math.min(60, m.txt.length * 7);
+      if (bw > 12){
+        x.beginPath(); x.roundRect(bx, ly + 7, bw, 3, 1.5);
+        x.fillStyle = 'rgba(255,255,255,.09)'; x.fill();
+        x.beginPath(); x.roundRect(bx, ly + 7, Math.max(1.5, bw * m.f), 3, 1.5);
+        x.fillStyle = c.hexA(col, .8); x.fill();
+      }
+    });
+  },
+  guide:{ txt:'Le tableau de bord du plan de travail : branche-le sur <b>n’importe quelle sortie de mesure</b> et il affiche la valeur <code>dans son unité</code> — 72 %, 136 °C, 1450 tr/min, 6,4 bar. Il remonte le câble, reconnaît la source et se règle tout seul. Une seule voie branchée : gros affichage. Jusqu’à quatre : un tableau de supervision, avec le nom de chaque source. Tu peux forcer l’unité et l’échelle au double-clic si tu veux détourner l’usage.',
+    ex:'Branche le NIV d’une cuve, la T° d’un four, la VIT d’un moteur et la PRES d’un réservoir sur les quatre entrées : tu as la vue d’ensemble de ton atelier sur un seul boîtier.',
+    real:'Dans une salle de contrôle, personne ne lit des tensions ni des valeurs brutes : chaque mesure est mise à l’échelle et affichée dans son unité métier. C’est ce qu’on appelle la <b>mise à l’échelle</b>, et c’est le premier réglage de tout automate.' }
+});
+/* ---------- Fluidique : conduire le débit d'un procédé à l'autre ---------- */
+defComp('TUYAU', {
+  name:'TUYAU', short:'TUYAU', family:'act', color:'#5aa2ff',
+  glyph:'⌇', w:150, h:76,
+  ins:[{ n:'E', bus:true }], outs:[{ n:'S', bus:true, unit:'L/min', min:0, max:50 }],
+  opts:[{ k:'dn', label:'Diamètre (mm)', min:8, max:100, step:2, def:40,
+    hint:'Une section plus étroite limite le débit qui peut passer — et rien d’autre ne le fera passer.' }],
+  eval(c){
+    const e = Math.max(0, Math.min(ANA_MAX, c.inPins[0].state | 0));
+    c.max = Math.round(ANA_MAX * optOf(c, 'dn') / 100);     // débit maximal admissible
+    c.deb = Math.min(e, c.max);
+    c.bride = e > c.max;                                     // le tuyau bride l'écoulement
+    c.outPins[0].state = c.deb;
+  },
+  tip:c => ['Débit : ' + (physOf(c.deb, { unit:'L/min', min:0, max:50 }) || {}).txt,
+            'Diamètre ' + optOf(c, 'dn') + ' mm → au plus ' +
+              (physOf(c.max, { unit:'L/min', min:0, max:50 }) || {}).txt,
+            c.bride ? '⚠ le tuyau bride le débit : il faut plus gros' : 'écoulement libre'],
+  body(c, x, col, on, hov, t){
+    const cy = c.y + c.h / 2 - 4, x0 = c.x + 10, w = c.w - 20;
+    const ep = 6 + 14 * (optOf(c, 'dn') / 100);
+    x.beginPath(); x.roundRect(x0, cy - ep / 2, w, ep, ep / 2);
+    x.fillStyle = 'rgba(255,255,255,.07)'; x.fill();
+    x.lineWidth = 1.3; x.strokeStyle = c.bride ? '#ffc23d' : 'rgba(255,255,255,.25)'; x.stroke();
+    const f = c.deb / ANA_MAX;
+    if (f > 0){
+      x.save();
+      x.beginPath(); x.roundRect(x0, cy - ep / 2, w, ep, ep / 2); x.clip();
+      x.beginPath(); x.moveTo(x0, cy); x.lineTo(x0 + w, cy);
+      x.lineWidth = Math.max(2, ep - 3); x.strokeStyle = c.hexA(col, .55); x.stroke();
+      x.beginPath(); x.moveTo(x0, cy); x.lineTo(x0 + w, cy);
+      x.lineWidth = Math.max(1.5, ep - 5); x.strokeStyle = '#9ec8ff';
+      x.setLineDash([5, 11]); x.lineDashOffset = -(t || 0) * .04 * (0.3 + f);
+      x.stroke(); x.setLineDash([]);
+      x.restore();
+    }
+    x.font = "600 8px 'IBM Plex Mono', monospace"; x.textAlign = 'center'; x.textBaseline = 'top';
+    x.fillStyle = c.bride ? '#ffc23d' : PAL.dim;
+    x.fillText('DN' + optOf(c, 'dn') + (c.bride ? ' · BRIDÉ' : ''), c.x + c.w / 2, c.y + c.h - 20);
+  },
+  guide:{ txt:'Il conduit un <b>débit</b> d’un procédé à l’autre — et il le <code>limite</code> : un tuyau de petit diamètre ne laissera jamais passer plus que sa section ne le permet, quelle que soit la pompe en amont. Quand il bride, il le dit.',
+    ex:'POMPE → TUYAU (DN 20) → CUVE : la pompe a beau tourner à fond, le remplissage plafonne. Élargis le tuyau et la cuve se remplit deux fois plus vite.',
+    real:'C’est l’erreur classique des installations : on change la pompe pour gagner du débit, alors que c’est la tuyauterie qui limite. Le débit dépend de la section, de la longueur et de la pression — jamais de la seule pompe.' }
+});
+defComp('TE', {
+  name:'TÉ DE RACCORDEMENT', short:'TÉ', family:'act', color:'#5aa2ff',
+  glyph:'⑂', w:120, h:104,
+  ins:[{ n:'E1', bus:true }, { n:'E2', bus:true }],
+  outs:[{ n:'S1', bus:true, unit:'L/min', min:0, max:50 },
+        { n:'S2', bus:true, unit:'L/min', min:0, max:50 }],
+  opts:[{ k:'rep', label:'Répartition vers S1 (%)', min:0, max:100, step:5, def:50,
+    hint:'Comment le débit total se partage entre les deux sorties.' }],
+  eval(c){
+    const tot = Math.min(ANA_MAX, (c.inPins[0].state | 0) + (c.inPins[1].state | 0));
+    const r = optOf(c, 'rep') / 100;
+    c.tot = tot;
+    c.outPins[0].state = Math.round(tot * r);
+    c.outPins[1].state = Math.round(tot * (1 - r));
+  },
+  value:c => (physOf(c.tot || 0, { unit:'L/min', min:0, max:50 }) || {}).txt,
+  sub:c => optOf(c, 'rep') + ' / ' + (100 - optOf(c, 'rep')) + ' %',
+  bar:c => (c.tot || 0) / ANA_MAX,
+  tip:c => ['Débit total : ' + (physOf(c.tot || 0, { unit:'L/min', min:0, max:50 }) || {}).txt,
+            'Réparti à ' + optOf(c, 'rep') + ' % vers S1'],
+  guide:{ txt:'Il <b>réunit</b> deux arrivées et <b>répartit</b> le débit total entre deux départs, selon la proportion que tu règles. De quoi alimenter deux cuves depuis une seule pompe, ou faire converger deux circuits.',
+    ex:'POMPE → TÉ, puis chaque sortie vers une CUVE : règle la répartition à 70 / 30 et regarde la première se remplir plus vite.',
+    real:'Dans une installation réelle, la répartition dépend des pertes de charge de chaque branche — on l’ajuste avec des vannes d’équilibrage. Ici, tu la règles directement.' }
+});
+defComp('PID', {
+  name:'RÉGULATEUR PID', short:'PID', family:'reg', color:'#ffc23d', cost:40, seq:true,
+  glyph:'∑∫', w:148, h:126,
+  ins:[{ n:'MES', bus:true }, { n:'RAZ' }], outs:[{ n:'CDE', bus:true }],
+  opts:[
+    { k:'cons', label:'Consigne (0-255)', min:0, max:255, step:1, def:150 },
+    { k:'kp', label:'Gain proportionnel Kp', min:0, max:10, step:0.1, def:2,
+      hint:'Réagit à l’écart présent. Trop fort : ça oscille.' },
+    { k:'ki', label:'Gain intégral Ki (par s)', min:0, max:5, step:0.05, def:0.4,
+      hint:'Accumule l’écart passé : c’est lui qui efface l’erreur résiduelle. Trop fort : ça dépasse.' },
+    { k:'kd', label:'Gain dérivé Kd (s)', min:0, max:5, step:0.05, def:0.6,
+      hint:'Anticipe : il freine quand la mesure monte vite. Trop fort : il amplifie le bruit.' },
+    { k:'sens', label:'Action', type:'select', def:'dir',
+      choices:[['dir','Directe (chauffer, remplir)'],['inv','Inverse (refroidir, vider)']] }
+  ],
+  init(c){ c.integ = 0; c.prevErr = null; c.lastT = 0; c.cmd = 0; c.p = 0; c.i = 0; c.dd = 0; },
+  eval(c){
+    c.mes = Math.max(0, Math.min(ANA_MAX, c.inPins[0].state | 0));
+    c.raz = c.inPins[1].state ? 1 : 0;
+    c.outPins[0].state = Math.round(c.cmd);
+  },
+  commit(c){
+    const now = Date.now();
+    const dt = c.lastT ? Math.min(0.2, (now - c.lastT) / 1000) : 0;
+    c.lastT = now;
+    if (c.raz){ c.integ = 0; c.prevErr = null; c.cmd = 0; return; }
+    if (!dt) return;
+    const signe = optOf(c, 'sens') === 'inv' ? -1 : 1;
+    const err = signe * (optOf(c, 'cons') - c.mes);
+    const kp = optOf(c, 'kp'), ki = optOf(c, 'ki'), kd = optOf(c, 'kd');
+    c.p = kp * err;
+    const der = c.prevErr === null ? 0 : (err - c.prevErr) / dt;
+    c.dd = kd * der;
+    const integTest = c.integ + err * dt;
+    const brut = c.p + ki * integTest + c.dd;
+    // anti-emballement : on n'accumule pas quand la sortie est déjà en butée
+    if (!((brut > ANA_MAX && err > 0) || (brut < 0 && err < 0))) c.integ = integTest;
+    c.i = ki * c.integ;
+    c.cmd = Math.max(0, Math.min(ANA_MAX, c.p + c.i + c.dd));
+    c.err = err;
+    c.prevErr = err;
+  },
+  tip:c => ['Consigne ' + optOf(c, 'cons') + ' · mesure ' + (c.mes || 0) +
+              ' · écart ' + Math.round(c.err || 0),
+            'P = ' + Math.round(c.p || 0) + '   I = ' + Math.round(c.i || 0) +
+              '   D = ' + Math.round(c.dd || 0),
+            'Commande : ' + Math.round(c.cmd || 0) + ' / 255',
+            'RAZ remet l’intégrale à zéro — utile après un arrêt'],
+  body(c, x, col, on, hov, t){
+    const cx = c.x + c.w / 2;
+    x.font = "700 20px 'Chakra Petch', sans-serif"; x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.fillStyle = col; x.shadowBlur = 8; x.shadowColor = col;
+    x.fillText(Math.round(c.cmd || 0), cx, c.y + 34); x.shadowBlur = 0;
+    x.font = "600 8px 'IBM Plex Mono', monospace"; x.fillStyle = PAL.dim;
+    x.fillText('cons ' + optOf(c, 'cons') + ' · mes ' + (c.mes || 0), cx, c.y + 52);
+    // trois barres : la part de chaque terme dans la commande
+    const tot = Math.max(1, Math.abs(c.p || 0) + Math.abs(c.i || 0) + Math.abs(c.dd || 0));
+    [['P', c.p, '#3dff9e'], ['I', c.i, '#38e1ff'], ['D', c.dd, '#ff6bc1']].forEach(([lab, v, cc], k) => {
+      const y = c.y + 68 + k * 14, bx = c.x + 30, bw = c.w - 52;
+      x.font = "600 8px 'IBM Plex Mono', monospace"; x.textAlign = 'left'; x.textBaseline = 'middle';
+      x.fillStyle = cc; x.fillText(lab, c.x + 14, y);
+      x.beginPath(); x.roundRect(bx, y - 3, bw, 6, 3);
+      x.fillStyle = 'rgba(255,255,255,.08)'; x.fill();
+      const f = Math.min(1, Math.abs(v || 0) / tot);
+      x.beginPath(); x.roundRect(bx + (v < 0 ? bw / 2 - bw / 2 * f : bw / 2), y - 3, Math.max(2, bw / 2 * f), 6, 3);
+      x.fillStyle = cc; x.fill();
+    });
+  },
+  guide:{ txt:'Le régulateur complet, celui des vraies installations. Il additionne trois corrections :<br>' +
+      '<code>P</code> — <b>proportionnel</b> : réagit à l’écart <i>présent</i>. Seul, il laisse toujours une erreur résiduelle.<br>' +
+      '<code>I</code> — <b>intégral</b> : accumule l’écart <i>passé</i> et pousse tant qu’il en reste. C’est lui qui amène exactement à la consigne.<br>' +
+      '<code>D</code> — <b>dérivé</b> : regarde la vitesse de variation et <i>freine avant l’arrivée</i>. Il réduit le dépassement.<br>' +
+      'Les trois barres du boîtier montrent en direct la part de chacun. L’entrée <code>RAZ</code> remet l’intégrale à zéro.',
+    ex:'FOUR → CAPTEUR DE TEMPÉRATURE → PID → PWM → FOUR, avec un ENREGISTREUR sur la mesure. Pars de Kp=2, Ki=0, Kd=0 : il reste un écart. Monte Ki à 0,4 : la courbe rejoint la consigne. Ajoute Kd=0,6 : le dépassement diminue.',
+    real:'Le PID pilote aujourd’hui les fours, les drones, les régulateurs de vitesse et les réacteurs chimiques. Son réglage se fait à l’œil sur la courbe — on augmente Kp jusqu’à l’oscillation, puis on la calme avec D, puis on ajoute juste assez de I. Une intégrale qui s’emballe pendant une saturation est l’erreur classique : ce composant s’en protège tout seul.' }
+});
 /* @@COMPOSANTS@@ */
 registerComponents();
 
@@ -6421,6 +6926,7 @@ function fitText(c, txt, maxW, weight, size, family, minSize){
 }
 function drawRegistryBody(comp, c, col, hov, t, d){
   const on = comp.active;
+  if (comp.horsGamme) col = '#ffc23d';        // capteur saturé : on le signale
   const cx = comp.x + comp.w / 2, cy = comp.y + comp.h / 2;
   comp.bodyFill(c, col, on, hov, () => c.roundRect(comp.x, comp.y, comp.w, comp.h, 10));
 
@@ -8057,11 +8563,13 @@ function pinTipData(pin){
 }
 function wireTipData(w){
   const a = w.outPin.comp, b = w.inPin.comp;
+  const ph = physOf(w.state, pinInfo(w.outPin));
   return { title: 'Câble',
     lines:[ FR_NAME[a.type] + ' · ' + pinLabelOf(a, w.outPin) + '  →  ' +
             FR_NAME[b.type] + ' · ' + pinLabelOf(b, w.inPin),
             '<span class="td">valeur</span> <span class="' + (w.state > 1 ? 'tw' : 'tv') + '">' +
             busTxt(w.state) + '</span>' +
+            (ph ? ' <span class="tv">= ' + ph.txt + '</span>' : '') +
             (w.wp.length ? ' <span class="td">· ' + w.wp.length + ' poignée(s)</span>' : '') ] };
 }
 /* Voisinage d'un composant : ce qui l'alimente et ce qu'il alimente,
@@ -8172,6 +8680,7 @@ function primaryParam(c){
   if (lg) return lg;
   const d = REG[c.type];
   if (!d || !d.opts) return null;
+  if (d.noDrag && d.noDrag(c)) return null;   // valeur imposée par le procédé
   const o = d.opts.find(x => x.k === d.main) ||
             d.opts.find(x => x.type !== 'text' && x.type !== 'select');
   if (!o) return null;

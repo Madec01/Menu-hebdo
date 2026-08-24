@@ -1,7 +1,7 @@
 # Architecte Logique
 
 Jeu d'apprentissage de la logique numérique et de l'automatisme : des portes
-élémentaires jusqu'aux capteurs, aux régulateurs et aux automates. 135 missions
+élémentaires jusqu'aux capteurs, aux régulateurs et aux automates. 140 missions
 guidées, de « allume une ampoule » au processeur 1 bit, puis du thermostat au
 feu tricolore programmé.
 
@@ -12,20 +12,20 @@ progression, les puces, les sauvegardes et le bac à sable.
 
 ## Ce que contient le jeu
 
-**~87 composants** répartis en neuf familles, avec une recherche dans la barre
+**~92 composants** répartis en neuf familles, avec une recherche dans la barre
 d'outils :
 
 | Famille | Contenu |
 | --- | --- |
 | Entrées | interrupteurs, boutons, horloge, séquenceur, clavier 4 bits, DIP 8, sélecteur, arrêt d'urgence… |
-| Capteurs | lumière, température, distance, humidité, niveau, pression, son, potentiomètre, présence, fin de course |
+| Capteurs | lumière, température, thermocouple haute T°, distance, humidité, niveau, pression, son, potentiomètre, présence, fin de course — **branchables sur un procédé pour mesurer en direct**, avec saturation hors gamme |
 | Portes | les 7 portes de base, versions à 3 entrées, NAND·3, NOR·3 |
 | Mémoire | retard, bascule D, registre, registre à décalage, RAM 16×4 |
 | Calcul & bus | MUX/DEMUX (2 et 4 voies), additionneur, soustracteur, comparateur, décodeurs, encodeur, BCD→7 segments, ROM, bus, tunnels |
 | Temps & automatisme | TON, TOF, impulsion calibrée, détecteur de fronts, mémoire SR, diviseur ÷N, chien de garde, machine à états |
-| Régulation | CAN, CNA, PWM, thermostat à hystérésis, Schmitt, limiteur, rampe, régulateur proportionnel |
-| Sorties | ampoule, afficheurs (hex, décimal, octet), LED RVB, matrice 8×8, oscilloscope, sonde, buzzer, note, jauge |
-| Actionneurs & procédés | relais, moteur (vitesse + tachymètre), vérin (position + fins de course), électrovanne et pompe proportionnelles, sirène, pas-à-pas, servo, feu, barrière — et les procédés qui réagissent vraiment : **four**, **cuve**, **réservoir d'air comprimé**, **convoyeur** |
+| Régulation | CAN, CNA, PWM, thermostat à hystérésis, Schmitt, limiteur, rampe, régulateur proportionnel, **PID complet** (anti-emballement, RAZ) |
+| Sorties | ampoule, afficheurs (hex, décimal, octet), LED RVB, matrice 8×8, oscilloscope, sonde, buzzer, note, jauge, **écran de mesure 4 voies** et **enregistreur de courbes** |
+| Actionneurs & procédés | relais, moteur (vitesse + tachymètre), vérin (position + fins de course), électrovanne et pompe proportionnelles, sirène, pas-à-pas, servo, feu, barrière — et les procédés qui réagissent vraiment : **four**, **cuve**, **réservoir d'air comprimé**, **convoyeur**, plus la fluidique (**tuyau** qui bride le débit, **té** de répartition) |
 
 **Le tuteur.** Pendant une mission, le panneau indique en direct combien de
 lignes de la table sont justes et laquelle cloche. Le bouton « Guide-moi sur le
@@ -33,6 +33,12 @@ schéma » calcule une solution complète (implicants premiers, couverture,
 conversion en base NAND ou NOR si la mission l'impose) et la pose en fantômes,
 étape par étape, en expliquant chaque geste. Désactivé sur les missions boîte
 noire.
+
+**Des schémas tout prêts.** Le menu 📦 propose 25 montages chargeables, dont onze
+procédés complets : station de pompage, four régulé en tout ou rien / proportionnel
+/ PID, poste pneumatique, convoyeur avec évacuation, vitesse moteur asservie, serre
+automatisée, carrefour piloté par automate, capteurs en prise directe, et un
+**atelier complet** où trois boucles tournent en parallèle.
 
 **Commander et mesurer.** Tout actionneur accepte la même commande en tout ou
 rien (`1` = pleine puissance) ou dosée (`2`…`255`, depuis un PWM, un CNA ou un
@@ -61,7 +67,7 @@ concatène entre `test/pre.js` (stubs DOM / Canvas / Audio / localStorage, plus
 une horloge `Date.now` pilotable) et `test/post.js` (les tests), puis exécute le
 tout dans un contexte `vm`. Aucun navigateur, aucune dépendance npm.
 
-133 tests couvrent le moteur, le séquentiel, les blocs numériques, l'analogique
+141 tests couvrent le moteur, le séquentiel, les blocs numériques, l'analogique
 et la régulation (dont une boucle fermée four + thermostat), l'édition,
 l'orientation, les tunnels, les puces, l'interface, le balisage et le guide.
 Deux tests valident automatiquement **tout** nouveau composant du registre

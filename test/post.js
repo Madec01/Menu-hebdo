@@ -510,8 +510,8 @@ T('T32 sauvegardes nommées : enregistrer, recharger, remplacer', () => {
   ok(JSON.parse(localStorage.getItem('al2_saves')).length >= 1, 'persisté dans localStorage');
 });
 
-T('T33 les 14 exemples se chargent et se simulent', () => {
-  eq(EXAMPLES.length, 14, 'catalogue d’exemples');
+T('T33 tous les exemples se chargent et se simulent', () => {
+  ok(EXAMPLES.length >= 23, 'catalogue d’exemples (' + EXAMPLES.length + ')');
   EXAMPLES.forEach((ex, i) => {
     board();
     const r = loadExample(i);
@@ -2440,6 +2440,221 @@ T('T136 boucle de vitesse : le tachymètre régule le moteur', () => {
   applyInspector(reg, fld('o_cons', 220));
   for (let i = 0; i < 120; i++){ __advance(100); sim(); }
   ok(m.vit > 150, 'nouvelle consigne suivie (' + Math.round(m.vit) + ')');
+});
+
+T('T137 unités : chaque mesure déclare son échelle physique', () => {
+  const attendu = { MOTOR:['tr/min'], JACK:['%'], VALVE:['L/min'], PUMP:['L/min'],
+                    SERVO:['°'], FOUR:['°C'], CUVE:['%','bar'], AIR:['bar'],
+                    CONV:['m/min'], STEPPER:['pas'], TEMPC:['°C'], DIST:['cm'], POT:['%'] };
+  Object.keys(attendu).forEach(t => {
+    const unites = REG[t].outs.filter(o => o.unit != null).map(o => o.unit);
+    deq(unites, attendu[t], t + ' : unités déclarées');
+    REG[t].outs.filter(o => o.unit != null).forEach(o =>
+      ok(typeof o.min === 'number' && o.max > o.min, t + ' : échelle cohérente'));
+  });
+  board();
+  const four = mk('FOUR', 0, 0);
+  const info = pinInfo(four.outPins[0]);
+  ok(info && info.unit === '°C', 'métadonnée lisible depuis un pin');
+  eq(physOf(0, info).txt, '0 °C', 'zéro');
+  eq(physOf(255, info).txt, '250 °C', 'pleine échelle');
+  eq(physOf(128, info).txt, '125 °C', 'milieu');
+  eq(pinInfo(four.outPins[1]), null, 'une sortie booléenne n’a pas d’unité');
+});
+
+T('T138 écran de mesure : il reconnaît tout seul ce qu’on lui branche', () => {
+  board();
+  const cuve = mk('CUVE', 0, 0), four = mk('FOUR', 0, 300);
+  const ecran = mk('ECRAN', 500, 0);
+  link(cuve, 0, ecran, 0);
+  cuve.niv = 72; sim(); sim();
+  eq(ecran.actives.length, 1, 'une voie branchée');
+  eq(ecran.actives[0].txt, '72 %', 'niveau affiché en pourcentage, sans réglage');
+  ok(/CUVE/.test(ecran.actives[0].nom), 'la source est nommée');
+  link(four, 0, ecran, 1);
+  four.temp = 128; sim(); sim();
+  eq(ecran.actives.length, 2, 'deux voies');
+  eq(ecran.actives[1].txt, '125 °C', 'température affichée en degrés');
+  // pression de la cuve sur une 3e voie
+  link(cuve, 3, ecran, 2); sim(); sim();
+  eq(ecran.actives[2].txt, '7.2 bar', 'la pression a sa propre unité et sa décimale');
+  // unité imposée
+  applyInspector(ecran, Object.assign(fld('o_unite', 'L'), { type:'text' }));
+  applyInspector(ecran, fld('o_ech', 500));
+  sim(); sim();
+  ok(/L$/.test(ecran.actives[0].txt), 'unité forcée : ' + ecran.actives[0].txt);
+  applyInspector(ecran, Object.assign(fld('o_unite', ''), { type:'text' }));
+  applyInspector(ecran, fld('o_ech', 0));
+  sim(); sim();
+  eq(ecran.actives[0].txt, '72 %', 'retour à la détection automatique');
+  drawScene(0);
+  // rien de branché
+  board();
+  const seul = mk('ECRAN', 0, 0);
+  sim();
+  eq(seul.actives.length, 0, 'aucune voie');
+  drawScene(0);
+  ok(/rien de branché/i.test(compTipData(seul).lines.join(' ')), 'l’infobulle le dit');
+});
+
+T('T139 jauge et câbles affichent aussi la valeur physique', () => {
+  board();
+  const air = mk('AIR', 0, 0), j = mk('JAUGE', 400, 0);
+  const w = link(air, 0, j, 0);
+  air.bar = 6.4; sim(); sim();
+  eq(j.ph.txt, '6.4 bar', 'la jauge lit l’échelle de sa source');
+  ok(/6.4 bar/.test(wireTipData(w).lines[1]), 'le câble aussi : ' + wireTipData(w).lines[1]);
+  // une mesure sans unité reste en valeur brute
+  board();
+  const g = mk('GROUP', 0, 0), j2 = mk('JAUGE', 400, 0);
+  const sw = [0,1,2,3].map(i => mk('SWITCH', -300, i * 70));
+  sw.forEach((x, i) => link(x, 0, g, i));
+  const w2 = link(g, 0, j2, 0);
+  drive(sw, [1,0,1,0]); sim();
+  ok(!/bar|°C/.test(wireTipData(w2).lines[1]), 'un bus sans unité reste brut');
+});
+
+T('T140 capteur branché : il mesure le procédé au lieu d’être réglé à la main', () => {
+  board();
+  const four = mk('FOUR', 0, 0), capt = mk('TEMPC', 400, 0);
+  applyInspector(capt, fld('o_val', 20));
+  sim();
+  eq(Math.round(capt.mes), 20, 'libre : il affiche la valeur simulée');
+  eq(capt.direct, false, 'pas de mesure en direct');
+  ok(primaryParam(capt), 'la glissière est disponible');
+  link(four, 0, capt, 0);
+  four.temp = 40;                         // 40/255 de 0-250 °C ≈ 39 °C
+  sim(); sim();
+  ok(capt.direct, 'branché : mesure en direct');
+  ok(Math.abs(capt.mes - 39) < 3, 'il lit la température du four (' + capt.mes.toFixed(1) + ' °C)');
+  ok(!primaryParam(capt), 'la glissière disparaît : c’est le procédé qui commande');
+  ok(!capt.horsGamme, 'dans la gamme');
+  // hors gamme : le capteur sature, comme un vrai instrument
+  four.temp = 200;                        // ≈ 196 °C, hors des 50 °C du capteur
+  sim(); sim();
+  ok(capt.horsGamme, 'saturation détectée');
+  eq(capt.mes, 50, 'il affiche son maximum');
+  eq(capt.outPins[0].state, 255, 'et sort la pleine échelle');
+  ok(/hors gamme/.test(compTipData(capt).lines.join(' ')), 'l’infobulle explique la saturation');
+  // débranché : il revient à la valeur simulée
+  wires = wires.filter(w => w.inPin !== capt.inPins[0]);
+  sim(); sim();
+  eq(capt.direct, false, 'redevenu simulateur');
+  eq(Math.round(capt.mes), 20, 'la valeur réglée à la main est retrouvée');
+});
+
+T('T141 boucle complète four → capteur → régulateur → four', () => {
+  board();
+  const four = mk('FOUR', 600, 0), capt = mk('TEMPC', 900, 0);
+  const th = mk('THERMO', 150, 0);
+  link(four, 0, capt, 0);                 // le capteur mesure le four
+  link(capt, 0, th, 0);                   // sa mesure alimente le régulateur
+  link(th, 0, four, 0);                   // qui commande la chauffe
+  // Attention à l’échelle : ce capteur mesure de −10 à 50 °C, il sort donc déjà 43
+  // quand le four est à 0 °C. La consigne se fixe dans l’échelle du CAPTEUR.
+  applyInspector(th, fld('o_cons', 150)); applyInspector(th, fld('o_hyst', 10));
+  applyInspector(four, fld('o_inert', 2));
+  eq(Math.round(four.temp), 0, 'four froid');
+  let coupe = false, relance = false;
+  for (let i = 0; i < 300; i++){
+    __advance(100); sim();
+    if (th.outPins[0].state === 0) coupe = true;
+    if (coupe && th.outPins[0].state === 1) relance = true;
+  }
+  ok(capt.direct, 'le capteur est bien en prise directe');
+  ok(coupe && relance, 'la boucle passant par le capteur régule vraiment');
+  ok(four.temp > 10 && four.temp < 60,
+    'et maintient la température autour de la consigne (' + Math.round(four.temp) + ')');
+  ok(Math.abs(capt.raw - 150) < 45, 'la mesure tourne autour de la consigne (' + capt.raw + ')');
+});
+
+T('T142 PID : les trois termes, l’anti-emballement et la remise à zéro', () => {
+  board();
+  const four = mk('FOUR', 600, 0), pid = mk('PID', 150, 0);
+  link(four, 0, pid, 0); link(pid, 0, four, 0);
+  applyInspector(pid, fld('o_cons', 150));
+  applyInspector(pid, fld('o_kp', 2)); applyInspector(pid, fld('o_ki', 0)); applyInspector(pid, fld('o_kd', 0));
+  applyInspector(four, fld('o_inert', 2));
+  // P seul : il reste un écart résiduel
+  for (let i = 0; i < 250; i++){ __advance(100); sim(); }
+  const ecartP = 150 - four.temp;
+  ok(ecartP > 5, 'proportionnel seul : écart résiduel de ' + Math.round(ecartP));
+  ok(Math.abs(pid.i) < 0.01, 'terme intégral nul');
+  // on ajoute l'intégrale : l'écart s'efface
+  applyInspector(pid, fld('o_ki', 0.5));
+  for (let i = 0; i < 400; i++){ __advance(100); sim(); }
+  const ecartPI = Math.abs(150 - four.temp);
+  ok(ecartPI < ecartP, 'l’intégrale réduit l’écart (' + Math.round(ecartPI) + ' contre ' + Math.round(ecartP) + ')');
+  ok(Math.abs(pid.i) > 0, 'le terme I travaille');
+  // anti-emballement : consigne inatteignable, l'intégrale ne diverge pas
+  applyInspector(pid, fld('o_cons', 255));
+  for (let i = 0; i < 300; i++){ __advance(100); sim(); }
+  const integ1 = pid.integ;
+  for (let i = 0; i < 300; i++){ __advance(100); sim(); }
+  ok(Math.abs(pid.integ - integ1) < Math.abs(integ1) * 0.5 + 50,
+    'l’intégrale ne s’emballe pas en butée');
+  ok(pid.cmd <= 255 && pid.cmd >= 0, 'commande toujours dans les bornes');
+  // remise à zéro
+  const raz = mk('SWITCH', 0, 400);
+  link(raz, 0, pid, 1);
+  raz.state = 1; sim(); sim();
+  eq(pid.integ, 0, 'RAZ efface l’intégrale');
+  eq(Math.round(pid.cmd), 0, 'et la commande');
+});
+
+T('T143 PID : le terme dérivé s’oppose à la montée, la boucle converge', () => {
+  board();
+  const four = mk('FOUR', 600, 0), pid = mk('PID', 150, 0);
+  link(four, 0, pid, 0); link(pid, 0, four, 0);
+  applyInspector(pid, fld('o_cons', 200));
+  applyInspector(pid, fld('o_kp', 2)); applyInspector(pid, fld('o_ki', 0.5));
+  applyInspector(pid, fld('o_kd', 3));
+  applyInspector(four, fld('o_inert', 4));
+  let dMin = 0, dVu = false;
+  for (let i = 0; i < 80; i++){
+    __advance(100); sim();
+    if (four.temp > 20 && four.temp < 190){ dMin = Math.min(dMin, pid.dd); dVu = true; }
+  }
+  ok(dVu, 'la montée a été observée');
+  ok(dMin < -1, 'pendant la montée, le terme D freine (' + Math.round(dMin) + ')');
+  for (let i = 0; i < 500; i++){ __advance(100); sim(); }
+  ok(Math.abs(four.temp - 200) < 12, 'le PID complet amène à la consigne (' +
+     Math.round(four.temp) + ' pour 200)');
+  ok(Math.abs(pid.err) < 15, 'écart résiduel faible (' + Math.round(pid.err) + ')');
+  // sans intégrale, l'écart résiduel réapparaît
+  applyInspector(pid, fld('o_ki', 0));
+  pid.integ = 0;
+  for (let i = 0; i < 500; i++){ __advance(100); sim(); }
+  ok(Math.abs(200 - four.temp) > 15, 'sans I : écart résiduel de ' + Math.round(200 - four.temp));
+});
+
+T('T144 tuyau et té : le débit se conduit et se limite', () => {
+  board();
+  const pot = mk('POT', 0, 0), pu = mk('PUMP', 250, 0), tu = mk('TUYAU', 500, 0);
+  const cuve = mk('CUVE', 800, 0);
+  link(pot, 0, pu, 0); link(pu, 0, tu, 0); link(tu, 0, cuve, 0);
+  applyInspector(pot, fld('o_val', 100));
+  applyInspector(tu, fld('o_dn', 20));         // tuyau étroit
+  cuve.niv = 0;
+  for (let i = 0; i < 10; i++){ __advance(150); sim(); }
+  ok(tu.bride, 'le tuyau bride le débit');
+  eq(tu.outPins[0].state, tu.max, 'débit plafonné à la section');
+  const lent = cuve.niv;
+  applyInspector(tu, fld('o_dn', 100));        // tuyau large
+  cuve.niv = 0;
+  for (let i = 0; i < 10; i++){ __advance(150); sim(); }
+  ok(!tu.bride, 'plus de bridage');
+  ok(cuve.niv > lent * 1.5, 'la cuve se remplit bien plus vite (' + Math.round(cuve.niv) +
+     ' contre ' + Math.round(lent) + ')');
+  // té : répartition
+  board();
+  const p2 = mk('POT', 0, 0), te = mk('TE', 300, 0);
+  link(p2, 0, te, 0);
+  applyInspector(p2, fld('o_val', 100));
+  applyInspector(te, fld('o_rep', 75));
+  sim();
+  eq(te.outPins[0].state, Math.round(255 * .75), '75 % vers S1');
+  eq(te.outPins[1].state, Math.round(255 * .25), '25 % vers S2');
 });
 
 /* ===================== 7. Guide ===================== */
