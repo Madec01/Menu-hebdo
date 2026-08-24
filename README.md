@@ -60,13 +60,19 @@ piéger une et la faire chercher à quelqu'un. Le chapitre 30 apprend la méthod
 remonter la chaîne depuis la demande jusqu'à l'effet, et trouver le premier
 maillon où « ce qui est ordonné » cesse de correspondre à « ce qui se produit ».
 
-**Le GRAFCET.** Un cycle de machine ne se décrit pas en équations mais en
-étapes reliées par des transitions : une étape est active ou non, et les
-actions qu'on lui associe durent exactement le temps où elle l'est. Le bloc
-dessine le diagramme normalisé (CEI 60848) sur son boîtier, montre le jeton
-descendre, et ses sorties `X0…X5` s'alignent sur les cases pour qu'on lise le
-schéma et le câblage d'un coup d'œil. Réceptivités sur `R1…R4`, temporisations
-`t/5s`, choix de séquence, retour à l'étape initiale par `INIT`.
+**Le GRAFCET, avec sa page dédiée.** Un cycle de machine ne se décrit pas en
+équations mais en étapes reliées par des transitions : une étape est active ou
+non, et les actions qu'on lui associe durent exactement le temps où elle l'est.
+Double-cliquer le bloc ouvre un **éditeur graphique** où l'on pose les étapes à
+la souris, on les glisse, on les relie, et l'on écrit les réceptivités en clair
+— `R1`, `R1·/R2`, `R2+X3` — avec temporisation `t/5s` facultative. Le modèle est
+celui de la norme (CEI 60848), pas une simplification linéaire : plusieurs
+étapes peuvent être actives à la fois, une transition peut avoir plusieurs
+amont (**convergence ET**) et plusieurs aval (**divergence ET**, dessinée en
+double barre), et deux transitions partant d'une même étape font une
+**divergence OU**. Un **temps de scrutation** réglable donne le rythme, comme
+sur un vrai automate — c'est lui qui empêche le graphe de s'emballer. Le
+boîtier n'en montre qu'une miniature, mais fidèle, avec le jeton en direct.
 
 **La mesure ne perd rien en chemin.** Un fil de mesure porte une valeur
 continue dans l'échelle 0-255 : une consigne de `100,4 °C` vise 100,4 °C, pas
