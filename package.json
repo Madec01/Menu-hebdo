@@ -1,6 +1,6 @@
 {
   "name": "architecte-logique",
-  "version": "6.1.0",
+  "version": "6.2.0",
   "description": "Architecte Logique — jeu de logique combinatoire et séquentielle en HTML autonome",
   "private": true,
   "scripts": {
