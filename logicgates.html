@@ -552,6 +552,7 @@ table.tt tr.tt-fail td:first-child::before{content:'✗ ';color:var(--red)}
       <span class="kbd">Suppr</span> effacer (survolé ou sélection) &nbsp;·&nbsp; <span class="kbd">Échap</span> annuler câble / désélectionner<br>
       <span class="kbd">Maj + glisser</span> sélection rectangle &nbsp;·&nbsp; <span class="kbd">Maj + clic</span> (dé)sélectionner &nbsp;·&nbsp;
       <span class="kbd">Ctrl+C</span> copier &nbsp;·&nbsp; <span class="kbd">Ctrl+V</span> coller &nbsp;·&nbsp; <span class="kbd">Ctrl+A</span> tout sélectionner<br>
+      <b>Tirer la barre du bas</b> d'un composant = régler son paramètre principal &nbsp;·&nbsp;
       <span class="kbd">R</span> tourner &nbsp;·&nbsp; <span class="kbd">M</span> miroir &nbsp;·&nbsp;
       <span class="kbd">F</span> recadrer sur le circuit &nbsp;·&nbsp; <span class="kbd">N</span> noms des composants &nbsp;·&nbsp;
       <b>survol</b> = infobulle détaillée<br>
@@ -1445,6 +1446,7 @@ class Component {
     }
     if (GATE_TYPES.includes(this.type)) this.drawGate(c, col, hov);
     else this.drawDevice(c, col, hov, t);
+    drawParamStrip(this, c, col, hov);
     if (R || M){ c.fillText = origFill; c.strokeText = origStroke; c.restore(); }
 
     // Nom sous le composant (toujours, ou seulement au survol / dans la sélection)
@@ -2815,6 +2817,11 @@ canvas.addEventListener('pointerdown', e => {
       }
       return;
     }
+    // La glissière du bas prend la main avant le déplacement du boîtier
+    if (!comp.locked && paramHit(comp, mouseW.x, mouseW.y) && paramDragStart(comp, mouseW.x)){
+      paramDragMove(mouseW.x, e.shiftKey);
+      return;
+    }
     pressComp = comp;
     longPressed = false;
     // Tactile : pas de double-clic sur un écran — un appui long ouvre l'inspecteur.
@@ -2848,6 +2855,7 @@ canvas.addEventListener('pointerdown', e => {
 canvas.addEventListener('pointermove', e => {
   mouseS = {x:e.clientX, y:e.clientY};
   mouseW = s2w(e.clientX, e.clientY);
+  if (paramDrag){ paramDragMove(mouseW.x, e.shiftKey); return; }
   const dist = Math.hypot(mouseS.x - downScreen.x, mouseS.y - downScreen.y);
   if (dist > 5){ moved = true; clearTimeout(touchHoldT); }
 
@@ -2887,8 +2895,10 @@ canvas.addEventListener('pointermove', e => {
   hoveredComp = hoveredPin ? null : pickComp(mouseW.x, mouseW.y);
   hoveredWire = (!hoveredPin && !hoveredComp && !wiring) ?
     (h => h ? h.wire : null)(pickWireAt(mouseW.x, mouseW.y, 9)) : null;
+  const surGlissiere = hoveredComp && !hoveredComp.locked &&
+        paramHit(hoveredComp, mouseW.x, mouseW.y);
   canvas.style.cursor = hoveredPin ? 'crosshair' :
-    (hoveredComp ? 'grab' : (hoveredWire ? 'pointer' : 'default'));
+    (surGlissiere ? 'ew-resize' : (hoveredComp ? 'grab' : (hoveredWire ? 'pointer' : 'default')));
   updateTip();
 });
 canvas.addEventListener('pointerleave', () => hideTip());
@@ -2897,6 +2907,7 @@ canvas.addEventListener('pointerup', e => {
   mouseS = {x:e.clientX, y:e.clientY};
   mouseW = s2w(e.clientX, e.clientY);
   clearTimeout(touchHoldT);
+  if (paramDrag){ paramDragEnd(); dragged = null; pressComp = null; panning = false; return; }
 
   if (wiring){
     const pin = pickPin(mouseW.x, mouseW.y);
@@ -6156,7 +6167,8 @@ function drawRegistryBody(comp, c, col, hov, t, d){
     c.fillText(st, cx, y + 13);
   }
   if (bar != null){
-    const bw = comp.w - 26, bx = cx - bw / 2, by = comp.y + comp.h - 13;
+    const bw = comp.w - 26, bx = cx - bw / 2;
+    const by = comp.y + comp.h - (primaryParam(comp) ? 20 : 13);
     c.beginPath(); c.roundRect(bx, by, bw, 5, 2.5);
     c.fillStyle = 'rgba(255,255,255,.08)'; c.fill();
     const f = Math.max(0, Math.min(1, bar));
@@ -7425,6 +7437,10 @@ function buildGuide(){
   // [type, nom, fonctionnement, exemple à essayer (ou null), anecdote réelle (ou null), types couverts]
   const SECTIONS = [
   { t:'L’atelier — les outils qui t’aident', p:
+    '<b>🎚 La glissière.</b> Le plus rapide : survole un composant réglable et <code>tire la barre du bas</code>. ' +
+    'La durée d’une temporisation, la fréquence d’une horloge, la consigne d’un thermostat, la mesure d’un ' +
+    'capteur se règlent d’un geste, sans rien ouvrir. Maintiens <code>Maj</code> pour affiner. Utilise ' +
+    'l’inspecteur quand tu veux une valeur <b>exacte</b> ou les réglages secondaires — pas pour passer 2 s à 3 s.<br><br>' +
     '<b>🔧 L’inspecteur.</b> <code>Double-clic</code> — ou <code>appui long</code> sur écran tactile — sur n’importe quel composant non verrouillé ouvre son panneau de réglages : ' +
     'fréquence exacte et rapport cyclique d’une <b>horloge</b>, nombre de cycles d’un <b>retard</b>, vitesse / longueur / motif d’un ' +
     '<b>séquenceur</b>, probabilité du <b>bruit</b>, valeur d’un <b>clavier 4 bits</b>, contenu d’une <b>ROM</b>, octave et volume d’une ' +
@@ -7712,7 +7728,10 @@ function compTipData(c){
   if (opts && opts.length)
     lines.push('<span class="td">réglages</span> ' + opts.map(o =>
       o.label.replace(/ *\(.*\)/, '') + ' : ' + optOf(c, o.k)).join(' · '));
-  if (!c.locked) lines.push('<span class="td">double-clic pour régler · appui long sur tactile</span>');
+  const pp = primaryParam(c);
+  if (pp) lines.push('<span class="td">glisse la barre du bas pour régler « ' + pp.label.toLowerCase() +
+    ' » · Maj pour affiner</span>');
+  if (!c.locked) lines.push('<span class="td">double-clic : tous les réglages · appui long sur tactile</span>');
   return { title, lines };
 }
 function pinTipData(pin){
@@ -7811,6 +7830,114 @@ document.getElementById('btn-labels').addEventListener('click', () => {
   AudioSys.click(); setLabelsMode(!labelsMode);
 });
 document.getElementById('btn-labels').classList.toggle('on', labelsMode);
+
+/* ====================================================================
+   GLISSIÈRE DE RÉGLAGE
+   Tout ce qui se règle a un paramètre principal, ajustable directement
+   sur le boîtier : on attrape la barre du bas et on tire. L'inspecteur
+   (double-clic) reste là pour la valeur exacte et les réglages
+   secondaires — mais on n'a plus à l'ouvrir pour passer 2 s à 3 s.
+   ==================================================================== */
+const LEGACY_PARAM = {
+  CLOCK:  { label:'Fréquence', unit:'Hz', min:0.1, max:30, step:0.1,
+            get:c => +(c.opt.freq || 1000 / CLOCK_SPEEDS[c.clockIdx]).toFixed(2),
+            set:(c, v) => c.opt.freq = v },
+  SEQ:    { label:'Vitesse', unit:'Hz', min:0.2, max:15, step:0.1,
+            get:c => +(c.opt.hz || 1000 / SEQ_SPEEDS[c.clockIdx]).toFixed(2),
+            set:(c, v) => c.opt.hz = v },
+  NOISE:  { label:'Probabilité du 1', unit:'%', min:5, max:95, step:5,
+            get:c => c.opt.prob ?? 50, set:(c, v) => c.opt.prob = v },
+  DELAY:  { label:'Retard', unit:'cycles', min:1, max:60, step:1,
+            get:c => c.opt.cycles || 1, set:(c, v) => { c.opt.cycles = v; c.dq = []; } },
+  NIBBLE: { label:'Valeur', unit:'', min:0, max:15, step:1,
+            get:c => c.value, set:(c, v) => c.value = v },
+  BUZZER: { label:'Hauteur du son', unit:'Hz', min:80, max:2000, step:10,
+            get:c => c.opt.bfreq || 349, set:(c, v) => c.opt.bfreq = v },
+  NOTE:   { label:'Volume', unit:'%', min:0, max:100, step:5,
+            get:c => c.opt.vol ?? 100, set:(c, v) => c.opt.vol = v }
+};
+/* Le paramètre principal d'un composant, ou null s'il n'y en a pas */
+function primaryParam(c){
+  if (!c || c.locked) return null;
+  const lg = LEGACY_PARAM[c.type];
+  if (lg) return lg;
+  const d = REG[c.type];
+  if (!d || !d.opts) return null;
+  const o = d.opts.find(x => x.k === d.main) ||
+            d.opts.find(x => x.type !== 'text' && x.type !== 'select');
+  if (!o) return null;
+  return { label:o.label.replace(/ *\(.*\)/, ''), unit:(o.label.match(/\(([^)]*)\)/) || [,''])[1],
+           min:o.min, max:o.max, step:o.step || 1,
+           get:cc => optOf(cc, o.k), set:(cc, v) => { cc.opt[o.k] = v; if (d.onOpt) d.onOpt(cc, o.k); } };
+}
+/* Zone d'accroche de la glissière, en coordonnées LOCALES (repère non tourné) */
+function paramZone(c){
+  if (!primaryParam(c)) return null;
+  return { x:c.x + 10, y:c.y + c.h - 7, w:c.w - 20, h:14 };
+}
+function paramHit(c, wx, wy){
+  const z = paramZone(c);
+  if (!z) return false;
+  const L = c.w2l(wx, wy);
+  return L.x >= z.x - 4 && L.x <= z.x + z.w + 4 && L.y >= z.y - 7 && L.y <= z.y + z.h - 3;
+}
+/* Dessin de la glissière : discrète, visible au survol ou pendant le réglage */
+function drawParamStrip(c, x, col, hov){
+  const p = primaryParam(c), z = paramZone(c);
+  if (!p || !z) return;
+  const actif = paramDrag && paramDrag.comp === c;
+  if (!hov && !actif) return;
+  const v = p.get(c), f = Math.max(0, Math.min(1, (v - p.min) / (p.max - p.min)));
+  const y = z.y + 3;
+  x.beginPath(); x.roundRect(z.x, y, z.w, 5, 2.5);
+  x.fillStyle = 'rgba(8,13,26,.92)'; x.fill();
+  x.lineWidth = 1; x.strokeStyle = 'rgba(255,255,255,.14)'; x.stroke();
+  if (f > 0){
+    x.beginPath(); x.roundRect(z.x, y, Math.max(3, z.w * f), 5, 2.5);
+    x.fillStyle = c.hexA(col, actif ? .95 : .6); x.fill();
+  }
+  const hx = z.x + z.w * f;
+  x.beginPath(); x.arc(hx, y + 2.5, actif ? 5.5 : 4.2, 0, 7);
+  x.fillStyle = actif ? col : '#0e1729';
+  if (actif){ x.shadowBlur = 10; x.shadowColor = col; }
+  x.fill(); x.shadowBlur = 0;
+  x.lineWidth = 1.5; x.strokeStyle = col; x.stroke();
+}
+/* ---- Le geste lui-même ---- */
+let paramDrag = null;
+function paramDragStart(c, wx){
+  const p = primaryParam(c);
+  if (!p) return false;
+  paramDrag = { comp:c, p, x0:wx, v0:p.get(c), moved:false };
+  return true;
+}
+function paramDragMove(wx, fine){
+  if (!paramDrag) return;
+  const { comp, p, x0, v0 } = paramDrag;
+  const z = paramZone(comp);
+  const course = Math.max(60, z.w);                    // toute la largeur = toute l'échelle
+  let d = (wx - x0) / course * (p.max - p.min);
+  if (fine) d /= 6;                                    // Maj : réglage fin
+  let v = v0 + d;
+  v = Math.round(v / p.step) * p.step;
+  v = Math.max(p.min, Math.min(p.max, v));
+  v = +v.toFixed(3);
+  if (v !== p.get(comp)){
+    p.set(comp, v);
+    paramDrag.moved = true;
+    updateStats(true);
+  }
+  showTipNow({ title:FR_NAME[comp.type],
+    lines:['<span class="td">' + p.label + '</span> <span class="tv">' +
+           (p.step < 1 ? v.toFixed(1) : v) + (p.unit ? ' ' + p.unit : '') + '</span>',
+           '<span class="td">Maj : réglage fin · double-clic : valeur exacte</span>'] });
+}
+function paramDragEnd(){
+  if (!paramDrag) return;
+  if (paramDrag.moved){ AudioSys.click(); markDirty(); }
+  paramDrag = null;
+  hideTip();
+}
 
 /* ---------- Stats ---------- */
 let lastStats = '';

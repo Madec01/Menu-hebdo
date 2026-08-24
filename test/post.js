@@ -2129,6 +2129,115 @@ T('T122 recherche de composant dans la barre d’outils', () => {
   ok(TOOL_TABS.length >= 8, 'les onglets sont toujours là');
 });
 
+/* ===================== 6septies. Glissière de réglage ===================== */
+console.log('— Glissière de réglage —');
+
+T('T123 paramètre principal : détecté sur tout ce qui se règle', () => {
+  board();
+  const cas = [['TON','Durée'], ['CLOCK','Fréquence'], ['NIBBLE','Valeur'], ['THERMO','Consigne'],
+               ['TEMPC','Mesure'], ['PWM','Fréquence'], ['DELAY','Retard'], ['JACK','Course complète'],
+               ['DIVN','Diviser par'], ['RAMPE','Pente'], ['BUZZER','Hauteur du son']];
+  cas.forEach(([t, lab]) => {
+    const c = mk(t, 0, 0);
+    const p = primaryParam(c);
+    ok(p, t + ' : paramètre principal détecté');
+    ok(p.label.startsWith(lab), t + ' : « ' + p.label +' » commence par « ' + lab + ' »');
+    ok(typeof p.get(c) === 'number', t + ' : valeur lisible');
+    ok(p.min < p.max && p.step > 0, t + ' : bornes cohérentes');
+  });
+  // ceux qui n'ont rien à régler n'ont pas de glissière
+  ['AND','LED','SWITCH','GROUP','RELAY','TUNNEL','FSM'].forEach(t => {
+    const c = mk(t, 0, 0);
+    const p = primaryParam(c);
+    if (t === 'TUNNEL' || t === 'FSM') ok(!p, t + ' : réglage non numérique, pas de glissière');
+    else ok(!p, t + ' : rien à régler');
+  });
+  // un composant verrouillé n'est jamais réglable
+  const l = mk('TON', 0, 0); l.locked = true;
+  ok(!primaryParam(l), 'composant verrouillé : pas de glissière');
+});
+
+T('T124 glisser règle la valeur, avec bornes, pas et réglage fin', () => {
+  board();
+  const ton = mk('TON', 100, 100);
+  const p = primaryParam(ton);
+  const z = paramZone(ton);
+  ok(z, 'zone de préhension définie');
+  ok(paramHit(ton, z.x + z.w / 2, z.y + 4), 'la barre du bas est accrochable');
+  ok(!paramHit(ton, z.x + z.w / 2, ton.y + 10), 'le haut du boîtier ne l’est pas');
+  eq(optOf(ton, 'sec'), 2, 'valeur de départ');
+  paramDragStart(ton, z.x + z.w / 2);
+  paramDragMove(z.x + z.w / 2 + z.w / 4, false);      // +1/4 d’échelle
+  const v = optOf(ton, 'sec');
+  ok(v > 12 && v < 20, 'un quart de course ≈ +15 s (' + v + ')');
+  paramDragMove(z.x + z.w * 5, false);
+  eq(optOf(ton, 'sec'), 60, 'borné au maximum');
+  paramDragMove(z.x - z.w * 5, false);
+  eq(optOf(ton, 'sec'), 0.1, 'borné au minimum');
+  // réglage fin
+  paramDragEnd();
+  paramDragStart(ton, 500); ton.opt.sec = 10;
+  paramDragStart(ton, 500);
+  paramDragMove(500 + z.w / 4, true);
+  const vf = optOf(ton, 'sec');
+  ok(vf > 10 && vf < 13, 'Maj : six fois plus fin (' + vf + ')');
+  paramDragEnd();
+  eq(paramDrag, null, 'geste terminé');
+});
+
+T('T125 glissière : composants historiques et capteurs', () => {
+  board();
+  const nb = mk('NIBBLE', 0, 0);
+  const zn = paramZone(nb);
+  paramDragStart(nb, zn.x);
+  paramDragMove(zn.x + zn.w / 2, false);
+  ok(nb.value >= 7 && nb.value <= 8, 'clavier 4 bits à mi-course (' + nb.value + ')');
+  paramDragEnd();
+  sim();
+  deq(nb.outPins.map(p => p.state), [(nb.value>>3)&1, (nb.value>>2)&1, (nb.value>>1)&1, nb.value&1],
+    'les sorties suivent immédiatement');
+  const clk = mk('CLOCK', 300, 0);
+  const zc = paramZone(clk);
+  paramDragStart(clk, zc.x + zc.w / 2);
+  paramDragMove(zc.x + zc.w / 2 + 20, false);
+  ok(clk.opt.freq > 2, 'fréquence d’horloge réglée à la souris (' + clk.opt.freq + ' Hz)');
+  paramDragEnd();
+  const t = mk('TEMPC', 600, 0);
+  const zt = paramZone(t);
+  paramDragStart(t, zt.x + zt.w / 2);
+  paramDragMove(zt.x + zt.w, false);
+  eq(optOf(t, 'val'), 50, 'capteur poussé à sa pleine échelle');
+  paramDragEnd();
+  sim();
+  eq(t.outPins[0].state, 255, 'la mesure brute suit');
+});
+
+T('T126 glissière : la rotation ne trompe pas la zone d’accroche', () => {
+  board();
+  const ton = mk('TON', 200, 200);
+  ton.rot = 1;
+  const z = paramZone(ton);
+  const world = ton.l2w(z.x + z.w / 2, z.y + 4);
+  ok(paramHit(ton, world.x, world.y), 'zone accrochable après rotation');
+  ok(!paramHit(ton, ton.x + ton.bw / 2, ton.y + 6), 'et pas ailleurs');
+  ton.rot = 0; ton.mir = true;
+  const w2 = ton.l2w(z.x + z.w / 2, z.y + 4);
+  ok(paramHit(ton, w2.x, w2.y), 'zone accrochable en miroir');
+});
+
+T('T127 glissière : le dessin et l’infobulle en parlent', () => {
+  board();
+  const ton = mk('TON', 100, 100);
+  hoveredComp = ton;
+  drawScene(0);                                   // le rendu avec glissière ne doit pas lever d’exception
+  const d = compTipData(ton);
+  ok(/glisse la barre/.test(d.lines.join(' ')), 'l’infobulle explique le geste');
+  ok(/double-clic/.test(d.lines.join(' ')), 'et rappelle l’inspecteur pour la précision');
+  hoveredComp = null;
+  const led = mk('LED', 400, 100);
+  ok(!/glisse la barre/.test(compTipData(led).lines.join(' ')), 'rien à dire sur un composant sans réglage');
+});
+
 /* ===================== 7. Guide ===================== */
 console.log('— Guide —');
 
