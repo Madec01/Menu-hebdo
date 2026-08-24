@@ -991,6 +991,13 @@ class Component {
     this.locked = false; this.customLabel = null;
     this.state = 0; this.clockIdx = 1;
     this.opt = {};                      // paramètres personnalisés (inspecteur)
+    const RD = (typeof REG !== 'undefined') ? REG[type] : null;
+    if (RD){                            // composant déclaré dans le registre
+      this.io(RD.ins.length, RD.outs.length, RD.w, RD.h);
+      if (RD.opts) RD.opts.forEach(o => { if (o.def !== undefined) this.opt[o.k] = o.def; });
+      if (RD.init) RD.init(this);
+      return;
+    }
     switch(type){
       case 'SWITCH': case 'BUTTON': this.io(0,1,76,54); break;
       case 'CLOCK':  this.io(0,1,76,54); break;
@@ -1046,17 +1053,7 @@ class Component {
     this.io(def.ins, def.outs, 118, Math.max(58, n * 24 + 18));
     this.inner = []; this.innerWires = [];
     if ((depth || 0) < 4){
-      def.src.comps.forEach(s => {
-        const c = new Component(s.x || 0, s.y || 0, s.t);
-        if (s.t === 'CHIP') c.initChip(s.chip, (depth || 0) + 1);
-        if (s.t === 'SWITCH' || s.t === 'RANDOM') c.state = s.s || 0;
-        if (s.t === 'NIBBLE') c.value = s.s || 0;
-        if (s.t === 'SEQ' && s.bits) c.bits = s.bits.slice();
-        if (s.t === 'KEY' && s.key) c.key = s.key;
-        if (s.ci != null) c.clockIdx = s.ci;
-        if (s.opt) c.opt = JSON.parse(JSON.stringify(s.opt));
-        this.inner.push(c);
-      });
+      def.src.comps.forEach(s => this.inner.push(compFromData(s, 0, 0, (depth || 0) + 1)));
       def.src.wires.forEach(([a, ap, b, bp]) => {
         const ca = this.inner[a], cb = this.inner[b];
         if (ca && cb && ca.outPins[ap] && cb.inPins[bp])
@@ -1085,6 +1082,8 @@ class Component {
   }
   /* Phase de commit synchrone (fin de frame) : bascules, retards, oscillo */
   commit(){
+    const RD = REG[this.type];
+    if (RD){ if (RD.commit) RD.commit(this); return; }
     if (this.type === 'DFF'){
       // prevClk===null : première frame de vie -> on adopte le niveau d'horloge SANS front
       // (comme un vrai circuit : une horloge déjà haute à la mise sous tension n'est pas un front)
@@ -1129,6 +1128,8 @@ class Component {
     this.outPins = Array.from({length:o}, (_,k) => new Pin(this, true,  k));
   }
   evaluate(){
+    const RD = REG[this.type];
+    if (RD){ if (RD.eval) RD.eval(this); return; }
     if (this.type === 'NIBBLE'){
       this.outPins.forEach((p, i) => p.state = (this.value >> (3 - i)) & 1);
       return;
@@ -1404,6 +1405,8 @@ class Component {
   }
 
   drawDevice(c, col, hov, t){
+    const RD = REG[this.type];
+    if (RD){ drawRegistryBody(this, c, col, hov, t, RD); return; }
     const on = this.active;
     const shape = () => c.roundRect(this.x, this.y, this.w, this.h, 10);
     const type = this.type;
@@ -2084,15 +2087,8 @@ function spawnGroup(data, ox, oy, sel){
   let skipped = 0;
   (data.comps || []).forEach(s => {
     if (m && (INPUT_TYPES.includes(s.t) || s.t === 'CHIP')){ idxMap.push(null); skipped++; return; }
-    const c = new Component((s.x || 0) + ox, (s.y || 0) + oy, s.t);
-    if (s.t === 'CHIP') c.initChip(s.chip, 0);
-    if (s.t === 'SWITCH' || s.t === 'RANDOM') c.state = s.s || 0;
-    if (s.t === 'NIBBLE') c.value = s.s || 0;
-    if (s.t === 'SEQ' && s.bits) c.bits = s.bits.slice();
-    if (s.t === 'KEY' && s.key) c.key = s.key;
-    if (s.ci != null) c.clockIdx = s.ci;
-    if (s.opt) c.opt = JSON.parse(JSON.stringify(s.opt));
-    if (s.lbl && !s.lk) c.customLabel = s.lbl;
+    const c = compFromData(s, ox, oy, 0);
+    if (s.lk) c.customLabel = null;        // une copie ne reprend pas l'étiquette de mission
     components.push(c); made.push(c); idxMap.push(c);
   });
   (data.wires || []).forEach(([a, ap, b, bp, wp]) => {
@@ -2173,6 +2169,8 @@ function analyzeCircuit(){
     const c = pin.comp;
     if (st.includes(c)) return '↺';
     const s2 = [...st, c], A = i => exprIn(c.inPins[i], s2);
+    const RD = REG[c.type];
+    if (RD) return RD.expr ? RD.expr(c, pin.index, A) : (SHORT[c.type] || c.type).toLowerCase() + '(…)';
     switch (c.type){
       case 'SWITCH': return names.get(c) || '?';
       case 'HIGH': return '1';
@@ -2204,7 +2202,8 @@ function analyzeCircuit(){
   }));
   // Table de vérité réelle : uniquement pour un circuit combinatoire à 1-4 interrupteurs
   const seqTypes = ['CLOCK','SEQ','NOISE','KEY','RANDOM','BUTTON','DFF','DELAY','CNT4','BLACKBOX'];
-  const combinatoire = !components.some(c => seqTypes.includes(c.type));
+  const combinatoire = !components.some(c =>
+    seqTypes.includes(c.type) || (REG[c.type] && REG[c.type].seq));
   let table = null;
   if (combinatoire && sws.length >= 1 && sws.length <= 4 && leds.length){
     const saved = sws.map(c => c.state);
@@ -2283,19 +2282,11 @@ function buildBoard(d){
   components = []; wires = [];
   const m = currentIdx >= 0 ? missions[currentIdx] : null;
   (d.comps || []).forEach(s => {
-    const c = new Component(s.x || 0, s.y || 0, s.t);
-    if (s.t === 'CHIP') c.initChip(s.chip, 0);
+    const c = compFromData(s, 0, 0, 0);
     if (s.t === 'BLACKBOX' && m){
       c.io(m.inputs, m.outputs, 116, Math.max(90, Math.max(m.inputs, m.outputs) * 26 + 18));
       c.bbTT = m.tt;
     }
-    if (s.t === 'SWITCH' || s.t === 'RANDOM') c.state = s.s || 0;
-    if (s.t === 'NIBBLE') c.value = s.s || 0;
-    if (s.t === 'SEQ' && s.bits){ c.bits = s.bits.slice(); c.w = Math.max(80, 24 + c.bits.length * 12.5); }
-    if (s.t === 'KEY' && s.key) c.key = s.key;
-    if (s.ci != null) c.clockIdx = s.ci;
-    if (s.opt) c.opt = JSON.parse(JSON.stringify(s.opt));
-    if (s.lbl) c.customLabel = s.lbl;
     if (s.lk) c.locked = true;
     if (s.obs) c.obs = true;
     components.push(c);
@@ -2389,6 +2380,8 @@ function openInspector(c){
   const txt = (id, lab, val, ml, hint) =>
     B.push(inspField(lab, '<input type="text" data-k="' + id + '" value="' + String(val).replace(/"/g,'&quot;') +
       '" maxlength="' + (ml || 24) + '">', hint));
+  const regO = regOpts(c);
+  if (regO) regO.forEach(o => B.push(regOptField(c, o)));
   switch (c.type){
     case 'CLOCK':
       num('freq', 'Fréquence (Hz)', +(c.opt.freq || 1000 / CLOCK_SPEEDS[c.clockIdx]).toFixed(2), 0.1, 30, 0.1);
@@ -2475,6 +2468,7 @@ function applyInspector(c, inp){
     const [r, kk] = romK.split(',').map(Number);
     c.opt.rom[r][kk] = inp.checked ? 1 : 0;
   }
+  else if (k && k.startsWith('o_')) regOptApply(c, k.slice(2), inp.value);
   else if (k === 'freq')  c.opt.freq  = clamp(parseFloat(inp.value) || 1, 0.1, 30);
   else if (k === 'duty')  c.opt.duty  = clamp(parseInt(inp.value) || 50, 5, 95);
   else if (k === 'cycles'){ c.opt.cycles = clamp(parseInt(inp.value) || 1, 1, 60); c.dq = []; }
@@ -2696,7 +2690,11 @@ canvas.addEventListener('pointerup', e => {
   }
   if (pressComp && !moved && !longPressed){
     const c = pressComp;
-    if (c.type === 'SWITCH'){
+    const RD = REG[c.type];
+    if (RD){
+      if (RD.click){ RD.click(c, mouseW.x, mouseW.y); AudioSys.click(); markDirty(); }
+    }
+    else if (c.type === 'SWITCH'){
       c.state = c.state ? 0 : 1;
       c.state ? AudioSys.toggleOn() : AudioSys.toggleOff();
       markDirty();
@@ -4193,6 +4191,398 @@ const SHORT = { SWITCH:'INTER.', BUTTON:'BOUTON', CLOCK:'HORLOGE', RANDOM:'ALÉA
   GROUP:'BUS ⊕', UNGROUP:'BUS ⊖', OCTET:'OCTET', PROBE:'SONDE', BLACKBOX:'BOÎTE ?',
   LED:'AMPOULE', SEGMENT:'AFF. HEX', DEC:'AFF. DÉC', RGB:'LED RVB', BUZZER:'BUZZER',
   MATRIX:'MATRICE', NOTE:'NOTE ♪', SCOPE:'OSCILLO', TRAFFIC:'FEU', BARRIER:'BARRIÈRE' };
+/* ====================================================================
+   REGISTRE DE COMPOSANTS  (v6)
+   Un composant = un objet déclaratif. Le registre alimente ensuite les
+   tables historiques (FR_NAME, SHORT, ICO, GATE_STYLE, GATE_COST, les
+   listes de familles et la barre d'outils), si bien que le reste du
+   moteur n'a rien de particulier à savoir de lui.
+
+   Forme d'une définition :
+     { name, short, family, color, glyph|icon, cost, w, h,
+       ins:[{n:'A', hint}], outs:[{n:'S'}],
+       opts:[{k, label, type, min, max, step, def, choices, hint}],
+       init(c), eval(c), commit(c), restore(c, s), click(c, wx, wy),
+       body(c, ctx, col, on, hov, t),   // dessin interne (optionnel)
+       value(c), sub(c), bar(c),        // rendu générique
+       expr(c, iPin, A),                // équation pour l'analyseur
+       tip(c),                          // lignes d'infobulle
+       seq,                             // circuit séquentiel (pas de table figée)
+       guide:{ txt, ex, real } }
+   ==================================================================== */
+const REG = {};
+function defComp(id, d){ d.id = id; REG[id] = d; return d; }
+const regOf = t => REG[t] || null;
+
+/* Icône par défaut : un glyphe centré (emoji ou 1-3 lettres) */
+function glyphIcon(g, size){
+  const s = size || (String(g).length > 2 ? 9 : 13);
+  return '<svg viewBox="0 0 32 24"><text x="16" y="17" text-anchor="middle" font-size="' + s +
+    '" font-family="IBM Plex Mono, monospace" fill="currentColor" stroke="none">' + g + '</text></svg>';
+}
+
+/* Onglets de la barre d'outils : familles regroupées pour rester lisibles */
+const TABS = [
+  { key:'in',    name:'Entrées',    fams:['in'],
+    items:['SWITCH','BUTTON','CLOCK','RANDOM','NOISE','NIBBLE','KEY','SEQ','HIGH','LOW'] },
+  { key:'sense', name:'Capteurs',   fams:['sense'], items:[] },
+  { key:'gate',  name:'Portes',     fams:['gate'],
+    items:['NOT','AND','OR','XOR','NAND','NOR','XNOR','AND3','OR3'] },
+  { key:'mem',   name:'Mémoire & calcul', fams:['mem','calc'], chips:true,
+    items:['DELAY','DFF','MUX','ADD','SUB','COMP','DEMUX','CNT4','ROM','GROUP','UNGROUP'] },
+  { key:'time',  name:'Temps & automatisme', fams:['time','reg'], items:[] },
+  { key:'out',   name:'Sorties & actionneurs', fams:['out','act'],
+    items:['LED','SEGMENT','DEC','OCTET','RGB','PROBE','MATRIX','SCOPE','TRAFFIC','BARRIER','BUZZER','NOTE'] }
+];
+const FAM_LOGIC = ['gate','mem','calc','time','reg'];   // comptent comme logique (missions, puces)
+
+/* Publie tout le registre dans les tables du moteur */
+function registerComponents(){
+  Object.keys(REG).forEach(id => {
+    const d = REG[id];
+    FR_NAME[id]    = d.name;
+    SHORT[id]      = d.short || d.name;
+    ICO[id]        = d.icon || glyphIcon(d.glyph || '?', d.iconSize);
+    GATE_STYLE[id] = { c: d.color || '#b18cff' };
+    if (d.cost) GATE_COST[id] = d.cost;
+    if (d.family === 'in' || d.family === 'sense'){ if (!INPUT_TYPES.includes(id)) INPUT_TYPES.push(id); }
+    if (d.family === 'out' || d.family === 'act'){ if (!OUTPUT_TYPES.includes(id)) OUTPUT_TYPES.push(id); }
+    if (FAM_LOGIC.includes(d.family) && !LOGIC_TYPES.includes(id)) LOGIC_TYPES.push(id);
+    const tab = TABS.find(t => t.fams.includes(d.family));
+    if (tab && !tab.items.includes(id)) tab.items.push(id);
+  });
+  TOOL_TABS.length = 0;
+  TABS.forEach(t => { if (t.items.length) TOOL_TABS.push(t); });
+}
+
+/* --------- Réglages : génération des champs et application --------- */
+function regOpts(c){
+  const d = regOf(c.type);
+  return (d && d.opts) ? d.opts : null;
+}
+function regOptField(c, o){
+  const v = c.opt[o.k] !== undefined ? c.opt[o.k] : o.def;
+  if (o.type === 'select')
+    return inspField(o.label, '<select data-k="o_' + o.k + '">' + o.choices.map(ch =>
+      '<option value="' + ch[0] + '"' + (String(v) === String(ch[0]) ? ' selected' : '') + '>' +
+      ch[1] + '</option>').join('') + '</select>', o.hint);
+  if (o.type === 'text')
+    return inspField(o.label, '<input type="text" data-k="o_' + o.k + '" value="' +
+      String(v == null ? '' : v).replace(/"/g, '&quot;') + '" maxlength="' + (o.max || 16) + '">', o.hint);
+  return inspField(o.label, '<input type="number" data-k="o_' + o.k + '" value="' + v +
+    '" min="' + o.min + '" max="' + o.max + '" step="' + (o.step || 1) + '">', o.hint);
+}
+function regOptApply(c, key, raw){
+  const d = regOf(c.type);
+  const o = d && d.opts && d.opts.find(x => x.k === key);
+  if (!o) return false;
+  if (o.type === 'text') c.opt[o.k] = String(raw).slice(0, o.max || 16);
+  else if (o.type === 'select') c.opt[o.k] = isNaN(+raw) ? raw : +raw;
+  else {
+    let v = (o.step && o.step < 1) ? parseFloat(raw) : parseInt(raw, 10);
+    if (isNaN(v)) v = o.def;
+    c.opt[o.k] = Math.max(o.min, Math.min(o.max, v));
+  }
+  if (d.onOpt) d.onOpt(c, o.k);
+  return true;
+}
+/* Valeur d'un réglage, avec repli sur la valeur par défaut déclarée */
+function optOf(c, k){
+  if (c.opt[k] !== undefined && c.opt[k] !== null) return c.opt[k];
+  const d = regOf(c.type), o = d && d.opts && d.opts.find(x => x.k === k);
+  return o ? o.def : undefined;
+}
+
+/* Sections de guide engendrées par le registre, dans cet ordre */
+const FAM_SECTIONS = [
+  { key:'sense', t:'Les capteurs — mesurer le monde',
+    p:'Un capteur transforme une grandeur physique (lumière, chaleur, distance…) en signal. Chacun donne DEUX sorties : la <b>valeur</b> mesurée sur un bus, et un <b>seuil</b> booléen — « il fait plus chaud que la consigne ». Règle la consigne au double-clic : c\u2019est le premier réflexe de l\u2019automaticien.' },
+  { key:'time', t:'Temps & automatisme — attendre, compter, séquencer',
+    p:'Les vrais automates ne raisonnent pas qu\u2019en 0 et 1 : ils <b>attendent</b>. Temporisations, impulsions calibrées, mémoires d\u2019état — voici la boîte à outils exacte des automates programmables industriels, en version démontable.' },
+  { key:'reg', t:'Régulation — maintenir une consigne',
+    p:'Réguler, c\u2019est corriger en permanence l\u2019écart entre ce qu\u2019on veut et ce qu\u2019on mesure. Du simple thermostat au PID, ces blocs ferment la boucle entre un capteur et un actionneur.' },
+  { key:'calc', t:'Calcul & données — les blocs assemblés (suite)',
+    p:'Des blocs numériques plus larges : décoder, coder, aiguiller, mémoriser des octets. Tous restent démontables en portes — leur coût affiché est celui du circuit qu\u2019ils remplacent.' },
+  { key:'mem', t:'Mémoire — registres et bascules (suite)',
+    p:'Les autres membres de la famille des bascules, et les mémoires qui rangent plusieurs bits d\u2019un coup.' },
+  { key:'gate', t:'Portes — les élargies (suite)', p:'Mêmes règles, plus d\u2019entrées.' },
+  { key:'in', t:'Les entrées — produire des signaux (suite)',
+    p:'D\u2019autres façons d\u2019injecter des 0 et des 1 : boutons d\u2019atelier, sélecteurs, claviers.' },
+  { key:'act', t:'Les actionneurs — agir sur le monde',
+    p:'Ce que le circuit commande vraiment : moteurs, vérins, vannes, relais. Chacun montre son état physique — un vérin sort, une vanne s\u2019ouvre, un relais claque.' },
+  { key:'out', t:'Les sorties — voir et entendre (suite)', p:'D\u2019autres façons de lire ce que raconte le circuit.' }
+];
+
+/* --------- Instanciation depuis des données sérialisées ---------
+   Point d'entrée UNIQUE : puces, presse-papier, annuler/refaire et bac
+   à sable passaient par quatre copies presque identiques — c'est ce qui
+   avait fait perdre les réglages d'inspecteur en v5. */
+function compFromData(s, ox, oy, depth){
+  const c = new Component((s.x || 0) + (ox || 0), (s.y || 0) + (oy || 0), s.t);
+  if (s.t === 'CHIP') c.initChip(s.chip, depth || 0);
+  if (s.t === 'SWITCH' || s.t === 'RANDOM') c.state = s.s || 0;
+  if (s.t === 'NIBBLE') c.value = s.s || 0;
+  if (s.t === 'SEQ' && s.bits){ c.bits = s.bits.slice(); c.w = Math.max(80, 24 + c.bits.length * 12.5); }
+  if (s.t === 'KEY' && s.key) c.key = s.key;
+  if (s.ci != null) c.clockIdx = s.ci;
+  if (s.opt) c.opt = JSON.parse(JSON.stringify(s.opt));
+  if (s.lbl) c.customLabel = s.lbl;
+  const d = regOf(s.t);
+  if (d && d.restore) d.restore(c, s);
+  return c;
+}
+
+/* ==== DÉFINITIONS DE COMPOSANTS (v6) ==== */
+/* ---------- Portes élargies ---------- */
+defComp('NAND3', {
+  name:'NON-ET · 3 ENTRÉES', short:'NAND·3', family:'gate', color:'#ffc23d', cost:2,
+  glyph:'&', w:96, h:78, ins:[{n:'A'},{n:'B'},{n:'C'}], outs:[{n:'S'}],
+  eval(c){ c.outPins[0].state = (c.inPins[0].state && c.inPins[1].state && c.inPins[2].state) ? 0 : 1; },
+  expr:(c, i, A) => '¬(' + A(0) + '·' + A(1) + '·' + A(2) + ')',
+  guide:{ txt:'Un ET à trois entrées, suivi d’une inversion : la sortie ne tombe à 0 que si <code>les trois</code> entrées valent 1. Comme les autres portes élargies, elle compte pour 2 portes.',
+    real:'Le boîtier 7410 (trois NAND à 3 entrées) est l’un des circuits intégrés les plus vendus de l’histoire.' }
+});
+defComp('NOR3', {
+  name:'NON-OU · 3 ENTRÉES', short:'NOR·3', family:'gate', color:'#b18cff', cost:2,
+  glyph:'≥1', w:96, h:78, ins:[{n:'A'},{n:'B'},{n:'C'}], outs:[{n:'S'}],
+  eval(c){ c.outPins[0].state = (c.inPins[0].state || c.inPins[1].state || c.inPins[2].state) ? 0 : 1; },
+  expr:(c, i, A) => '¬(' + A(0) + ' + ' + A(1) + ' + ' + A(2) + ')',
+  guide:{ txt:'Sortie à 1 <code>seulement si les trois entrées sont à 0</code>. Pratique comme détecteur de « rien ne se passe » : trois capteurs au repos, une seule porte.',
+    ex:'Trois capteurs → NOR·3 → ampoule « zone libre ». Dès qu’un capteur s’active, la zone n’est plus libre.' }
+});
+
+/* ---------- Temps & automatisme ---------- */
+defComp('TON', {
+  name:'TEMPO À L’ENCLENCHEMENT', short:'TON', family:'time', color:'#38e1ff', cost:8, seq:true,
+  glyph:'⏳', w:104, h:74, ins:[{n:'E'}], outs:[{n:'Q'}],
+  opts:[{ k:'sec', label:'Durée (s)', min:0.1, max:60, step:0.1, def:2,
+    hint:'La sortie ne passe à 1 que si l’entrée reste à 1 pendant toute la durée.' }],
+  init(c){ c.since = 0; c.q = 0; },
+  eval(c){ c.pendIn = c.inPins[0].state ? 1 : 0; c.outPins[0].state = c.q; },
+  commit(c){
+    const now = Date.now(), ms = optOf(c, 'sec') * 1000;
+    if (!c.pendIn){ c.since = 0; c.q = 0; return; }
+    if (!c.since) c.since = now;
+    c.q = (now - c.since >= ms) ? 1 : 0;
+  },
+  value:c => optOf(c, 'sec') + ' s',
+  sub:c => c.q ? 'écoulé' : (c.since ? 'décompte…' : 'au repos'),
+  bar:c => c.q ? 1 : (c.since ? Math.min(1, (Date.now() - c.since) / (optOf(c, 'sec') * 1000)) : 0),
+  tip:c => ['Retard à l’enclenchement : ' + optOf(c, 'sec') + ' s'],
+  expr:(c, i, A) => 'après(' + A(0) + ')',
+  guide:{ txt:'La temporisation des automates : quand l’entrée passe à 1, la sortie attend <code>T secondes</code> avant de la suivre. Si l’entrée retombe avant la fin, tout est annulé et le décompte repart de zéro.',
+    ex:'Capteur de porte → TON (3 s) → alarme : une porte entrouverte une seconde ne déclenche rien, une porte laissée ouverte 3 secondes sonne.',
+    real:'Dans les automates industriels, ce bloc s’appelle littéralement TON (Timer On-delay). C’est le plus utilisé de tous : anti-rebond, confirmation de défaut, sécurité au démarrage.' }
+});
+defComp('TOF', {
+  name:'TEMPO AU DÉCLENCHEMENT', short:'TOF', family:'time', color:'#38e1ff', cost:8, seq:true,
+  glyph:'⏳', w:104, h:74, ins:[{n:'E'}], outs:[{n:'Q'}],
+  opts:[{ k:'sec', label:'Durée (s)', min:0.1, max:60, step:0.1, def:3,
+    hint:'La sortie retombe seulement après ce délai, une fois l’entrée revenue à 0.' }],
+  init(c){ c.since = 0; c.q = 0; },
+  eval(c){ c.pendIn = c.inPins[0].state ? 1 : 0; c.outPins[0].state = c.q; },
+  commit(c){
+    const now = Date.now(), ms = optOf(c, 'sec') * 1000;
+    if (c.pendIn){ c.q = 1; c.since = 0; return; }
+    if (c.q){ if (!c.since) c.since = now; if (now - c.since >= ms){ c.q = 0; c.since = 0; } }
+  },
+  value:c => optOf(c, 'sec') + ' s',
+  sub:c => c.since ? 'extinction…' : (c.q ? 'maintenu' : 'au repos'),
+  bar:c => c.since ? 1 - Math.min(1, (Date.now() - c.since) / (optOf(c, 'sec') * 1000)) : (c.q ? 1 : 0),
+  expr:(c, i, A) => 'maintien(' + A(0) + ')',
+  guide:{ txt:'L’inverse du TON : la sortie s’allume <code>immédiatement</code> avec l’entrée, mais met T secondes à s’éteindre quand l’entrée retombe. C’est la minuterie d’escalier.',
+    ex:'Bouton poussoir → TOF (5 s) → lampe : une pression brève éclaire cinq secondes.',
+    real:'TOF (Timer Off-delay) sert partout où il faut « laisser le temps » : ventilation qui continue après l’arrêt d’un four, essuie-glaces temporisés, minuteries de cage d’escalier.' }
+});
+defComp('PULSE', {
+  name:'IMPULSION CALIBRÉE', short:'IMPULS.', family:'time', color:'#38e1ff', cost:6, seq:true,
+  glyph:'⎍', w:104, h:74, ins:[{n:'E'}], outs:[{n:'Q'}],
+  opts:[{ k:'sec', label:'Largeur (s)', min:0.1, max:30, step:0.1, def:1,
+    hint:'Durée de l’impulsion, quelle que soit la durée de l’appui.' }],
+  init(c){ c.prevIn = null; c.start = 0; c.q = 0; },
+  eval(c){ c.pendIn = c.inPins[0].state ? 1 : 0; c.outPins[0].state = c.q; },
+  commit(c){
+    const now = Date.now(), ms = optOf(c, 'sec') * 1000;
+    if (c.prevIn !== null && c.pendIn && !c.prevIn && !c.q){ c.q = 1; c.start = now; }
+    if (c.q && now - c.start >= ms) c.q = 0;
+    c.prevIn = c.pendIn;
+  },
+  value:c => optOf(c, 'sec') + ' s',
+  sub:c => c.q ? 'impulsion' : 'prêt',
+  bar:c => c.q ? 1 - Math.min(1, (Date.now() - c.start) / (optOf(c, 'sec') * 1000)) : 0,
+  expr:(c, i, A) => 'impulsion(' + A(0) + ')',
+  guide:{ txt:'Un <code>monostable</code> : au front montant de l’entrée, la sortie part à 1 pendant une durée fixe, puis retombe toute seule — même si on garde le doigt appuyé. Appuyer plus longtemps ne change rien.',
+    ex:'Bouton → IMPULSION (2 s) → moteur de portail : chaque appui donne exactement deux secondes de mouvement.',
+    real:'C’est le rôle du fameux circuit NE555 en montage monostable, présent dans des milliards d’appareils depuis 1972.' }
+});
+defComp('EDGE', {
+  name:'DÉTECTEUR DE FRONTS', short:'FRONTS', family:'time', color:'#38e1ff', cost:4, seq:true,
+  glyph:'⌐', w:100, h:78, ins:[{n:'E'}], outs:[{n:'↑'},{n:'↓'}],
+  init(c){ c.prevIn = null; c.up = 0; c.dn = 0; },
+  eval(c){
+    c.pendIn = c.inPins[0].state ? 1 : 0;
+    c.outPins[0].state = c.up; c.outPins[1].state = c.dn;
+  },
+  commit(c){
+    if (c.prevIn === null){ c.prevIn = c.pendIn; return; }
+    c.up = (c.pendIn && !c.prevIn) ? 1 : 0;
+    c.dn = (!c.pendIn && c.prevIn) ? 1 : 0;
+    if (c.up || c.dn) c.flash = Date.now();
+    c.prevIn = c.pendIn;
+  },
+  value:c => (Date.now() - (c.flash || 0) < 220) ? '⚡' : '—',
+  sub:() => 'montant / descendant',
+  expr:(c, i, A) => (i === 0 ? 'front↑(' : 'front↓(') + A(0) + ')',
+  guide:{ txt:'Deux sorties qui émettent une <code>impulsion très brève</code> : l’une quand l’entrée passe de 0 à 1 (front montant ↑), l’autre quand elle retombe (front descendant ↓). Tu l’as construit à la main avec un RETARD et un XOR — le voici en boîte.',
+    ex:'Interrupteur → FRONTS → deux compteurs : l’un compte les ouvertures, l’autre les fermetures.',
+    real:'Compter des événements plutôt que mesurer un niveau : c’est ainsi qu’un compteur kilométrique, un podomètre ou un débitmètre fonctionnent.' }
+});
+defComp('SRMEM', {
+  name:'MÉMOIRE SET / RESET', short:'MÉM. SR', family:'time', color:'#5aa2ff', cost:4, seq:true,
+  glyph:'S/R', w:100, h:82, ins:[{n:'S'},{n:'R'}], outs:[{n:'Q'},{n:'Q̄'}],
+  opts:[{ k:'dom', label:'Dominance', type:'select', def:'r',
+    choices:[['r','Arrêt prioritaire (sécurité)'],['s','Marche prioritaire']],
+    hint:'Que faire si S et R sont actionnés en même temps ? En sécurité machine, l’arrêt gagne toujours.' }],
+  init(c){ c.q = 0; },
+  eval(c){
+    const S = c.inPins[0].state ? 1 : 0, R = c.inPins[1].state ? 1 : 0;
+    if (S && R) c.q = (optOf(c, 'dom') === 's') ? 1 : 0;
+    else if (S) c.q = 1;
+    else if (R) c.q = 0;
+    c.outPins[0].state = c.q; c.outPins[1].state = c.q ? 0 : 1;
+  },
+  value:c => c.q ? 'MARCHE' : 'ARRÊT',
+  sub:c => optOf(c, 'dom') === 's' ? 'S prioritaire' : 'R prioritaire',
+  expr:(c, i, A) => (i ? '¬' : '') + 'mém[S=' + A(0) + ', R=' + A(1) + ']',
+  guide:{ txt:'Le verrou SR que tu as câblé avec deux NOR, en un seul boîtier — et avec le réglage qui manque toujours aux débutants : <code>qui gagne</code> si Set et Reset arrivent ensemble. En sécurité machine, c’est l’arrêt.',
+    ex:'Bouton MARCHE → S, bouton ARRÊT → R, Q → moteur : le montage marche/arrêt le plus courant de toute l’industrie.',
+    real:'Ce schéma s’appelle « auto-maintien ». Avant les automates, il était câblé avec des relais — et le contact d’arrêt était toujours en série, pour couper même si le fil casse.' }
+});
+defComp('DIVN', {
+  name:'DIVISEUR DE FRÉQUENCE', short:'÷N', family:'time', color:'#5aa2ff', cost:10, seq:true,
+  glyph:'÷', w:100, h:74, ins:[{n:'▷'}], outs:[{n:'S'}],
+  opts:[{ k:'n', label:'Diviser par', min:2, max:64, step:1, def:2,
+    hint:'La sortie change d’état tous les N fronts montants.' }],
+  init(c){ c.prevClk = null; c.n = 0; c.q = 0; },
+  eval(c){ c.pendClk = c.inPins[0].state ? 1 : 0; c.outPins[0].state = c.q; },
+  commit(c){
+    if (c.prevClk !== null && c.pendClk && !c.prevClk){
+      c.n++;
+      if (c.n >= optOf(c, 'n')){ c.n = 0; c.q = c.q ? 0 : 1; }
+    }
+    c.prevClk = c.pendClk;
+  },
+  value:c => '÷ ' + optOf(c, 'n'),
+  sub:c => c.n + ' / ' + optOf(c, 'n'),
+  bar:c => c.n / optOf(c, 'n'),
+  expr:(c, i, A) => 'divise(' + A(0) + ')',
+  guide:{ txt:'Compte les fronts d’horloge et ne change d’état que tous les <code>N</code> : une horloge à 60 Hz divisée par 60 donne une impulsion par seconde. C’est une chaîne de bascules D, en un composant.',
+    ex:'Horloge rapide → ÷16 → ampoule : le clignotement devient lisible à l’œil.',
+    real:'Ton ordinateur fait exactement ça : un quartz unique à quelques MHz, puis des diviseurs et des multiplieurs pour fabriquer toutes les horloges dont il a besoin.' }
+});
+defComp('WDOG', {
+  name:'CHIEN DE GARDE', short:'CHIEN G.', family:'time', color:'#ff6bc1', cost:8, seq:true,
+  glyph:'🐕', w:104, h:78, ins:[{n:'E'}], outs:[{n:'⚠'}],
+  opts:[{ k:'sec', label:'Délai d’alerte (s)', min:0.5, max:60, step:0.5, def:3,
+    hint:'Sans nouveau front sur l’entrée pendant ce délai, l’alarme se déclenche.' }],
+  init(c){ c.prevIn = null; c.last = 0; c.alarm = 0; },
+  eval(c){ c.pendIn = c.inPins[0].state ? 1 : 0; c.outPins[0].state = c.alarm; },
+  commit(c){
+    const now = Date.now();
+    if (!c.last) c.last = now;
+    if (c.prevIn !== null && c.pendIn && !c.prevIn){ c.last = now; c.alarm = 0; }
+    if (now - c.last >= optOf(c, 'sec') * 1000) c.alarm = 1;
+    c.prevIn = c.pendIn;
+  },
+  value:c => c.alarm ? 'ALERTE' : 'veille',
+  sub:c => optOf(c, 'sec') + ' s sans signe de vie',
+  bar:c => c.last ? Math.min(1, (Date.now() - c.last) / (optOf(c, 'sec') * 1000)) : 0,
+  guide:{ txt:'Il surveille qu’un signal <code>continue de bouger</code>. Chaque front remet son sablier à zéro ; si plus rien ne vient pendant le délai, il lève une alarme. Un système figé est souvent plus dangereux qu’un système à l’arrêt.',
+    ex:'Capteur de rotation d’un tapis → chien de garde (2 s) → sirène : le tapis bloqué déclenche l’alerte, même si rien n’a « échoué » explicitement.',
+    real:'Tous les calculateurs embarqués en ont un : si le programme se bloque, le chien de garde ne reçoit plus sa caresse et redémarre la machine. Voitures, satellites, box internet.' }
+});
+/* @@COMPOSANTS@@ */
+registerComponents();
+
+/* --------- Rendu générique d'un composant du registre ---------
+   Boîtier + noms de pins + glyphe + valeur + sous-titre + jauge.
+   La plupart des composants n'ont donc aucun code de dessin à écrire ;
+   ceux qui en ont besoin fournissent body(). */
+function drawRegistryBody(comp, c, col, hov, t, d){
+  const on = comp.active;
+  const cx = comp.x + comp.w / 2, cy = comp.y + comp.h / 2;
+  comp.bodyFill(c, col, on, hov, () => c.roundRect(comp.x, comp.y, comp.w, comp.h, 10));
+
+  // Noms de pins, allumés quand le signal passe
+  c.font = "600 7px 'IBM Plex Mono', monospace"; c.textBaseline = 'middle';
+  c.textAlign = 'left';
+  comp.inPins.forEach((p, i) => {
+    const n = d.ins[i] && d.ins[i].n;
+    if (!n) return;
+    c.fillStyle = p.state ? PAL.pinOn : PAL.dim;
+    c.fillText(n, comp.x + 6, p.y);
+  });
+  c.textAlign = 'right';
+  comp.outPins.forEach((p, i) => {
+    const n = d.outs[i] && d.outs[i].n;
+    if (!n) return;
+    c.fillStyle = p.state ? PAL.pinOn : PAL.dim;
+    c.fillText(n, comp.x + comp.w - 6, p.y);
+  });
+
+  if (d.body){ d.body(comp, c, col, on, hov, t); return; }
+
+  const val = d.value ? d.value(comp) : null;
+  const sub = d.sub ? d.sub(comp) : null;
+  const bar = d.bar ? d.bar(comp) : null;
+  c.textAlign = 'center';
+  let y = cy;
+  if (val != null && sub != null) y = cy - 6;
+  if (bar != null) y -= 5;
+
+  if (d.glyph && val == null){
+    c.font = "600 19px 'IBM Plex Mono', monospace"; c.textBaseline = 'middle';
+    c.fillStyle = on ? col : comp.hexA(col, .55);
+    if (on){ c.shadowBlur = 12; c.shadowColor = col; }
+    c.fillText(d.glyph, cx, y); c.shadowBlur = 0;
+  } else if (val != null){
+    if (d.glyph){
+      c.font = "600 10px 'IBM Plex Mono', monospace"; c.textBaseline = 'middle';
+      c.fillStyle = comp.hexA(col, .6);
+      c.fillText(d.glyph, cx, comp.y + 14);
+    }
+    c.font = "700 14px 'Chakra Petch', sans-serif"; c.textBaseline = 'middle';
+    c.fillStyle = on ? col : comp.hexA(col, .55);
+    if (on){ c.shadowBlur = 10; c.shadowColor = col; }
+    c.fillText(String(val), cx, y); c.shadowBlur = 0;
+  }
+  if (sub != null){
+    c.font = "600 7.5px 'IBM Plex Mono', monospace"; c.textBaseline = 'middle';
+    c.fillStyle = PAL.dim;
+    c.fillText(String(sub), cx, y + 13);
+  }
+  if (bar != null){
+    const bw = comp.w - 26, bx = cx - bw / 2, by = comp.y + comp.h - 13;
+    c.beginPath(); c.roundRect(bx, by, bw, 5, 2.5);
+    c.fillStyle = 'rgba(255,255,255,.08)'; c.fill();
+    const f = Math.max(0, Math.min(1, bar));
+    if (f > 0){
+      c.beginPath(); c.roundRect(bx, by, Math.max(2, bw * f), 5, 2.5);
+      c.fillStyle = col; c.fill();
+    }
+  }
+}
+/* Petit utilitaire de dessin partagé par les composants du registre */
+function drawLamp(c, x, y, r, on, col){
+  c.beginPath(); c.arc(x, y, r, 0, 7);
+  c.fillStyle = on ? col : 'rgba(255,255,255,.07)';
+  if (on){ c.shadowBlur = 14; c.shadowColor = col; }
+  c.fill(); c.shadowBlur = 0;
+  c.lineWidth = 1.4;
+  c.strokeStyle = on ? '#e9fff5' : 'rgba(255,255,255,.22)';
+  c.stroke();
+}
+
 /* Le type est-il disponible ? (récompenses de mission + grant temporaire) */
 function unlockedType(t){
   const req = UNLOCKS[t];
@@ -4863,18 +5253,7 @@ function restoreSandbox(){
   try {
     const d = JSON.parse(localStorage.getItem('al2_sandbox') || 'null');
     if (!d || !d.comps) return;
-    d.comps.forEach(s => {
-      const c = new Component(s.x, s.y, s.t);
-      if (s.t === 'CHIP') c.initChip(s.chip, 0);
-      if (s.t === 'SWITCH' || s.t === 'RANDOM') c.state = s.s || 0;
-      if (s.t === 'NIBBLE') c.value = s.s || 0;
-      if (s.t === 'SEQ' && s.bits) c.bits = s.bits.slice();
-      if (s.t === 'KEY' && s.key) c.key = s.key;
-      if (s.ci != null) c.clockIdx = s.ci;
-      if (s.opt) c.opt = JSON.parse(JSON.stringify(s.opt));
-      if (s.lbl) c.customLabel = s.lbl;
-      components.push(c);
-    });
+    d.comps.forEach(s => components.push(compFromData(s, 0, 0, 0)));
     d.wires.forEach(([a, ap, b, bp, wp]) => {
       const ca = components[a], cb = components[b];
       if (ca && cb && ca.outPins[ap] && cb.inPins[bp]){
@@ -5103,6 +5482,14 @@ function buildGuide(){
      ['TRAFFIC','BARRIER']]
   ]}
   ];
+  // Sections engendrées par le registre : chaque composant déclaré apporte
+  // automatiquement son entrée de guide, impossible d'en oublier un.
+  FAM_SECTIONS.forEach(fs => {
+    const items = Object.keys(REG).filter(id => REG[id].family === fs.key && REG[id].guide)
+      .map(id => { const d = REG[id];
+        return [id, d.guideTitle || d.name, d.guide.txt, d.guide.ex || null, d.guide.real || null, [id]]; });
+    if (items.length) SECTIONS.push({ t: fs.t, p: fs.p, items });
+  });
   document.getElementById('guide-body').innerHTML = SECTIONS.map(sec =>
     '<div class="g-sec">' + sec.t + '</div><p class="g-secp">' + sec.p + '</p>' +
     sec.items.map(([t, name, txt, ex, real, covers]) =>

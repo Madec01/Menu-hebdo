@@ -811,6 +811,157 @@ T('T65 puce : une ROM programmée garde sa table une fois encapsulée', () => {
   CHIPS = CHIPS.filter(c => c.name !== 'TEST-ROM'); saveChips();
 });
 
+/* ===================== 6bis. Registre de composants ===================== */
+console.log('— Registre —');
+
+T('T66 registre : chaque composant déclaré est complet et publié', () => {
+  const ids = Object.keys(REG);
+  ok(ids.length > 0, 'le registre contient des composants');
+  ids.forEach(id => {
+    const d = REG[id];
+    ok(d.name && d.short, id + ' : nom et nom court');
+    ok(d.family, id + ' : famille');
+    eq(FR_NAME[id], d.name, id + ' : publié dans FR_NAME');
+    eq(SHORT[id], d.short, id + ' : publié dans SHORT');
+    ok(ICO[id] && /svg/.test(ICO[id]), id + ' : icône');
+    ok(GATE_STYLE[id] && GATE_STYLE[id].c, id + ' : couleur');
+    ok(d.w >= 40 && d.h >= 40, id + ' : dimensions plausibles');
+    ok(Array.isArray(d.ins) && Array.isArray(d.outs), id + ' : pins déclarés');
+    ok(d.guide && d.guide.txt && d.guide.txt.length > 40, id + ' : entrée de guide rédigée');
+    ok(TOOL_TABS.some(t => t.items.includes(id)), id + ' : présent dans la barre d’outils');
+    (d.opts || []).forEach(o => {
+      ok(o.k && o.label, id + ' : réglage nommé');
+      if (o.type === 'select') ok(Array.isArray(o.choices) && o.choices.length, id + '/' + o.k + ' : choix');
+      else if (o.type !== 'text') ok(typeof o.min === 'number' && typeof o.max === 'number' &&
+        o.def >= o.min && o.def <= o.max, id + '/' + o.k + ' : bornes cohérentes');
+    });
+  });
+});
+
+T('T67 registre : tous les composants s’instancient, se simulent et se dessinent', () => {
+  const ids = Object.keys(REG);
+  board();
+  ids.forEach((id, i) => {
+    const c = mk(id, (i % 8) * 200, Math.floor(i / 8) * 200);
+    eq(c.inputs, REG[id].ins.length, id + ' : nombre d’entrées');
+    eq(c.outputs, REG[id].outs.length, id + ' : nombre de sorties');
+  });
+  for (let k = 0; k < 4; k++){ __advance(120); sim(); }
+  drawScene(0);                       // aucun dessin ne doit lever d’exception
+  const data = serializeGroup(components);
+  board();
+  const r = spawnGroup(data, 0, 0, false);
+  eq(r.made.length, ids.length, 'tous re-instanciables depuis une sauvegarde');
+  board();
+});
+
+T('T68 TON / TOF : retard à l’enclenchement et au déclenchement', () => {
+  board();
+  const s = mk('SWITCH', 0, 0), ton = mk('TON', 300, 0), tof = mk('TOF', 300, 200);
+  const l1 = mk('LED', 600, 0), l2 = mk('LED', 600, 200);
+  link(s, 0, ton, 0); link(s, 0, tof, 0); link(ton, 0, l1, 0); link(tof, 0, l2, 0);
+  applyInspector(ton, fld('o_sec', 2)); applyInspector(tof, fld('o_sec', 3));
+  eq(optOf(ton, 'sec'), 2, 'durée réglée par l’inspecteur');
+  s.state = 1; sim();
+  eq(ton.q, 0, 'TON : rien avant la fin du délai');
+  eq(tof.q, 1, 'TOF : sortie immédiate');
+  __advance(1000); sim(); eq(ton.q, 0, 'TON : toujours en décompte à 1 s');
+  __advance(1200); sim(); eq(ton.q, 1, 'TON : sortie après 2,2 s');
+  s.state = 0; sim();
+  eq(ton.q, 0, 'TON : retombe aussitôt');
+  eq(tof.q, 1, 'TOF : maintenu');
+  __advance(2000); sim(); eq(tof.q, 1, 'TOF : encore maintenu à 2 s');
+  __advance(1500); sim(); eq(tof.q, 0, 'TOF : retombe après 3 s');
+  // un appui trop bref n’arme pas le TON
+  s.state = 1; sim(); __advance(500); sim(); s.state = 0; sim();
+  __advance(3000); sim();
+  eq(ton.q, 0, 'TON : appui trop bref, jamais déclenché');
+});
+
+T('T69 IMPULSION calibrée : largeur fixe quelle que soit la durée d’appui', () => {
+  board();
+  const s = mk('SWITCH', 0, 0), p = mk('PULSE', 300, 0);
+  link(s, 0, p, 0);
+  applyInspector(p, fld('o_sec', 1));
+  sim();
+  s.state = 1; sim();
+  eq(p.q, 1, 'impulsion déclenchée au front');
+  __advance(600); sim(); eq(p.q, 1, 'toujours haute à 0,6 s');
+  __advance(600); sim(); eq(p.q, 0, 'retombée à 1,2 s malgré l’appui maintenu');
+  __advance(2000); sim(); eq(p.q, 0, 'pas de nouvelle impulsion sans nouveau front');
+  s.state = 0; sim(); s.state = 1; sim();
+  eq(p.q, 1, 'nouveau front, nouvelle impulsion');
+});
+
+T('T70 FRONTS : une impulsion sur ↑ puis sur ↓', () => {
+  board();
+  const s = mk('SWITCH', 0, 0), e = mk('EDGE', 300, 0);
+  link(s, 0, e, 0);
+  sim(); sim();
+  deq([e.up, e.dn], [0,0], 'au repos');
+  s.state = 1; sim();
+  deq([e.up, e.dn], [1,0], 'front montant');
+  sim();
+  deq([e.up, e.dn], [0,0], 'impulsion d’une seule frame');
+  s.state = 0; sim();
+  deq([e.up, e.dn], [0,1], 'front descendant');
+});
+
+T('T71 MÉMOIRE SR : auto-maintien et dominance réglable', () => {
+  board();
+  const S = mk('SWITCH', 0, 0), R = mk('SWITCH', 0, 200), m = mk('SRMEM', 300, 0);
+  link(S, 0, m, 0); link(R, 0, m, 1);
+  sim(); eq(m.q, 0, 'départ à l’arrêt');
+  S.state = 1; sim(); S.state = 0; sim();
+  eq(m.q, 1, 'la marche se maintient toute seule');
+  R.state = 1; sim(); R.state = 0; sim();
+  eq(m.q, 0, 'l’arrêt efface la mémoire');
+  S.state = 1; R.state = 1; sim();
+  eq(m.q, 0, 'S et R ensemble : arrêt prioritaire par défaut');
+  applyInspector(m, Object.assign(fld('o_dom', 's'), { tagName:'SELECT' }));
+  sim();
+  eq(m.q, 1, 'dominance inversée : marche prioritaire');
+  eq(m.outPins[1].state, 0, 'sortie complémentaire');
+});
+
+T('T72 ÷N : la sortie change tous les N fronts', () => {
+  board();
+  const clk = mk('SWITCH', 0, 0), d = mk('DIVN', 300, 0);
+  link(clk, 0, d, 0);
+  applyInspector(d, fld('o_n', 3));
+  const seen = [];
+  clk.state = 0; sim();
+  for (let i = 0; i < 9; i++){ clk.state = 1; sim(); clk.state = 0; sim(); seen.push(d.q); }
+  deq(seen, [0,0,1,1,1,0,0,0,1], 'bascule tous les 3 fronts');
+});
+
+T('T73 CHIEN DE GARDE : alerte quand le signal s’arrête', () => {
+  board();
+  const s = mk('SWITCH', 0, 0), w = mk('WDOG', 300, 0);
+  link(s, 0, w, 0);
+  applyInspector(w, fld('o_sec', 2));
+  sim();
+  for (let i = 0; i < 3; i++){ s.state = 1; sim(); __advance(500); s.state = 0; sim(); __advance(500); }
+  eq(w.alarm, 0, 'signal vivant : pas d’alerte');
+  __advance(2500); sim();
+  eq(w.alarm, 1, 'plus de front pendant 2 s : alerte');
+  s.state = 1; sim();
+  eq(w.alarm, 0, 'un nouveau front rassure le chien de garde');
+});
+
+T('T74 NAND·3 et NOR·3', () => {
+  board();
+  const sw = [0,1,2].map(i => mk('SWITCH', 0, i * 100));
+  const na = mk('NAND3', 300, 0), no = mk('NOR3', 300, 300);
+  const l1 = mk('LED', 600, 0), l2 = mk('LED', 600, 300);
+  sw.forEach((s, i) => { link(s, 0, na, i); link(s, 0, no, i); });
+  link(na, 0, l1, 0); link(no, 0, l2, 0);
+  const rows = measure(sw, [l1, l2]);
+  deq(rows.map(r => r[0]), [1,1,1,1,1,1,1,0], 'NAND·3');
+  deq(rows.map(r => r[1]), [1,0,0,0,0,0,0,0], 'NOR·3');
+  eq(gateCost('NAND3'), 2, 'coût de la porte élargie');
+});
+
 /* ===================== 7. Interface & export ===================== */
 console.log('— Interface & export —');
 
