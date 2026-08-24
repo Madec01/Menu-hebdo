@@ -1262,6 +1262,181 @@ T('T88 chaîne d’automatisme complète : marche/arrêt, sécurité, va-et-vien
   eq(mem.q, 1, 'redémarrage possible une fois déverrouillé');
 });
 
+/* ===================== 6ter. Analogique, capteurs, régulation ===================== */
+console.log('— Analogique & régulation —');
+
+T('T89 capteurs : mesure physique, valeur brute et seuil', () => {
+  board();
+  const t = mk('TEMPC', 0, 0), l = mk('LDR', 300, 0), d = mk('DIST', 600, 0);
+  sim();
+  eq(t.outPins[0].state, phys2raw(20, -10, 50), '20 °C → valeur brute');
+  eq(t.outPins[1].state, 0, '20 °C sous le seuil de 25 °C');
+  applyInspector(t, fld('o_val', 30)); sim();
+  eq(t.outPins[1].state, 1, '30 °C : seuil dépassé');
+  eq(t.outPins[0].state, phys2raw(30, -10, 50), 'valeur brute suit la mesure');
+  applyInspector(t, fld('o_val', 99));
+  eq(optOf(t, 'val'), 50, 'mesure bornée au maximum du capteur');
+  applyInspector(l, fld('o_seuil', 500)); applyInspector(l, fld('o_val', 800)); sim();
+  eq(l.outPins[1].state, 1, 'lumière au-dessus du seuil');
+  eq(d.outPins[0].state, phys2raw(120, 0, 400), 'distance convertie');
+  // le clic balaye l’échelle
+  const v0 = optOf(d, 'val');
+  REG.DIST.click(d);
+  eq(optOf(d, 'val'), v0 + 40, 'clic : +1/10 d’échelle');
+});
+
+T('T90 conversions CAN et CNA : aller-retour sans perte', () => {
+  board();
+  const pot = mk('POT', 0, 0), can = mk('CAN', 300, 0), cna = mk('CNA', 600, 0);
+  const jauge = mk('JAUGE', 900, 0);
+  link(pot, 0, can, 0);
+  can.outPins.forEach((p, i) => wires.push(new Wire(p, cna.inPins[i])));
+  link(cna, 0, jauge, 0);
+  recalcFan();
+  [0, 25, 50, 75, 100].forEach(pc => {
+    applyInspector(pot, fld('o_val', pc)); sim();
+    const brut = phys2raw(pc, 0, 100);
+    eq(can.raw, brut, pc + ' % → ' + brut);
+    eq(cna.outPins[0].state, brut, 'reconverti à l’identique');
+    eq(jauge.raw, brut, 'la jauge reçoit la valeur');
+  });
+  applyInspector(pot, fld('o_val', 100)); sim();
+  deq(can.outPins.map(p => p.state), [1,1,1,1,1,1,1,1], '255 = 11111111');
+});
+
+T('T91 PWM : le rapport cyclique suit la valeur d’entrée', () => {
+  board();
+  const pot = mk('POT', 0, 0), en = mk('HIGH', 0, 200), pwm = mk('PWM', 300, 0);
+  link(pot, 0, pwm, 0); link(en, 0, pwm, 1);
+  applyInspector(pwm, fld('o_hz', 1));            // période 1000 ms
+  applyInspector(pot, fld('o_val', 25));          // ≈ 64/255
+  __setNow(1000000); sim();
+  eq(pwm.outPins[0].state, 1, 'début de période : à 1');
+  __setNow(1000000 + 300); sim();
+  eq(pwm.outPins[0].state, 0, 'après 30 % de la période : à 0');
+  applyInspector(pot, fld('o_val', 90));
+  __setNow(1000000 + 800); sim();
+  eq(pwm.outPins[0].state, 1, 'à 90 %, encore à 1 en fin de période');
+  applyInspector(pot, fld('o_val', 0));
+  __setNow(1000000); sim();
+  eq(pwm.outPins[0].state, 0, '0 % : toujours éteint');
+  __setNow(__T0);
+});
+
+T('T92 thermostat : hystérésis et sens d’action', () => {
+  board();
+  const pot = mk('POT', 0, 0), th = mk('THERMO', 300, 0);
+  link(pot, 0, th, 0);
+  applyInspector(th, fld('o_cons', 128)); applyInspector(th, fld('o_hyst', 12));
+  applyInspector(pot, fld('o_val', 20)); sim();      // ≈ 51 brut, très en dessous
+  eq(th.outPins[0].state, 1, 'sous la consigne : ça chauffe');
+  applyInspector(pot, fld('o_val', 50)); sim();      // ≈ 128, dans la zone morte
+  eq(th.outPins[0].state, 1, 'dans la zone morte : pas de changement d’avis');
+  applyInspector(pot, fld('o_val', 90)); sim();      // ≈ 230, bien au-dessus
+  eq(th.outPins[0].state, 0, 'au-dessus : arrêt');
+  applyInspector(pot, fld('o_val', 50)); sim();
+  eq(th.outPins[0].state, 0, 'zone morte : reste arrêté');
+  applyInspector(pot, fld('o_val', 20)); sim();
+  eq(th.outPins[0].state, 1, 'sous le seuil bas : relance');
+  applyInspector(th, Object.assign(fld('o_sens', 'refr'), { tagName:'SELECT' }));
+  applyInspector(pot, fld('o_val', 90)); sim();
+  eq(th.outPins[0].state, 1, 'en mode refroidissement, la logique s’inverse');
+});
+
+T('T93 comparateur à hystérésis (Schmitt) et limiteur', () => {
+  board();
+  const pot = mk('POT', 0, 0), sc = mk('SCHMITT', 300, 0), li = mk('LIMIT', 300, 300);
+  link(pot, 0, sc, 0); link(pot, 0, li, 0);
+  applyInspector(sc, fld('o_haut', 200)); applyInspector(sc, fld('o_bas', 80));
+  applyInspector(li, fld('o_min', 40)); applyInspector(li, fld('o_max', 150));
+  const set = pc => { applyInspector(pot, fld('o_val', pc)); sim(); };
+  set(0);  eq(sc.outPins[0].state, 0, 'départ bas');
+  set(50); eq(sc.outPins[0].state, 0, '≈128 : pas encore le seuil haut');
+  set(90); eq(sc.outPins[0].state, 1, '≈230 : bascule');
+  set(50); eq(sc.outPins[0].state, 1, 'reste haut dans la zone d’hystérésis');
+  set(10); eq(sc.outPins[0].state, 0, 'sous le seuil bas : retombe');
+  set(0);   eq(li.outPins[0].state, 40, 'limiteur : plancher');
+  set(100); eq(li.outPins[0].state, 150, 'limiteur : plafond');
+  set(30);  eq(li.outPins[0].state, phys2raw(30, 0, 100), 'entre les deux : inchangé');
+});
+
+T('T94 rampe : la sortie rejoint la cible à pente limitée', () => {
+  board();
+  const pot = mk('POT', 0, 0), r = mk('RAMPE', 300, 0);
+  link(pot, 0, r, 0);
+  applyInspector(r, fld('o_vit', 100));           // 100 unités par seconde
+  applyInspector(pot, fld('o_val', 100));         // cible 255
+  sim();
+  eq(Math.round(r.val), 0, 'départ à zéro');
+  for (let i = 0; i < 5; i++){ __advance(100); sim(); }   // le pas d’intégration est borné à 200 ms
+  ok(r.val > 30 && r.val < 70, 'la moitié du chemin après 0,5 s (' + Math.round(r.val) + ')');
+  for (let i = 0; i < 20; i++){ __advance(200); sim(); }
+  eq(Math.round(r.val), 255, 'cible atteinte');
+  applyInspector(pot, fld('o_val', 0));
+  for (let i = 0; i < 20; i++){ __advance(200); sim(); }
+  eq(Math.round(r.val), 0, 'et redescend de la même façon');
+});
+
+T('T95 boucle fermée : four + thermostat régulent la température', () => {
+  board();
+  const four = mk('FOUR', 400, 0), th = mk('THERMO', 100, 0), cna = mk('CNA', 260, 300);
+  // FOUR → THERMOSTAT → CNA (poids 128 = pleine chauffe) → FOUR : la boucle est fermée
+  link(four, 0, th, 0);
+  link(th, 0, cna, 0);
+  link(cna, 0, four, 0);
+  applyInspector(th, fld('o_cons', 100)); applyInspector(th, fld('o_hyst', 10));
+  applyInspector(four, fld('o_inert', 2));
+  eq(Math.round(four.temp), 0, 'four froid au départ');
+  let atteint = false, coupe = false, relance = false, dernier = 1;
+  for (let i = 0; i < 400; i++){
+    __advance(100); sim();
+    if (four.temp > 90) atteint = true;
+    if (atteint && th.outPins[0].state === 0) coupe = true;
+    if (coupe && th.outPins[0].state === 1) relance = true;
+    dernier = th.outPins[0].state;
+  }
+  ok(atteint, 'le four monte jusqu’à la consigne (' + Math.round(four.temp) + ')');
+  ok(coupe, 'le thermostat coupe au-dessus de la consigne');
+  ok(relance, 'puis relance quand ça redescend : la régulation cycle');
+  ok(four.temp > 80 && four.temp < 130, 'la température reste autour de la consigne (' +
+     Math.round(four.temp) + ')');
+});
+
+T('T96 cuve : remplissage automatique entre deux seuils', () => {
+  board();
+  const cuve = mk('CUVE', 400, 0), mem = mk('SRMEM', 100, 0);
+  link(cuve, 2, mem, 0);                 // niveau BAS  -> marche pompe
+  link(cuve, 1, mem, 1);                 // niveau HAUT -> arrêt pompe
+  link(mem, 0, cuve, 0);                 // pompe -> remplissage
+  applyInspector(cuve, fld('o_debit', 50));
+  applyInspector(cuve, fld('o_bas', 20)); applyInspector(cuve, fld('o_haut', 80));
+  cuve.niv = 10; sim();
+  eq(cuve.outPins[2].state, 1, 'niveau bas détecté');
+  for (let i = 0; i < 40; i++){ __advance(100); sim(); }
+  ok(cuve.niv >= 80, 'la cuve s’est remplie toute seule (' + Math.round(cuve.niv) + ' %)');
+  eq(mem.q, 0, 'la pompe s’est arrêtée au niveau haut');
+  eq(cuve.outPins[1].state, 1, 'seuil haut signalé');
+  // vidange manuelle : la pompe ne repart qu'au niveau bas
+  cuve.niv = 50; sim();
+  eq(mem.q, 0, 'à mi-hauteur, la pompe reste arrêtée : c’est l’hystérésis');
+  cuve.niv = 15; sim();
+  eq(mem.q, 1, 'sous le niveau bas, elle repart');
+});
+
+T('T97 vérins, servos et jauges acceptent une valeur de bus sans avertissement', () => {
+  board();
+  const pot = mk('POT', 0, 0), servo = mk('SERVO', 300, 0), jauge = mk('JAUGE', 600, 0);
+  link(pot, 0, servo, 0); link(pot, 0, jauge, 0);
+  applyInspector(pot, fld('o_val', 100)); sim();
+  ok(!servo.inPins[0].busWarn, 'servo : pin bus déclaré');
+  ok(!jauge.inPins[0].busWarn, 'jauge : pin bus déclaré');
+  for (let i = 0; i < 15; i++){ __advance(150); sim(); }
+  ok(Math.abs(servo.ang - Math.PI) < 0.1, 'le servo atteint 180° (' + Math.round(servo.ang * 180 / Math.PI) + '°)');
+  applyInspector(pot, fld('o_val', 0));
+  for (let i = 0; i < 15; i++){ __advance(150); sim(); }
+  ok(servo.ang < 0.1, 'et revient à 0°');
+});
+
 /* ===================== 7. Interface & export ===================== */
 console.log('— Interface & export —');
 

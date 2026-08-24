@@ -129,7 +129,7 @@ table.tt tr.tt-fail td:first-child::before{content:'✗ ';color:var(--red)}
 #toolbar{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:20;
   display:flex;flex-direction:column;align-items:center;gap:7px;padding:9px 12px 10px;
   max-width:calc(100vw - 24px)}
-.tool-tabs{display:flex;gap:3px}
+.tool-tabs{display:flex;gap:3px;flex-wrap:wrap;max-width:calc(100vw - 60px)}
 .tool-tab{font-family:var(--mono);font-size:9px;letter-spacing:.16em;text-transform:uppercase;
   padding:5px 13px;border-radius:8px;border:1px solid transparent;background:transparent;
   color:var(--dim);cursor:pointer;transition:.15s}
@@ -4226,16 +4226,19 @@ function glyphIcon(g, size){
 
 /* Onglets de la barre d'outils : familles regroupées pour rester lisibles */
 const TABS = [
-  { key:'in',    name:'Entrées',    fams:['in'],
+  { key:'in',    name:'Entrées',  fams:['in'],
     items:['SWITCH','BUTTON','CLOCK','RANDOM','NOISE','NIBBLE','KEY','SEQ','HIGH','LOW'] },
-  { key:'sense', name:'Capteurs',   fams:['sense'], items:[] },
-  { key:'gate',  name:'Portes',     fams:['gate'],
+  { key:'sense', name:'Capteurs', fams:['sense'], items:[] },
+  { key:'gate',  name:'Portes',   fams:['gate'],
     items:['NOT','AND','OR','XOR','NAND','NOR','XNOR','AND3','OR3'] },
-  { key:'mem',   name:'Mémoire & calcul', fams:['mem','calc'], chips:true,
-    items:['DELAY','DFF','MUX','ADD','SUB','COMP','DEMUX','CNT4','ROM','GROUP','UNGROUP'] },
-  { key:'time',  name:'Temps & automatisme', fams:['time','reg'], items:[] },
-  { key:'out',   name:'Sorties & actionneurs', fams:['out','act'],
-    items:['LED','SEGMENT','DEC','OCTET','RGB','PROBE','MATRIX','SCOPE','TRAFFIC','BARRIER','BUZZER','NOTE'] }
+  { key:'mem',   name:'Mémoire',  fams:['mem'], chips:true, items:['DELAY','DFF'] },
+  { key:'calc',  name:'Calcul & bus', fams:['calc'],
+    items:['MUX','ADD','SUB','COMP','DEMUX','CNT4','ROM','GROUP','UNGROUP'] },
+  { key:'time',  name:'Temps & automatisme', fams:['time'], items:[] },
+  { key:'reg',   name:'Régulation', fams:['reg'], items:[] },
+  { key:'out',   name:'Sorties', fams:['out'],
+    items:['LED','SEGMENT','DEC','OCTET','RGB','PROBE','MATRIX','SCOPE','BUZZER','NOTE'] },
+  { key:'act',   name:'Actionneurs', fams:['act'], items:['TRAFFIC','BARRIER'] }
 ];
 const FAM_LOGIC = ['gate','mem','calc','time','reg'];   // comptent comme logique (missions, puces)
 
@@ -5045,6 +5048,448 @@ defComp('STEPPER', {
   guide:{ txt:'Il n’avance que d’un <code>pas</code> à chaque front d’horloge — 16 pas par tour ici — et l’entrée <code>S</code> choisit le sens. Sa position exacte est connue sans aucun capteur : elle se compte.',
     ex:'HORLOGE → ▷ : rotation régulière. Remplace l’horloge par un BOUTON À IMPULSION : tu positionnes le moteur pas par pas, exactement comme une imprimante 3D.',
     real:'Imprimantes, scanners, machines à commande numérique : tous utilisent des moteurs pas à pas, parce qu’on peut leur ordonner « avance de 137 pas » sans jamais mesurer où ils en sont.' }
+});
+/* ==================== SIGNAL ANALOGIQUE ====================
+   Un fil transporte une valeur entière 0-255. Les capteurs mesurent une
+   grandeur physique (°C, cm, lux…), l'affichent dans son unité et sortent
+   la valeur brute correspondante — exactement ce que fait un convertisseur
+   d'entrée d'automate. */
+const ANA_MAX = 255;
+const phys2raw = (v, mn, mx) => Math.max(0, Math.min(ANA_MAX, Math.round((v - mn) / (mx - mn) * ANA_MAX)));
+const raw2phys = (r, mn, mx) => mn + (r / ANA_MAX) * (mx - mn);
+const fmtPhys = (v, unit, dec) => (dec ? v.toFixed(dec) : Math.round(v)) + (unit ? ' ' + unit : '');
+
+/* Fabrique de capteurs : mesure + seuil, tous bâtis sur le même moule */
+function defSensor(id, o){
+  return defComp(id, {
+    name:o.name, short:o.short, family:'sense', color:'#38e1ff', glyph:o.glyph,
+    w:o.w || 116, h:96, ins:[], outs:[{ n:'MES', bus:true }, { n:o.seuilPin || '>' }],
+    opts:[
+      { k:'val', label:'Mesure (' + o.unit + ')', min:o.min, max:o.max, step:o.step || 1, def:o.def,
+        hint:'La grandeur que « voit » le capteur. Fais-la varier pour tester ton circuit.' },
+      { k:'seuil', label:'Seuil de basculement (' + o.unit + ')', min:o.min, max:o.max, step:o.step || 1, def:o.seuil,
+        hint:'La sortie booléenne passe à 1 au-dessus de ce seuil.' }
+    ],
+    eval(c){
+      const v = optOf(c, 'val'), s = optOf(c, 'seuil');
+      c.raw = phys2raw(v, o.min, o.max);
+      c.outPins[0].state = c.raw;
+      c.outPins[1].state = v >= s ? 1 : 0;
+    },
+    click(c){                       // clic : balaye l'échelle par dixièmes
+      const step = (o.max - o.min) / 10;
+      let v = optOf(c, 'val') + step;
+      if (v > o.max) v = o.min;
+      c.opt.val = Math.round(v * 10) / 10;
+    },
+    value:c => fmtPhys(optOf(c, 'val'), o.unit, o.step && o.step < 1 ? 1 : 0),
+    sub:c => 'seuil ' + fmtPhys(optOf(c, 'seuil'), o.unit, 0) + (c.outPins[1].state ? ' ✓' : ''),
+    bar:c => (optOf(c, 'val') - o.min) / (o.max - o.min),
+    tip:c => ['Mesure : ' + fmtPhys(optOf(c, 'val'), o.unit, 1) + '  →  valeur brute ' + c.raw + ' / 255',
+              'Seuil : ' + fmtPhys(optOf(c, 'seuil'), o.unit, 0) + (c.outPins[1].state ? ' — dépassé' : ' — non atteint'),
+              'Clic : balaye l’échelle · double-clic : valeur exacte'],
+    expr:(c, i, A) => i === 0 ? 'mesure(' + o.short + ')' : 'seuil(' + o.short + ')',
+    guide:o.guide
+  });
+}
+defSensor('POT', { name:'POTENTIOMÈTRE', short:'POTAR', glyph:'◑', unit:'%', min:0, max:100, def:50, seuil:50,
+  guide:{ txt:'Le réglage manuel de base : un curseur de 0 à 100 % qui sort une <code>valeur</code> sur le bus. Rien de plus simple, et pourtant c’est l’entrée analogique la plus utilisée du monde.',
+    ex:'POTAR → JAUGE : tourne le bouton et regarde l’aiguille suivre. Puis POTAR → CAN : les 8 bits apparaissent.',
+    real:'Volume d’un ampli, manette de jeu, pédale d’accélérateur électrique : tous des potentiomètres, lus par un convertisseur.' }});
+defSensor('LDR', { name:'CAPTEUR DE LUMIÈRE', short:'LUMIÈRE', glyph:'☀', unit:'lux', min:0, max:1000, def:400, seuil:200,
+  guide:{ txt:'Il mesure l’éclairement en <code>lux</code>. Sa sortie booléenne s’allume au-dessus du seuil : c’est un interrupteur crépusculaire réglable.',
+    ex:'LUMIÈRE (seuil bas) → NON → lampadaire : l’éclairage public s’allume quand la nuit tombe.',
+    real:'Une photorésistance vaut quelques centaines d’ohms en plein soleil et plusieurs mégohms dans le noir. C’est cette variation que le circuit convertit en nombre.' }});
+defSensor('TEMPC', { name:'CAPTEUR DE TEMPÉRATURE', short:'TEMP.', glyph:'🌡', unit:'°C', min:-10, max:50, def:20, seuil:25,
+  guide:{ txt:'La température ambiante, de −10 à 50 °C. La sortie <code>MES</code> donne la valeur, la sortie booléenne dit « il fait plus chaud que la consigne ».',
+    ex:'TEMP. → THERMOSTAT → VENTILATEUR : la climatisation la plus simple du monde.',
+    real:'Un capteur ne « sait » pas ce qu’est un degré : il fournit une tension, et c’est l’étalonnage — la correspondance choisie par l’ingénieur — qui la transforme en température.' }});
+defSensor('DIST', { name:'CAPTEUR DE DISTANCE', short:'DISTANCE', glyph:'⇥', unit:'cm', min:0, max:400, def:120, seuil:60,
+  guide:{ txt:'Un télémètre à ultrasons : il mesure la distance de l’obstacle le plus proche, de 0 à 400 cm. Attention à la logique : ici, un obstacle <b>proche</b> donne une <b>petite</b> valeur.',
+    ex:'DISTANCE → seuil → NON → sirène de recul : l’alarme se déclenche quand l’obstacle passe SOUS le seuil.',
+    real:'Le capteur envoie une salve d’ultrasons et chronomètre l’écho. Le son parcourant 34 cm par milliseconde, mesurer une distance revient à mesurer un temps.' }});
+defSensor('HUM', { name:'CAPTEUR D’HUMIDITÉ', short:'HUMIDITÉ', glyph:'💧', unit:'%', min:0, max:100, def:45, seuil:70,
+  guide:{ txt:'L’humidité relative de l’air, de 0 à 100 %. Indispensable dès qu’on parle de serre, de cave ou de ventilation.',
+    ex:'HUMIDITÉ (seuil 70 %) → VENTILATEUR, avec un TON de 5 s : la VMC ne se déclenche que si l’humidité dure.' }});
+defSensor('NIV', { name:'CAPTEUR DE NIVEAU', short:'NIVEAU', glyph:'▤', unit:'%', min:0, max:100, def:30, seuil:80,
+  guide:{ txt:'Le niveau de remplissage d’une cuve. Sa sortie booléenne signale le dépassement du seuil — le classique « niveau haut ».',
+    ex:'Deux capteurs de niveau (un bas, un haut) + une MÉMOIRE SR + une POMPE : le remplissage automatique avec hystérésis, sans pompage nerveux.' }});
+defSensor('PRESS', { name:'CAPTEUR DE PRESSION', short:'PRESSION', glyph:'◉', unit:'bar', min:0, max:10, def:3, seuil:6, step:0.1,
+  guide:{ txt:'La pression d’un circuit hydraulique ou pneumatique, de 0 à 10 bar. Au-delà du seuil, la sortie booléenne alerte.',
+    ex:'PRESSION → seuil → ÉLECTROVANNE de décharge : la sécurité pression d’un compresseur.' }});
+defSensor('MIC', { name:'CAPTEUR SONORE', short:'SON', glyph:'🎤', unit:'dB', min:0, max:120, def:40, seuil:85,
+  guide:{ txt:'Le niveau sonore en décibels. Au-dessus du seuil, la sortie bascule : détecteur de bruit, applaudissements, alarme de chantier.',
+    ex:'SON (seuil 85 dB) → IMPULSION → BASCULE D rebouclée : un interrupteur qui s’allume et s’éteint en tapant dans les mains.' }});
+
+defComp('PIR', {
+  name:'DÉTECTEUR DE PRÉSENCE', short:'PRÉSENCE', family:'sense', color:'#38e1ff', glyph:'👁',
+  w:100, h:82, ins:[], outs:[{ n:'DET' }],
+  init(c){ c.det = 0; },
+  save:c => ({ det: c.det || undefined }),
+  restore(c, s){ if (s.det) c.det = 1; },
+  eval(c){ c.outPins[0].state = c.det; },
+  click(c){ c.det = c.det ? 0 : 1; },
+  value:c => c.det ? 'PRÉSENCE' : 'vide',
+  sub:() => 'clic pour simuler',
+  tip:c => [c.det ? 'Quelqu’un est détecté' : 'Zone vide', 'Clic : faire passer quelqu’un'],
+  guide:{ txt:'Un détecteur de mouvement infrarouge : sa sortie passe à 1 quand quelqu’un est dans la zone. Clique dessus pour simuler un passage.',
+    ex:'PRÉSENCE → TOF (30 s) → lampe : l’éclairage de couloir qui s’allume au passage et s’éteint tout seul.',
+    real:'Un capteur PIR ne « voit » pas la chaleur : il voit la <b>variation</b> de chaleur. Immobile, on devient invisible pour lui — d’où les lumières qui s’éteignent quand on ne bouge plus.' }
+});
+defComp('FDC', {
+  name:'CAPTEUR FIN DE COURSE', short:'FIN COURSE', family:'sense', color:'#38e1ff', glyph:'⊣',
+  w:100, h:78, ins:[], outs:[{ n:'S' }],
+  init(c){ c.on2 = 0; },
+  save:c => ({ det: c.on2 || undefined }),
+  restore(c, s){ if (s.det) c.on2 = 1; },
+  eval(c){ c.outPins[0].state = c.on2; },
+  click(c){ c.on2 = c.on2 ? 0 : 1; },
+  value:c => c.on2 ? 'ACTIONNÉ' : 'libre',
+  tip:c => [c.on2 ? 'Contact actionné' : 'Contact au repos', 'Clic : actionner'],
+  guide:{ txt:'Un contact mécanique actionné par la pièce elle-même quand elle arrive en butée. C’est l’œil le plus fiable d’un automate : il ne dit pas « je crois », il dit « c’est arrivé ».',
+    ex:'FIN DE COURSE → R d’une MÉMOIRE SR qui commande un moteur : la machine s’arrête exactement au bon endroit, sans compter le temps.' }
+});
+
+/* ---------- Conversion analogique ↔ numérique ---------- */
+defComp('CAN', {
+  name:'CONVERTISSEUR ANALOGIQUE → 8 BITS', short:'CAN', family:'reg', color:'#b18cff', cost:16,
+  glyph:'A→D', w:118, h:200, ins:[{ n:'A', bus:true }],
+  outs:[{n:'128'},{n:'64'},{n:'32'},{n:'16'},{n:'8'},{n:'4'},{n:'2'},{n:'1'}],
+  eval(c){
+    const v = Math.max(0, Math.min(255, c.inPins[0].state | 0));
+    c.raw = v;
+    c.outPins.forEach((p, i) => p.state = (v >> (7 - i)) & 1);
+  },
+  value:c => String(c.raw || 0),
+  sub:c => '0b' + (c.raw || 0).toString(2).padStart(8, '0'),
+  guide:{ txt:'Le pont entre les deux mondes : il découpe une valeur continue en <code>8 bits</code> que la logique sait manipuler. 256 marches pour représenter toute l’échelle du capteur.',
+    ex:'TEMP. → CAN → AFFICHEUR OCTET, puis branche les bits sur des portes : tu peux enfin comparer, masquer, décaler une grandeur physique.',
+    real:'Toute mesure entrant dans un ordinateur passe par là. « 8 bits », « 12 bits », « 24 bits » : c’est la finesse des marches — et ce qui sépare un thermomètre d’une carte son.' }
+});
+defComp('CNA', {
+  name:'CONVERTISSEUR 8 BITS → ANALOGIQUE', short:'CNA', family:'reg', color:'#b18cff', cost:16,
+  glyph:'D→A', w:118, h:200,
+  ins:[{n:'128'},{n:'64'},{n:'32'},{n:'16'},{n:'8'},{n:'4'},{n:'2'},{n:'1'}],
+  outs:[{ n:'A', bus:true }],
+  eval(c){
+    const v = c.inPins.reduce((a, p, i) => a + (p.state ? (128 >> i) : 0), 0);
+    c.raw = v;
+    c.outPins[0].state = v;
+  },
+  value:c => String(c.raw || 0),
+  sub:() => '8 bits → valeur',
+  guide:{ txt:'L’opération inverse : huit bits deviennent une <code>valeur continue</code> que les actionneurs analogiques savent suivre.',
+    ex:'COMPTEUR 4 BITS → CNA → SERVOMOTEUR : le bras se déplace par crans réguliers. Un balayage automatique.',
+    real:'C’est ce que fait ta carte son des milliers de fois par seconde pour reconstruire une onde sonore à partir de nombres.' }
+});
+
+/* ---------- Régulation ---------- */
+defComp('PWM', {
+  name:'MODULATEUR PWM', short:'PWM', family:'reg', color:'#ffc23d', cost:12, seq:true,
+  glyph:'⊓⊔', w:116, h:88,
+  ins:[{ n:'VAL', bus:true }, { n:'EN' }], outs:[{ n:'S' }],
+  opts:[{ k:'hz', label:'Fréquence (Hz)', min:0.2, max:20, step:0.1, def:2,
+    hint:'Nombre de cycles par seconde. En vrai on monte à plusieurs kHz — ici on ralentit pour voir.' }],
+  eval(c){
+    const en = c.inPins[1].state ? 1 : 0;
+    const duty = Math.max(0, Math.min(255, c.inPins[0].state | 0)) / 255;
+    c.duty = duty;
+    const p = 1000 / optOf(c, 'hz');
+    c.outPins[0].state = (en && duty > 0 && ((Date.now() % p) / p) < duty) ? 1 : 0;
+  },
+  value:c => Math.round((c.duty || 0) * 100) + ' %',
+  sub:c => optOf(c, 'hz') + ' Hz',
+  bar:c => c.duty || 0,
+  tip:c => ['Rapport cyclique : ' + Math.round((c.duty || 0) * 100) + ' %',
+            'La sortie est tout ou rien — c’est la MOYENNE qui varie'],
+  guide:{ txt:'Comment faire varier une puissance avec un signal qui ne connaît que 0 et 1 ? En jouant sur la <code>proportion de temps</code> passée à 1. À 25 %, le moteur reçoit un quart de la puissance : il tourne lentement, sans jamais être alimenté « à moitié ».',
+    ex:'POTAR → PWM → MOTEUR : la vitesse suit le bouton. Baisse la fréquence à 0,5 Hz pour voir les impulsions une à une.',
+    real:'Variateurs de lumière, vitesse des ventilateurs, chargeurs, servomoteurs : la modulation de largeur d’impulsion est partout, parce qu’un transistor tout ou rien ne chauffe presque pas — contrairement à un montage qui « freine » le courant.' }
+});
+defComp('THERMO', {
+  name:'THERMOSTAT À HYSTÉRÉSIS', short:'THERMOST.', family:'reg', color:'#ffc23d', cost:10, seq:true,
+  glyph:'⇅', w:120, h:92,
+  ins:[{ n:'MES', bus:true }], outs:[{ n:'CDE' }],
+  opts:[
+    { k:'cons', label:'Consigne (0-255)', min:0, max:255, step:1, def:128,
+      hint:'La valeur à maintenir.' },
+    { k:'hyst', label:'Hystérésis (±)', min:1, max:60, step:1, def:12,
+      hint:'Zone morte autour de la consigne : elle évite que la commande claque sans arrêt.' },
+    { k:'sens', label:'Action', type:'select', def:'chauf',
+      choices:[['chauf','Chauffer (sous la consigne)'],['refr','Refroidir (au-dessus)']] }
+  ],
+  init(c){ c.q = 0; },
+  eval(c){
+    const v = c.inPins[0].state | 0, s = optOf(c, 'cons'), h = optOf(c, 'hyst');
+    if (optOf(c, 'sens') === 'chauf'){
+      if (v < s - h) c.q = 1;
+      else if (v > s + h) c.q = 0;
+    } else {
+      if (v > s + h) c.q = 1;
+      else if (v < s - h) c.q = 0;
+    }
+    c.mes = v;
+    c.outPins[0].state = c.q;
+  },
+  value:c => (c.mes || 0) + ' → ' + optOf(c, 'cons'),
+  sub:c => c.q ? (optOf(c, 'sens') === 'chauf' ? 'chauffe' : 'refroidit') : 'repos',
+  bar:c => (c.mes || 0) / 255,
+  tip:c => ['Consigne ' + optOf(c, 'cons') + ' ± ' + optOf(c, 'hyst'),
+            'Mesure ' + (c.mes || 0) + ' → commande ' + (c.q ? 'ACTIVE' : 'arrêtée')],
+  guide:{ txt:'Il compare une mesure à une <code>consigne</code> et commande le chauffage (ou le refroidissement). Le secret est l’<b>hystérésis</b> : il ne coupe pas dès que la consigne est atteinte, mais un peu au-dessus, et ne relance qu’un peu en dessous. Sans elle, la commande claquerait plusieurs fois par seconde.',
+    ex:'FOUR → THERMOSTAT → entrée CHAUFFE du four : la boucle est fermée, la température oscille autour de la consigne. Réduis l’hystérésis à 1 et observe le claquement.',
+    real:'Ce va-et-vient contrôlé s’appelle une régulation « tout ou rien ». C’est celle de ton chauffe-eau, de ton réfrigérateur et de ton fer à repasser.' }
+});
+defComp('SCHMITT', {
+  name:'COMPARATEUR À HYSTÉRÉSIS', short:'SCHMITT', family:'reg', color:'#ffc23d', cost:6,
+  glyph:'⎍', w:116, h:88,
+  ins:[{ n:'A', bus:true }], outs:[{ n:'S' }],
+  opts:[
+    { k:'haut', label:'Seuil haut', min:1, max:255, step:1, def:170 },
+    { k:'bas',  label:'Seuil bas',  min:0, max:254, step:1, def:85,
+      hint:'Le signal doit repasser SOUS ce seuil pour que la sortie retombe.' }
+  ],
+  init(c){ c.q = 0; },
+  eval(c){
+    const v = c.inPins[0].state | 0;
+    if (v >= optOf(c, 'haut')) c.q = 1;
+    else if (v <= optOf(c, 'bas')) c.q = 0;
+    c.mes = v;
+    c.outPins[0].state = c.q;
+  },
+  value:c => String(c.mes || 0),
+  sub:c => optOf(c, 'bas') + ' / ' + optOf(c, 'haut'),
+  bar:c => (c.mes || 0) / 255,
+  guide:{ txt:'Un comparateur avec <code>deux seuils</code> : il bascule à 1 en franchissant le seuil haut, et ne retombe qu’en repassant sous le seuil bas. Entre les deux, il ne change pas d’avis — c’est ce qui le rend insensible au bruit.',
+    ex:'BRUIT → SCHMITT : compare la sortie avec un comparateur à seuil unique. Le second hésite en permanence, le Schmitt reste net.',
+    real:'Inventé par Otto Schmitt en observant… les nerfs du calmar. C’est le composant qui transforme un signal sale en signal logique propre, à l’entrée de presque toutes les cartes électroniques.' }
+});
+defComp('LIMIT', {
+  name:'LIMITEUR', short:'LIMITEUR', family:'reg', color:'#ffc23d', cost:6,
+  glyph:'⊏⊐', w:112, h:84,
+  ins:[{ n:'A', bus:true }], outs:[{ n:'S', bus:true }],
+  opts:[
+    { k:'min', label:'Minimum', min:0, max:255, step:1, def:0 },
+    { k:'max', label:'Maximum', min:0, max:255, step:1, def:200 }
+  ],
+  eval(c){
+    const v = c.inPins[0].state | 0;
+    c.out = Math.max(optOf(c, 'min'), Math.min(optOf(c, 'max'), v));
+    c.outPins[0].state = c.out;
+  },
+  value:c => String(c.out || 0),
+  sub:c => optOf(c, 'min') + ' … ' + optOf(c, 'max'),
+  guide:{ txt:'Il écrête la valeur qui le traverse entre un minimum et un maximum. Une sécurité bête et efficace : quoi qu’il arrive en amont, l’actionneur ne recevra jamais plus que ce qu’il peut encaisser.',
+    ex:'POTAR → LIMITEUR (max 120) → PWM → MOTEUR : impossible de dépasser la mi-puissance, même en poussant le bouton à fond.' }
+});
+defComp('RAMPE', {
+  name:'RAMPE / DÉMARRAGE PROGRESSIF', short:'RAMPE', family:'reg', color:'#ffc23d', cost:12, seq:true,
+  glyph:'◺', w:120, h:92,
+  ins:[{ n:'CIB', bus:true }], outs:[{ n:'S', bus:true }],
+  opts:[{ k:'vit', label:'Pente (unités/s)', min:5, max:255, step:5, def:60,
+    hint:'Vitesse maximale de variation de la sortie.' }],
+  init(c){ c.val = 0; c.lastT = 0; },
+  eval(c){ c.cible = c.inPins[0].state | 0; c.outPins[0].state = Math.round(c.val); },
+  commit(c){
+    const now = Date.now(), dt = c.lastT ? Math.min(200, now - c.lastT) : 0;
+    c.lastT = now;
+    const step = optOf(c, 'vit') * dt / 1000;
+    if (c.val < c.cible) c.val = Math.min(c.cible, c.val + step);
+    else if (c.val > c.cible) c.val = Math.max(c.cible, c.val - step);
+  },
+  value:c => String(Math.round(c.val || 0)),
+  sub:c => '→ ' + (c.cible || 0),
+  bar:c => (c.val || 0) / 255,
+  guide:{ txt:'La sortie rejoint la valeur demandée <code>en douceur</code>, à pente limitée, au lieu de sauter d’un coup. C’est le démarrage progressif — et l’arrêt progressif.',
+    ex:'INTERRUPTEUR → VRAI·1 → RAMPE → PWM → MOTEUR : le moteur monte en régime au lieu de démarrer d’un coup.',
+    real:'Un démarrage brutal, c’est un pic de courant, une courroie qui glisse et une mécanique qui souffre. Les ascenseurs, les tapis roulants et les trains démarrent tous en rampe — pour la mécanique autant que pour le confort.' }
+});
+defComp('PROP', {
+  name:'RÉGULATEUR PROPORTIONNEL', short:'RÉG. P', family:'reg', color:'#ffc23d', cost:20, seq:true,
+  glyph:'∝', w:124, h:96,
+  ins:[{ n:'MES', bus:true }], outs:[{ n:'CDE', bus:true }],
+  opts:[
+    { k:'cons', label:'Consigne (0-255)', min:0, max:255, step:1, def:150 },
+    { k:'gain', label:'Gain', min:0.2, max:10, step:0.2, def:3,
+      hint:'Plus le gain est fort, plus la correction est vive — et plus le système risque d’osciller.' }
+  ],
+  eval(c){
+    const v = c.inPins[0].state | 0, s = optOf(c, 'cons');
+    c.err = s - v;
+    c.cmd = Math.max(0, Math.min(255, Math.round(c.err * optOf(c, 'gain'))));
+    c.outPins[0].state = c.cmd;
+  },
+  value:c => String(c.cmd || 0),
+  sub:c => 'écart ' + (c.err > 0 ? '+' : '') + (c.err || 0),
+  bar:c => (c.cmd || 0) / 255,
+  tip:c => ['Consigne ' + optOf(c, 'cons') + ' · mesure ' + ((optOf(c, 'cons') - (c.err || 0)) | 0),
+            'Commande = écart × gain ' + optOf(c, 'gain')],
+  guide:{ txt:'Au lieu de commander en tout ou rien, il <code>dose</code> : plus l’écart à la consigne est grand, plus la commande est forte. Le résultat est bien plus doux qu’un thermostat — mais il subsiste toujours un petit écart résiduel, que seuls les termes I et D d’un vrai PID savent effacer.',
+    ex:'FOUR → RÉG. P → PWM → entrée CHAUFFE : compare avec le thermostat. La température ne fait plus de dents de scie. Monte le gain à 10 : elle se met à osciller.',
+    real:'Le proportionnel est la première brique du fameux PID, qui pilote aujourd’hui les fours, les drones, les fusées et la vitesse de ta voiture.' }
+});
+
+/* ---------- Procédés : le monde réagit à la commande ---------- */
+defComp('FOUR', {
+  name:'FOUR (PROCÉDÉ THERMIQUE)', short:'FOUR', family:'act', color:'#ff6bc1', seq:true,
+  glyph:'🔥', w:132, h:104,
+  ins:[{ n:'CHF', bus:true }], outs:[{ n:'T°', bus:true }, { n:'CHAUD' }],
+  opts:[
+    { k:'inert', label:'Inertie (s)', min:1, max:60, step:1, def:8,
+      hint:'Temps de réaction du procédé : plus il est grand, plus la régulation est difficile.' },
+    { k:'alerte', label:'Seuil « chaud » (0-255)', min:0, max:255, step:5, def:200 }
+  ],
+  init(c){ c.temp = 0; c.lastT = 0; },
+  save:c => ({ temp: c.temp ? Math.round(c.temp) : undefined }),
+  restore(c, s){ if (s.temp != null) c.temp = s.temp; },
+  eval(c){
+    c.pwr = Math.max(0, Math.min(255, c.inPins[0].state | 0));
+    c.outPins[0].state = Math.round(c.temp);
+    c.outPins[1].state = c.temp >= optOf(c, 'alerte') ? 1 : 0;
+  },
+  commit(c){
+    const now = Date.now(), dt = c.lastT ? Math.min(200, now - c.lastT) : 0;
+    c.lastT = now;
+    const tau = optOf(c, 'inert') * 1000;
+    c.temp += (c.pwr - c.temp) * Math.min(1, dt / tau);   // premier ordre
+  },
+  value:c => Math.round(raw2phys(c.temp || 0, 0, 250)) + ' °C',
+  sub:c => c.pwr ? 'chauffe ' + Math.round(c.pwr / 2.55) + ' %' : 'refroidit',
+  bar:c => (c.temp || 0) / 255,
+  tip:c => ['Température : ' + Math.round(raw2phys(c.temp || 0, 0, 250)) + ' °C (brut ' + Math.round(c.temp || 0) + ')',
+            'Puissance reçue : ' + Math.round((c.pwr || 0) / 2.55) + ' %',
+            'Inertie : ' + optOf(c, 'inert') + ' s'],
+  guide:{ txt:'Un vrai <b>procédé</b> : il reçoit une puissance de chauffe et sa température monte <code>lentement</code>, avec de l’inertie, puis redescend toute seule quand on coupe. Il mesure lui-même sa température et la renvoie sur <code>T°</code>.<br>C’est la pièce qui manquait pour boucler : logique → actionneur → <b>monde</b> → capteur → logique.',
+    ex:'FOUR → THERMOSTAT → FOUR : ta première boucle fermée. Regarde la température osciller autour de la consigne, puis remplace le thermostat par un RÉG. P et compare.',
+    real:'L’inertie est l’ennemie de tout automaticien : quand on constate que c’est trop chaud, la chaleur est déjà partie. C’est pourquoi les bons régulateurs anticipent au lieu de réagir.' }
+});
+defComp('CUVE', {
+  name:'CUVE (PROCÉDÉ HYDRAULIQUE)', short:'CUVE', family:'act', color:'#5aa2ff', seq:true,
+  glyph:'🛢', w:126, h:132,
+  ins:[{ n:'REMP' }, { n:'VID' }], outs:[{ n:'NIV', bus:true }, { n:'HAUT' }, { n:'BAS' }],
+  opts:[
+    { k:'debit', label:'Débit (%/s)', min:2, max:100, step:2, def:20 },
+    { k:'haut', label:'Seuil haut (%)', min:10, max:100, step:5, def:90 },
+    { k:'bas', label:'Seuil bas (%)', min:0, max:90, step:5, def:10 }
+  ],
+  init(c){ c.niv = 30; c.lastT = 0; },
+  save:c => ({ niv: Math.round(c.niv) }),
+  restore(c, s){ if (s.niv != null) c.niv = s.niv; },
+  eval(c){
+    c.fill = c.inPins[0].state ? 1 : 0; c.drain = c.inPins[1].state ? 1 : 0;
+    c.outPins[0].state = Math.round(c.niv * 2.55);
+    c.outPins[1].state = c.niv >= optOf(c, 'haut') ? 1 : 0;
+    c.outPins[2].state = c.niv <= optOf(c, 'bas') ? 1 : 0;
+  },
+  commit(c){
+    const now = Date.now(), dt = c.lastT ? Math.min(200, now - c.lastT) : 0;
+    c.lastT = now;
+    const d = optOf(c, 'debit') * dt / 1000;
+    if (c.fill && !c.drain) c.niv = Math.min(100, c.niv + d);
+    else if (c.drain && !c.fill) c.niv = Math.max(0, c.niv - d);
+  },
+  tip:c => ['Niveau : ' + Math.round(c.niv) + ' %',
+            'Seuils : bas ' + optOf(c, 'bas') + ' % · haut ' + optOf(c, 'haut') + ' %'],
+  body(c, x, col, on, hov, t){
+    const w = c.w - 52, h = c.h - 34, x0 = c.x + 26, y0 = c.y + 16;
+    x.beginPath(); x.roundRect(x0, y0, w, h, 6);
+    x.fillStyle = 'rgba(255,255,255,.04)'; x.fill();
+    x.lineWidth = 1.4; x.strokeStyle = 'rgba(255,255,255,.22)'; x.stroke();
+    const lv = Math.max(0, Math.min(100, c.niv)) / 100;
+    const hh = (h - 6) * lv;
+    x.beginPath(); x.roundRect(x0 + 3, y0 + h - 3 - hh, w - 6, hh, 4);
+    x.fillStyle = 'rgba(90,162,255,.5)'; x.fill();
+    // ondulation de surface
+    if (c.fill || c.drain){
+      x.beginPath();
+      const sy = y0 + h - 3 - hh;
+      x.moveTo(x0 + 3, sy);
+      for (let i = 0; i <= w - 6; i += 4)
+        x.lineTo(x0 + 3 + i, sy + Math.sin((i + (t || 0) * 0.06) * .25) * 1.6);
+      x.lineWidth = 1.4; x.strokeStyle = '#9ec8ff'; x.stroke();
+    }
+    [['haut', c.outPins[1].state], ['bas', c.outPins[2].state]].forEach(([k, act], i) => {
+      const yy = y0 + h - 3 - (h - 6) * (optOf(c, k) / 100);
+      x.beginPath(); x.moveTo(x0 - 4, yy); x.lineTo(x0 + w + 4, yy);
+      x.lineWidth = 1; x.strokeStyle = act ? PAL.pinOn : 'rgba(255,255,255,.18)';
+      x.setLineDash([3, 3]); x.stroke(); x.setLineDash([]);
+    });
+    x.font = "700 11px 'Chakra Petch', sans-serif"; x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.fillStyle = col;
+    x.fillText(Math.round(c.niv) + ' %', c.x + c.w / 2, c.y + c.h - 10);
+  },
+  guide:{ txt:'Une cuve qui se remplit et se vide vraiment, avec son <code>niveau</code> sur un bus et ses deux détecteurs de seuil <b>haut</b> et <b>bas</b>. Les deux commandes ensemble s’annulent.',
+    ex:'HAUT → R et BAS → S d’une MÉMOIRE SR, sortie → REMP : le remplissage automatique classique. La pompe démarre au niveau bas et s’arrête au niveau haut, jamais entre les deux.',
+    real:'Pourquoi deux seuils et pas un ? Avec un seul, la pompe démarrerait et s’arrêterait plusieurs fois par seconde autour du point de consigne. Cet écart volontaire s’appelle l’hystérésis — et il use dix fois moins la pompe.' }
+});
+
+/* ---------- Sorties analogiques ---------- */
+defComp('JAUGE', {
+  name:'JAUGE À AIGUILLE', short:'JAUGE', family:'out', color:'#3dff9e',
+  glyph:'◔', w:118, h:104, ins:[{ n:'A', bus:true }], outs:[],
+  opts:[
+    { k:'unit', label:'Unité affichée', type:'text', max:6, def:'%' },
+    { k:'ech', label:'Valeur en pleine échelle', min:1, max:1000, step:1, def:100 }
+  ],
+  eval(c){ c.raw = Math.max(0, Math.min(255, c.inPins[0].state | 0)); },
+  tip:c => ['Valeur brute : ' + (c.raw || 0) + ' / 255'],
+  body(c, x, col, on, hov, t){
+    const cx = c.x + c.w / 2, cy = c.y + c.h - 26, r = 32;
+    x.beginPath(); x.arc(cx, cy, r, Math.PI, 0); x.lineWidth = 2;
+    x.strokeStyle = 'rgba(255,255,255,.14)'; x.stroke();
+    for (let i = 0; i <= 10; i++){
+      const a = Math.PI + i * Math.PI / 10;
+      x.beginPath();
+      x.moveTo(cx + Math.cos(a) * (r - 5), cy + Math.sin(a) * (r - 5));
+      x.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+      x.lineWidth = 1; x.strokeStyle = 'rgba(255,255,255,.25)'; x.stroke();
+    }
+    const f = (c.raw || 0) / 255, a = Math.PI + f * Math.PI;
+    x.beginPath(); x.moveTo(cx, cy);
+    x.lineTo(cx + Math.cos(a) * (r - 4), cy + Math.sin(a) * (r - 4));
+    x.lineWidth = 2.6; x.strokeStyle = col; x.lineCap = 'round';
+    x.shadowBlur = 8; x.shadowColor = col; x.stroke(); x.shadowBlur = 0;
+    x.beginPath(); x.arc(cx, cy, 3, 0, 7); x.fillStyle = col; x.fill();
+    const val = Math.round(f * optOf(c, 'ech'));
+    x.font = "700 13px 'Chakra Petch', sans-serif"; x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.fillStyle = col;
+    x.fillText(val + ' ' + (optOf(c, 'unit') || ''), cx, c.y + 20);
+  },
+  guide:{ txt:'Elle affiche une valeur de bus sous forme d’aiguille, avec l’<code>unité</code> et la <code>pleine échelle</code> de ton choix. Le moyen le plus rapide de voir ce que transporte vraiment un bus.',
+    ex:'POTAR → JAUGE réglée sur 400 cm : tu as reconstitué l’affichage d’un télémètre.' }
+});
+defComp('SERVO', {
+  name:'SERVOMOTEUR', short:'SERVO', family:'act', color:'#3dff9e',
+  glyph:'⟀', w:122, h:104, ins:[{ n:'POS', bus:true }], outs:[],
+  init(c){ c.ang = 0; c.lastT = 0; },
+  eval(c){ c.cible = Math.max(0, Math.min(255, c.inPins[0].state | 0)) / 255 * Math.PI; },
+  commit(c){
+    const now = Date.now(), dt = c.lastT ? Math.min(200, now - c.lastT) : 0;
+    c.lastT = now;
+    const step = dt / 1000 * 3.2;                       // vitesse de rotation limitée
+    const d = (c.cible || 0) - c.ang;
+    c.ang += Math.abs(d) < step ? d : Math.sign(d) * step;
+  },
+  tip:c => ['Angle : ' + Math.round((c.ang || 0) * 180 / Math.PI) + '°'],
+  body(c, x, col, on, hov, t){
+    const cx = c.x + c.w / 2, cy = c.y + c.h - 28;
+    x.beginPath(); x.roundRect(cx - 16, cy - 6, 32, 22, 4);
+    x.fillStyle = 'rgba(255,255,255,.06)'; x.fill();
+    x.lineWidth = 1.3; x.strokeStyle = 'rgba(255,255,255,.22)'; x.stroke();
+    const a = Math.PI + (c.ang || 0);
+    x.beginPath(); x.moveTo(cx, cy);
+    x.lineTo(cx + Math.cos(a) * 34, cy + Math.sin(a) * 34);
+    x.lineWidth = 5; x.strokeStyle = col; x.lineCap = 'round';
+    x.shadowBlur = 10; x.shadowColor = col; x.stroke(); x.shadowBlur = 0;
+    x.beginPath(); x.arc(cx, cy, 4.5, 0, 7); x.fillStyle = '#0e1729'; x.fill();
+    x.lineWidth = 1.6; x.strokeStyle = col; x.stroke();
+    x.font = "600 9px 'IBM Plex Mono', monospace"; x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.fillStyle = PAL.dim;
+    x.fillText(Math.round((c.ang || 0) * 180 / Math.PI) + '°', cx, c.y + 16);
+  },
+  guide:{ txt:'Un bras qui se place à l’<code>angle demandé</code> (0 à 180°) et l’y maintient. Il ne tourne pas en continu : il vise une position et la tient.',
+    ex:'POTAR → SERVO : le bras suit le bouton. Puis COMPTEUR → CNA → SERVO : il balaye par crans réguliers.',
+    real:'Le servomoteur contient lui-même une boucle de régulation : un capteur d’angle, un comparateur avec la consigne, et un moteur qui corrige. C’est une régulation complète dans un boîtier de 3 cm.' }
 });
 /* @@COMPOSANTS@@ */
 registerComponents();
