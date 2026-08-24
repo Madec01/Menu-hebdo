@@ -768,6 +768,8 @@ let hoveredWire = null;          // fil survolé (poignées visibles)
 let draggedWp = null;            // {wire, idx} : poignée en cours de déplacement
 let touchHoldT = 0;              // minuterie d'appui long (tactile)
 let longPressed = false;         // l'appui long a agi : le relâchement ne doit rien faire
+let lodLevel = 2;                // 2 = détaillé · 1 = simplifié · 0 = blocs (selon le zoom)
+let focusSet = null;             // voisinage mis en évidence (survol d'un composant)
 let simulating = false;          // vérification en cours → pas d'audio buzzer
 let confetti = [];
 let uid = 1;
@@ -906,6 +908,13 @@ class Wire {
   }
   draw(c, t){
     const edit = (this === hoveredWire) || (draggedWp && draggedWp.wire === this);
+    if (lodLevel === 0){                       // vue de loin : trait simple, sans effets
+      c.beginPath(); this.buildPath(c);
+      c.lineWidth = 2; c.lineCap = 'round';
+      c.strokeStyle = this.state > 1 ? PAL.wireBus : (this.state ? PAL.wireOn : PAL.wireOff);
+      c.stroke();
+      return;
+    }
     c.beginPath(); this.buildPath(c);
     const bus = this.state > 1;                       // fil de bus : il transporte une valeur
     const col = bus ? PAL.wireBus : PAL.wireOn;
@@ -1328,9 +1337,31 @@ class Component {
   }
 
   /* ================= RENDU ================= */
+  /* Vue de loin : un bloc coloré, sans texte ni ombre. Le circuit reste
+     lisible d'un coup d'œil et le rendu ne s'effondre pas à 200 composants. */
+  drawSimple(c){
+    const col = GATE_STYLE[this.type].c, on = this.active;
+    c.beginPath(); c.roundRect(this.x, this.y, this.w, this.h, 8);
+    c.fillStyle = this.hexA(col, on ? .34 : .13); c.fill();
+    c.lineWidth = 1.4; c.strokeStyle = this.hexA(col, on ? .95 : .45); c.stroke();
+    if (this.locked){
+      c.lineWidth = 1; c.strokeStyle = 'rgba(255,194,61,.5)';
+      c.strokeRect(this.x - 3, this.y - 3, this.w + 6, this.h + 6);
+    }
+    if (lodLevel >= 1){
+      c.font = "600 9px 'IBM Plex Mono', monospace";
+      c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillStyle = this.hexA(col, .95);
+      c.fillText(this.customLabel || SHORT[this.type] || this.type, this.x + this.w / 2, this.y + this.h / 2);
+      c.fillStyle = PAL.pinOn;
+      this.inPins.forEach(p => { if (p.state){ c.beginPath(); c.arc(p.x, p.y, 2.6, 0, 7); c.fill(); } });
+      this.outPins.forEach(p => { if (p.state){ c.beginPath(); c.arc(p.x, p.y, 2.6, 0, 7); c.fill(); } });
+    }
+  }
   draw(c, t){
     const st = GATE_STYLE[this.type], col = st.c;
     const hov = (this === hoveredComp && !dragged) || this === dragged;
+    if (lodLevel < 2 && !hov){ this.drawSimple(c); return; }
 
     if (GATE_TYPES.includes(this.type)) this.drawGate(c, col, hov);
     else this.drawDevice(c, col, hov, t);
@@ -7111,7 +7142,26 @@ function wireTipData(w){
             busTxt(w.state) + '</span>' +
             (w.wp.length ? ' <span class="td">· ' + w.wp.length + ' poignée(s)</span>' : '') ] };
 }
+/* Voisinage d'un composant : ce qui l'alimente et ce qu'il alimente,
+   à quelques sauts. Sert à estomper le reste quand le plan est chargé. */
+function neighbourhood(comp, depth){
+  const set = new Set([comp]);
+  let front = [comp];
+  for (let d = 0; d < depth; d++){
+    const next = [];
+    front.forEach(c => {
+      wires.forEach(w => {
+        if (w.inPin.comp === c && !set.has(w.outPin.comp)){ set.add(w.outPin.comp); next.push(w.outPin.comp); }
+        if (w.outPin.comp === c && !set.has(w.inPin.comp)){ set.add(w.inPin.comp); next.push(w.inPin.comp); }
+      });
+    });
+    front = next;
+    if (!front.length) break;
+  }
+  return set;
+}
 function hideTip(){
+  focusSet = null;
   clearTimeout(tipT); tipFor = null;
   if (tipShown){ document.getElementById('tipbox').classList.add('hidden'); tipShown = false; }
 }
@@ -7142,6 +7192,9 @@ function updateTip(){
 }
 function refreshTip(){
   if (!tipFor) return;
+  // Sur un plan chargé, survoler un composant met son voisinage en évidence
+  focusSet = (tipFor instanceof Component && components.length >= 10)
+    ? neighbourhood(tipFor, 3) : null;
   const data = tipFor instanceof Pin ? pinTipData(tipFor)
              : tipFor instanceof Wire ? wireTipData(tipFor)
              : compTipData(tipFor);
@@ -7182,6 +7235,7 @@ let buzzActive = false;
 /* Dessine la scène complète (grille, câbles, composants, sélection, confetti).
    Séparée de render() pour pouvoir produire une image hors boucle (export PNG). */
 function drawScene(t, opaque){
+  lodLevel = cam.z < .42 ? 0 : (cam.z < .62 ? 1 : 2);
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.clearRect(0, 0, W, H);
   if (opaque){
@@ -7211,7 +7265,12 @@ function drawScene(t, opaque){
 
   // Monde
   ctx.setTransform(DPR * cam.z, 0, 0, DPR * cam.z, DPR * cam.x, DPR * cam.y);
-  wires.forEach(w => w.draw(ctx, t));
+  const dim = a => { ctx.globalAlpha = focusSet && !a ? .26 : 1; };
+  wires.forEach(w => {
+    dim(!focusSet || (focusSet.has(w.outPin.comp) && focusSet.has(w.inPin.comp)));
+    w.draw(ctx, t);
+  });
+  ctx.globalAlpha = 1;
 
   if (wiring){
     ctx.beginPath();
@@ -7227,7 +7286,8 @@ function drawScene(t, opaque){
     ctx.stroke();
     ctx.setLineDash([]); ctx.shadowBlur = 0;
   }
-  components.forEach(c => c.draw(ctx, t));
+  components.forEach(c => { dim(!focusSet || focusSet.has(c)); c.draw(ctx, t); });
+  ctx.globalAlpha = 1;
   drawGhosts(ctx, t);
 
   // Sélection : liserés + rectangle élastique

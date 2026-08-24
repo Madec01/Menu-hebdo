@@ -1854,6 +1854,48 @@ T('T101 touche F : recadrage sur le circuit', () => {
   eq(cam.z, z, 'plan vide : la vue ne bouge pas');
 });
 
+T('T111 niveau de détail : le rendu se simplifie quand on dézoome', () => {
+  board();
+  for (let i = 0; i < 12; i++) mk('AND', (i % 4) * 200, Math.floor(i / 4) * 200);
+  cam.z = 1;    drawScene(0); eq(lodLevel, 2, 'zoom normal : rendu détaillé');
+  cam.z = .5;   drawScene(0); eq(lodLevel, 1, 'zoom moyen : rendu simplifié');
+  cam.z = .38;  drawScene(0); eq(lodLevel, 0, 'très dézoomé : blocs');
+  resetCam(); drawScene(0);
+  eq(lodLevel, 2, 'retour au détail');
+});
+
+T('T112 mise en évidence du voisinage au survol', () => {
+  board();
+  // chaîne de 12 composants : A -> g1 -> g2 -> ... pour que le voisinage soit partiel
+  const chain = [];
+  let prev = mk('SWITCH', 0, 0);
+  chain.push(prev);
+  for (let i = 0; i < 11; i++){
+    const g = mk('NOT', 200 + i * 160, 0);
+    link(prev, 0, g, 0);
+    chain.push(g); prev = g;
+  }
+  const set = neighbourhood(chain[5], 3);
+  ok(set.has(chain[5]), 'le composant survolé est dedans');
+  ok(set.has(chain[4]) && set.has(chain[6]), 'ses voisins directs aussi');
+  ok(set.has(chain[2]) && set.has(chain[8]), 'jusqu’à trois sauts');
+  ok(!set.has(chain[0]) && !set.has(chain[11]), 'mais pas tout le circuit');
+  // le survol l’active, la sortie l’efface
+  hoveredComp = chain[5]; tipFor = chain[5];
+  refreshTip();
+  ok(focusSet && focusSet.size === set.size, 'focus actif au survol');
+  drawScene(0);
+  hideTip();
+  eq(focusSet, null, 'focus effacé quand l’infobulle disparaît');
+  // circuit court : pas de mise en évidence, ce serait inutile
+  board();
+  const a = mk('SWITCH', 0, 0), g = mk('NOT', 200, 0);
+  link(a, 0, g, 0);
+  tipFor = a; refreshTip();
+  eq(focusSet, null, 'moins de 10 composants : aucun estompage');
+  hideTip();
+});
+
 /* ===================== 7. Guide ===================== */
 console.log('— Guide —');
 
