@@ -386,18 +386,37 @@ table.tab tr:hover td{background:rgba(255,255,255,.028)}
 .couleurMarque input{width:26px;height:22px;border:none;background:none;padding:0;cursor:pointer}
 .label{padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05);opacity:.62}
 .label:last-child{border-bottom:none}
-.label.enCours,.label.obtenu{opacity:1}
+.label.enCours,.label.obtenu,.label.pret{opacity:1}
 .labTete{display:flex;justify-content:space-between;align-items:baseline}
 .labNom{font-size:13px;font-weight:600;color:var(--texte-doux)}
 .labEtat{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--texte-faible)}
 .label.obtenu .labEtat{color:var(--vert)}
 .label.enCours .labEtat{color:var(--or)}
+.label.pret .labEtat{color:var(--or);font-weight:700}
 .labResume{font-size:11px;color:var(--texte-faible);line-height:1.4;margin:3px 0}
 .labCond{font-size:11px;color:var(--texte-doux);line-height:1.4}
 .label.obtenu .labCond{color:var(--vert)}
 .labGain{font-size:10.5px;color:var(--texte-faible);line-height:1.4;margin-top:4px;font-style:italic}
 .labLocal{display:flex;gap:7px;align-items:flex-start;font-size:11.5px;color:var(--texte-doux);
   margin-top:6px;cursor:pointer}
+.duoRayon canvas{display:block;margin:0 auto;width:200px;height:150px}
+.rayon{
+  position:relative;height:20px;border-radius:5px;background:#4a3a38;overflow:hidden;
+  margin:6px 0 4px;display:flex;align-items:center;
+}
+.rayon i{position:absolute;left:0;top:0;bottom:0;background:#3f6b45;border-radius:5px}
+.rayon span{position:relative;font-size:10.5px;font-weight:600;padding:0 7px}
+.rgVous{color:#b6e2bd}
+.rgEux{color:#e8b6b0;margin-left:auto}
+.compTete{display:flex;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--texte-faible);margin-top:8px}
+.compTete span:first-child{flex:1}
+.compTete span:not(:first-child){width:44px;text-align:right}
+.compRival{display:flex;font-size:12px;color:var(--texte-faible);padding:3px 0}
+.crNom{flex:1;color:var(--texte-doux)}
+.crNous,.crEux{width:44px;text-align:right;font-variant-numeric:tabular-nums}
+.compRival.devant .crNous{color:var(--vert);font-weight:600}
+.compRival:not(.devant) .crEux{color:var(--rouge);font-weight:600}
 
 /* ---------- La sortie d'une recette ---------- */
 .noteGeante{
@@ -682,7 +701,7 @@ const CONFIG = {
   arretChangementHuile: 45,    // minutes de jeu, friteuse à l'arrêt
   rebutMax: 0.5,
   sauvegarde: "cadence_save_v1",
-  version: 5
+  version: 6
 };
 
 // minutes de jeu écoulées par tick de simulation
@@ -1352,6 +1371,31 @@ const LABELS = [
   }
 ];
 
+/* ------------------------------------------------------------ Le concurrent
+   Une seule marque rivale, mais elle réagit : quand vous montez en gamme, elle
+   descend et inonde le volume ; quand vous bradez, elle passe au-dessus. C'est
+   ce qui fait qu'aucune semaine ne ressemble à la précédente. */
+const RIVAUX = [
+  { nom:"Croustil",      logo:"eclair",     c1:"#f0d44a", c2:"#2a2318", fond:"rouge",     motif:"eclats",  standing:26 },
+  { nom:"Maison Béarn",  logo:"blason",     c1:"#d8c27a", c2:"#33261a", fond:"nuit",      motif:"kraft",   standing:74 },
+  { nom:"Patatos",       logo:"soleil",     c1:"#ffd166", c2:"#3a2c14", fond:"orange",    motif:"rayures", standing:34 },
+  { nom:"Les Tuiles d'Or",logo:"etoile",    c1:"#e8c86a", c2:"#2b2f38", fond:"creme",     motif:"uni",     standing:66 },
+  { nom:"Vent du Nord",  logo:"moulin",     c1:"#bcd4dd", c2:"#25314a", fond:"turquoise", motif:"vagues",  standing:48 },
+  { nom:"Bec Fin",       logo:"epi",        c1:"#cfe08a", c2:"#2f4326", fond:"olive",     motif:"kraft",   standing:70 }
+];
+
+/* Ce qu'ils font quand on ne les regarde pas. Un fait par semaine, au plus. */
+const COUPS_RIVAL = [
+  { id:"prix",     texte:"casse les prix", part:0.05, standing:-4 },
+  { id:"pub",      texte:"passe à la radio", notoriete:6 },
+  { id:"recette",  texte:"sort une nouvelle recette", notoriete:4, part:0.04 },
+  { id:"linéaire", texte:"gagne du linéaire en grande surface", part:0.06 },
+  { id:"montee",   texte:"monte en gamme", standing:6 },
+  { id:"rappel",   texte:"rappelle un lot", confiance:-9, part:-0.06 },
+  { id:"greve",    texte:"a une grève dans son usine", part:-0.05 },
+  { id:"presse",   texte:"se fait éreinter dans la presse", notoriete:2, confiance:-6, part:-0.04 }
+];
+
 /* Ce que le public cherche en ce moment. Change de temps en temps. */
 const TENDANCES = [
   { tag:"piquant",   texte:"Les gens cherchent du relevé en ce moment." },
@@ -1602,6 +1646,7 @@ function nouvellePartie(nomEntreprise, modeChoisi){
     reputation: CONFIG.reputationDepart,     // c'est la « confiance » des trois jauges
     marque: marqueParDefaut(nomEntreprise),
     labels: { obtenus:[], suite:{}, local:false },
+    rival: creerRival(),
     recherche: { recettes:[], enCours:null, notoriete:0, tendance:0, tendanceSemaine:0, prochain:1 },
     progression: { age:1, objectifsCompletes:[], jaugeObjectif:0, vendus:{}, produits:{}, produitsSemaine:{}, compteurs:{} },
     stats: { historiqueSemaines:[], semaineCourante: semaineVierge(), clients:{} },
@@ -1659,6 +1704,14 @@ function cibleStanding(){
   c += bonusStandingLabels();
   return clamp(c, 0, 100);
 }
+/** Le concurrent démarre plus connu que vous : il était là avant. */
+function creerRival(){
+  const r = choix(RIVAUX);
+  return Object.assign({}, r, {
+    notoriete: 34, confiance: 62, part: 0.5, dernierCoup: null, semainesCoup: 0
+  });
+}
+
 function labelObtenu(id){ return !!etat.labels && etat.labels.obtenus.indexOf(id) >= 0; }
 function labelsObtenus(){ return LABELS.filter(l => labelObtenu(l.id)); }
 function bonusStandingLabels(){ return labelsObtenus().reduce((s,l) => s + (l.standing||0), 0); }
@@ -3545,7 +3598,8 @@ function vendreSurplus(){
     if (!ITEMS[id].vente) continue;
     const surplus = Math.floor(stockDe(id) - reserveContrats(id));
     if (surplus < 1) continue;
-    const prix = ITEMS[id].vente * 0.88 * surplus;
+    // Les commerces donnent le rayon à qui vend : notre part y pèse directement.
+    const prix = ITEMS[id].vente * 0.88 * surplus * (0.72 + partMarche() * 0.56);
     ajouterStock(id, -surplus);
     encaisser(prix, "vente");
     compter(etat.progression.vendus, id, surplus);
@@ -3575,16 +3629,71 @@ function finSemaine(){
   etat.progression.produitsSemaine = {};
   majLabels();
   majStanding(s);
+  majRival();
 
   // Nouvelles propositions de commande
   const produits = Object.keys(ITEMS).filter(id => ITEMS[id].vente && (ITEMS[id].ageMin||1) <= etat.meta.age);
   etat.contrats.proposes = [];
-  const n = etat.meta.age >= 2 ? 3 : 2;
+  // Moins on pèse, moins on nous propose : le concurrent prend les places.
+  const base = etat.meta.age >= 2 ? 3 : 2;
+  const n = Math.max(1, Math.round(base * (0.55 + partMarche() * 0.9)));
   for (let i=0;i<n;i++) etat.contrats.proposes.push(creerContrat(choix(produits)));
 
   etat.meta.vitesse = 0;
   sauvegardeAuto();
   ouvrirVendredi(s);
+}
+
+/* -------------------------------------------------------- Le concurrent
+   Sa force face à la vôtre, sur chaque marché ouvert. La part se lit comme un
+   partage du rayon : à deux marques égales, chacune la moitié. */
+function forceMarque(not, conf, sta, p){
+  const w = p.poids;
+  return Math.max(0.05,
+    0.5 + (not/100 - 0.4) * Math.abs(w.notoriete)
+        + (conf/100 - 0.5) * Math.abs(w.confiance)
+        + (sta/100 - 0.45) * w.standing);
+}
+
+/** Notre part de rayon, tous marchés ouverts confondus. */
+function partMarche(){
+  const r = etat.rival;
+  if (!r) return 1;
+  const ouverts = paliersOuverts();
+  if (!ouverts.length) return 0.5;
+  let nous = 0, eux = 0;
+  for (const p of ouverts){
+    nous += forceMarque(notoriete(), confianceEffective(), standing(), p) * p.volume;
+    eux  += forceMarque(r.notoriete, r.confiance, r.standing, p) * p.volume;
+  }
+  return clamp(nous / Math.max(0.001, nous + eux), 0.18, 0.86);
+}
+
+/** Le concurrent bouge tout seul, et se démarque de vous : c'est ce qui rend
+ *  le choix de positionnement vivant. Si vous montez, il descend. */
+function majRival(){
+  const r = etat.rival;
+  if (!r) return;
+  r.notoriete = clamp(r.notoriete + hasard(0.2, 1.1), 0, 100);
+  r.confiance = clamp(r.confiance + hasard(-0.8, 1.0), 25, 96);
+  // Il se place à l'opposé : s'écarter de vous, c'est sa meilleure stratégie.
+  const oppose = standing() > 55 ? 30 : standing() < 40 ? 74 : 50;
+  r.standing = clamp(r.standing + (oppose - r.standing) * 0.14, 0, 100);
+
+  r.semainesCoup = (r.semainesCoup || 0) + 1;
+  if (r.semainesCoup >= 2 && Math.random() < 0.42){
+    r.semainesCoup = 0;
+    const c = choix(COUPS_RIVAL);
+    r.dernierCoup = c.id;
+    r.notoriete = clamp(r.notoriete + (c.notoriete||0), 0, 100);
+    r.confiance = clamp(r.confiance + (c.confiance||0), 20, 96);
+    r.standing  = clamp(r.standing  + (c.standing||0), 0, 100);
+    r.avance = clamp((r.avance||0) + (c.part||0), -0.15, 0.2);
+    fait(r.nom + " " + c.texte);
+    notif("Chez le concurrent", r.nom + " " + c.texte + ".", (c.part||0) > 0 ? "att" : "");
+  }
+  r.avance = (r.avance || 0) * 0.85;      // un coup s'estompe
+  r.part = clamp(1 - partMarche() + r.avance, 0.1, 0.9);
 }
 
 /* ---------------------------------------------------------- Les labels
@@ -8819,6 +8928,11 @@ function SECTIONS_GUIDE(){
     "matière achetée aux producteurs du bassin — tenue plusieurs semaines de suite. Quand c'est le "+
     "cas, vous faites venir l'auditeur : c'est vous qui payez, quand vous voulez. Et le label se "+
     "perd le jour où la condition ne tient plus.</p>"+
+    "<p><b>En face, il y a quelqu'un.</b> Une marque rivale se partage le rayon avec vous. Ce que "+
+    "vous n'y prenez pas, elle le prend : moins de propositions de commande, et les commerces du "+
+    "coin paient moins bien. Et elle <b>réagit</b> — montez en gamme, elle descendra vers le volume ; "+
+    "bradez, elle passera au-dessus. Elle fait aussi ses coups : une campagne radio, un rappel de "+
+    "lot, du linéaire gagné. Tout est dit dans l'onglet Marque et au bilan du vendredi.</p>"+
     "<p>C'est ce qui fait du ménage et de l'entretien autre chose qu'une corvée : sans "+
     "<b>Atelier certifié</b>, l'export reste fermé quoi qu'il arrive.</p>"+
     "<p>Le nom, le logo et le sachet se règlent dans l'onglet Marque. Le nom et le logo sont peints "+
@@ -10236,6 +10350,52 @@ function panneauMarque(z){
   }
   z.appendChild(bm);
 
+  /* --- le concurrent --- */
+  const r = etat.rival;
+  if (r){
+    const br = blocTitre("En face");
+    const part = partMarche();
+    const duo = document.createElement("div");
+    duo.className = "duoRayon";
+    const cv = document.createElement("canvas");
+    cv.width = 200; cv.height = 150;
+    duo.appendChild(cv);
+    const g2 = cv.getContext("2d");
+    dessinerSachet(g2, m, 12, 8, 72, 100);
+    dessinerSachet(g2, r, 116, 8, 72, 100);
+    g2.font = "600 11px 'Segoe UI', sans-serif";
+    g2.textAlign = "center"; g2.fillStyle = "#c9cfd7";
+    g2.fillText("vous", 48, 126);
+    g2.fillText(r.nom.slice(0,14), 152, 126);
+    br.appendChild(duo);
+
+    // Le partage du rayon, en une barre
+    const barre = elem('<div class="rayon"><i></i><span class="rgVous"></span><span class="rgEux"></span></div>');
+    barre.querySelector("i").style.width = Math.round(part*100) + "%";
+    barre.querySelector(".rgVous").textContent = Math.round(part*100) + " %";
+    barre.querySelector(".rgEux").textContent = Math.round((1-part)*100) + " %";
+    br.appendChild(barre);
+    br.appendChild(elem('<div class="reapproNote"></div>')).textContent =
+      "Le rayon se partage. Ce que vous n'y prenez pas, " + r.nom + " le prend : " +
+      "moins de propositions de commande, et les commerces du coin paient moins bien.";
+
+    const cmp = (nom, a, b2) => {
+      const l = document.createElement("div");
+      l.className = "compRival" + (a >= b2 ? " devant" : "");
+      l.innerHTML = '<span class="crNom"></span><span class="crNous"></span><span class="crEux"></span>';
+      l.querySelector(".crNom").textContent = nom;
+      l.querySelector(".crNous").textContent = Math.round(a);
+      l.querySelector(".crEux").textContent = Math.round(b2);
+      br.appendChild(l);
+    };
+    br.appendChild(elem('<div class="compTete"><span></span><span>vous</span><span>eux</span></div>'));
+    cmp("Notoriété", notoriete(), r.notoriete);
+    cmp("Confiance", confianceEffective(), r.confiance);
+    cmp("Standing", standing(), r.standing);
+    br.appendChild(elem('<div class="reapproNote"></div>')).textContent = motRival(r);
+    z.appendChild(br);
+  }
+
   /* --- les labels --- */
   const bl = blocTitre("Les labels");
   if (!LABELS.some(labelDisponible))
@@ -10249,12 +10409,16 @@ function panneauMarque(z){
     const m = mesureLabel(l.id);
     const suite = labelEnCours(l.id);
     const b = document.createElement("div");
-    b.className = "label" + (obtenu ? " obtenu" : m.ok ? " enCours" : "");
+    b.className = "label" + (obtenu ? " obtenu"
+                           : m.ok && suite >= l.semaines ? " pret"
+                           : m.ok ? " enCours" : "");
     b.innerHTML = '<div class="labTete"><span class="labNom"></span><span class="labEtat"></span></div>'+
                   '<div class="labResume"></div><div class="labCond"></div>';
     b.querySelector(".labNom").textContent = l.nom;
     b.querySelector(".labEtat").textContent = obtenu ? "obtenu"
-      : m.ok ? suite + " / " + l.semaines + " semaines" : "non tenu";
+      : !m.ok ? "non tenu"
+      : suite >= l.semaines ? "prêt"
+      : suite + " / " + l.semaines + " semaines";
     b.querySelector(".labResume").textContent = l.resume;
     const c = b.querySelector(".labCond");
     c.textContent = l.exigence + " — " + m.dit + ".";
@@ -10392,6 +10556,14 @@ function motStanding(v){
   if (v >= 45) return "Une marque honnête, de tous les jours.";
   if (v >= 28) return "Une marque de premier prix.";
   return "Une marque discount.";
+}
+
+/** Ce que fait le concurrent, dit simplement. */
+function motRival(r){
+  const ecart = r.standing - standing();
+  if (ecart > 18) return r.nom + " joue plus haut de gamme que vous. Le volume vous est laissé.";
+  if (ecart < -18) return r.nom + " casse les prix sous vous. Le haut du marché vous est laissé.";
+  return r.nom + " vous suit sur le même terrain. C'est là que ça se joue au coude à coude.";
 }
 
 /* ============================================================================
@@ -10658,6 +10830,10 @@ function migrer(o){
     o.labels = { obtenus:[], suite:{}, local:false };
     o.version = 5;
   }
+  if (o.version < 6){
+    o.rival = null;          // recréé au chargement
+    o.version = 6;
+  }
   return o;
 }
 
@@ -10691,6 +10867,7 @@ function appliquer(o){
   etat.formations = etat.formations || [];
   etat.marque = Object.assign(marqueParDefaut(etat.meta.nomEntreprise), etat.marque || {});
   etat.labels = Object.assign({ obtenus:[], suite:{}, local:false }, etat.labels || {});
+  if (!etat.rival || !etat.rival.nom) etat.rival = creerRival();
   cacheEnseigne = null;
   etat.finances.creances = etat.finances.creances || [];
   etat.progression.compteurs = etat.progression.compteurs || {};

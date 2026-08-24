@@ -1411,6 +1411,83 @@ cas("labels", async (nav) => {
   return { echecs: v.echecs.concat(erreurs), note: 4 + " labels, gagnés et perdus" };
 });
 
+cas("le-concurrent", async (nav) => {
+  const { page, jeu, erreurs } = await contexte(nav);
+  const v = verif();
+
+  const r0 = await jeu(`({ nom: etat.rival.nom, part: partMarche(),
+                           dansLaTable: RIVAUX.some(x => x.nom === etat.rival.nom) })`);
+  v("un concurrent existe dès le départ", !!r0.nom, r0.nom);
+  v("il sort de la table", r0.dansLaTable);
+  v("le rayon est partagé", r0.part > 0.15 && r0.part < 0.9, Math.round(r0.part*100) + " %");
+
+  // Notre part suit nos jauges, dans le bon sens.
+  const p = await jeu(`(() => {
+    sauterAge(3);
+    const set = (n,c,s) => { etat.recherche.notoriete=n; etat.reputation=c; etat.marque.standing=s;
+                             return partMarche(); };
+    etat.rival.notoriete = 40; etat.rival.confiance = 60; etat.rival.standing = 50;
+    return { faible: set(5, 30, 42), fort: set(90, 95, 55) };
+  })()`);
+  v("une marque faible pèse peu dans le rayon", p.faible < 0.45, Math.round(p.faible*100) + " %");
+  v("une marque forte pèse plus", p.fort > p.faible + 0.15,
+    Math.round(p.faible*100) + " % → " + Math.round(p.fort*100) + " %");
+
+  // Il se démarque : on monte, il descend.
+  const d = await jeu(`(() => {
+    etat.marque.standing = 90; etat.rival.standing = 80;
+    for (let i=0;i<10;i++) majRival();
+    const bas = etat.rival.standing;
+    etat.marque.standing = 20;
+    for (let i=0;i<10;i++) majRival();
+    return { bas, haut: etat.rival.standing };
+  })()`);
+  v("face à une marque chic, il descend en gamme", d.bas < 50, Math.round(d.bas));
+  v("face à une marque discount, il monte", d.haut > d.bas + 15,
+    Math.round(d.bas) + " → " + Math.round(d.haut));
+
+  // Ses coups arrivent, et laissent une trace lisible.
+  const c = await jeu(`(() => {
+    const faits = [];
+    for (let i=0;i<60;i++){
+      const av = etat.stats.semaineCourante.faits.length;
+      majRival();
+      if (etat.stats.semaineCourante.faits.length > av)
+        faits.push(etat.stats.semaineCourante.faits[etat.stats.semaineCourante.faits.length-1]);
+    }
+    return { n: faits.length, exemple: faits[0] || "",
+             borne: etat.rival.notoriete <= 100 && etat.rival.confiance >= 20 };
+  })()`);
+  v.aumoins("il fait parler de lui", c.n, 5);
+  v("et chaque coup se lit en français", /\w+ \w+/.test(c.exemple), c.exemple);
+  v("ses jauges restent dans les clous", c.borne);
+
+  // Le rayon décide de ce que les commerces paient et de ce qu'on nous propose.
+  const eff = await jeu(`(() => {
+    const mesure = () => {
+      const u = U(); u.stocksSortie = {}; ajouterStock('chips_vrac', 100);
+      const avant = etat.finances.solde;
+      etat.venteAuto = true; vendreSurplus();
+      return Math.round(etat.finances.solde - avant);
+    };
+    etat.recherche.notoriete = 5; etat.reputation = 30; etat.marque.standing = 42;
+    etat.rival.notoriete = 90; etat.rival.confiance = 95; etat.rival.standing = 50;
+    const petit = mesure(), partPetite = partMarche();
+    etat.recherche.notoriete = 95; etat.reputation = 95; etat.marque.standing = 55;
+    etat.rival.notoriete = 20; etat.rival.confiance = 40;
+    const gros = mesure(), partGrosse = partMarche();
+    return { petit, gros, partPetite, partGrosse };
+  })()`);
+  v("une marque écrasée vend moins cher au comptant", eff.gros > eff.petit,
+    eff.petit + " € contre " + eff.gros + " €");
+  v("et sa part de rayon le disait", eff.partGrosse > eff.partPetite);
+
+  const inv = await jeu("verifierPartie()");
+  for (const t of inv) v("invariant : " + t.nom, t.ok, t.detail);
+  await page.close();
+  return { echecs: v.echecs.concat(erreurs), note: r0.nom + ", " + c.n + " coups en 60 semaines" };
+});
+
 /* ============================================================== Exécution ==*/
 const filtre = process.argv.slice(2);
 const choisis = filtre.length ? CAS.filter(c => filtre.some(f => c.nom.includes(f))) : CAS;

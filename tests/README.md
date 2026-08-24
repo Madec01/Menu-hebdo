@@ -38,6 +38,7 @@ La suite sort en code 1 si un cas échoue.
 | `quai-de-sortie` | on l'accroche, on trace jusqu'à lui, et la marchandise y arrive |
 | `marque-et-marches` | les trois jauges se contredisent, et chaque marché les lit à sa façon |
 | `labels` | un label se tient plusieurs semaines, se demande, se paie, et se perd |
+| `le-concurrent` | il se démarque de vous, fait ses coups, et prend le rayon qu'on lui laisse |
 
 ## Les invariants, aussi dans le jeu
 
