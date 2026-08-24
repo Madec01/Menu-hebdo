@@ -271,12 +271,12 @@ réelles** à la vitesse ×1.
 
 ## Tests
 
-`node tests/suite.mjs` pilote le jeu dans un vrai navigateur : vingt-six cas qui
+`node tests/suite.mjs` pilote le jeu dans un vrai navigateur : vingt-sept cas qui
 couvrent le didacticiel, la chaîne, la conservation de la matière, le réseau de
 convoyeurs, la qualité, les modes, les cinq âges, les auto-vérifications, la
 sauvegarde, le rythme, la performance, la recherche, le raccord entre bandes,
 les quais et rangements, les bâtiments d'équipe, la cour, le garde-manger du
-labo, les raccords courts, les croisements, l'équipe, les stocks, la marque, les labels, le concurrent, les clients, les cadres et la fin de partie. Voir [`tests/README.md`](tests/README.md).
+labo, les raccords courts, les croisements, l'équipe, les stocks, la marque, les labels, le concurrent, les clients, les cadres, la fin de partie et la vitesse du jeu. Voir [`tests/README.md`](tests/README.md).
 
 ## Organisation du code
 

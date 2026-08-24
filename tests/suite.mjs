@@ -1692,6 +1692,80 @@ cas("la-fin", async (nav) => {
   return { echecs: v.echecs.concat(erreurs), note: "5 âges, 4 conditions, épilogue" };
 });
 
+cas("vitesse-rendue", async (nav) => {
+  const { page, jeu, erreurs } = await contexte(nav);
+  const v = verif();
+
+  // Le vendredi soir : on arrête, puis on rend exactement ce qu'on avait pris.
+  const ven = await jeu(`(() => {
+    reglerVitesse(4);
+    const choisi = etat.meta.vitesse;
+    for (let t=0;t<CONFIG.ticksParJour*5;t++) simTick();
+    const pendant = etat.meta.vitesse;
+    const ecran = document.querySelector('#ecranVendredi').classList.contains('visible');
+    document.querySelector('#btLancer').click();
+    return { choisi, pendant, ecran, apres: etat.meta.vitesse };
+  })()`);
+  v.egal("le joueur est en ×4", ven.choisi, 4);
+  v("le vendredi soir arrête le temps", ven.ecran && ven.pendant === 0);
+  v.egal("et le rend en ×4, pas en ×1", ven.apres, 4);
+
+  // Le passage d'âge, même chose.
+  const age = await jeu(`(() => {
+    reglerVitesse(2);
+    etat.progression.vendus.chips_vrac = 99999;
+    verifierObjectif();
+    const pendant = etat.meta.vitesse;
+    document.querySelector('#btReprendre').click();
+    return { pendant, apres: etat.meta.vitesse, age: etat.meta.age };
+  })()`);
+  v.egal("le nouvel âge arrête le temps", age.pendant, 0);
+  v.egal("et rend le ×2", age.apres, 2);
+
+  // Deux écrans qui s'enchaînent ne doivent pas écraser le choix par un zéro.
+  const deux = await jeu(`(() => {
+    reglerVitesse(4);
+    suspendreTemps();          // premier écran
+    suspendreTemps();          // un deuxième par-dessus
+    const memoire = etat.meta.vitesseAvant;
+    reprendreTemps();
+    return { memoire, apres: etat.meta.vitesse };
+  })()`);
+  v.egal("la mémoire garde la vraie vitesse", deux.memoire, 4);
+  v.egal("et deux écrans empilés la rendent quand même", deux.apres, 4);
+
+  // Une pause volontaire se respecte aussi : on ne redémarre pas tout seul.
+  const pause = await jeu(`(() => {
+    reglerVitesse(1);
+    const dansEcran = (() => { suspendreTemps(); return etat.meta.vitesse; })();
+    reprendreTemps();
+    return { dansEcran, apres: etat.meta.vitesse };
+  })()`);
+  v.egal("le temps s'arrête pendant l'écran", pause.dansEcran, 0);
+  v.egal("et repart au ×1 qu'on avait", pause.apres, 1);
+
+  // La sortie d'une recette, le dernier écran qui coupait le temps.
+  const rech = await jeu(`(() => {
+    sauterAge(4); etat.finances.solde = 300000; poserMachine('bureau',-4,2,0);
+    etat.recherche.tout = true; verifierDeblocages(false);
+    reglerVitesse(4);
+    lancerEtude("Essai", { gout:'nature', coupe:'fine', cuisson:'friture', sel:'normal',
+                           texture:'standard', touche:'aucune', format:'familial' });
+    for (let j=0;j<20 && etat.recherche.enCours;j++)
+      for (let k=0;k<CONFIG.ticksParJour;k++) simTick();
+    document.querySelector('#ecranVendredi')?.classList.remove('visible');
+    const pendant = etat.meta.vitesse;
+    const ouvert = document.querySelector('#ecranSortieRecette').classList.contains('visible');
+    fermerSortieRecette();
+    return { pendant, ouvert, apres: etat.meta.vitesse };
+  })()`);
+  v("la recette qui sort arrête le temps", rech.ouvert && rech.pendant === 0);
+  v.egal("et le rend en ×4", rech.apres, 4);
+
+  await page.close();
+  return { echecs: v.echecs.concat(erreurs), note: "×4 rendu après vendredi, âge et recette" };
+});
+
 /* ============================================================== Exécution ==*/
 const filtre = process.argv.slice(2);
 const choisis = filtre.length ? CAS.filter(c => filtre.some(f => c.nom.includes(f))) : CAS;

@@ -1668,6 +1668,7 @@ function nouvellePartie(nomEntreprise, modeChoisi){
       nomEntreprise: nomEntreprise || "Chips du Bassin",
       tempsJeu: 0,
       vitesse: 0,
+      vitesseAvant: 1,        // la vitesse qu'on rend au joueur après un écran
       age: 1,
       prochainId: 2,          // 1 et 2 sont réservés aux deux quais
       dernierJourTraite: -1,
@@ -1722,6 +1723,20 @@ function nouvellePartie(nomEntreprise, modeChoisi){
    Trois jauges, et deux existaient déjà : la notoriété vit dans la recherche,
    la confiance est `etat.reputation`. On les lit toujours par ces fonctions,
    pour que le reste du code n'ait pas à savoir où elles habitent. */
+/* ------------------------------------------------------- Le temps qui passe
+   Un écran qui s'ouvre arrête le jeu, et le rend ensuite tel qu'on l'avait
+   laissé : quelqu'un qui jouait en ×4 ne doit pas retomber en ×1 à chaque
+   vendredi soir. On ne mémorise que les vitesses réelles, pour que deux écrans
+   qui s'enchaînent n'écrasent pas le choix du joueur avec un zéro. */
+function suspendreTemps(){
+  if (etat.meta.vitesse > 0) etat.meta.vitesseAvant = etat.meta.vitesse;
+  etat.meta.vitesse = 0;
+}
+function reprendreTemps(){
+  etat.meta.vitesse = etat.meta.vitesseAvant || 1;
+  majBandeau();
+}
+
 function notoriete(){ return etat.recherche ? etat.recherche.notoriete : 0; }
 function confiance(){ return etat.reputation; }
 function standing(){ return etat.marque ? etat.marque.standing : CONFIG.standingDepart; }
@@ -3761,7 +3776,7 @@ function finSemaine(){
   const n = Math.max(1, Math.round(base * (0.55 + partMarche() * 0.9)));
   for (let i=0;i<n;i++) etat.contrats.proposes.push(creerContrat(choix(produits)));
 
-  etat.meta.vitesse = 0;
+  suspendreTemps();
   sauvegardeAuto();
   ouvrirVendredi(s);
 }
@@ -3995,7 +4010,7 @@ function passerAgeSuivant(){
   const nouv = AGES[etat.meta.age-1];
   agrandirUsine(Math.max(nouv.largeur, U().largeur), Math.max(nouv.hauteur, U().hauteur));
   U().nom = nouv.nom;
-  etat.meta.vitesse = 0;
+  suspendreTemps();
   son("age");
   notif("Nouvel âge : " + nouv.nom, nouv.intro, "ok");
   paroleContexte("age" + etat.meta.age, {});
@@ -4125,7 +4140,7 @@ function agrandirQuai(sortie){
 }
 
 function finDePartie(){
-  etat.meta.vitesse = 0;
+  suspendreTemps();
   ouvrirFin();
 }
 
@@ -8383,8 +8398,8 @@ function ouvrirVendredi(bilan){
 
   $("#btLancer").onclick = () => {
     fermer("#ecranVendredi");
-    etat.meta.vitesse = 1;
-    majBandeau(); majPanneau(); majBarreConstruction();
+    reprendreTemps();
+    majPanneau(); majBarreConstruction();
   };
   majResteDecisions();
   ouvrir("#ecranVendredi");
@@ -8601,8 +8616,8 @@ function ouvrirAnnonceAge(age){
   $("#btReprendre").onclick = () => {
     fermer("#ecranMenu");
     centrerCamera();
-    etat.meta.vitesse = 1;
-    majBarreConstruction(); majPanneau(); majBandeau();
+    reprendreTemps();
+    majBarreConstruction(); majPanneau();
   };
   ouvrir("#ecranMenu");
   son("age");
@@ -10301,15 +10316,15 @@ function ouvrirSortieRecette(r){
   }
   $("#btPlusTard").onclick = fermerSortieRecette;
 
-  etat.meta.vitesse = 0;
+  suspendreTemps();
   ouvrir("#ecranSortieRecette");
   son(r.note >= 65 ? "age" : "refus");
 }
 
 function fermerSortieRecette(){
   fermer("#ecranSortieRecette");
-  etat.meta.vitesse = 1;
-  majBandeau(); majPanneau();
+  reprendreTemps();
+  majPanneau();
 }
 
 /* ============================================================================
@@ -10878,12 +10893,12 @@ function ouvrirEpilogue(){
 
   $("#btContinuer").onclick = () => {
     fermer("#ecranEpilogue");
-    etat.meta.vitesse = 1;
-    majBandeau(); majPanneau();
+    reprendreTemps();
+    majPanneau();
   };
   $("#btNouvelleFin").onclick = () => { location.reload(); };
 
-  etat.meta.vitesse = 0;
+  suspendreTemps();
   ouvrir("#ecranEpilogue");
   son("age");
   sauvegardeAuto();
@@ -11407,6 +11422,7 @@ function initClavier(){
 
 function reglerVitesse(v){
   etat.meta.vitesse = v;
+  if (v > 0) etat.meta.vitesseAvant = v;    // c'est le choix qu'on rendra après un écran
   majBandeau();
   initAudio();
 }
