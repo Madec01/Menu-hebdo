@@ -803,6 +803,17 @@ class Pin {
   }
   get x(){ return this.comp.l2w(this.lx, this.ly).x; }
   get y(){ return this.comp.l2w(this.lx, this.ly).y; }
+  /* Nature du port : 'log' (électrique) ou 'flu' (tuyauterie) */
+  get kind(){
+    const d = REG[this.comp.type];
+    if (!d) return 'log';
+    const m = (this.isOutput ? d.outs : d.ins)[this.index];
+    return (m && m.flu) ? 'flu' : 'log';
+  }
+  /* Débit que ce port accepte d'absorber (écrit par le composant, lu par l'amont) */
+  get libre(){ return this.accept == null ? ANA_MAX : this.accept; }
+  /* Débit que ce port de sortie CHERCHE à faire passer, avant tout bridage aval */
+  get dispo(){ return this.dem == null ? (this.state | 0) : this.dem; }
   /* Direction sortante du pin (vers l'extérieur du boîtier), après rotation */
   dir(){
     const c = this.comp;
@@ -822,6 +833,17 @@ class Pin {
   draw(c){
     const hov = (this === hoveredPin);
     const r = this.r + (hov ? 2.5 : 0);
+    if (this.kind === 'flu'){                  // raccord de tuyauterie : port carré
+      const s = r + 1.5;
+      c.beginPath(); c.roundRect(this.x - s, this.y - s, s * 2, s * 2, 2.5);
+      c.fillStyle = this.state ? 'rgba(90,162,255,.85)' : '#141d33';
+      if (this.state){ c.shadowBlur = 10; c.shadowColor = '#5aa2ff'; }
+      c.fill(); c.shadowBlur = 0;
+      c.lineWidth = 1.6;
+      c.strokeStyle = hov ? '#9ec8ff' : (this.state ? '#9ec8ff' : 'rgba(150,170,200,.6)');
+      c.stroke();
+      return;
+    }
     c.beginPath(); c.arc(this.x, this.y, r, 0, 7);
     c.fillStyle = this.state ? PAL.pinOn : PAL.pinOffFill;
     if (this.state){ c.shadowBlur = 10; c.shadowColor = PAL.pinOn; }
@@ -914,7 +936,8 @@ class Wire {
   drawBusValue(c){
     const P = this.points(), i = Math.max(0, Math.floor((P.length - 2) / 2));
     const mx = (P[i].x + P[i+1].x) / 2, my = (P[i].y + P[i+1].y) / 2;
-    const ph = physOf(this.state, pinInfo(this.outPin));
+    const ph = physOf(this.state, pinInfo(this.outPin) ||
+      (this.flu ? { unit:'L/min', min:0, max:50 } : null));
     const txt = ph ? ph.txt : String(this.state);
     c.save();
     c.font = "600 10px 'IBM Plex Mono', monospace";
@@ -935,8 +958,47 @@ class Wire {
     }
     return best;
   }
+  get flu(){ return this.outPin.kind === 'flu'; }
+  /* Tuyauterie : gaine métallique + écoulement animé proportionnel au débit */
+  drawPipe(c, t){
+    const edit = (this === hoveredWire) || (draggedWp && draggedWp.wire === this);
+    const f = Math.max(0, Math.min(1, this.state / ANA_MAX));
+    c.beginPath(); this.buildPath(c);
+    c.lineCap = 'round'; c.lineJoin = 'round';
+    c.lineWidth = edit ? 13 : 11;
+    c.strokeStyle = 'rgba(150,170,200,.30)'; c.stroke();
+    c.beginPath(); this.buildPath(c);
+    c.lineWidth = edit ? 9.5 : 7.5;
+    c.strokeStyle = '#141d2f'; c.stroke();
+    if (f > 0){
+      c.beginPath(); this.buildPath(c);
+      c.lineWidth = edit ? 7 : 5.5;
+      c.strokeStyle = 'rgba(90,162,255,' + (.35 + f * .5) + ')'; c.stroke();
+      c.beginPath(); this.buildPath(c);
+      c.lineWidth = edit ? 5 : 3.5;
+      c.strokeStyle = '#9ec8ff';
+      c.setLineDash([6, 12]); c.lineDashOffset = -t * (.02 + f * .1);
+      c.stroke(); c.setLineDash([]);
+      if (lodLevel === 2) this.drawBusValue(c);
+    }
+    if (edit || this.wp.length) this.drawHandles(c);
+  }
+  drawHandles(c){
+    this.wp.forEach((p, i) => {
+      const hot = (this === hoveredWire) || (draggedWp && draggedWp.wire === this && draggedWp.idx === i);
+      c.save(); c.translate(p.x, p.y); c.rotate(Math.PI / 4);
+      const s = hot ? 5.5 : 4;
+      c.beginPath(); c.rect(-s, -s, s * 2, s * 2);
+      c.fillStyle = hot ? '#38e1ff' : 'rgba(56,225,255,.45)';
+      if (hot){ c.shadowBlur = 10; c.shadowColor = '#38e1ff'; }
+      c.fill(); c.shadowBlur = 0;
+      c.lineWidth = 1.2; c.strokeStyle = hot ? '#eaffff' : 'rgba(56,225,255,.6)'; c.stroke();
+      c.restore();
+    });
+  }
   draw(c, t){
     const edit = (this === hoveredWire) || (draggedWp && draggedWp.wire === this);
+    if (this.flu && lodLevel > 0){ this.drawPipe(c, t); return; }
     if (lodLevel === 0){                       // vue de loin : trait simple, sans effets
       c.beginPath(); this.buildPath(c);
       c.lineWidth = 2; c.lineCap = 'round';
@@ -2230,7 +2292,7 @@ const EXAMPLES = [
     {t:'TUYAU',x:520,y:150,opt:{dn:30}},
     {t:'ECRAN',x:900,y:100,opt:{titre:'CUVE'}},
     {t:'BUTTON',x:20,y:300}],
-   wires:[[0,2,1,0],[0,1,1,1],[1,0,2,0],[2,0,3,0],[3,0,0,0],[0,0,4,0],[0,3,4,1],[5,0,1,0]] }},
+   wires:[[0,2,1,0],[0,1,1,1],[1,0,2,0],[2,1,3,0],[3,0,0,2],[0,0,4,0],[0,3,4,1],[5,0,1,0]] }},
 { name:'Four régulé — tout ou rien', icon:'🔥', diff:'Régulation',
   desc:'La boucle fermée la plus simple : le four mesure sa température, le thermostat coupe et relance. L’enregistreur montre la dent de scie caractéristique. Change l’hystérésis et regarde la courbe changer.',
   data:{ comps:[
@@ -2357,7 +2419,7 @@ const EXAMPLES = [
     {t:'HIGH',x:180,y:520},
     {t:'ECRAN',x:820,y:180,opt:{titre:'ATELIER'}},
     {t:'COURBE',x:820,y:400,opt:{duree:60}}],
-   wires:[[3,0,0,0],[0,0,1,0],[1,0,2,0],[2,2,3,0],[2,1,3,1],
+   wires:[[3,0,0,0],[0,1,1,0],[1,0,2,2],[2,2,3,0],[2,1,3,1],
           [4,0,5,0],[5,0,4,0],
           [8,0,6,0],[6,1,7,0],
           [2,0,9,0],[4,0,9,1],[6,0,9,2],[2,3,9,3],
@@ -2919,7 +2981,25 @@ function deleteComponent(comp){
   AudioSys.del();
   markDirty();
 }
+/* Ce que le composant en aval d'un port de sortie accepte d'absorber */
+function avalLibre(outPin){
+  const ws = wires.filter(w => w.outPin === outPin);
+  if (!ws.length) return 0;                    // rien de branché : rien ne s'écoule
+  return ws.reduce((a, w) => a + w.inPin.libre, 0);
+}
+/* Ce que l'amont d'un port d'entrée cherche à y faire passer (demande, avant bridage) */
+function amontDem(inPin){
+  return wires.filter(w => w.inPin === inPin)
+              .reduce((a, w) => a + w.outPin.dispo, 0);
+}
 function connectWire(outPin, inPin){
+  if (outPin.kind !== inPin.kind){
+    toast(outPin.kind === 'flu'
+      ? '🔌 Un tuyau ne se branche pas sur une borne électrique — cherche un port carré.'
+      : '💧 Un fil électrique ne se branche pas sur un raccord de tuyauterie.', 'error', 4200);
+    AudioSys.error();
+    return;
+  }
   // Les rebouclages sur soi-même sont permis : Q̄→D d'une bascule = diviseur de fréquence,
   // sortie d'une porte vers sa propre entrée = rétroaction (le moteur à passes la gère).
   wires = wires.filter(w => w.inPin !== inPin);
@@ -5767,12 +5847,20 @@ defComp('JACK', {
 });
 defComp('VALVE', {
   name:'ÉLECTROVANNE', short:'VANNE', family:'act', color:'#3dff9e',
-  glyph:'⧖', w:110, h:92, ins:[{n:'CMD', bus:true}],
-  outs:[{n:'DÉB', bus:true, unit:'L/min', min:0, max:50}],
+  glyph:'⧖', w:120, h:104,
+  ins:[{n:'CMD', bus:true}, {n:'E', flu:true}],
+  outs:[{n:'DÉB', bus:true, unit:'L/min', min:0, max:50}, {n:'S', flu:true}],
   eval(c){
     c.ouv = anaIn(c.inPins[0]);
     c.open = c.ouv > 0 ? 1 : 0;
-    c.outPins[0].state = c.ouv;                    // le débit suit l'ouverture
+    c.inPins[1].accept = Math.min(c.ouv, avalLibre(c.outPins[1]));   // ce qu'elle laisse entrer
+    const raccorde = wires.some(w => w.inPin === c.inPins[1]);
+    // raccordée : elle transmet ce qui arrive, dans la limite de son ouverture
+    // libre : elle sert de robinet de source, comme avant
+    c.deb = raccorde ? Math.min(c.inPins[1].state | 0, c.ouv) : c.ouv;
+    c.outPins[1].dem = raccorde ? Math.min(amontDem(c.inPins[1]), c.ouv) : c.ouv;
+    c.outPins[0].state = c.deb;
+    c.outPins[1].state = c.deb;
   },
   tip:c => [c.open ? ('Ouverte à ' + Math.round(c.ouv / 2.55) + ' % — débit ' + c.ouv + '/255')
                    : 'Fermée, débit nul',
@@ -5801,18 +5889,25 @@ defComp('VALVE', {
 });
 defComp('PUMP', {
   name:'POMPE', short:'POMPE', family:'act', color:'#3dff9e',
-  glyph:'◍', w:108, h:96, ins:[{n:'M', bus:true}],
-  outs:[{n:'DÉB', bus:true, unit:'L/min', min:0, max:50}],
+  glyph:'◍', w:112, h:112,
+  ins:[{n:'M', bus:true}, {n:'ASP', flu:true}],
+  outs:[{n:'DÉB', bus:true, unit:'L/min', min:0, max:50}, {n:'REF', flu:true}],
   init(c){ c.ang = 0; c.lastT = 0; c.deb = 0; },
   eval(c){
     c.cmd = anaIn(c.inPins[0]);
+    // ce qu'elle peut aspirer : la source branchée, ou l'air libre si rien n'est raccordé
+    const amont = wires.some(w => w.inPin === c.inPins[1]) ? (c.inPins[1].state | 0) : ANA_MAX;
+    c.cible = Math.min(c.cmd, amont, avalLibre(c.outPins[1]) || (wires.some(w => w.outPin === c.outPins[1]) ? 0 : c.cmd));
+    c.inPins[1].accept = c.cmd;                // elle demande à l'amont ce qu'elle veut débiter
+    c.outPins[1].dem = Math.min(c.cmd, amont);  // ce qu'elle POUSSERAIT si l'aval suivait
     c.run = c.cmd > 0 ? 1 : 0;
     c.outPins[0].state = Math.round(c.deb);
+    c.outPins[1].state = Math.round(c.deb);
   },
   commit(c){
     const now = Date.now(), dt = c.lastT ? Math.min(200, now - c.lastT) : 0;
     c.lastT = now;
-    c.deb += (c.cmd - c.deb) * Math.min(1, dt / 600);   // le débit s'établit progressivement
+    c.deb += ((c.cible == null ? c.cmd : c.cible) - c.deb) * Math.min(1, dt / 600);   // le débit s'établit progressivement
     if (c.deb < .5) c.deb = 0;
     if (c.deb) c.ang += dt * 0.00006 * c.deb;
   },
@@ -5926,17 +6021,21 @@ const fmtPhys = (v, unit, dec) => (dec ? v.toFixed(dec) : Math.round(v)) + (unit
 function defSensor(id, o){
   return defComp(id, {
     name:o.name, short:o.short, family:'sense', color:'#38e1ff', glyph:o.glyph,
-    w:o.w || 120, h:100,
+    w:o.w || 120, h:106,
     ins:[{ n:'PROC', bus:true }],          // branché sur un procédé : mesure en direct
     outs:[{ n:'MES', bus:true, unit:o.unit, min:o.min, max:o.max },
-          { n:o.seuilPin || 'SEU' }],
+          { n:'HAUT' },          // au-dessus du seuil haut
+          { n:'BAS' }],          // au-dessous du seuil bas
     /* Quand le capteur est branché, sa valeur ne se règle plus à la main */
     noDrag:c => !!sourceOf(c.inPins[0]),
     opts:[
       { k:'val', label:'Mesure (' + o.unit + ')', min:o.min, max:o.max, step:o.step || 1, def:o.def,
         hint:'La grandeur que « voit » le capteur. Fais-la varier pour tester ton circuit.' },
-      { k:'seuil', label:'Seuil de basculement (' + o.unit + ')', min:o.min, max:o.max, step:o.step || 1, def:o.seuil,
-        hint:'La sortie booléenne passe à 1 au-dessus de ce seuil.' }
+      { k:'seuil', label:'Seuil HAUT (' + o.unit + ')', min:o.min, max:o.max, step:o.step || 1, def:o.seuil,
+        hint:'La sortie HAUT passe à 1 au-dessus de cette valeur.' },
+      { k:'bas', label:'Seuil BAS (' + o.unit + ')', min:o.min, max:o.max, step:o.step || 1,
+        def:o.bas != null ? o.bas : +(o.min + (o.max - o.min) * .2).toFixed(2),
+        hint:'La sortie BAS passe à 1 au-dessous de cette valeur. Entre les deux seuils, les deux sorties sont à 0 : c\u2019est la plage normale.' }
     ],
     eval(c){
       const src = sourceOf(c.inPins[0]);
@@ -5957,10 +6056,11 @@ function defSensor(id, o){
         v = optOf(c, 'val');
       }
       c.mes = v;
-      const s = optOf(c, 'seuil');
+      const sh = optOf(c, 'seuil'), sb = optOf(c, 'bas');
       c.raw = phys2raw(v, o.min, o.max);
       c.outPins[0].state = c.raw;
-      c.outPins[1].state = v >= s ? 1 : 0;
+      c.outPins[1].state = v >= sh ? 1 : 0;
+      c.outPins[2].state = v <= sb ? 1 : 0;
     },
     click(c){                       // clic : balaye l'échelle (seulement s'il est libre)
       if (sourceOf(c.inPins[0])) return;
@@ -5971,7 +6071,8 @@ function defSensor(id, o){
     },
     value:c => fmtPhys(c.mes != null ? c.mes : optOf(c, 'val'), o.unit, o.step && o.step < 1 ? 1 : 0),
     sub:c => (c.direct ? '⟵ en direct' : 'simulé') +
-             ' · seuil ' + fmtPhys(optOf(c, 'seuil'), o.unit, 0) + (c.outPins[1].state ? ' ✓' : ''),
+             ' · ' + fmtPhys(optOf(c, 'bas'), o.unit, 0) + ' … ' + fmtPhys(optOf(c, 'seuil'), o.unit, 0) +
+             (c.outPins[1].state ? ' ▲' : (c.outPins[2].state ? ' ▼' : '')),
     bar:c => ((c.mes != null ? c.mes : optOf(c, 'val')) - o.min) / (o.max - o.min),
     tip:c => [
       (c.direct ? 'MESURE EN DIRECT sur le procédé' : 'Valeur simulée à la main (rien n’est branché sur PROC)'),
@@ -5980,7 +6081,9 @@ function defSensor(id, o){
       (c.horsGamme ? '⚠ hors gamme : le procédé vaut ' + fmtPhys(c.brut, o.unit, 1) +
         ', le capteur sature (étendue ' + o.min + ' … ' + o.max + ' ' + o.unit + ')' :
         'Étendue de mesure : ' + o.min + ' … ' + o.max + ' ' + o.unit),
-      'Seuil : ' + fmtPhys(optOf(c, 'seuil'), o.unit, 0) + (c.outPins[1].state ? ' — dépassé' : ' — non atteint')],
+      'Seuil HAUT ' + fmtPhys(optOf(c, 'seuil'), o.unit, 0) + (c.outPins[1].state ? ' — DÉPASSÉ ▲' : '') +
+        '  ·  seuil BAS ' + fmtPhys(optOf(c, 'bas'), o.unit, 0) + (c.outPins[2].state ? ' — SOUS LE SEUIL ▼' : ''),
+      (!c.outPins[1].state && !c.outPins[2].state) ? 'Dans la plage normale' : ''],
     expr:(c, i, A) => i === 0 ? 'mesure(' + o.short + ')' : 'seuil(' + o.short + ')',
     guide:o.guide
   });
@@ -6265,9 +6368,9 @@ defComp('FOUR', {
 defComp('CUVE', {
   name:'CUVE (PROCÉDÉ HYDRAULIQUE)', short:'CUVE', family:'act', color:'#5aa2ff', seq:true,
   glyph:'🛢', w:126, h:132,
-  ins:[{ n:'REMP', bus:true }, { n:'VID', bus:true }],
+  ins:[{ n:'REMP', bus:true }, { n:'VID', bus:true }, { n:'E', flu:true }],
   outs:[{ n:'NIV', bus:true, unit:'%', min:0, max:100 }, { n:'HAUT' }, { n:'BAS' },
-        { n:'PRES', bus:true, unit:'bar', min:0, max:10 }],
+        { n:'PRES', bus:true, unit:'bar', min:0, max:10 }, { n:'S', flu:true }],
   opts:[
     { k:'debit', label:'Débit (%/s)', min:2, max:100, step:2, def:20 },
     { k:'haut', label:'Seuil haut (%)', min:10, max:100, step:5, def:90 },
@@ -6277,12 +6380,20 @@ defComp('CUVE', {
   save:c => ({ niv: Math.round(c.niv) }),
   restore(c, s){ if (s.niv != null) c.niv = s.niv; },
   eval(c){
-    c.fill = anaIn(c.inPins[0]); c.drain = anaIn(c.inPins[1]);
+    // Arrivée : commande électrique OU tuyau raccordé. Elle n'accepte plus rien une fois pleine.
+    c.inPins[2].accept = c.niv >= 99.5 ? 0 : ANA_MAX;
+    c.entree = Math.max(anaIn(c.inPins[0]), c.inPins[2].state | 0);
+    // Départ par gravité : d'autant plus fort que la cuve est pleine, limité par l'aval
+    c.outPins[4].dem = Math.round(c.niv * 2.55);        // ce que la colonne d'eau pousserait
+    c.sortie = Math.min(Math.round(c.niv * 2.55), avalLibre(c.outPins[4]));
+    c.fill = c.entree;
+    c.drain = Math.max(anaIn(c.inPins[1]), c.sortie);
     c.outPins[0].state = Math.round(c.niv * 2.55);
     c.outPins[1].state = c.niv >= optOf(c, 'haut') ? 1 : 0;
     c.outPins[2].state = c.niv <= optOf(c, 'bas') ? 1 : 0;
     // pression au fond = hauteur de colonne d'eau : elle suit le niveau
     c.outPins[3].state = Math.round(c.niv * 2.55);
+    c.outPins[4].state = c.sortie;
   },
   commit(c){
     const now = Date.now(), dt = c.lastT ? Math.min(200, now - c.lastT) : 0;
@@ -6499,7 +6610,8 @@ defComp('AIR', {
   name:'RÉSERVOIR D’AIR COMPRIMÉ', short:'AIR COMP.', family:'act', color:'#5aa2ff', seq:true,
   glyph:'🛢', w:130, h:120,
   ins:[{ n:'COMP', bus:true }, { n:'USE', bus:true }],
-  outs:[{ n:'PRES', bus:true, unit:'bar', min:0, max:10 }, { n:'HAUT' }, { n:'BAS' }],
+  outs:[{ n:'PRES', bus:true, unit:'bar', min:0, max:10 }, { n:'HAUT' }, { n:'BAS' },
+        { n:'AIR', flu:true }],
   opts:[
     { k:'debit', label:'Remplissage (bar/s)', min:0.1, max:5, step:0.1, def:1 },
     { k:'haut', label:'Seuil haut (bar)', min:1, max:10, step:0.5, def:8 },
@@ -6515,6 +6627,9 @@ defComp('AIR', {
     c.outPins[0].state = Math.round(c.bar / 10 * ANA_MAX);
     c.outPins[1].state = c.bar >= optOf(c, 'haut') ? 1 : 0;
     c.outPins[2].state = c.bar <= optOf(c, 'bas') ? 1 : 0;
+    // piquage : il distribue d'autant plus d'air qu'il est sous pression
+    c.tirage = Math.min(Math.round(c.bar / 10 * ANA_MAX), avalLibre(c.outPins[3]));
+    c.outPins[3].state = c.tirage;
   },
   commit(c){
     const now = Date.now(), dt = c.lastT ? Math.min(200, now - c.lastT) : 0;
@@ -6522,6 +6637,7 @@ defComp('AIR', {
     const s = dt / 1000;
     c.bar += optOf(c, 'debit') * s * (c.comp / ANA_MAX);
     c.bar -= optOf(c, 'debit') * 1.4 * s * (c.use / ANA_MAX);
+    c.bar -= optOf(c, 'debit') * 1.4 * s * ((c.tirage || 0) / ANA_MAX);
     c.bar -= optOf(c, 'fuite') / 60 * s;
     c.bar = Math.max(0, Math.min(10, c.bar));
   },
@@ -6765,15 +6881,19 @@ defComp('ECRAN', {
 defComp('TUYAU', {
   name:'TUYAU', short:'TUYAU', family:'act', color:'#5aa2ff',
   glyph:'⌇', w:150, h:76,
-  ins:[{ n:'E', bus:true }], outs:[{ n:'S', bus:true, unit:'L/min', min:0, max:50 }],
+  ins:[{ n:'E', flu:true }], outs:[{ n:'S', flu:true }, { n:'DÉB', bus:true, unit:'L/min', min:0, max:50 }],
   opts:[{ k:'dn', label:'Diamètre (mm)', min:8, max:100, step:2, def:40,
     hint:'Une section plus étroite limite le débit qui peut passer — et rien d’autre ne le fera passer.' }],
   eval(c){
-    const e = Math.max(0, Math.min(ANA_MAX, c.inPins[0].state | 0));
     c.max = Math.round(ANA_MAX * optOf(c, 'dn') / 100);     // débit maximal admissible
+    c.inPins[0].accept = Math.min(c.max, avalLibre(c.outPins[0]));
+    const e = Math.max(0, Math.min(ANA_MAX, c.inPins[0].state | 0));
+    c.dem = amontDem(c.inPins[0]);                           // ce que l'amont voudrait pousser
     c.deb = Math.min(e, c.max);
-    c.bride = e > c.max;                                     // le tuyau bride l'écoulement
+    c.bride = c.dem > c.max;                                 // le tuyau bride l'écoulement
+    c.outPins[0].dem = Math.min(c.dem, c.max);
     c.outPins[0].state = c.deb;
+    c.outPins[1].state = c.deb;
   },
   tip:c => ['Débit : ' + (physOf(c.deb, { unit:'L/min', min:0, max:50 }) || {}).txt,
             'Diamètre ' + optOf(c, 'dn') + ' mm → au plus ' +
@@ -6785,7 +6905,7 @@ defComp('TUYAU', {
     x.beginPath(); x.roundRect(x0, cy - ep / 2, w, ep, ep / 2);
     x.fillStyle = 'rgba(255,255,255,.07)'; x.fill();
     x.lineWidth = 1.3; x.strokeStyle = c.bride ? '#ffc23d' : 'rgba(255,255,255,.25)'; x.stroke();
-    const f = c.deb / ANA_MAX;
+    const f = (c.deb || 0) / ANA_MAX;
     if (f > 0){
       x.save();
       x.beginPath(); x.roundRect(x0, cy - ep / 2, w, ep, ep / 2); x.clip();
@@ -6808,17 +6928,23 @@ defComp('TUYAU', {
 defComp('TE', {
   name:'TÉ DE RACCORDEMENT', short:'TÉ', family:'act', color:'#5aa2ff',
   glyph:'⑂', w:120, h:104,
-  ins:[{ n:'E1', bus:true }, { n:'E2', bus:true }],
-  outs:[{ n:'S1', bus:true, unit:'L/min', min:0, max:50 },
-        { n:'S2', bus:true, unit:'L/min', min:0, max:50 }],
+  ins:[{ n:'E1', flu:true }, { n:'E2', flu:true }],
+  outs:[{ n:'S1', flu:true }, { n:'S2', flu:true },
+        { n:'DÉB', bus:true, unit:'L/min', min:0, max:50 }],
   opts:[{ k:'rep', label:'Répartition vers S1 (%)', min:0, max:100, step:5, def:50,
     hint:'Comment le débit total se partage entre les deux sorties.' }],
   eval(c){
+    const capa = avalLibre(c.outPins[0]) + avalLibre(c.outPins[1]);
+    c.inPins[0].accept = capa; c.inPins[1].accept = capa;
     const tot = Math.min(ANA_MAX, (c.inPins[0].state | 0) + (c.inPins[1].state | 0));
     const r = optOf(c, 'rep') / 100;
     c.tot = tot;
+    const dem = Math.min(ANA_MAX, amontDem(c.inPins[0]) + amontDem(c.inPins[1]));
+    c.outPins[0].dem = Math.round(dem * r);
+    c.outPins[1].dem = Math.round(dem * (1 - r));
     c.outPins[0].state = Math.round(tot * r);
     c.outPins[1].state = Math.round(tot * (1 - r));
+    c.outPins[2].state = tot;
   },
   value:c => (physOf(c.tot || 0, { unit:'L/min', min:0, max:50 }) || {}).txt,
   sub:c => optOf(c, 'rep') + ' / ' + (100 - optOf(c, 'rep')) + ' %',

@@ -2253,9 +2253,9 @@ T('T128 convention de commande : 1 = pleine puissance, valeur dosée = proportio
 
 T('T129 chaque actionneur renvoie sa mesure', () => {
   const attendu = {
-    MOTOR:['VIT','TR'], JACK:['S0','S1','POS'], VALVE:['DÉB'], PUMP:['DÉB'],
-    SERVO:['POS'], CUVE:['NIV','HAUT','BAS','PRES'], FOUR:['T°','CHAUD'],
-    AIR:['PRES','HAUT','BAS'], CONV:['VIT','PIÈCE'], STEPPER:['POS']
+    MOTOR:['VIT','TR'], JACK:['S0','S1','POS'], VALVE:['DÉB','S'], PUMP:['DÉB','REF'],
+    SERVO:['POS'], CUVE:['NIV','HAUT','BAS','PRES','S'], FOUR:['T°','CHAUD'],
+    AIR:['PRES','HAUT','BAS','AIR'], CONV:['VIT','PIÈCE'], STEPPER:['POS']
   };
   Object.keys(attendu).forEach(t => {
     const d = REG[t];
@@ -2628,33 +2628,86 @@ T('T143 PID : le terme dérivé s’oppose à la montée, la boucle converge', (
   ok(Math.abs(200 - four.temp) > 15, 'sans I : écart résiduel de ' + Math.round(200 - four.temp));
 });
 
-T('T144 tuyau et té : le débit se conduit et se limite', () => {
+T('T144 tuyauterie : raccords fluides, bridage et répartition', () => {
   board();
-  const pot = mk('POT', 0, 0), pu = mk('PUMP', 250, 0), tu = mk('TUYAU', 500, 0);
-  const cuve = mk('CUVE', 800, 0);
-  link(pot, 0, pu, 0); link(pu, 0, tu, 0); link(tu, 0, cuve, 0);
+  const pot = mk('POT', 0, 0), pu = mk('PUMP', 250, 0), tu = mk('TUYAU', 550, 0);
+  const cuve = mk('CUVE', 850, 0);
+  link(pot, 0, pu, 0);                       // commande électrique de la pompe
+  link(pu, 1, tu, 0);                        // refoulement → tuyau (raccords fluides)
+  link(tu, 0, cuve, 2);                      // tuyau → arrivée de la cuve
   applyInspector(pot, fld('o_val', 100));
-  applyInspector(tu, fld('o_dn', 20));         // tuyau étroit
+  applyInspector(tu, fld('o_dn', 20));       // tuyau étroit
   cuve.niv = 0;
-  for (let i = 0; i < 10; i++){ __advance(150); sim(); }
+  for (let i = 0; i < 30; i++){ __advance(150); sim(); }   // le temps que la pompe s'établisse
   ok(tu.bride, 'le tuyau bride le débit');
   eq(tu.outPins[0].state, tu.max, 'débit plafonné à la section');
-  const lent = cuve.niv;
-  applyInspector(tu, fld('o_dn', 100));        // tuyau large
   cuve.niv = 0;
-  for (let i = 0; i < 10; i++){ __advance(150); sim(); }
+  for (let i = 0; i < 12; i++){ __advance(150); sim(); }
+  const lent = cuve.niv;
+  ok(lent > 0, 'la cuve se remplit par le tuyau (' + lent.toFixed(1) + ' %)');
+  applyInspector(tu, fld('o_dn', 100));      // tuyau large
+  for (let i = 0; i < 20; i++){ __advance(150); sim(); }   // la pompe remonte en régime
+  cuve.niv = 0;
+  for (let i = 0; i < 12; i++){ __advance(150); sim(); }
   ok(!tu.bride, 'plus de bridage');
-  ok(cuve.niv > lent * 1.5, 'la cuve se remplit bien plus vite (' + Math.round(cuve.niv) +
-     ' contre ' + Math.round(lent) + ')');
-  // té : répartition
+  ok(cuve.niv > lent * 1.5, 'remplissage bien plus rapide (' + cuve.niv.toFixed(1) +
+     ' contre ' + lent.toFixed(1) + ')');
+  // té : répartition du débit
   board();
-  const p2 = mk('POT', 0, 0), te = mk('TE', 300, 0);
-  link(p2, 0, te, 0);
+  const p2 = mk('POT', 0, 0), pu2 = mk('PUMP', 200, 0), te = mk('TE', 450, 0);
+  const c1 = mk('CUVE', 750, 0), c2 = mk('CUVE', 750, 400);
+  link(p2, 0, pu2, 0); link(pu2, 1, te, 0);
+  link(te, 0, c1, 2); link(te, 1, c2, 2);
   applyInspector(p2, fld('o_val', 100));
   applyInspector(te, fld('o_rep', 75));
-  sim();
-  eq(te.outPins[0].state, Math.round(255 * .75), '75 % vers S1');
-  eq(te.outPins[1].state, Math.round(255 * .25), '25 % vers S2');
+  c1.niv = 0; c2.niv = 0;
+  for (let i = 0; i < 15; i++){ __advance(150); sim(); }
+  ok(c1.niv > c2.niv * 1.8, 'la répartition 75/25 se voit sur les niveaux (' +
+     c1.niv.toFixed(1) + ' contre ' + c2.niv.toFixed(1) + ')');
+});
+
+T('T145 un tuyau ne se branche pas sur une borne électrique', () => {
+  board();
+  const led = mk('LED', 400, 0), pu = mk('PUMP', 0, 0);
+  eq(pu.outPins[1].kind, 'flu', 'le refoulement est un port fluide');
+  eq(pu.outPins[0].kind, 'log', 'la mesure de débit reste électrique');
+  eq(led.inPins[0].kind, 'log', 'une ampoule a une borne électrique');
+  connectWire(pu.outPins[1], led.inPins[0]);
+  eq(wires.length, 0, 'le raccordement est refusé');
+  const cuve = mk('CUVE', 700, 0);
+  eq(cuve.inPins[2].kind, 'flu', 'la cuve a une arrivée fluide');
+  connectWire(pu.outPins[1], cuve.inPins[2]);
+  eq(wires.length, 1, 'entre deux ports fluides, ça se raccorde');
+  ok(wires[0].flu, 'la liaison se sait fluide');
+  connectWire(pu.outPins[0], cuve.inPins[0]);
+  eq(wires.length, 2, 'et l’électrique reste possible');
+  ok(!wires[1].flu, 'cette liaison-là est électrique');
+  drawScene(0);
+});
+
+T('T146 hydraulique : la cuve se vide par gravité et déborde', () => {
+  board();
+  const haut = mk('CUVE', 0, 0), tu = mk('TUYAU', 350, 0), bas = mk('CUVE', 700, 0);
+  link(haut, 4, tu, 0);                      // départ de la cuve haute
+  link(tu, 0, bas, 2);                       // vers l’arrivée de la cuve basse
+  applyInspector(tu, fld('o_dn', 60));
+  applyInspector(haut, fld('o_debit', 30)); applyInspector(bas, fld('o_debit', 30));
+  haut.niv = 90; bas.niv = 0;
+  for (let i = 0; i < 20; i++){ __advance(150); sim(); }
+  ok(haut.niv < 90, 'la cuve haute se vide (' + haut.niv.toFixed(1) + ' %)');
+  ok(bas.niv > 0, 'la cuve basse se remplit (' + bas.niv.toFixed(1) + ' %)');
+  // une cuve pleine n’accepte plus rien : le débit s’arrête
+  bas.niv = 100; sim(); sim();
+  eq(bas.inPins[2].accept, 0, 'cuve pleine : elle n’absorbe plus');
+  const avant = haut.niv;
+  for (let i = 0; i < 10; i++){ __advance(150); sim(); }
+  ok(Math.abs(haut.niv - avant) < 1.5, 'et l’amont cesse de couler (' + haut.niv.toFixed(1) + ')');
+  // un départ non raccordé ne vide pas la cuve
+  board();
+  const seule = mk('CUVE', 0, 0);
+  seule.niv = 80;
+  for (let i = 0; i < 15; i++){ __advance(150); sim(); }
+  eq(Math.round(seule.niv), 80, 'sans tuyau raccordé, rien ne s’écoule');
 });
 
 /* ===================== 7. Guide ===================== */
@@ -2684,6 +2737,24 @@ T('T59 le guide ne mentionne plus les anciens déblocages de mission', () => {
   const html = __el('guide-body').innerHTML;
   ok(!/récompense (de la )?mission/i.test(html), 'plus de « récompense mission » (déblocage total en v5)');
   ok(!/pour débloquer/i.test(html), 'plus de mention de déblocage');
+});
+
+T('T147 tous les exemples se câblent sur des ports compatibles', () => {
+  const bad = [];
+  EXAMPLES.forEach(ex => {
+    board();
+    const r = spawnGroup(ex.data, 0, 0, true);
+    (ex.data.wires || []).forEach(w => {
+      const a = r.made[w[0]], b = r.made[w[2]];
+      if (!a || !b) return bad.push(ex.name + ' : câble vers un composant absent');
+      const op = a.outPins[w[1]], ip = b.inPins[w[3]];
+      if (!op || !ip) return bad.push(ex.name + ' : broche absente ' +
+        a.type + '#' + w[1] + ' → ' + b.type + '#' + w[3]);
+      if (op.kind !== ip.kind) bad.push(ex.name + ' : ' + a.type + '#' + w[1] +
+        '(' + op.kind + ') → ' + b.type + '#' + w[3] + '(' + ip.kind + ')');
+    });
+  });
+  ok(!bad.length, 'liaisons incohérentes —\n      ' + bad.join('\n      '));
 });
 
 /* ===================== bilan ===================== */
