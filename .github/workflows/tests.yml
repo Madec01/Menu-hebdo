@@ -1,0 +1,23 @@
+name: Tests
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  headless:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Suite de tests headless
+        run: node test/run.js
+      - name: Les copies figées démarrent toujours
+        run: |
+          for f in versions/*.html; do
+            echo "── $f"
+            node test/run.js "$f" --smoke
+          done

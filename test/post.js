@@ -1751,7 +1751,7 @@ T('T61 balisage : toutes les modales sont des .modal-overlay refermables', () =>
 });
 
 T('T62 balisage : chaque getElementById du script vise un id existant', () => {
-  const dyn = new Set(['btn-make-chip','btn-manage-chips']);   // créés par buildToolbar()
+  const dyn = new Set(['btn-make-chip','btn-manage-chips','tool-search']);   // créés par buildToolbar()
   const ids = new Set([...__HTML.matchAll(/getElementById\('([\w-]+)'\)/g)].map(m => m[1]));
   const present = new Set([...__HTML.matchAll(/id="([\w-]+)"/g)].map(m => m[1]));
   const missing = [...ids].filter(i => !present.has(i) && !dyn.has(i));
@@ -2110,6 +2110,23 @@ T('T121 machine à états : transitions programmables, horloge et remise à zér
   A.state = 1;
   clk.state = 1; sim(); clk.state = 0; sim();
   eq(f.st, 2, 'A=1 : on part en 2');
+});
+
+T('T122 recherche de composant dans la barre d’outils', () => {
+  ok(searchTypes('vérin').includes('JACK'), 'accent ignoré');
+  ok(searchTypes('VERIN').includes('JACK'), 'casse ignorée');
+  ok(searchTypes('bascule').includes('DFF'), 'nom complet');
+  ok(searchTypes('tempo').length >= 2, 'plusieurs temporisations trouvées');
+  ok(searchTypes('nand').includes('NAND') && searchTypes('nand').includes('NAND3'), 'variantes');
+  ok(searchTypes('hystérésis').includes('THERMO') || searchTypes('hystérésis').includes('SCHMITT'),
+    'recherche jusque dans le texte du guide');
+  eq(searchTypes('zzzz').length, 0, 'aucune correspondance');
+  ok(searchTypes('e').length <= 30, 'résultats bornés');
+  // la barre se reconstruit sans erreur avec un filtre
+  toolFilter = 'moteur'; buildToolbar(); updateToolbar();
+  toolFilter = 'zzz'; buildToolbar(); updateToolbar();
+  toolFilter = ''; buildToolbar(); updateToolbar();
+  ok(TOOL_TABS.length >= 8, 'les onglets sont toujours là');
 });
 
 /* ===================== 7. Guide ===================== */

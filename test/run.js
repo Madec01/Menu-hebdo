@@ -13,7 +13,9 @@ const path = require('path');
 const vm = require('vm');
 
 const root = path.resolve(__dirname, '..');
-const htmlPath = path.resolve(process.argv[2] || path.join(root, 'logicgates.html'));
+const args = process.argv.slice(2);
+const smoke = args.includes('--smoke');          // simple contrôle de démarrage
+const htmlPath = path.resolve(args.filter(a => a[0] !== '-')[0] || path.join(root, 'logicgates.html'));
 
 if (!fs.existsSync(htmlPath)){
   console.error('✗ Fichier introuvable : ' + htmlPath);
@@ -34,11 +36,20 @@ const post = fs.readFileSync(path.join(__dirname, 'post.js'), 'utf8');
 
 /* Concaténation : le code du jeu déclare tout en const/let de portée script,
    post.js doit donc vivre dans LE MÊME script pour y accéder. */
+/* En mode --smoke on ne joue pas la suite : on vérifie seulement que le
+   fichier démarre (utile sur les copies figées d'anciennes versions, qui
+   ne connaissent évidemment pas les tests des versions suivantes). */
+const boot = `
+console.log('démarrage : ' + missions.length + ' missions, ' +
+  TOOL_TABS.reduce((a,t)=>a+t.items.length,0) + ' outils, ' +
+  Object.keys(typeof REG !== 'undefined' ? REG : {}).length + ' composants du registre');
+if (!missions.length) throw new Error('aucune mission');
+loadMission(0); loadMission(-1); simulate(3);
+({ passed: 1, failed: 0 });`;
 const source = [
   '/* ---- pre.js ---- */', pre,
   '/* ---- jeu ---- */',    game,
-  '/* ---- post.js ---- */', post,
-  '__runTests();'
+  smoke ? boot : ('/* ---- post.js ---- */\n' + post + '\n__runTests();')
 ].join('\n');
 
 const sandbox = { console, setTimeout, clearTimeout, setInterval, clearInterval, process, Math, JSON };
