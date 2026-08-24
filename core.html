@@ -65,6 +65,13 @@
   #challenges .ok{color:#78ffb4}
   #challenges .ok:before{content:'[x] '}
   #challenges .ko:before{content:'[ ] '}
+  #belt{position:absolute;bottom:118px;left:14px;display:flex;gap:6px}
+  #belt .ch{width:34px;height:34px;border:2px solid;border-radius:5px;display:flex;
+    align-items:center;justify-content:center;font-size:16px;font-weight:800;
+    background:rgba(12,14,18,.8)}
+  #belt .empty{border-color:#2a2f39;opacity:.35}
+  #sacoche{position:absolute;bottom:160px;left:14px;font-size:10px;color:var(--dim);
+    display:flex;gap:9px;flex-wrap:wrap;max-width:230px}
   .meter{height:7px;background:#22252c;border:1px solid var(--line);border-radius:3px;
     overflow:hidden;margin:3px 0 8px}
   .meter i{display:block;height:100%;transition:width .06s linear}
@@ -173,6 +180,8 @@
   <div id="combo"></div>
   <div id="eventBanner"></div>
   <div id="challenges"></div>
+  <div id="belt"></div>
+  <div id="sacoche"></div>
   <div id="bars">
     <div id="fuelWrap">
       <div class="lab"><span>CARBURANT</span><span id="fuelLab">100 L</span></div>
@@ -189,7 +198,8 @@
   <h1>C<span>O</span>RE</h1>
   <div class="sub">Tu pilotes une foreuse. Le centre de la planete est a 1 300 metres.<br>
     Il n'y a pas de vie et pas de game over : ton seul adversaire est le chrono.<br>
-    Le carburant, lui, ne brule qu'a l'action — creuser large coute cher, reflechir ne coute rien.</div>
+    Le carburant, lui, ne brule qu'a l'action — creuser large coute cher, reflechir ne coute rien.<br>
+    Ramasse de quoi fabriquer des explosifs : faire sauter la roche ne consomme pas une goutte.</div>
   <h2>Choisis ton metier</h2>
   <div class="cards" id="jobs"></div>
   <div class="keys">
@@ -197,6 +207,7 @@
     <span><b>2 touches</b> — forer en diagonale</span>
     <span><b>Espace</b> — turbo</span>
     <span><b>Le carburant</b> brule a l'action, pas au temps</span>
+    <span><b>E</b> — poser une charge</span>
     <span><b>R</b> — recommencer le niveau</span>
     <span><b>M</b> — son</span>
   </div>
@@ -345,7 +356,7 @@ window.CORE = window.CORE || {};
       ore: '#d68b3f', oreName: 'cuivre', oreValue: 13,
       wSoft: 0.56, wMed: 0.26, wHard: 0.08,
       special: 'FRIABLE', wSpecial: 0.10,   // s'effondre en cascade
-      veins: 8, caves: 3, bonuses: 8, traps: 2, bidons: 5, coffres: 2
+      veins: 8, caves: 3, bonuses: 8, traps: 2, bidons: 5, coffres: 2, ingredients: 10
     },
     {
       id: 2, name: 'LES SEDIMENTS', from: 220, to: 880,
@@ -354,7 +365,7 @@ window.CORE = window.CORE || {};
       ore: '#e0b23c', oreName: 'fer', oreValue: 22,
       wSoft: 0.44, wMed: 0.30, wHard: 0.14,
       special: 'CHARBON', wSpecial: 0.12,   // explose et enflamme ses voisines
-      veins: 9, caves: 4, bonuses: 9, traps: 3, bidons: 6, coffres: 2
+      veins: 9, caves: 4, bonuses: 9, traps: 3, bidons: 6, coffres: 2, ingredients: 12
     },
     {
       id: 3, name: 'LES GROTTES DE CRISTAL', from: 880, to: 1600,
@@ -363,7 +374,7 @@ window.CORE = window.CORE || {};
       ore: '#c8e6ff', oreName: 'argent', oreValue: 38,
       wSoft: 0.38, wMed: 0.28, wHard: 0.16,
       special: 'CRISTAL', wSpecial: 0.18,   // reaction en chaine, et ca paye
-      veins: 10, caves: 4, bonuses: 10, traps: 4, bidons: 7, coffres: 3
+      veins: 10, caves: 4, bonuses: 10, traps: 4, bidons: 7, coffres: 3, ingredients: 13
     }
   ];
 
@@ -422,6 +433,42 @@ window.CORE = window.CORE || {};
     { id: 'fall30',   label: 'Chuter de 30 blocs d\'un coup',  gold: 100, check: function (st) { return st.bigFall >= 30; } }
   ];
 
+  /* ---------------------------------------------------------- EXPLOSIFS */
+  /* On trouve des ingredients dans la roche ; des qu'une recette est complete,
+     la charge est fabriquee toute seule. Faire sauter des cases ne coute pas
+     une goutte de carburant : c'est la que se gagne l'economie. */
+  CFG.INGREDIENTS = [
+    { id: 'salpetre', nom: 'Salpetre',       icon: '*', color: '#e8e2c8', poids: 26, couche: 1 },
+    { id: 'soufre',   nom: 'Soufre jaune',   icon: 'S', color: '#e8d24a', poids: 24, couche: 1 },
+    { id: 'meche',    nom: 'Meche huilee',   icon: '~', color: '#c98a4a', poids: 24, couche: 1 },
+    { id: 'gaz',      nom: 'Poche de gaz',   icon: 'o', color: '#8ae08a', poids: 15, couche: 2 },
+    { id: 'champi',   nom: 'Champignon peteur', icon: '%', color: '#ff8ac0', poids: 13, couche: 2 },
+    { id: 'nitro',    nom: 'Nitro de poche', icon: '!', color: '#ff5a3d', poids: 10, couche: 2 },
+    { id: 'cristal',  nom: 'Eclat instable', icon: '^', color: '#9be0ff', poids: 10, couche: 3 },
+    { id: 'dent',     nom: 'Dent de ver fossilisee', icon: 'V', color: '#d8c0a0', poids: 5, couche: 3 }
+  ];
+
+  /* Fabrication du plus puissant au plus simple. */
+  CFG.RECIPES = [
+    { id: 'abyssale', nom: 'Bombe abyssale', icon: '@', color: '#b48dff',
+      cout: { nitro: 1, cristal: 1, dent: 1 }, rayon: 9, effondre: true, degat: true,
+      desc: 'Rayon 9, et tout s\'ecroule autour' },
+    { id: 'geode',    nom: 'Nitro-geode',    icon: 'O', color: '#9be0ff',
+      cout: { nitro: 1, cristal: 1 }, rayon: 6, degat: true,
+      desc: 'Rayon 6' },
+    { id: 'dirigee',  nom: 'Charge dirigee', icon: '>', color: '#7ec8ff',
+      cout: { salpetre: 1, meche: 1, gaz: 1 }, tunnel: 15,
+      desc: 'Perce un couloir de 15 blocs droit devant' },
+    { id: 'pet',      nom: 'Pet de champignon', icon: '%', color: '#ff8ac0',
+      cout: { champi: 1, gaz: 1 }, rayon: 2, poussee: 26,
+      desc: 'Petit rayon, mais ca propulse la foreuse' },
+    { id: 'dynamite', nom: 'Dynamite',       icon: '#', color: '#ff8a3d',
+      cout: { salpetre: 1, soufre: 1, meche: 1 }, rayon: 4,
+      desc: 'Rayon 4, la valeur sure' }
+  ];
+  CFG.BELT_MAX = 3;      // charges transportables
+  CFG.FUSE = 0.85;       // secondes de meche
+
   /* ------------------------------------------------------------- CARNET */
   /* Ce qui se debloque d'une expedition a l'autre. C'est la seule chose qui
      donne une raison de relancer : on voit toujours ce qui est a une partie. */
@@ -456,6 +503,8 @@ window.CORE = window.CORE || {};
       desc: 'Roche plus dure, Faille plus rapide — et une carte de plus a chaque station' },
     { id: 'ascete',    nom: 'Metier : L\'Ascete',      stat: 'cleanRuns', but: 1,
       desc: 'Aucun bonus ne t\'affecte, mais +1 carte a chaque choix' },
+    { id: 'artificier', nom: 'Metier : L\'Artificier',  stat: 'bombes',    but: 25,
+      desc: 'Demarre avec trois charges et trouve plus d\'ingredients' },
     { id: 'profondeur3', nom: 'PROFONDEUR III',        stat: 'deepWins',  but: 1,
       desc: 'Le vrai test : deux points d\'integrite seulement' }
   ];
@@ -802,7 +851,7 @@ window.CORE = window.CORE || {};
     13: { hard: 1.0,   slow: 0.5, name: 'gluante' }
   };
 
-  var KIND = { BONUS: 1, PEPITE: 2, TEMPS: 3, CARBURANT: 4 };
+  var KIND = { BONUS: 1, PEPITE: 2, TEMPS: 3, CARBURANT: 4, INGREDIENT: 5 };
 
   function valueNoise(rng, w, h, cell) {
     var gw = Math.ceil(w / cell) + 2, gh = Math.ceil(h / cell) + 2;
@@ -1012,6 +1061,14 @@ window.CORE = window.CORE || {};
     scatter(Math.round(layer.bonuses * 0.8), function () { return { kind: KIND.PEPITE }; });
     scatter(3, function () { return { kind: KIND.TEMPS }; });
     scatter(layer.bidons, function () { return { kind: KIND.CARBURANT }; });
+
+    // ingredients d'explosifs : seuls ceux de la couche atteinte apparaissent
+    var dispo = CFG.INGREDIENTS.filter(function (g) { return g.couche <= layer.id; });
+    var sac = [];
+    dispo.forEach(function (g) { for (var k = 0; k < g.poids; k++) sac.push(g); });
+    scatter(layer.ingredients || 11, function (r) {
+      return { kind: KIND.INGREDIENT, ing: r.pick(sac) };
+    });
 
     // --- le Sceau ----------------------------------------------------------
     if (def.type === 'sceau') {
@@ -1236,6 +1293,12 @@ window.CORE = window.CORE || {};
     },
     blast: function () { blip(120, 0.35, 'sawtooth', 0.2, 40); },
     bounce: function () { blip(400, 0.16, 'sine', 0.16, 1100); },
+    craft: function () {
+      [523, 784, 1047].forEach(function (f, i) {
+        setTimeout(function () { blip(f, 0.1, 'square', 0.15); }, i * 60);
+      });
+    },
+    fuse: function () { blip(1200, 0.5, 'sine', 0.07, 300); },
     hurt: function () {
       blip(220, 0.22, 'sawtooth', 0.22, 70);
       setTimeout(function () { blip(140, 0.3, 'square', 0.16, 50); }, 60);
@@ -1280,7 +1343,7 @@ window.CORE = window.CORE || {};
       prog: 0, progKey: '', crit: false,
       drilling: false, grounded: false, falling: false,
       stall: 0, bit: 0,
-      straight: 0, straightBest: 0, fallFrom: null, lastHard: 1
+      straight: 0, straightBest: 0, fallFrom: null, lastHard: 1, kick: null
     };
   }
 
@@ -1379,6 +1442,14 @@ window.CORE = window.CORE || {};
       d.vy += CFG.GRAVITY * dt;
       if (inDy > 0) d.vy = Math.max(d.vy, s.roll * 0.9);
       if (d.vy > CFG.TERMINAL) d.vy = CFG.TERMINAL;
+    }
+
+    // impulsion d'une explosion : elle s'ajoute au pilotage pendant un instant
+    if (d.kick && d.kick.t > 0) {
+      d.kick.t -= dt;
+      d.vx += d.kick.vx;
+      d.vy += d.kick.vy;
+      if (d.kick.t <= 0) d.kick = null;
     }
 
     var nx = d.x + d.vx * dt;
@@ -1608,6 +1679,7 @@ window.CORE = window.CORE || {};
     fuel: 100, fuelMax: 100, reserve: false, lowWarned: false,
     hp: 3, iframes: 0, stun: 0, falls: [], failleCd: 0, sealBroken: false,
     justRestarted: 0, turboCharge: 0,
+    ing: {}, belt: [], bombs: [],
     event: null, eventT: 0, eventNext: 0, marker: null,
     combo: 0, comboT: 0, comboMult: 1,
     challenges: [], st: null,
@@ -1699,6 +1771,9 @@ window.CORE = window.CORE || {};
     G.hitstop = 0; G.slowmo = 0; G.flash = null; G.desat = 0;
     G.lowWarned = false; G.reserve = false; G.rescueT = 0;
     G.dryChoice = false;
+    G.bombs = [];
+    if (!G.run.keepBelt) { G.ing = {}; G.belt = []; }
+    G.run.keepBelt = false;
     G.hp = Math.max(1, CFG.HP + (pre.hpBonus || 0) + tier().hp); G.iframes = 0; G.stun = 0; G.falls = [];
     G.failleCd = 0; G.sealBroken = false; G.turboCharge = 0;
     G.world.failleRow = G.world.top - 3;
@@ -1765,6 +1840,9 @@ window.CORE = window.CORE || {};
     if (item.kind === W.KIND.BONUS) { p.color = item.bonus.color; p.label = item.bonus.icon; }
     else if (item.kind === W.KIND.PEPITE) { p.color = '#ffd24a'; p.label = '$'; }
     else if (item.kind === W.KIND.CARBURANT) { p.color = '#8ac46a'; p.label = 'L'; }
+    else if (item.kind === W.KIND.INGREDIENT) {
+      p.ing = item.ing; p.color = item.ing.color; p.label = item.ing.icon;
+    }
     else { p.color = '#5ff0e0'; p.label = '-5'; }
     G.pickups.push(p);
   }
@@ -1778,6 +1856,86 @@ window.CORE = window.CORE || {};
         s: 2 + Math.random() * 3, color: color,
         life: 0.35 + Math.random() * 0.4, max: 0.75
       });
+    }
+  }
+
+  /* -------------------------------------------------------- EXPLOSIFS */
+  /* Des qu'une recette est complete, la charge se fabrique toute seule : on
+     ramasse, on entend le clic, on a une bombe de plus a la ceinture. */
+  function craft() {
+    var fait = null;
+    for (var r = 0; r < CFG.RECIPES.length; r++) {
+      var rec = CFG.RECIPES[r];
+      if (G.belt.length >= CFG.BELT_MAX) break;
+      var ok = true;
+      for (var k in rec.cout) if ((G.ing[k] || 0) < rec.cout[k]) { ok = false; break; }
+      if (!ok) continue;
+      for (var k2 in rec.cout) G.ing[k2] -= rec.cout[k2];
+      G.belt.push(rec);
+      fait = rec;
+      r = -1;                                  // on retente : plusieurs charges d'un coup
+    }
+    if (fait) {
+      toast('FABRIQUE — ' + fait.nom, fait.color, true);
+      flash(fait.color, 0.2);
+      SFX.craft();
+    }
+  }
+
+  function placeCharge() {
+    if (!G.belt.length || G.dryChoice) return;
+    var rec = G.belt.shift();
+    var d = G.drill;
+    G.bombs.push({
+      def: rec, t: CFG.FUSE,
+      x: d.x + CFG.DRILL_W / 2 + d.fx * 1.2,
+      y: d.y + CFG.DRILL_H / 2 + d.fy * 1.2,
+      fx: d.fx, fy: d.fy
+    });
+    SFX.fuse();
+  }
+
+  function updateBombs(dt) {
+    var tok = G.levelToken, d = G.drill, world = G.world;
+    for (var i = G.bombs.length - 1; i >= 0; i--) {
+      var b = G.bombs[i];
+      b.t -= dt;
+      if (b.t > 0) continue;
+      G.bombs.splice(i, 1);
+      var cx = Math.round(b.x), cy = Math.round(b.y);
+      var budget = { n: 300 };
+
+      if (b.def.tunnel) {
+        for (var l = 0; l < b.def.tunnel; l++) {
+          for (var w2 = -1; w2 <= 1; w2++) {
+            var tx = cx + b.fx * l - (b.fy !== 0 ? w2 : 0);
+            var ty = cy + b.fy * l - (b.fx !== 0 ? w2 : 0);
+            if (W.DESTRUCTIBLE[world.at(tx, ty)]) destroyAt(tx, ty, true, budget);
+          }
+        }
+      } else {
+        blast(cx, cy, b.def.rayon, budget, null);
+      }
+
+      burst(cx, cy, b.def.color, 30);
+      flash(b.def.color, 0.3);
+      G.shake = 20;
+      SFX.blast();
+      G.meta.bombes = (G.meta.bombes || 0) + 1;
+
+      var dist = Math.sqrt(Math.pow(d.x + 1 - b.x, 2) + Math.pow(d.y + 1 - b.y, 2));
+      if (b.def.poussee) {
+        var a = Math.atan2(d.y + 1 - b.y, d.x + 1 - b.x);
+        if (dist < 0.4) a = Math.atan2(-b.fy, -b.fx);
+        d.kick = { vx: Math.cos(a) * b.def.poussee, vy: Math.sin(a) * b.def.poussee, t: 0.45 };
+      }
+      if (b.def.effondre) {
+        G.scan = { x0: cx - b.def.rayon, x1: cx + b.def.rayon, y: cy - b.def.rayon };
+      }
+      if (b.def.degat && dist < 3.5) {
+        damage(1, 'TROP PRES');
+        if (G.levelToken !== tok) return;
+      }
     }
   }
 
@@ -2272,6 +2430,9 @@ window.CORE = window.CORE || {};
     if (G.marker) G.marker.t -= dt;
     var tok0 = G.levelToken;
     checkCollapse();
+    if (input.place) placeCharge();
+    updateBombs(dt);
+    if (G.levelToken !== tok0) return;
     updateFaille(dt);
     if (G.levelToken !== tok0) return;
     updateFalls(dt);
@@ -2355,6 +2516,12 @@ window.CORE = window.CORE || {};
       G.run.gold += Math.round(G.world.layer.oreValue * 2 * stats.value * G.comboMult);
       SFX.gold();
       toast('+ or', '#ffd24a', false);
+    } else if (p.kind === W.KIND.INGREDIENT) {
+      G.ing[p.ing.id] = (G.ing[p.ing.id] || 0) + 1;
+      bumpCombo();
+      SFX.ore();
+      toast(p.ing.nom, p.ing.color, false);
+      craft();
     } else if (p.kind === W.KIND.CARBURANT) {
       var l = CFG.FUEL.bidon * (stats.bigCans ? 2 : 1);
       G.meta.cans++;
@@ -2394,6 +2561,7 @@ window.CORE = window.CORE || {};
     G.run.gold += bonusGold;
 
     G.run.fuelCarry = G.fuel;
+    G.run.keepBelt = true;          // ingredients et charges passent au niveau suivant
     G.run.splits.push(t);
     G.run.medals.push(medal);
     G.run.total += t;
@@ -2492,7 +2660,7 @@ window.CORE = window.CORE || {};
     G: G, startRun: startRun, startLevel: startLevel, update: update,
     computeStats: computeStats, chooseCard: chooseCard, buyPart: buyPart,
     nextLevel: nextLevel, medalFor: medalFor, shopOpen: shopOpen, buyFuel: buyFuel, tier: tier,
-    dryRestart: dryRestart, dryBuy: dryBuy
+    dryRestart: dryRestart, dryBuy: dryBuy, placeCharge: placeCharge
   };
 })(window.CORE);
 
@@ -2846,6 +3014,30 @@ window.CORE = window.CORE || {};
       }
     }
     ctx.textAlign = 'left';
+
+    // --- charges posees : meche qui accelere ---------------------------------
+    for (var bmi = 0; bmi < g.bombs.length; bmi++) {
+      var bm = g.bombs[bmi];
+      var k2 = 1 - bm.t / CFG.FUSE;
+      var bx2 = bm.x * T, by2 = bm.y * T;
+      var rr2 = T * (0.9 + k2 * 0.5);
+      var bg2 = ctx.createRadialGradient(bx2, by2, 0, bx2, by2, rr2 * 3);
+      bg2.addColorStop(0, bm.def.color);
+      bg2.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.globalAlpha = 0.25 + 0.5 * Math.abs(Math.sin(g.time * (6 + k2 * 34)));
+      ctx.fillStyle = bg2;
+      ctx.fillRect(bx2 - rr2 * 3, by2 - rr2 * 3, rr2 * 6, rr2 * 6);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = '#1a1410';
+      ctx.fillRect(bx2 - rr2 / 2, by2 - rr2 / 2, rr2, rr2);
+      ctx.fillStyle = bm.def.color;
+      ctx.fillRect(bx2 - rr2 / 2 + 2, by2 - rr2 / 2 + 2, rr2 - 4, rr2 - 4);
+      ctx.fillStyle = '#0d0d10';
+      ctx.font = 'bold 11px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(bm.def.icon, bx2, by2 + 4);
+      ctx.textAlign = 'left';
+    }
 
     // --- particules ------------------------------------------------------------
     for (var qi = 0; qi < g.parts.length; qi++) {
@@ -3498,6 +3690,23 @@ window.CORE = window.CORE || {};
       ? 'linear-gradient(90deg,#ffd24a,#fff2a8)' : 'linear-gradient(90deg,#5ff0e0,#7ec8ff)';
     $('turboLab').textContent = d.turboT > 0 ? 'ACTIF' : (G.turboCharge >= 1 ? 'PRET' : '');
 
+    var belt = '';
+    for (var bi = 0; bi < CFG.BELT_MAX; bi++) {
+      var ch = G.belt[bi];
+      belt += ch
+        ? '<div class="ch" style="border-color:' + ch.color + ';color:' + ch.color +
+          '" title="' + ch.nom + '">' + ch.icon + '</div>'
+        : '<div class="ch empty">·</div>';
+    }
+    $('belt').innerHTML = belt;
+
+    var sac = [];
+    CFG.INGREDIENTS.forEach(function (g2) {
+      var n = G.ing[g2.id] || 0;
+      if (n > 0) sac.push('<span style="color:' + g2.color + '">' + g2.icon + n + '</span>');
+    });
+    $('sacoche').innerHTML = sac.join('');
+
     var pips = '';
     var maxHp = CFG.HP + (s.hpBonus || 0);
     for (var h = 0; h < maxHp; h++) pips += '<i class="' + (h < G.hp ? 'on' : 'off') + '"></i>';
@@ -3589,6 +3798,7 @@ window.CORE = window.CORE || {};
   }
   window.addEventListener('keydown', function (e) {
     if (e.code === 'KeyM') { CORE.SFX.toggle(); return; }
+    if ((e.code === 'KeyE' || e.code === 'KeyF') && !keys[e.code]) placeQueued = true;
     if (e.code === 'KeyR' && G.state === 'play') { GAME.startLevel(G.run.levelIndex); return; }
     if (e.code === 'Escape' && G.state === 'play') { CORE.SFX.drill(false, 0); UI.buildMenu(); prevState = 'menu'; G.state = 'menu'; return; }
     keys[e.code] = true;
@@ -3598,8 +3808,11 @@ window.CORE = window.CORE || {};
   window.addEventListener('keyup', function (e) { keys[e.code] = false; });
   window.addEventListener('blur', function () { keys = {}; });
 
-  var input = { dx: 0, dy: 0, turbo: false };
+  var placeQueued = false;
+  var input = { dx: 0, dy: 0, turbo: false, place: false };
   function readInput() {
+    input.place = placeQueued;
+    placeQueued = false;
     input.dx = (held(CODE.right) ? 1 : 0) - (held(CODE.left) ? 1 : 0);
     input.dy = (held(CODE.down) ? 1 : 0) - (held(CODE.up) ? 1 : 0);
     input.turbo = held(CODE.turbo);

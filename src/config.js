@@ -102,7 +102,7 @@ window.CORE = window.CORE || {};
       ore: '#d68b3f', oreName: 'cuivre', oreValue: 13,
       wSoft: 0.56, wMed: 0.26, wHard: 0.08,
       special: 'FRIABLE', wSpecial: 0.10,   // s'effondre en cascade
-      veins: 8, caves: 3, bonuses: 8, traps: 2, bidons: 5, coffres: 2
+      veins: 8, caves: 3, bonuses: 8, traps: 2, bidons: 5, coffres: 2, ingredients: 10
     },
     {
       id: 2, name: 'LES SEDIMENTS', from: 220, to: 880,
@@ -111,7 +111,7 @@ window.CORE = window.CORE || {};
       ore: '#e0b23c', oreName: 'fer', oreValue: 22,
       wSoft: 0.44, wMed: 0.30, wHard: 0.14,
       special: 'CHARBON', wSpecial: 0.12,   // explose et enflamme ses voisines
-      veins: 9, caves: 4, bonuses: 9, traps: 3, bidons: 6, coffres: 2
+      veins: 9, caves: 4, bonuses: 9, traps: 3, bidons: 6, coffres: 2, ingredients: 12
     },
     {
       id: 3, name: 'LES GROTTES DE CRISTAL', from: 880, to: 1600,
@@ -120,7 +120,7 @@ window.CORE = window.CORE || {};
       ore: '#c8e6ff', oreName: 'argent', oreValue: 38,
       wSoft: 0.38, wMed: 0.28, wHard: 0.16,
       special: 'CRISTAL', wSpecial: 0.18,   // reaction en chaine, et ca paye
-      veins: 10, caves: 4, bonuses: 10, traps: 4, bidons: 7, coffres: 3
+      veins: 10, caves: 4, bonuses: 10, traps: 4, bidons: 7, coffres: 3, ingredients: 13
     }
   ];
 
@@ -179,6 +179,42 @@ window.CORE = window.CORE || {};
     { id: 'fall30',   label: 'Chuter de 30 blocs d\'un coup',  gold: 100, check: function (st) { return st.bigFall >= 30; } }
   ];
 
+  /* ---------------------------------------------------------- EXPLOSIFS */
+  /* On trouve des ingredients dans la roche ; des qu'une recette est complete,
+     la charge est fabriquee toute seule. Faire sauter des cases ne coute pas
+     une goutte de carburant : c'est la que se gagne l'economie. */
+  CFG.INGREDIENTS = [
+    { id: 'salpetre', nom: 'Salpetre',       icon: '*', color: '#e8e2c8', poids: 26, couche: 1 },
+    { id: 'soufre',   nom: 'Soufre jaune',   icon: 'S', color: '#e8d24a', poids: 24, couche: 1 },
+    { id: 'meche',    nom: 'Meche huilee',   icon: '~', color: '#c98a4a', poids: 24, couche: 1 },
+    { id: 'gaz',      nom: 'Poche de gaz',   icon: 'o', color: '#8ae08a', poids: 15, couche: 2 },
+    { id: 'champi',   nom: 'Champignon peteur', icon: '%', color: '#ff8ac0', poids: 13, couche: 2 },
+    { id: 'nitro',    nom: 'Nitro de poche', icon: '!', color: '#ff5a3d', poids: 10, couche: 2 },
+    { id: 'cristal',  nom: 'Eclat instable', icon: '^', color: '#9be0ff', poids: 10, couche: 3 },
+    { id: 'dent',     nom: 'Dent de ver fossilisee', icon: 'V', color: '#d8c0a0', poids: 5, couche: 3 }
+  ];
+
+  /* Fabrication du plus puissant au plus simple. */
+  CFG.RECIPES = [
+    { id: 'abyssale', nom: 'Bombe abyssale', icon: '@', color: '#b48dff',
+      cout: { nitro: 1, cristal: 1, dent: 1 }, rayon: 9, effondre: true, degat: true,
+      desc: 'Rayon 9, et tout s\'ecroule autour' },
+    { id: 'geode',    nom: 'Nitro-geode',    icon: 'O', color: '#9be0ff',
+      cout: { nitro: 1, cristal: 1 }, rayon: 6, degat: true,
+      desc: 'Rayon 6' },
+    { id: 'dirigee',  nom: 'Charge dirigee', icon: '>', color: '#7ec8ff',
+      cout: { salpetre: 1, meche: 1, gaz: 1 }, tunnel: 15,
+      desc: 'Perce un couloir de 15 blocs droit devant' },
+    { id: 'pet',      nom: 'Pet de champignon', icon: '%', color: '#ff8ac0',
+      cout: { champi: 1, gaz: 1 }, rayon: 2, poussee: 26,
+      desc: 'Petit rayon, mais ca propulse la foreuse' },
+    { id: 'dynamite', nom: 'Dynamite',       icon: '#', color: '#ff8a3d',
+      cout: { salpetre: 1, soufre: 1, meche: 1 }, rayon: 4,
+      desc: 'Rayon 4, la valeur sure' }
+  ];
+  CFG.BELT_MAX = 3;      // charges transportables
+  CFG.FUSE = 0.85;       // secondes de meche
+
   /* ------------------------------------------------------------- CARNET */
   /* Ce qui se debloque d'une expedition a l'autre. C'est la seule chose qui
      donne une raison de relancer : on voit toujours ce qui est a une partie. */
@@ -213,6 +249,8 @@ window.CORE = window.CORE || {};
       desc: 'Roche plus dure, Faille plus rapide — et une carte de plus a chaque station' },
     { id: 'ascete',    nom: 'Metier : L\'Ascete',      stat: 'cleanRuns', but: 1,
       desc: 'Aucun bonus ne t\'affecte, mais +1 carte a chaque choix' },
+    { id: 'artificier', nom: 'Metier : L\'Artificier',  stat: 'bombes',    but: 25,
+      desc: 'Demarre avec trois charges et trouve plus d\'ingredients' },
     { id: 'profondeur3', nom: 'PROFONDEUR III',        stat: 'deepWins',  but: 1,
       desc: 'Le vrai test : deux points d\'integrite seulement' }
   ];

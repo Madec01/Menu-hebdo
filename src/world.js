@@ -24,7 +24,7 @@ window.CORE = window.CORE || {};
     13: { hard: 1.0,   slow: 0.5, name: 'gluante' }
   };
 
-  var KIND = { BONUS: 1, PEPITE: 2, TEMPS: 3, CARBURANT: 4 };
+  var KIND = { BONUS: 1, PEPITE: 2, TEMPS: 3, CARBURANT: 4, INGREDIENT: 5 };
 
   function valueNoise(rng, w, h, cell) {
     var gw = Math.ceil(w / cell) + 2, gh = Math.ceil(h / cell) + 2;
@@ -234,6 +234,14 @@ window.CORE = window.CORE || {};
     scatter(Math.round(layer.bonuses * 0.8), function () { return { kind: KIND.PEPITE }; });
     scatter(3, function () { return { kind: KIND.TEMPS }; });
     scatter(layer.bidons, function () { return { kind: KIND.CARBURANT }; });
+
+    // ingredients d'explosifs : seuls ceux de la couche atteinte apparaissent
+    var dispo = CFG.INGREDIENTS.filter(function (g) { return g.couche <= layer.id; });
+    var sac = [];
+    dispo.forEach(function (g) { for (var k = 0; k < g.poids; k++) sac.push(g); });
+    scatter(layer.ingredients || 11, function (r) {
+      return { kind: KIND.INGREDIENT, ing: r.pick(sac) };
+    });
 
     // --- le Sceau ----------------------------------------------------------
     if (def.type === 'sceau') {

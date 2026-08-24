@@ -34,6 +34,7 @@ node build.js
 | `Z Q S D` / fleches | Diriger la foreuse. **La direction pressee est la direction de forage** — il n'y a pas de bouton « miner ». |
 | Deux directions | Forer en diagonale (creuse un escalier) |
 | `Espace` | Turbo — 2 s a vitesse doublee, 15 s de recharge |
+| `E` | Poser une charge explosive |
 | `R` | Recommencer le niveau |
 | `Echap` | Retour au menu |
 | `M` | Couper le son |
@@ -68,6 +69,13 @@ node build.js
   passifs dediee.
 - **3 defis optionnels par niveau**, un **combo** qui multiplie l'or, des **medailles**
   or/argent/bronze, et le **fantome** de ton meilleur passage qui creuse a cote de toi.
+
+## Le Carnet du mineur
+
+Tout ce que tu fais alimente des compteurs qui survivent aux expeditions, et **seize
+deblocages** y sont accroches : metiers, passifs, pieces de boutique, bonus, pactes, et deux
+paliers de difficulte (Profondeur II et III). L'ecran de fin montre toujours **les trois
+prochains deblocages avec leur barre de progression** — on voit ce qui est a une partie.
 
 ## Structure
 
@@ -117,6 +125,8 @@ Le chrono punit la durete, le carburant punit la largeur : deux pressions distin
   archetypes de build.
 - [docs/v2-propositions.md](docs/v2-propositions.md) — le carburant, la variete des
   niveaux et le ressenti des bonus.
+- [docs/v4-retention.md](docs/v4-retention.md) — pourquoi on ne relancait pas une partie,
+  le Carnet, les explosifs, et ce qui manque encore (un climax).
 - [docs/v3-challenge.md](docs/v3-challenge.md) — le diagnostic du manque de challenge
   et sa reponse : roche qui tombe, Faille, niveaux courts, integrite. Avec les
   references (Mr. Driller, Spelunky, Downwell) dont chaque mecanique est tiree.

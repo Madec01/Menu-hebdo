@@ -348,6 +348,30 @@ window.CORE = window.CORE || {};
     }
     ctx.textAlign = 'left';
 
+    // --- charges posees : meche qui accelere ---------------------------------
+    for (var bmi = 0; bmi < g.bombs.length; bmi++) {
+      var bm = g.bombs[bmi];
+      var k2 = 1 - bm.t / CFG.FUSE;
+      var bx2 = bm.x * T, by2 = bm.y * T;
+      var rr2 = T * (0.9 + k2 * 0.5);
+      var bg2 = ctx.createRadialGradient(bx2, by2, 0, bx2, by2, rr2 * 3);
+      bg2.addColorStop(0, bm.def.color);
+      bg2.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.globalAlpha = 0.25 + 0.5 * Math.abs(Math.sin(g.time * (6 + k2 * 34)));
+      ctx.fillStyle = bg2;
+      ctx.fillRect(bx2 - rr2 * 3, by2 - rr2 * 3, rr2 * 6, rr2 * 6);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = '#1a1410';
+      ctx.fillRect(bx2 - rr2 / 2, by2 - rr2 / 2, rr2, rr2);
+      ctx.fillStyle = bm.def.color;
+      ctx.fillRect(bx2 - rr2 / 2 + 2, by2 - rr2 / 2 + 2, rr2 - 4, rr2 - 4);
+      ctx.fillStyle = '#0d0d10';
+      ctx.font = 'bold 11px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(bm.def.icon, bx2, by2 + 4);
+      ctx.textAlign = 'left';
+    }
+
     // --- particules ------------------------------------------------------------
     for (var qi = 0; qi < g.parts.length; qi++) {
       var q = g.parts[qi];

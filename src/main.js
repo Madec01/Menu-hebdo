@@ -33,6 +33,7 @@
   }
   window.addEventListener('keydown', function (e) {
     if (e.code === 'KeyM') { CORE.SFX.toggle(); return; }
+    if ((e.code === 'KeyE' || e.code === 'KeyF') && !keys[e.code]) placeQueued = true;
     if (e.code === 'KeyR' && G.state === 'play') { GAME.startLevel(G.run.levelIndex); return; }
     if (e.code === 'Escape' && G.state === 'play') { CORE.SFX.drill(false, 0); UI.buildMenu(); prevState = 'menu'; G.state = 'menu'; return; }
     keys[e.code] = true;
@@ -42,8 +43,11 @@
   window.addEventListener('keyup', function (e) { keys[e.code] = false; });
   window.addEventListener('blur', function () { keys = {}; });
 
-  var input = { dx: 0, dy: 0, turbo: false };
+  var placeQueued = false;
+  var input = { dx: 0, dy: 0, turbo: false, place: false };
   function readInput() {
+    input.place = placeQueued;
+    placeQueued = false;
     input.dx = (held(CODE.right) ? 1 : 0) - (held(CODE.left) ? 1 : 0);
     input.dy = (held(CODE.down) ? 1 : 0) - (held(CODE.up) ? 1 : 0);
     input.turbo = held(CODE.turbo);

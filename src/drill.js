@@ -16,7 +16,7 @@ window.CORE = window.CORE || {};
       prog: 0, progKey: '', crit: false,
       drilling: false, grounded: false, falling: false,
       stall: 0, bit: 0,
-      straight: 0, straightBest: 0, fallFrom: null, lastHard: 1
+      straight: 0, straightBest: 0, fallFrom: null, lastHard: 1, kick: null
     };
   }
 
@@ -115,6 +115,14 @@ window.CORE = window.CORE || {};
       d.vy += CFG.GRAVITY * dt;
       if (inDy > 0) d.vy = Math.max(d.vy, s.roll * 0.9);
       if (d.vy > CFG.TERMINAL) d.vy = CFG.TERMINAL;
+    }
+
+    // impulsion d'une explosion : elle s'ajoute au pilotage pendant un instant
+    if (d.kick && d.kick.t > 0) {
+      d.kick.t -= dt;
+      d.vx += d.kick.vx;
+      d.vy += d.kick.vy;
+      if (d.kick.t <= 0) d.kick = null;
     }
 
     var nx = d.x + d.vx * dt;

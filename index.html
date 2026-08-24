@@ -65,6 +65,13 @@
   #challenges .ok{color:#78ffb4}
   #challenges .ok:before{content:'[x] '}
   #challenges .ko:before{content:'[ ] '}
+  #belt{position:absolute;bottom:118px;left:14px;display:flex;gap:6px}
+  #belt .ch{width:34px;height:34px;border:2px solid;border-radius:5px;display:flex;
+    align-items:center;justify-content:center;font-size:16px;font-weight:800;
+    background:rgba(12,14,18,.8)}
+  #belt .empty{border-color:#2a2f39;opacity:.35}
+  #sacoche{position:absolute;bottom:160px;left:14px;font-size:10px;color:var(--dim);
+    display:flex;gap:9px;flex-wrap:wrap;max-width:230px}
   .meter{height:7px;background:#22252c;border:1px solid var(--line);border-radius:3px;
     overflow:hidden;margin:3px 0 8px}
   .meter i{display:block;height:100%;transition:width .06s linear}
@@ -173,6 +180,8 @@
   <div id="combo"></div>
   <div id="eventBanner"></div>
   <div id="challenges"></div>
+  <div id="belt"></div>
+  <div id="sacoche"></div>
   <div id="bars">
     <div id="fuelWrap">
       <div class="lab"><span>CARBURANT</span><span id="fuelLab">100 L</span></div>
@@ -189,7 +198,8 @@
   <h1>C<span>O</span>RE</h1>
   <div class="sub">Tu pilotes une foreuse. Le centre de la planete est a 1 300 metres.<br>
     Il n'y a pas de vie et pas de game over : ton seul adversaire est le chrono.<br>
-    Le carburant, lui, ne brule qu'a l'action — creuser large coute cher, reflechir ne coute rien.</div>
+    Le carburant, lui, ne brule qu'a l'action — creuser large coute cher, reflechir ne coute rien.<br>
+    Ramasse de quoi fabriquer des explosifs : faire sauter la roche ne consomme pas une goutte.</div>
   <h2>Choisis ton metier</h2>
   <div class="cards" id="jobs"></div>
   <div class="keys">
@@ -197,6 +207,7 @@
     <span><b>2 touches</b> — forer en diagonale</span>
     <span><b>Espace</b> — turbo</span>
     <span><b>Le carburant</b> brule a l'action, pas au temps</span>
+    <span><b>E</b> — poser une charge</span>
     <span><b>R</b> — recommencer le niveau</span>
     <span><b>M</b> — son</span>
   </div>

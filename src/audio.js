@@ -92,6 +92,12 @@ window.CORE = window.CORE || {};
     },
     blast: function () { blip(120, 0.35, 'sawtooth', 0.2, 40); },
     bounce: function () { blip(400, 0.16, 'sine', 0.16, 1100); },
+    craft: function () {
+      [523, 784, 1047].forEach(function (f, i) {
+        setTimeout(function () { blip(f, 0.1, 'square', 0.15); }, i * 60);
+      });
+    },
+    fuse: function () { blip(1200, 0.5, 'sine', 0.07, 300); },
     hurt: function () {
       blip(220, 0.22, 'sawtooth', 0.22, 70);
       setTimeout(function () { blip(140, 0.3, 'square', 0.16, 50); }, 60);

@@ -15,6 +15,7 @@ window.CORE = window.CORE || {};
     fuel: 100, fuelMax: 100, reserve: false, lowWarned: false,
     hp: 3, iframes: 0, stun: 0, falls: [], failleCd: 0, sealBroken: false,
     justRestarted: 0, turboCharge: 0,
+    ing: {}, belt: [], bombs: [],
     event: null, eventT: 0, eventNext: 0, marker: null,
     combo: 0, comboT: 0, comboMult: 1,
     challenges: [], st: null,
@@ -106,6 +107,9 @@ window.CORE = window.CORE || {};
     G.hitstop = 0; G.slowmo = 0; G.flash = null; G.desat = 0;
     G.lowWarned = false; G.reserve = false; G.rescueT = 0;
     G.dryChoice = false;
+    G.bombs = [];
+    if (!G.run.keepBelt) { G.ing = {}; G.belt = []; }
+    G.run.keepBelt = false;
     G.hp = Math.max(1, CFG.HP + (pre.hpBonus || 0) + tier().hp); G.iframes = 0; G.stun = 0; G.falls = [];
     G.failleCd = 0; G.sealBroken = false; G.turboCharge = 0;
     G.world.failleRow = G.world.top - 3;
@@ -172,6 +176,9 @@ window.CORE = window.CORE || {};
     if (item.kind === W.KIND.BONUS) { p.color = item.bonus.color; p.label = item.bonus.icon; }
     else if (item.kind === W.KIND.PEPITE) { p.color = '#ffd24a'; p.label = '$'; }
     else if (item.kind === W.KIND.CARBURANT) { p.color = '#8ac46a'; p.label = 'L'; }
+    else if (item.kind === W.KIND.INGREDIENT) {
+      p.ing = item.ing; p.color = item.ing.color; p.label = item.ing.icon;
+    }
     else { p.color = '#5ff0e0'; p.label = '-5'; }
     G.pickups.push(p);
   }
@@ -185,6 +192,86 @@ window.CORE = window.CORE || {};
         s: 2 + Math.random() * 3, color: color,
         life: 0.35 + Math.random() * 0.4, max: 0.75
       });
+    }
+  }
+
+  /* -------------------------------------------------------- EXPLOSIFS */
+  /* Des qu'une recette est complete, la charge se fabrique toute seule : on
+     ramasse, on entend le clic, on a une bombe de plus a la ceinture. */
+  function craft() {
+    var fait = null;
+    for (var r = 0; r < CFG.RECIPES.length; r++) {
+      var rec = CFG.RECIPES[r];
+      if (G.belt.length >= CFG.BELT_MAX) break;
+      var ok = true;
+      for (var k in rec.cout) if ((G.ing[k] || 0) < rec.cout[k]) { ok = false; break; }
+      if (!ok) continue;
+      for (var k2 in rec.cout) G.ing[k2] -= rec.cout[k2];
+      G.belt.push(rec);
+      fait = rec;
+      r = -1;                                  // on retente : plusieurs charges d'un coup
+    }
+    if (fait) {
+      toast('FABRIQUE — ' + fait.nom, fait.color, true);
+      flash(fait.color, 0.2);
+      SFX.craft();
+    }
+  }
+
+  function placeCharge() {
+    if (!G.belt.length || G.dryChoice) return;
+    var rec = G.belt.shift();
+    var d = G.drill;
+    G.bombs.push({
+      def: rec, t: CFG.FUSE,
+      x: d.x + CFG.DRILL_W / 2 + d.fx * 1.2,
+      y: d.y + CFG.DRILL_H / 2 + d.fy * 1.2,
+      fx: d.fx, fy: d.fy
+    });
+    SFX.fuse();
+  }
+
+  function updateBombs(dt) {
+    var tok = G.levelToken, d = G.drill, world = G.world;
+    for (var i = G.bombs.length - 1; i >= 0; i--) {
+      var b = G.bombs[i];
+      b.t -= dt;
+      if (b.t > 0) continue;
+      G.bombs.splice(i, 1);
+      var cx = Math.round(b.x), cy = Math.round(b.y);
+      var budget = { n: 300 };
+
+      if (b.def.tunnel) {
+        for (var l = 0; l < b.def.tunnel; l++) {
+          for (var w2 = -1; w2 <= 1; w2++) {
+            var tx = cx + b.fx * l - (b.fy !== 0 ? w2 : 0);
+            var ty = cy + b.fy * l - (b.fx !== 0 ? w2 : 0);
+            if (W.DESTRUCTIBLE[world.at(tx, ty)]) destroyAt(tx, ty, true, budget);
+          }
+        }
+      } else {
+        blast(cx, cy, b.def.rayon, budget, null);
+      }
+
+      burst(cx, cy, b.def.color, 30);
+      flash(b.def.color, 0.3);
+      G.shake = 20;
+      SFX.blast();
+      G.meta.bombes = (G.meta.bombes || 0) + 1;
+
+      var dist = Math.sqrt(Math.pow(d.x + 1 - b.x, 2) + Math.pow(d.y + 1 - b.y, 2));
+      if (b.def.poussee) {
+        var a = Math.atan2(d.y + 1 - b.y, d.x + 1 - b.x);
+        if (dist < 0.4) a = Math.atan2(-b.fy, -b.fx);
+        d.kick = { vx: Math.cos(a) * b.def.poussee, vy: Math.sin(a) * b.def.poussee, t: 0.45 };
+      }
+      if (b.def.effondre) {
+        G.scan = { x0: cx - b.def.rayon, x1: cx + b.def.rayon, y: cy - b.def.rayon };
+      }
+      if (b.def.degat && dist < 3.5) {
+        damage(1, 'TROP PRES');
+        if (G.levelToken !== tok) return;
+      }
     }
   }
 
@@ -679,6 +766,9 @@ window.CORE = window.CORE || {};
     if (G.marker) G.marker.t -= dt;
     var tok0 = G.levelToken;
     checkCollapse();
+    if (input.place) placeCharge();
+    updateBombs(dt);
+    if (G.levelToken !== tok0) return;
     updateFaille(dt);
     if (G.levelToken !== tok0) return;
     updateFalls(dt);
@@ -762,6 +852,12 @@ window.CORE = window.CORE || {};
       G.run.gold += Math.round(G.world.layer.oreValue * 2 * stats.value * G.comboMult);
       SFX.gold();
       toast('+ or', '#ffd24a', false);
+    } else if (p.kind === W.KIND.INGREDIENT) {
+      G.ing[p.ing.id] = (G.ing[p.ing.id] || 0) + 1;
+      bumpCombo();
+      SFX.ore();
+      toast(p.ing.nom, p.ing.color, false);
+      craft();
     } else if (p.kind === W.KIND.CARBURANT) {
       var l = CFG.FUEL.bidon * (stats.bigCans ? 2 : 1);
       G.meta.cans++;
@@ -801,6 +897,7 @@ window.CORE = window.CORE || {};
     G.run.gold += bonusGold;
 
     G.run.fuelCarry = G.fuel;
+    G.run.keepBelt = true;          // ingredients et charges passent au niveau suivant
     G.run.splits.push(t);
     G.run.medals.push(medal);
     G.run.total += t;
@@ -899,6 +996,6 @@ window.CORE = window.CORE || {};
     G: G, startRun: startRun, startLevel: startLevel, update: update,
     computeStats: computeStats, chooseCard: chooseCard, buyPart: buyPart,
     nextLevel: nextLevel, medalFor: medalFor, shopOpen: shopOpen, buyFuel: buyFuel, tier: tier,
-    dryRestart: dryRestart, dryBuy: dryBuy
+    dryRestart: dryRestart, dryBuy: dryBuy, placeCharge: placeCharge
   };
 })(window.CORE);

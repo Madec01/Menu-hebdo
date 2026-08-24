@@ -284,6 +284,23 @@ window.CORE = window.CORE || {};
       ? 'linear-gradient(90deg,#ffd24a,#fff2a8)' : 'linear-gradient(90deg,#5ff0e0,#7ec8ff)';
     $('turboLab').textContent = d.turboT > 0 ? 'ACTIF' : (G.turboCharge >= 1 ? 'PRET' : '');
 
+    var belt = '';
+    for (var bi = 0; bi < CFG.BELT_MAX; bi++) {
+      var ch = G.belt[bi];
+      belt += ch
+        ? '<div class="ch" style="border-color:' + ch.color + ';color:' + ch.color +
+          '" title="' + ch.nom + '">' + ch.icon + '</div>'
+        : '<div class="ch empty">·</div>';
+    }
+    $('belt').innerHTML = belt;
+
+    var sac = [];
+    CFG.INGREDIENTS.forEach(function (g2) {
+      var n = G.ing[g2.id] || 0;
+      if (n > 0) sac.push('<span style="color:' + g2.color + '">' + g2.icon + n + '</span>');
+    });
+    $('sacoche').innerHTML = sac.join('');
+
     var pips = '';
     var maxHp = CFG.HP + (s.hpBonus || 0);
     for (var h = 0; h < maxHp; h++) pips += '<i class="' + (h < G.hp ? 'on' : 'off') + '"></i>';
