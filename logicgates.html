@@ -175,6 +175,15 @@ table.tt tr.tt-fail td:first-child::before{content:'✗ ';color:var(--red)}
 .save-info{flex:1;display:flex;flex-direction:column;gap:1px}
 .save-info b{font-size:13px;color:#dcffe9}
 .save-info span{font-family:var(--mono);font-size:9.5px;color:var(--dim)}
+#tipbox{position:fixed;z-index:26;max-width:290px;border-radius:11px;padding:8px 11px;
+  pointer-events:none;font-size:11px;line-height:1.5;opacity:1;transition:opacity .12s}
+#tipbox.hidden{display:none}
+#tip-title{font-family:'Chakra Petch',sans-serif;font-weight:700;font-size:12px;color:var(--cyan);
+  letter-spacing:.04em;margin-bottom:3px}
+#tip-body{font-family:var(--mono);color:#c3d2ea;font-size:10.5px}
+#tip-body .tv{color:var(--green);font-weight:600}
+#tip-body .td{color:var(--dim)}
+#tip-body .tw{color:var(--amber)}
 #inspector{position:fixed;z-index:30;width:250px;max-height:70vh;overflow-y:auto;
   border-radius:14px;padding:12px 14px;scrollbar-width:thin;scrollbar-color:#2a3a5a transparent}
 #inspector.hidden{display:none}
@@ -363,6 +372,9 @@ table.tt tr.tt-fail td:first-child::before{content:'✗ ';color:var(--red)}
   <button class="icon-btn on" id="btn-sound" title="Son">
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5 6 9H2v6h4l5 4V5z" fill="currentColor" stroke="none"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 6a9 9 0 0 1 0 12"/></svg>
   </button>
+  <button class="icon-btn on" id="btn-labels" title="Noms sous les composants : toujours / au survol seulement (touche N)">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h10M4 17h7"/></svg>
+  </button>
   <button class="icon-btn" id="btn-analyze" title="Analyser le circuit : équations booléennes et table de vérité">
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35M8 11h6M11 8v6"/></svg>
   </button>
@@ -475,6 +487,9 @@ table.tt tr.tt-fail td:first-child::before{content:'✗ ';color:var(--red)}
   </div>
 </div>
 
+<!-- ======= INFOBULLE DE SURVOL ======= -->
+<div id="tipbox" class="glass hidden"><div id="tip-title"></div><div id="tip-body"></div></div>
+
 <!-- ======= INSPECTEUR ======= -->
 <div id="inspector" class="glass hidden">
   <div id="insp-head"><span id="insp-title"></span><button id="insp-close" title="Fermer (Échap)">✕</button></div>
@@ -500,6 +515,8 @@ table.tt tr.tt-fail td:first-child::before{content:'✗ ';color:var(--red)}
       <span class="kbd">Suppr</span> effacer (survolé ou sélection) &nbsp;·&nbsp; <span class="kbd">Échap</span> annuler câble / désélectionner<br>
       <span class="kbd">Maj + glisser</span> sélection rectangle &nbsp;·&nbsp; <span class="kbd">Maj + clic</span> (dé)sélectionner &nbsp;·&nbsp;
       <span class="kbd">Ctrl+C</span> copier &nbsp;·&nbsp; <span class="kbd">Ctrl+V</span> coller &nbsp;·&nbsp; <span class="kbd">Ctrl+A</span> tout sélectionner<br>
+      <span class="kbd">F</span> recadrer sur le circuit &nbsp;·&nbsp; <span class="kbd">N</span> noms des composants &nbsp;·&nbsp;
+      <b>survol</b> = infobulle détaillée<br>
       Cliquer sur une <b>entrée déjà câblée</b> détache le fil (relâcher dans le vide le supprime).<br>
       <span class="kbd">Double-clic sur un fil</span> ajouter une poignée ◆ déplaçable &nbsp;·&nbsp;
       <span class="kbd">Double-clic sur ◆</span> la retirer &nbsp;·&nbsp;
@@ -1288,11 +1305,13 @@ class Component {
     if (GATE_TYPES.includes(this.type)) this.drawGate(c, col, hov);
     else this.drawDevice(c, col, hov, t);
 
-    // Nom sous le composant
-    c.font = "500 8.5px 'IBM Plex Mono', monospace";
-    c.textAlign = 'center'; c.textBaseline = 'top';
-    c.fillStyle = hov ? '#c8d6ee' : PAL.dim;
-    c.fillText(FR_NAME[this.type], this.x + this.w/2, this.y + this.h + 6);
+    // Nom sous le composant (toujours, ou seulement au survol / dans la sélection)
+    if (labelsMode || hov || selection.has(this)){
+      c.font = "500 8.5px 'IBM Plex Mono', monospace";
+      c.textAlign = 'center'; c.textBaseline = 'top';
+      c.fillStyle = hov ? '#c8d6ee' : PAL.dim;
+      c.fillText(FR_NAME[this.type], this.x + this.w/2, this.y + this.h + 6);
+    }
 
     // Badge de label mission (A, B, S…)
     if (this.customLabel){
@@ -2570,7 +2589,7 @@ function overTrash(sx, sy){
 }
 
 canvas.addEventListener('pointerdown', e => {
-  closeInspector();
+  closeInspector(); hideTip();
   try { canvas.setPointerCapture(e.pointerId); } catch(err){}   // pointeur déjà relâché / synthétique
   mouseS = {x:e.clientX, y:e.clientY};
   mouseW = s2w(e.clientX, e.clientY);
@@ -2676,7 +2695,9 @@ canvas.addEventListener('pointermove', e => {
     (h => h ? h.wire : null)(pickWireAt(mouseW.x, mouseW.y, 9)) : null;
   canvas.style.cursor = hoveredPin ? 'crosshair' :
     (hoveredComp ? 'grab' : (hoveredWire ? 'pointer' : 'default'));
+  updateTip();
 });
+canvas.addEventListener('pointerleave', () => hideTip());
 
 canvas.addEventListener('pointerup', e => {
   mouseS = {x:e.clientX, y:e.clientY};
@@ -2780,7 +2801,7 @@ canvas.addEventListener('dblclick', e => {
   }
 });
 canvas.addEventListener('wheel', e => {
-  e.preventDefault();
+  e.preventDefault(); hideTip();
   zoomAt(e.clientX, e.clientY, e.deltaY < 0 ? 1.1 : 1/1.1);
 }, {passive:false});
 
@@ -2810,6 +2831,12 @@ addEventListener('keydown', e => {
   }
   if ((e.ctrlKey || e.metaKey) && (e.key === 'd' || e.key === 'D')){
     e.preventDefault(); duplicateSelection();
+  }
+  if (!e.ctrlKey && !e.metaKey && (e.key === 'n' || e.key === 'N')) setLabelsMode(!labelsMode);
+  if (!e.ctrlKey && !e.metaKey && (e.key === 'f' || e.key === 'F')){
+    const bb = boardBBox();
+    if (bb){ camFitTo(bb, 90); updateStats(true); AudioSys.click(); }
+    else toast('Rien à recadrer : le plan de travail est vide.', 'info', 2000);
   }
   if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A')){
     e.preventDefault();
@@ -6322,9 +6349,14 @@ function buildGuide(){
     '<code>mém[…]</code> pour une bascule). Si le circuit est combinatoire et compte au plus 4 interrupteurs, il en mesure ' +
     'aussi la <b>vraie table de vérité</b> en simulant les combinaisons. Dans les missions 🕵️ boîte noire il est brouillé : ' +
     'à toi de déduire.<br><br>' +
+    '<b>🔍 L’infobulle.</b> Survole n’importe quoi : un <b>composant</b> te donne l’état de chacune de ses ' +
+    'entrées et sorties, ses réglages et son coût ; un <b>pin</b> dit à quoi il est relié ; un <b>câble</b> ' +
+    'affiche la valeur qu’il transporte. C’est le réflexe à prendre quand un circuit ne fait pas ce que tu crois.<br><br>' +
     '<b>⌨️ Les gestes qui font gagner du temps.</b> <code>Ctrl+Z</code> / <code>Ctrl+Y</code> annuler-refaire, ' +
     '<code>Ctrl+C</code> / <code>Ctrl+V</code> copier-coller, <code>Ctrl+D</code> dupliquer la sélection, ' +
     '<code>Suppr</code> effacer, glisser dans le vide pour sélectionner plusieurs boîtiers (puis ⇤ ⤒ ☰ pour les aligner), ' +
+    '<code>F</code> recadrer la vue sur ton circuit, <code>N</code> masquer les noms sous les boîtiers ' +
+    '(le plan respire quand il y a beaucoup de composants), ' +
     '<code>🪄</code> pour ranger les câbles automatiquement et <code>📷</code> pour exporter une image de ton montage.',
     items:[] },
   { t:'Les entrées — produire des signaux', p:'Tout circuit commence par des sources : elles injectent des 0 et des 1 que la logique va transformer.', items:[
@@ -6504,6 +6536,159 @@ function buildGuide(){
       '</div></div>').join('')
   ).join('');
 }
+
+
+/* ==================== INFOBULLE DE SURVOL ====================
+   Elle lit ce que le moteur sait déjà (hoveredComp / hoveredPin /
+   hoveredWire) : nom, état de chaque pin, réglages, valeur transportée.
+   En mission « boîte noire », elle ne révèle évidemment rien. */
+let tipT = 0, tipFor = null, tipShown = false;
+const busTxt = v => (v > 1 ? 'bus ' + v : (v ? '1' : '0'));
+
+/* Noms de pins des composants historiques (le registre les déclare lui-même) */
+const LEGACY_PINS = {
+  NOT:{ i:['A'], o:['S'] }, AND:{ i:['A','B'], o:['S'] }, OR:{ i:['A','B'], o:['S'] },
+  XOR:{ i:['A','B'], o:['S'] }, NAND:{ i:['A','B'], o:['S'] }, NOR:{ i:['A','B'], o:['S'] },
+  XNOR:{ i:['A','B'], o:['S'] }, AND3:{ i:['A','B','C'], o:['S'] }, OR3:{ i:['A','B','C'], o:['S'] },
+  DFF:{ i:['D','▷'], o:['Q','Q̄'] }, DELAY:{ i:['E'], o:['S'] },
+  MUX:{ i:['D0','D1','S'], o:['S'] }, ADD:{ i:['A','B','Ci'], o:['Σ','Co'] },
+  SUB:{ i:['A','B','Bi'], o:['D','Bo'] }, COMP:{ i:['A','B'], o:['>','=','<'] },
+  DEMUX:{ i:['D','S'], o:['0','1'] }, CNT4:{ i:['▷','RZ'], o:['8','4','2','1'] },
+  ROM:{ i:['4','2','1'], o:['S1','S2'] },
+  GROUP:{ i:['8','4','2','1'], o:['BUS'] }, UNGROUP:{ i:['BUS'], o:['8','4','2','1'] },
+  NIBBLE:{ i:[], o:['8','4','2','1'] }, SEGMENT:{ i:['8','4','2','1'], o:[] },
+  DEC:{ i:['8','4','2','1'], o:[] }, RGB:{ i:['R','V','B'], o:[] },
+  NOTE:{ i:['♪','4','2','1'], o:[] }, SCOPE:{ i:['CH1','CH2'], o:[] },
+  TRAFFIC:{ i:['V','O','R'], o:[] }, OCTET:{ i:['128','64','32','16','8','4','2','1'], o:[] }
+};
+function pinLabelOf(comp, pin){
+  const lg = LEGACY_PINS[comp.type];
+  if (lg){
+    const arr = pin.isOutput ? lg.o : lg.i;
+    if (arr && arr[pin.index]) return arr[pin.index];
+  }
+  const d = REG[comp.type];
+  if (d){
+    const arr = pin.isOutput ? d.outs : d.ins;
+    if (arr[pin.index] && arr[pin.index].n) return arr[pin.index].n;
+  }
+  if (comp.type === 'CHIP'){
+    const names = pin.isOutput ? comp.pinNamesOut : comp.pinNamesIn;
+    if (names && names[pin.index]) return names[pin.index];
+  }
+  const gen = pin.isOutput ? 'S' : 'E';
+  const n = pin.isOutput ? comp.outputs : comp.inputs;
+  return n > 1 ? gen + (pin.index + 1) : gen;
+}
+function compTipData(c){
+  const m = currentIdx >= 0 ? missions[currentIdx] : null;
+  const secret = c.type === 'BLACKBOX' || (m && m.bb && c.locked && c.type !== 'SWITCH' && c.type !== 'LED');
+  const title = (c.customLabel ? c.customLabel + ' · ' : '') + FR_NAME[c.type];
+  if (secret) return { title, lines:['<span class="td">Contenu masqué : à toi de le déduire !</span>'] };
+  const lines = [];
+  const d = REG[c.type];
+  if (d && d.tip) d.tip(c).forEach(l => lines.push(l));
+  if (c.inPins.length){
+    lines.push('<span class="td">entrées</span> ' + c.inPins.map(p =>
+      pinLabelOf(c, p) + '=<span class="' + (p.state > 1 ? 'tw' : 'tv') + '">' +
+      (p.state > 1 ? p.state : (p.state ? 1 : 0)) + '</span>').join('  '));
+  }
+  if (c.outPins.length){
+    lines.push('<span class="td">sorties</span> ' + c.outPins.map(p =>
+      pinLabelOf(c, p) + '=<span class="' + (p.state > 1 ? 'tw' : 'tv') + '">' +
+      (p.state > 1 ? p.state : (p.state ? 1 : 0)) + '</span>').join('  '));
+  }
+  if (GATE_TYPES.includes(c.type)){
+    const F = { NOT:'S = ¬A', AND:'S = A·B', OR:'S = A+B', XOR:'S = A⊕B',
+      NAND:'S = ¬(A·B)', NOR:'S = ¬(A+B)', XNOR:'S = ¬(A⊕B)',
+      AND3:'S = A·B·C', OR3:'S = A+B+C' };
+    if (F[c.type]) lines.push('<span class="td">' + F[c.type] + '</span>');
+  }
+  if (c.type === 'CHIP' && c.chipName)
+    lines.push('<span class="td">puce</span> ' + c.chipName + ' · ' + c.chipCost + ' portes');
+  const cost = gateCost(c.type);
+  if (cost) lines.push('<span class="td">coût</span> ' + cost + ' porte' + (cost > 1 ? 's' : ''));
+  const opts = regOpts(c);
+  if (opts && opts.length)
+    lines.push('<span class="td">réglages</span> ' + opts.map(o =>
+      o.label.replace(/ *\(.*\)/, '') + ' : ' + optOf(c, o.k)).join(' · '));
+  if (!c.locked) lines.push('<span class="td">double-clic pour régler · appui long sur tactile</span>');
+  return { title, lines };
+}
+function pinTipData(pin){
+  const c = pin.comp;
+  const src = wires.filter(w => w.inPin === pin).map(w => FR_NAME[w.outPin.comp.type]);
+  const dst = wires.filter(w => w.outPin === pin).length;
+  const lines = ['<span class="td">' + (pin.isOutput ? 'sortie' : 'entrée') + '</span> ' +
+    pinLabelOf(c, pin) + ' = <span class="' + (pin.state > 1 ? 'tw' : 'tv') + '">' + busTxt(pin.state) + '</span>'];
+  if (!pin.isOutput) lines.push(src.length ? '<span class="td">reliée à</span> ' + src.join(', ')
+                                           : '<span class="td">non reliée</span>');
+  else lines.push('<span class="td">' + (dst ? dst + ' câble(s) partent d’ici' : 'aucun câble') + '</span>');
+  if (pin.busWarn) lines.push('<span class="tw">⚠ bus normalisé à 1 pour ce composant</span>');
+  return { title: FR_NAME[c.type], lines };
+}
+function wireTipData(w){
+  const a = w.outPin.comp, b = w.inPin.comp;
+  return { title: 'Câble',
+    lines:[ FR_NAME[a.type] + ' · ' + pinLabelOf(a, w.outPin) + '  →  ' +
+            FR_NAME[b.type] + ' · ' + pinLabelOf(b, w.inPin),
+            '<span class="td">valeur</span> <span class="' + (w.state > 1 ? 'tw' : 'tv') + '">' +
+            busTxt(w.state) + '</span>' +
+            (w.wp.length ? ' <span class="td">· ' + w.wp.length + ' poignée(s)</span>' : '') ] };
+}
+function hideTip(){
+  clearTimeout(tipT); tipFor = null;
+  if (tipShown){ document.getElementById('tipbox').classList.add('hidden'); tipShown = false; }
+}
+function showTipNow(data){
+  const el = document.getElementById('tipbox');
+  document.getElementById('tip-title').innerHTML = data.title;
+  document.getElementById('tip-body').innerHTML = data.lines.join('<br>');
+  el.classList.remove('hidden'); tipShown = true;
+  const r = el.getBoundingClientRect();
+  const w = Math.round(r.width) || 240, h = Math.round(r.height) || 80;
+  let x = mouseS.x + 18, y = mouseS.y + 18;
+  if (x + w + 8 > innerWidth) x = mouseS.x - w - 14;
+  if (y + h + 8 > innerHeight) y = mouseS.y - h - 14;
+  el.style.left = Math.max(8, x) + 'px';
+  el.style.top = Math.max(8, y) + 'px';
+}
+/* Appelée à chaque mouvement de souris : décide quoi montrer, ou rien */
+function updateTip(){
+  if (dragged || wiring || panning || selRect || draggedWp || inspComp){ hideTip(); return; }
+  const target = hoveredPin || hoveredComp || hoveredWire;
+  if (!target){ hideTip(); return; }
+  if (target !== tipFor){
+    tipFor = target;
+    clearTimeout(tipT);
+    if (tipShown) refreshTip();                 // déjà visible : on enchaîne sans délai
+    else tipT = setTimeout(refreshTip, 320);
+  }
+}
+function refreshTip(){
+  if (!tipFor) return;
+  const data = tipFor instanceof Pin ? pinTipData(tipFor)
+             : tipFor instanceof Wire ? wireTipData(tipFor)
+             : compTipData(tipFor);
+  showTipNow(data);
+}
+/* Rafraîchit le contenu (les états changent en permanence) */
+setInterval(() => { if (tipShown && tipFor) refreshTip(); }, 400);
+
+/* ---------- Étiquettes sous les composants : toujours / au survol ---------- */
+let labelsMode = localStorage.getItem('al2_labels') !== 'hover';   // true = toujours
+function setLabelsMode(always){
+  labelsMode = always;
+  localStorage.setItem('al2_labels', always ? 'always' : 'hover');
+  const b = document.getElementById('btn-labels');
+  if (b) b.classList.toggle('on', always);
+  toast(always ? '🏷 Noms affichés sous tous les composants.'
+               : '🏷 Noms affichés au survol et sur la sélection seulement — le plan respire.', 'info', 2600);
+}
+document.getElementById('btn-labels').addEventListener('click', () => {
+  AudioSys.click(); setLabelsMode(!labelsMode);
+});
+document.getElementById('btn-labels').classList.toggle('on', labelsMode);
 
 /* ---------- Stats ---------- */
 let lastStats = '';

@@ -1589,6 +1589,82 @@ T('T63 la modale de l’analyseur s’ouvre et se referme', () => {
   loadMission(-1);
 });
 
+T('T98 infobulle : composant, pin et câble', () => {
+  board();
+  const a = mk('SWITCH', 0, 0), g = mk('AND', 300, 0), l = mk('LED', 600, 0);
+  a.customLabel = 'CAPTEUR';
+  const w = link(a, 0, g, 0); link(g, 0, l, 0);
+  a.state = 1; sim();
+  const dc = compTipData(g);
+  ok(/ET · AND/.test(dc.title), 'titre du composant');
+  ok(dc.lines.join(' ').includes('entrées'), 'états des entrées');
+  ok(/A=/.test(dc.lines.join(' ')) && /B=/.test(dc.lines.join(' ')), 'pins nommés A et B');
+  ok(/S = A·B/.test(dc.lines.join(' ')), 'équation de la porte');
+  ok(/coût/.test(dc.lines.join(' ')), 'coût en portes');
+  const da = compTipData(a);
+  ok(/CAPTEUR/.test(da.title), 'étiquette personnalisée dans le titre');
+  const dp = pinTipData(g.inPins[0]);
+  ok(/entrée/.test(dp.lines[0]), 'nature du pin');
+  ok(/INTERRUPTEUR/.test(dp.lines[1]), 'source du signal');
+  const dw = wireTipData(w);
+  ok(/INTERRUPTEUR/.test(dw.lines[0]) && /ET/.test(dw.lines[0]), 'les deux extrémités du câble');
+  ok(/valeur/.test(dw.lines[1]), 'valeur transportée');
+  // un bus affiche sa valeur
+  board();
+  const sw = [0,1,2,3].map(i => mk('SWITCH', 0, i * 70));
+  const gp = mk('GROUP', 300, 0), ug = mk('UNGROUP', 600, 0);
+  sw.forEach((x, i) => link(x, 0, gp, i));
+  const wb = link(gp, 0, ug, 0);
+  drive(sw, [1,0,1,0]);
+  ok(/bus 10/.test(wireTipData(wb).lines[1]), 'câble de bus : valeur lisible');
+});
+
+T('T99 infobulle : réglages, capteurs, et rien en boîte noire', () => {
+  board();
+  const t = mk('TEMPC', 0, 0);
+  applyInspector(t, fld('o_val', 30)); sim();
+  const d = compTipData(t);
+  ok(/30/.test(d.lines.join(' ')), 'la mesure apparaît');
+  ok(/seuil/i.test(d.lines.join(' ')), 'le seuil apparaît');
+  ok(/réglages/.test(d.lines.join(' ')), 'les réglages sont listés');
+  loadMission(missions.findIndex(m => m.id === 'm79'));
+  const bb = components.find(c => c.type === 'BLACKBOX');
+  const db = compTipData(bb);
+  ok(/masqué/i.test(db.lines.join(' ')), 'la boîte noire ne révèle rien');
+  ok(!/entrées/.test(db.lines.join(' ')), 'aucun état divulgué');
+  loadMission(-1);
+});
+
+T('T100 noms des composants : bascule et raccourci N', () => {
+  board();
+  const avant = labelsMode;
+  setLabelsMode(false);
+  eq(labelsMode, false, 'noms masqués');
+  eq(localStorage.getItem('al2_labels'), 'hover', 'préférence enregistrée');
+  __fireWin('keydown', { key:'n' });
+  eq(labelsMode, true, 'la touche N rebascule');
+  __fire('btn-labels', 'click');
+  eq(labelsMode, false, 'le bouton aussi');
+  drawScene(0);                       // le rendu doit tenir dans les deux modes
+  setLabelsMode(true); drawScene(0);
+  setLabelsMode(avant);
+});
+
+T('T101 touche F : recadrage sur le circuit', () => {
+  board();
+  mk('AND', 2000, 1500); mk('OR', 2400, 1800);
+  resetCam();
+  __fireWin('keydown', { key:'f' });
+  const bb = boardBBox();
+  eq(Math.round((bb.x0 + bb.w / 2) * cam.z + cam.x), Math.round(W / 2), 'circuit centré');
+  ok(cam.z <= 2.5 && cam.z >= .35, 'zoom valide');
+  board();
+  resetCam();
+  const z = cam.z;
+  __fireWin('keydown', { key:'f' });
+  eq(cam.z, z, 'plan vide : la vue ne bouge pas');
+});
+
 /* ===================== 7. Guide ===================== */
 console.log('— Guide —');
 
