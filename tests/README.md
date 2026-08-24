@@ -43,6 +43,8 @@ La suite sort en code 1 si un cas échoue.
 | `la-fin` | les cinq âges s'enchaînent, et l'épilogue dit ce qu'est devenue la maison |
 | `vitesse-rendue` | un écran qui s'ouvre rend ensuite la vitesse qu'on avait choisie |
 | `rupture-et-pret` | à sec, le jeu propose d'acheter — et d'emprunter s'il n'y a plus rien |
+| `panneau-vivant` | un achat se voit tout de suite, une saisie en cours n'est pas écrasée |
+| `onglets-progressifs` | quatre onglets au départ, huit à l'arrivée, chacun annoncé une fois |
 
 ## Les invariants, aussi dans le jeu
 

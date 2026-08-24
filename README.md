@@ -140,6 +140,10 @@ sachets se comptent à l'unité.
 - **Des outils de développement** (<kbd>F2</kbd>) : sauter à n'importe quel âge,
   changer de mode, remplir le quai, user ou réviser le matériel, avancer d'une
   semaine, et lancer les **auto-vérifications** de la partie.
+- **Le panneau grandit avec l'usine** : quatre onglets au départ (Détail,
+  Stocks, Équipe, Guide), puis Commandes et Argent au premier vendredi soir, la
+  Marque à l'âge 3, le Labo à l'âge 4. Chaque ouverture est annoncée par le
+  contremaître, l'onglet clignote, et elle figure dans l'écran du nouvel âge.
 - **La marque, et trois jauges qui se contredisent** : la *notoriété* (combien
   de gens vous connaissent), la *confiance* (est-ce qu'on peut compter sur vous)
   et le *standing* (bas ou haut de gamme). Le standing suit le sachet, le logo
@@ -279,12 +283,12 @@ réelles** à la vitesse ×1.
 
 ## Tests
 
-`node tests/suite.mjs` pilote le jeu dans un vrai navigateur : vingt-huit cas qui
+`node tests/suite.mjs` pilote le jeu dans un vrai navigateur : trente cas qui
 couvrent le didacticiel, la chaîne, la conservation de la matière, le réseau de
 convoyeurs, la qualité, les modes, les cinq âges, les auto-vérifications, la
 sauvegarde, le rythme, la performance, la recherche, le raccord entre bandes,
 les quais et rangements, les bâtiments d'équipe, la cour, le garde-manger du
-labo, les raccords courts, les croisements, l'équipe, les stocks, la marque, les labels, le concurrent, les clients, les cadres, la fin de partie, la vitesse du jeu et les ruptures de stock. Voir [`tests/README.md`](tests/README.md).
+labo, les raccords courts, les croisements, l'équipe, les stocks, la marque, les labels, le concurrent, les clients, les cadres, la fin de partie, la vitesse du jeu, les ruptures de stock et l'ouverture progressive du panneau. Voir [`tests/README.md`](tests/README.md).
 
 ## Organisation du code
 

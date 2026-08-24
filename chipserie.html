@@ -135,6 +135,11 @@ input,select{font:inherit;color:inherit}
 }
 #onglets button:hover{color:var(--texte-doux);background:var(--fond2)}
 #onglets button.actif{color:var(--or);border-bottom-color:var(--or);background:var(--fond2)}
+@keyframes ongletNeuf{
+  0%,100%{ color:var(--or); border-bottom-color:transparent }
+  50%    { color:var(--or); border-bottom-color:var(--or) }
+}
+#onglets button.neuf{animation:ongletNeuf 1.1s ease-in-out 8}
 #contenuPanneau{flex:1;overflow-y:auto;padding:14px}
 
 /* barres de défilement discrètes */
@@ -665,9 +670,9 @@ table.tab tr:hover td{background:rgba(255,255,255,.028)}
         <button data-o="detail" class="actif">Détail</button>
         <button data-o="stocks">Stocks</button>
         <button data-o="perso">Équipe</button>
-        <button data-o="commandes">Commandes</button>
-        <button data-o="finances">Argent</button>
-        <button data-o="marque">Marque</button>
+        <button data-o="commandes" class="hidden">Commandes</button>
+        <button data-o="finances" class="hidden">Argent</button>
+        <button data-o="marque" class="hidden">Marque</button>
         <button data-o="labo" class="hidden">Labo</button>
         <button data-o="guide">Guide</button>
       </nav>
@@ -1418,6 +1423,28 @@ const LABELS = [
   }
 ];
 
+/* ------------------------------------------------------------- Les onglets
+   Le panneau grandit avec l'usine : en semaine 1 il y a trois machines et un
+   ouvrier, et huit onglets noieraient les deux qui comptent. `quand` renvoie
+   vrai quand l'onglet s'ouvre ; l'ouverture est annoncée une fois. */
+const ONGLETS = [
+  { id:"detail",    nom:"Détail" },
+  { id:"stocks",    nom:"Stocks" },
+  { id:"perso",     nom:"Équipe" },
+  { id:"commandes", nom:"Commandes",
+    quand: () => etat.contrats.proposes.length > 0 || etat.contrats.acceptes.length > 0 ||
+                 etat.stats.historiqueSemaines.length > 0,
+    dit:"Un client demande quelque chose. Onglet Commandes : on regarde si on sait le faire avant de signer." },
+  { id:"finances",  nom:"Argent",
+    quand: () => etat.stats.historiqueSemaines.length > 0,
+    dit:"Une semaine de faite. L'onglet Argent tient les comptes — le loyer, les salaires, ce qui rentre." },
+  { id:"marque",    nom:"Marque", age:3,
+    dit:"Patron, faudrait qu'on parle de ce qu'on est en train de devenir. J'ai mis un dossier de côté : onglet Marque." },
+  { id:"labo",      nom:"Labo", age:4,
+    dit:"On ne va pas fabriquer toute notre vie ce que les autres ont inventé. Le labo est ouvert." },
+  { id:"guide",     nom:"Guide" }
+];
+
 /* ---------------------------------------------------------------- Les cadres
    Trois postes de bureau. Chacun coûte cher tous les jours et occupe un bureau
    d'études — donc embaucher un cadre, c'est renoncer à une étude plus rapide. */
@@ -1687,6 +1714,7 @@ function nouvellePartie(nomEntreprise, modeChoisi){
       tempsJeu: 0,
       vitesse: 0,
       vitesseAvant: 1,        // la vitesse qu'on rend au joueur après un écran
+      ongletsVus: [],         // les onglets déjà annoncés
       age: 1,
       prochainId: 2,          // 1 et 2 sont réservés aux deux quais
       dernierJourTraite: -1,
@@ -2854,10 +2882,38 @@ function affecterAutomatiquement(){
   paires.sort((a,b) => b.score - a.score);
 
   const prisO = new Set(), prisM = new Set();
-  let n = 0;
+  const choix2 = [];
   for (const p of paires){
     if (prisO.has(p.o.id) || prisM.has(p.m.id)) continue;
     prisO.add(p.o.id); prisM.add(p.m.id);
+    choix2.push(p);
+  }
+
+  // Le glouton prend la meilleure paire, puis la suivante — et se laisse parfois
+  // enfermer. Quelques passes d'échange deux à deux le rattrapent : si permuter
+  // deux personnes fait gagner, on permute. Tableaux courts, ça converge vite.
+  const note = (o, m) => {
+    const acces = tuileAcces(u, m, o.x, o.y);
+    if (!acces) return -1e9;
+    return 10*(o.competences[COMP_MACHINE[m.type]] ?? 0.5) - Math.hypot(acces.x-o.x, acces.y-o.y)*0.12;
+  };
+  for (let passe=0; passe<6; passe++){
+    let bouge = false;
+    for (let i=0;i<choix2.length;i++)
+      for (let j=i+1;j<choix2.length;j++){
+        const a = choix2[i], b = choix2[j];
+        const avant = note(a.o, a.m) + note(b.o, b.m);
+        const apres = note(a.o, b.m) + note(b.o, a.m);
+        if (apres > avant + 1e-9){
+          const t = a.m; a.m = b.m; b.m = t;
+          bouge = true;
+        }
+      }
+    if (!bouge) break;
+  }
+
+  let n = 0;
+  for (const p of choix2){
     if (p.o.posteAssigne !== p.m.id){ p.o.posteAssigne = p.m.id; libererTache(p.o); }
     n++;
   }
@@ -3176,6 +3232,10 @@ function finJournee(){
   // 10. Vendredi soir : on arrête tout et on décide.
   if (jourSemaine() === 0 && jourCourant() > 0) finSemaine();
   else majBandeau();
+
+  // En dernier : la semaine vient d'être bouclée et les commandes proposées,
+  // donc les onglets qui en dépendent peuvent s'ouvrir dès ce soir.
+  verifierOnglets();
 }
 
 /** Ce que l'atelier consomme d'une matière en une journée pleine : sert à
@@ -6583,8 +6643,6 @@ function majBandeau(){
   basculer("#indStock", age >= 2);
   basculer("#indReput", age >= 2);
   basculer("#indPerso", age >= 2);
-  const labo = document.querySelector('#onglets button[data-o="labo"]');
-  if (labo) labo.classList.toggle("hidden", !(age >= 4 || mode().toutDebloque));
   if (age >= 2){
     const u = U();
     // On montre le produit fini le plus abondant, avec sa vraie unité.
@@ -7241,16 +7299,51 @@ function validerTrace(){
    UI (2/3) — le panneau de droite
    ========================================================================== */
 
+function ongletOuvert(o){
+  if (mode().toutDebloque) return true;
+  if (o.age && etat.meta.age < o.age) return false;
+  if (o.quand && !o.quand()) return false;
+  return true;
+}
+
 function majOnglets(){
-  $$("#onglets button").forEach(b => b.classList.toggle("actif", b.dataset.o === vue.ongletActif));
+  $$("#onglets button").forEach(b => {
+    const o = ONGLETS.find(x => x.id === b.dataset.o);
+    b.classList.toggle("hidden", !!o && !ongletOuvert(o));
+    b.classList.toggle("actif", b.dataset.o === vue.ongletActif);
+  });
+  // Un onglet fermé ne doit pas rester affiché : on revient à l'atelier.
+  const actif = ONGLETS.find(x => x.id === vue.ongletActif);
+  if (actif && !ongletOuvert(actif)){ vue.ongletActif = "detail"; majOnglets(); }
+}
+
+/** Ce qui vient de s'ouvrir, annoncé une fois — et le contremaître le dit. */
+function verifierOnglets(){
+  etat.meta.ongletsVus = etat.meta.ongletsVus || [];
+  for (const o of ONGLETS){
+    if (!ongletOuvert(o) || etat.meta.ongletsVus.includes(o.id)) continue;
+    const neuf = etat.meta.ongletsVus.length > 0;   // au tout début, on n'annonce rien
+    etat.meta.ongletsVus.push(o.id);
+    if (!neuf || !o.dit) continue;
+    notif("Un onglet s'ouvre", "« " + o.nom + " » — " + o.dit, "ok");
+    parle(o.dit, 12000);
+    const b = document.querySelector('#onglets button[data-o="' + o.id + '"]');
+    if (b){ b.classList.add("neuf"); setTimeout(() => b.classList.remove("neuf"), 12000); }
+    son("valide");
+  }
+  majOnglets();
 }
 
 function majPanneau(){
   if (!etat) return;
   const z = $("#contenuPanneau");
-  // Le panneau se rafraîchit en continu : on ne détruit pas ce que le joueur
-  // est en train de manipuler, et on lui rend sa position de défilement.
-  if (z.contains(document.activeElement) && document.activeElement !== document.body) return;
+  // Le panneau se rafraîchit en continu : on ne détruit pas ce que le joueur est
+  // en train de saisir, et on lui rend sa position de défilement. Attention :
+  // seuls les champs comptent. Un bouton qu'on vient de cliquer reste
+  // `activeElement`, et bloquait tout rafraîchissement — d'où des quantités
+  // qui ne bougeaient plus après un achat.
+  const focus = document.activeElement;
+  if (focus && z.contains(focus) && /^(INPUT|SELECT|TEXTAREA)$/.test(focus.tagName)) return;
   const defilement = z.scrollTop;
   z.innerHTML = "";
   switch (vue.ongletActif){
@@ -8651,6 +8744,8 @@ function ouvrirAnnonceAge(age){
     </div>`;
   const l = $("#listeDebloque");
   const noms = {
+    _marque:"L'onglet Marque — ce que le public sait de vous",
+    _labo:"L'onglet Labo — vos propres recettes",
     convoyeur:"Les convoyeurs — l'équipe ne porte plus tout à bout de bras",
     caisse:"Les bacs de stockage",
     tambour:"Le tambour d'assaisonnement, qui tourne tout seul",
@@ -8669,6 +8764,11 @@ function ouvrirAnnonceAge(age){
   };
   for (const d of age.debloque)
     if (noms[d]) l.appendChild(elem('<div class="ligne"><span class="k">'+noms[d]+'</span></div>'));
+  // Les onglets qui s'ouvrent à cet âge sont une nouveauté comme une autre.
+  for (const o of ONGLETS)
+    if (o.age === age.n)
+      l.appendChild(elem('<div class="ligne"><span class="k">'+
+        (noms["_"+o.id] || ("L'onglet " + o.nom))+'</span></div>'));
   l.appendChild(elem('<div class="ligne"><span class="k">Un atelier de '+age.largeur+' sur '+age.hauteur+' tuiles</span></div>'));
   $("#btReprendre").onclick = () => {
     fermer("#ecranMenu");
@@ -11741,7 +11841,7 @@ function demarrer(){
   centrerCamera();
   vue.selection = null;
   vue.ongletActif = "detail";
-  majOnglets();
+  verifierOnglets();      // ce qui est déjà ouvert est noté sans être annoncé
   majBarreConstruction();
   majPanneau();
   majBandeau();

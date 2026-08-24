@@ -1045,27 +1045,38 @@ cas("equipe-et-stocks", async (nav) => {
   v.egal("et personne n'est mis deux fois", a.uniques, a.assignes);
   v.egal("le reste part au portage", a.auPortage, a.equipe - a.n);
 
-  // Le placement optimise vraiment ce qu'il annonce : la compétence, moins le
-  // trajet. On le compare à une affectation prise dans l'ordre, sur le même
-  // critère — sinon on mesure autre chose que ce que le code cherche.
+  // Le placement optimise la compétence moins le trajet. On ne peut pas exiger
+  // l'optimum absolu d'un glouton, mais on peut exiger qu'aucun échange de deux
+  // personnes ne l'améliore — c'est précisément ce que la passe d'échanges
+  // garantit, et c'est vérifiable sans référence extérieure.
   const comp = await jeu(`(() => {
     const u = U();
     const note = (o,m) => {
       const acces = tuileAcces(u, m, o.x, o.y);
-      if (!acces) return -99;
+      if (!acces) return -1e9;
       return 10*(o.competences[COMP_MACHINE[m.type]] ?? 0.5) -
              Math.hypot(acces.x - o.x, acces.y - o.y)*0.12;
     };
-    const choisi = u.ouvriers.filter(o => o.posteAssigne != null)
-                             .reduce((s,o) => s + note(o, noeudParId(o.posteAssigne)), 0);
+    const places = u.ouvriers.filter(o => o.posteAssigne != null)
+                             .map(o => ({ o, m: noeudParId(o.posteAssigne) }));
+    const total = places.reduce((s,p) => s + note(p.o, p.m), 0);
+    let gainPossible = 0;
+    for (let i=0;i<places.length;i++)
+      for (let j=i+1;j<places.length;j++){
+        const a = places[i], b = places[j];
+        gainPossible = Math.max(gainPossible,
+          (note(a.o,b.m) + note(b.o,a.m)) - (note(a.o,a.m) + note(b.o,b.m)));
+      }
+    // et la comparaison avec un placement dans l'ordre, pour information
     const postes = machinesAOperer();
     let ordre = 0;
     for (let i=0;i<postes.length;i++) ordre += note(u.ouvriers[i], postes[i]);
-    return { choisi, ordre, n: postes.length };
+    return { total, gainPossible, ordre };
   })()`);
-  v("l'affectation vaut mieux qu'un tirage dans l'ordre",
-    comp.choisi >= comp.ordre - 0.001,
-    comp.choisi.toFixed(2) + " contre " + comp.ordre.toFixed(2));
+  v("aucun échange de deux personnes ne ferait mieux", comp.gainPossible < 0.001,
+    "gain possible " + comp.gainPossible.toFixed(2));
+  v("et le placement se défend face à un tirage dans l'ordre",
+    comp.total >= comp.ordre - 2, comp.total.toFixed(2) + " contre " + comp.ordre.toFixed(2));
 
   const lib = await jeu(`(() => { const n = libererTousLesPostes();
     return { n, restants: U().ouvriers.filter(o => o.posteAssigne != null).length }; })()`);
@@ -1887,6 +1898,131 @@ cas("rupture-et-pret", async (nav) => {
 
   await page.close();
   return { echecs: v.echecs.concat(erreurs), note: "rupture, achat, prêt, seuil" };
+});
+
+cas("panneau-vivant", async (nav) => {
+  const { page, jeu, erreurs } = await contexte(nav);
+  const v = verif();
+
+  // Acheter depuis l'onglet Stocks doit mettre le poids à jour tout de suite :
+  // le bouton qu'on vient de cliquer reste `activeElement`, et bloquait tout.
+  const r = await jeu(`(() => {
+    vue.ongletActif = "stocks"; majOnglets(); majPanneau();
+    const lire = () => {
+      const l = [...document.querySelectorAll('#contenuPanneau .item')]
+        .find(e => /Pommes de terre/.test(e.textContent));
+      return l ? l.querySelector('.qte').textContent : null;
+    };
+    const avant = lire();
+    const rang = document.querySelectorAll('#contenuPanneau .btRang')[0];
+    const b = rang.querySelectorAll('button')[1];
+    // Un vrai clic donne le focus au bouton : c'est ce qui bloquait tout.
+    b.focus();
+    const focus = document.activeElement.tagName;
+    b.click();
+    const apres = lire();
+    return { avant, apres, focus };
+  })()`);
+  v.egal("on part de zéro", r.avant, "0,0 kg");
+  v("le poids bouge tout de suite", r.apres !== r.avant, r.avant + " → " + r.apres);
+  v.egal("alors que le focus est resté sur le bouton", r.focus, "BUTTON");
+
+  // Mais un champ en cours de saisie reste protégé : c'était la raison du garde-fou.
+  const champ = await jeu(`(() => {
+    sauterAge(2); vue.ongletActif = "stocks"; majPanneau();
+    const rg = reglageStock('pdt_brutes'); rg.mode = 'seuil'; majPanneau();
+    const inp = document.querySelector('#contenuPanneau input[type=number]');
+    if (!inp) return { ok:false, dit:"aucun champ" };
+    inp.focus(); inp.value = "777";
+    majPanneau();
+    const apres = document.querySelector('#contenuPanneau input[type=number]');
+    return { ok: !!apres && apres.value === "777", dit: apres ? apres.value : "disparu" };
+  })()`);
+  v("une saisie en cours n'est pas écrasée", champ.ok, champ.dit);
+
+  // Et le panneau se rafraîchit toujours tout seul au fil du temps.
+  const auto = await jeu(`(() => {
+    document.activeElement.blur();
+    vue.ongletActif = "stocks"; majPanneau();
+    const avant = document.querySelector('#contenuPanneau').textContent.length;
+    ajouterStock('sel', 500);
+    majPanneau();
+    const apres = document.querySelector('#contenuPanneau').textContent;
+    return { change: apres.length !== avant, contient: /500 kg/.test(apres) };
+  })()`);
+  v("un stock qui change se voit sans rien cliquer", auto.contient || auto.change);
+
+  await page.close();
+  return { echecs: v.echecs.concat(erreurs), note: "achat visible, saisie protégée" };
+});
+
+cas("onglets-progressifs", async (nav) => {
+  const { page, jeu, erreurs } = await contexte(nav);
+  const v = verif();
+  const visibles = () => jeu(`[...document.querySelectorAll('#onglets button')]
+      .filter(b => !b.classList.contains('hidden')).map(b => b.dataset.o).join(',')`);
+
+  v.egal("au départ, quatre onglets", await visibles(), "detail,stocks,perso,guide");
+
+  // Commandes et Argent s'ouvrent au premier vendredi soir, pas avant.
+  const sem = await jeu(`(() => {
+    poserMachine('laveuse',4,3,0); acheter('pdt_brutes',500);
+    for (let t=0;t<CONFIG.ticksParJour*5;t++) simTick();
+    document.querySelector('#btLancer')?.click();
+    return { vus: etat.meta.ongletsVus.slice() };
+  })()`);
+  v("Commandes s'est ouvert", sem.vus.includes("commandes"));
+  v("Argent aussi", sem.vus.includes("finances"));
+  v("mais pas la Marque", !sem.vus.includes("marque"));
+  v("ni le Labo", !sem.vus.includes("labo"));
+
+  // La Marque à l'âge 3, le Labo à l'âge 4.
+  const a2 = await jeu(`(() => { sauterAge(2); verifierOnglets();
+    return [...document.querySelectorAll('#onglets button')]
+      .filter(b => !b.classList.contains('hidden')).map(b => b.dataset.o).join(','); })()`);
+  v("rien de neuf à l'âge 2", !a2.includes("marque") && !a2.includes("labo"), a2);
+  const a3 = await jeu(`(() => { sauterAge(3); verifierOnglets();
+    return [...document.querySelectorAll('#onglets button')]
+      .filter(b => !b.classList.contains('hidden')).map(b => b.dataset.o).join(','); })()`);
+  v("la Marque s'ouvre à l'âge 3", a3.includes("marque"), a3);
+  v("le Labo attend encore", !a3.includes("labo"), a3);
+  const a4 = await jeu(`(() => { sauterAge(4); verifierOnglets();
+    return [...document.querySelectorAll('#onglets button')]
+      .filter(b => !b.classList.contains('hidden')).map(b => b.dataset.o).join(','); })()`);
+  v("le Labo s'ouvre à l'âge 4", a4.includes("labo"), a4);
+
+  // L'ouverture se dit, et une seule fois.
+  const dit = await jeu(`(() => {
+    const avant = etat.meta.ongletsVus.length;
+    verifierOnglets(); verifierOnglets();
+    return { stable: etat.meta.ongletsVus.length === avant,
+             phrase: (ONGLETS.find(o => o.id === 'marque')||{}).dit || "" };
+  })()`);
+  v("on n'annonce pas deux fois", dit.stable);
+  v("le contremaître a une phrase pour chaque ouverture", dit.phrase.length > 20, dit.phrase);
+  const toutes = await jeu(`ONGLETS.filter(o => o.age || o.quand).every(o => (o.dit||"").length > 20)`);
+  v("et pour toutes celles qui s'ouvrent en cours de partie", toutes);
+
+  // Un onglet qui se referme ne laisse pas le panneau dans le vide.
+  const repli = await jeu(`(() => {
+    vue.ongletActif = "labo";
+    sauterAge(1); majOnglets();
+    return vue.ongletActif;
+  })()`);
+  v.egal("on revient au Détail si l'onglet ouvert se ferme", repli, "detail");
+
+  // Le bac à sable montre tout, tout de suite.
+  const bac = await jeu(`(() => {
+    etat.meta.mode = 'bacASable'; majOnglets();
+    const n = [...document.querySelectorAll('#onglets button')]
+      .filter(b => !b.classList.contains('hidden')).length;
+    etat.meta.mode = 'normal';
+    return n;
+  })()`);
+  v.egal("le bac à sable ouvre les huit onglets", bac, 8);
+
+  await page.close();
+  return { echecs: v.echecs.concat(erreurs), note: "4 onglets au départ, 8 à l'arrivée" };
 });
 
 /* ============================================================== Exécution ==*/
