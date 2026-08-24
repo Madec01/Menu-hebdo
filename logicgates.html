@@ -1549,7 +1549,7 @@ class Component {
   /* Vue de loin : un bloc coloré, sans texte ni ombre. Le circuit reste
      lisible d'un coup d'œil et le rendu ne s'effondre pas à 200 composants. */
   drawSimple(c){
-    const col = GATE_STYLE[this.type].c, on = this.active;
+    const col = compColor(this), on = this.active;
     c.beginPath(); c.roundRect(this.x, this.y, this.bw, this.bh, 8);
     c.fillStyle = this.hexA(col, on ? .34 : .13); c.fill();
     c.lineWidth = 1.4; c.strokeStyle = this.hexA(col, on ? .95 : .45); c.stroke();
@@ -1568,7 +1568,7 @@ class Component {
     }
   }
   draw(c, t){
-    const st = GATE_STYLE[this.type], col = st.c;
+    const st = GATE_STYLE[this.type], col = compColor(this);
     const hov = (this === hoveredComp && !dragged) || this === dragged;
     if (lodLevel < 2 && !hov){ this.drawSimple(c); return; }
 
@@ -1747,14 +1747,14 @@ class Component {
       const by = this.y + 20;
       if (on){
         const halo = c.createRadialGradient(cx, by, 2, cx, by, 34);
-        halo.addColorStop(0, 'rgba(61,255,158,.5)'); halo.addColorStop(1, 'transparent');
+        halo.addColorStop(0, this.hexA(col, .5)); halo.addColorStop(1, 'transparent');
         c.fillStyle = halo; c.fillRect(cx - 36, by - 36, 72, 72);
       }
       c.beginPath(); c.arc(cx, by, 14, 0, 7);
       c.fillStyle = on ? col : '#16233c'; 
       if (on){ c.shadowBlur = 22; c.shadowColor = col; }
       c.fill(); c.shadowBlur = 0;
-      c.lineWidth = 1.6; c.strokeStyle = on ? '#c9ffe4' : this.hexA(col, .5); c.stroke();
+      c.lineWidth = 1.6; c.strokeStyle = on ? '#ffffff' : this.hexA(col, .5); c.stroke();
       if (on){
         c.strokeStyle = 'rgba(255,255,255,.8)'; c.lineWidth = 1.4;
         for (let i = 0; i < 8; i++){
@@ -2856,6 +2856,80 @@ function alignSel(mode){
   AudioSys.click(); markDirty();
 }
 
+/* ==================== VOYANTS DE SIGNALISATION ====================
+   Les couleurs normalisées d'un pupitre (CEI 60073) : sur une machine, la
+   couleur d'un voyant n'est pas une décoration, c'est une information. */
+const LAMP_COLORS = [
+  ['vert',   '#3dff9e', 'Marche · situation normale · sécurité'],
+  ['rouge',  '#ff5d6c', 'Défaut · arrêt d’urgence · danger'],
+  ['orange', '#ffc23d', 'Alerte · seuil atteint · attention'],
+  ['jaune',  '#ffe45c', 'Anomalie · mise en garde'],
+  ['bleu',   '#5aa2ff', 'Action obligatoire de l’opérateur'],
+  ['blanc',  '#e8f1ff', 'Information · marche en cours'],
+  ['violet', '#c79cff', 'Signalisation libre']
+];
+function lampColor(k){
+  const e = LAMP_COLORS.find(x => x[0] === k);
+  return e ? e[1] : null;
+}
+/* Couleur d'un composant : celle de sa famille, sauf voyant recoloré */
+function compColor(c){
+  return (c.opt && lampColor(c.opt.coul)) || GATE_STYLE[c.type].c;
+}
+
+/* Un clic simple sur un composant : la réaction propre à son type.
+   Extrait du gestionnaire de pointeur pour être appelable et testable. */
+function clickComp(c, wx, wy){
+  const mouseW = { x:wx, y:wy };
+  const RD = REG[c.type];
+  if (RD){
+    if (RD.click){
+      const L = c.w2l(mouseW.x, mouseW.y);
+      RD.click(c, L.x, L.y); AudioSys.click(); markDirty();
+    }
+  }
+  else if (c.type === 'SWITCH'){
+    c.state = c.state ? 0 : 1;
+    c.state ? AudioSys.toggleOn() : AudioSys.toggleOff();
+    markDirty();
+  }
+  else if (c.type === 'CLOCK'){
+    c.clockIdx = (c.clockIdx + 1) % CLOCK_SPEEDS.length;
+    delete c.opt.freq;                   // le clic revient aux presets
+    AudioSys.click(); markDirty();
+  }
+  else if (c.type === 'RANDOM'){
+    c.state = Math.random() < .5 ? 0 : 1;
+    c.rollT = Date.now();
+    c.state ? AudioSys.toggleOn() : AudioSys.toggleOff();
+    markDirty();
+  }
+  else if (c.type === 'NIBBLE'){
+    c.value = (c.value + 1) % 16;
+    AudioSys.click(); markDirty();
+  }
+  else if (c.type === 'LED'){          // clic : couleur suivante du pupitre
+    const i = LAMP_COLORS.findIndex(x => x[0] === (c.opt.coul || 'vert'));
+    c.opt.coul = LAMP_COLORS[(i + 1) % LAMP_COLORS.length][0];
+    AudioSys.click(); markDirty();
+  }
+  else if (c.type === 'KEY'){
+    c.key = KEYS[(KEYS.indexOf(c.key) + 1) % KEYS.length];
+    AudioSys.click(); markDirty();
+  }
+  else if (c.type === 'SEQ'){
+    const k = c.seqCellAt(mouseW.x, mouseW.y);
+    if (k >= 0){ c.bits[k] ^= 1; c.bits[k] ? AudioSys.toggleOn() : AudioSys.toggleOff(); }
+    else { c.clockIdx = (c.clockIdx + 1) % SEQ_SPEEDS.length; delete c.opt.hz; AudioSys.click(); }
+    markDirty();
+  }
+  else if (c.type === 'NOISE'){
+    c.clockIdx = (c.clockIdx + 1) % CLOCK_SPEEDS.length;
+    delete c.opt.freq;                   // idem horloge : le clic reprend la main sur l'inspecteur
+    AudioSys.click(); markDirty();
+  }
+}
+
 /* ==================== INSPECTEUR DE COMPOSANTS ==================== */
 let inspComp = null;
 function setSeqLen(c, len){
@@ -2929,6 +3003,17 @@ function openInspector(c){
     case 'NIBBLE':
       num('val', 'Valeur (0-15)', c.value, 0, 15, 1);
       break;
+    case 'LED': {
+      const cur = c.opt.coul || 'vert';
+      B.push(inspField('Couleur du voyant',
+        '<select data-k="coul">' + LAMP_COLORS.map(([k, , sens]) =>
+          '<option value="' + k + '"' + (k === cur ? ' selected' : '') + '>' +
+          k.charAt(0).toUpperCase() + k.slice(1) + ' — ' + sens.split(' · ')[0] + '</option>').join('') +
+        '</select>',
+        'Sur un vrai pupitre la couleur porte un sens (CEI 60073) : ' +
+        LAMP_COLORS.map(([k, , sens]) => '<b>' + k + '</b> ' + sens.toLowerCase()).join(' · ') + '.'));
+      break;
+    }
     case 'FSM': {
       let g = '<div class="fsm-grid"><span class="rg-h">ÉTAT</span><span class="rg-h">A0 B0</span>' +
               '<span class="rg-h">A0 B1</span><span class="rg-h">A1 B0</span><span class="rg-h">A1 B1</span>';
@@ -3017,6 +3102,7 @@ function applyInspector(c, inp){
   else if (k === 'vol')  c.opt.vol = clamp(parseInt(inp.value) || 0, 0, 100);
   else if (k === 'bfreq')c.opt.bfreq = clamp(parseInt(inp.value) || 349, 80, 2000);
   else if (k === 'val')  c.value = clamp(parseInt(inp.value) || 0, 0, 15);
+  else if (k === 'coul'){ if (lampColor(inp.value)) c.opt.coul = inp.value; }
   else if (k === 'chipname'){
     const nn = renameChip(c.chipName, inp.value);
     if (nn !== inp.value.trim()) inp.value = nn;
@@ -3251,51 +3337,7 @@ canvas.addEventListener('pointerup', e => {
     }
     wiring = null;
   }
-  if (pressComp && !moved && !longPressed){
-    const c = pressComp;
-    const RD = REG[c.type];
-    if (RD){
-      if (RD.click){
-        const L = c.w2l(mouseW.x, mouseW.y);
-        RD.click(c, L.x, L.y); AudioSys.click(); markDirty();
-      }
-    }
-    else if (c.type === 'SWITCH'){
-      c.state = c.state ? 0 : 1;
-      c.state ? AudioSys.toggleOn() : AudioSys.toggleOff();
-      markDirty();
-    }
-    else if (c.type === 'CLOCK'){
-      c.clockIdx = (c.clockIdx + 1) % CLOCK_SPEEDS.length;
-      delete c.opt.freq;                   // le clic revient aux presets
-      AudioSys.click(); markDirty();
-    }
-    else if (c.type === 'RANDOM'){
-      c.state = Math.random() < .5 ? 0 : 1;
-      c.rollT = Date.now();
-      c.state ? AudioSys.toggleOn() : AudioSys.toggleOff();
-      markDirty();
-    }
-    else if (c.type === 'NIBBLE'){
-      c.value = (c.value + 1) % 16;
-      AudioSys.click(); markDirty();
-    }
-    else if (c.type === 'KEY'){
-      c.key = KEYS[(KEYS.indexOf(c.key) + 1) % KEYS.length];
-      AudioSys.click(); markDirty();
-    }
-    else if (c.type === 'SEQ'){
-      const k = c.seqCellAt(mouseW.x, mouseW.y);
-      if (k >= 0){ c.bits[k] ^= 1; c.bits[k] ? AudioSys.toggleOn() : AudioSys.toggleOff(); }
-      else { c.clockIdx = (c.clockIdx + 1) % SEQ_SPEEDS.length; delete c.opt.hz; AudioSys.click(); }
-      markDirty();
-    }
-    else if (c.type === 'NOISE'){
-      c.clockIdx = (c.clockIdx + 1) % CLOCK_SPEEDS.length;
-      delete c.opt.freq;                   // idem horloge : le clic reprend la main sur l'inspecteur
-      AudioSys.click(); markDirty();
-    }
-  }
+  if (pressComp && !moved && !longPressed) clickComp(pressComp, mouseW.x, mouseW.y);
   if (pressComp && pressComp.type === 'BUTTON'){ pressComp.state = 0; }
   if (selRect){                              // valider le rectangle élastique
     const rx0 = Math.min(selRect.x0, selRect.x1), rx1 = Math.max(selRect.x0, selRect.x1);
@@ -8758,9 +8800,10 @@ function buildGuide(){
      'Déduire le dedans en n’observant que le dehors : c’est le quotidien des experts en sécurité, des réparateurs sans documentation… et des neurosciences.']
   ]},
   { t:'Les sorties — voir, entendre, agir', p:'Un circuit ne sert à rien si on ne voit pas ce qu’il raconte. Chaque sortie traduit des bits en lumière, chiffres, son ou mouvement.', items:[
-    ['LED','Ampoule',
-     'S’allume si son entrée vaut 1. Le voyant universel — commence toujours par elle pour déboguer un circuit.',
-     null, null],
+    ['LED','Ampoule & voyant de signalisation',
+     'S’allume si son entrée vaut 1. Le voyant universel — commence toujours par elle pour déboguer un circuit. Un <code>clic</code> fait défiler sa <b>couleur</b>, le double-clic la choisit dans la liste : vert, rouge, orange, jaune, bleu, blanc, violet.',
+     'Câble trois ampoules sur un pupitre : verte « marche », orange « seuil haut atteint », rouge « défaut ». D’un coup d’œil, on sait dans quel état est la machine — c’est tout l’intérêt.',
+     'Sur une vraie machine, la couleur d’un voyant est <b>normalisée</b> (CEI 60073) et n’est pas décorative : <b>rouge</b> = danger ou arrêt d’urgence, <b>orange/jaune</b> = anomalie qui appelle une surveillance, <b>vert</b> = situation normale, <b>bleu</b> = une action est obligatoire, <b>blanc</b> = simple information. Un opérateur qui change d’usine doit pouvoir lire un pupitre sans mode d’emploi.'],
     ['SEGMENT','Afficheurs 7 segments & décimal',
      '4 entrées binaires (poids 8-4-2-1 de haut en bas). L’<code>AFF. HEX</code> dessine le chiffre en segments (0-F), l’<code>AFF. DÉC</code> écrit la valeur en clair (0-15).',
      null,
@@ -8825,7 +8868,7 @@ function buildGuide(){
    hoveredWire) : nom, état de chaque pin, réglages, valeur transportée.
    En mission « boîte noire », elle ne révèle évidemment rien. */
 let tipT = 0, tipFor = null, tipShown = false;
-const busTxt = v => (v > 1 ? 'bus ' + v : (v ? '1' : '0'));
+const busTxt = v => (v > 1 ? 'bus ' + fmtRaw(v) : (v ? '1' : '0'));
 
 /* Noms de pins des composants historiques (le registre les déclare lui-même) */
 const LEGACY_PINS = {
@@ -8871,21 +8914,27 @@ function compTipData(c){
   const lines = [];
   const d = REG[c.type];
   if (d && d.tip) d.tip(c).forEach(l => lines.push(l));
-  if (c.inPins.length){
-    lines.push('<span class="td">entrées</span> ' + c.inPins.map(p =>
-      pinLabelOf(c, p) + '=<span class="' + (p.state > 1 ? 'tw' : 'tv') + '">' +
-      (p.state > 1 ? p.state : (p.state ? 1 : 0)) + '</span>').join('  '));
-  }
-  if (c.outPins.length){
-    lines.push('<span class="td">sorties</span> ' + c.outPins.map(p =>
-      pinLabelOf(c, p) + '=<span class="' + (p.state > 1 ? 'tw' : 'tv') + '">' +
-      (p.state > 1 ? p.state : (p.state ? 1 : 0)) + '</span>').join('  '));
-  }
+  // Un pin qui déclare une unité se lit dans son unité ; sinon en valeur brute.
+  const etat = p => {
+    if (p.state <= 1) return p.state ? '1' : '0';
+    const ph = physOf(p.state, pinInfo(p) || (sourceOf(p) || {}).info);
+    return ph ? ph.txt : fmtRaw(p.state);
+  };
+  const bloc = (nom, pins) => lines.push('<span class="td">' + nom + '</span> ' + pins.map(p =>
+    pinLabelOf(c, p) + '=<span class="' + (p.state > 1 ? 'tw' : 'tv') + '">' +
+    etat(p) + '</span>').join('  '));
+  if (c.inPins.length)  bloc('entrées', c.inPins);
+  if (c.outPins.length) bloc('sorties', c.outPins);
   if (GATE_TYPES.includes(c.type)){
     const F = { NOT:'S = ¬A', AND:'S = A·B', OR:'S = A+B', XOR:'S = A⊕B',
       NAND:'S = ¬(A·B)', NOR:'S = ¬(A+B)', XNOR:'S = ¬(A⊕B)',
       AND3:'S = A·B·C', OR3:'S = A+B+C' };
     if (F[c.type]) lines.push('<span class="td">' + F[c.type] + '</span>');
+  }
+  if (c.type === 'LED'){
+    const e = LAMP_COLORS.find(x => x[0] === (c.opt.coul || 'vert'));
+    if (e) lines.push('<span class="td">voyant ' + e[0] + '</span> ' + e[2] +
+      '<br><span class="td">clic : couleur suivante</span>');
   }
   if (c.type === 'CHIP' && c.chipName)
     lines.push('<span class="td">puce</span> ' + c.chipName + ' · ' + c.chipCost + ' portes');
@@ -8894,7 +8943,7 @@ function compTipData(c){
   const opts = regOpts(c);
   if (opts && opts.length)
     lines.push('<span class="td">réglages</span> ' + opts.map(o =>
-      o.label.replace(/ *\(.*\)/, '') + ' : ' + optOf(c, o.k)).join(' · '));
+      o.label.replace(/ *\(.*\)/, '') + ' : ' + optTxt(c, o.k)).join(' · '));
   const pp = primaryParam(c);
   if (pp) lines.push('<span class="td">glisse la barre du bas pour régler « ' + pp.label.toLowerCase() +
     ' » · Maj pour affiner</span>');

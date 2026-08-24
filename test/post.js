@@ -2925,6 +2925,32 @@ T('T152 la mesure garde sa finesse d’un bout à l’autre de la chaîne', () =
        'la consigne vise exactement la même valeur');
 });
 
+T('T153 les voyants prennent les couleurs normalisées du pupitre', () => {
+  board();
+  const l = mk('LED', 0, 0);
+  eq(compColor(l), GATE_STYLE.LED.c, 'par défaut : la couleur de la famille');
+  applyInspector(l, fld('coul', 'rouge'));
+  eq(compColor(l), lampColor('rouge'), 'recoloré en rouge');
+  eq(l.opt.coul, 'rouge', 'le choix est mémorisé dans les réglages');
+  applyInspector(l, fld('coul', 'mauve-imaginaire'));
+  eq(l.opt.coul, 'rouge', 'une couleur inconnue est refusée');
+  // le clic fait défiler la palette et revient à son point de départ
+  const n = LAMP_COLORS.length;
+  const depart = l.opt.coul;
+  for (let i = 0; i < n; i++) clickComp(l, l.x + 10, l.y + 10);
+  eq(l.opt.coul, depart, 'le clic boucle sur toute la palette');
+  clickComp(l, l.x + 10, l.y + 10);
+  ok(l.opt.coul !== depart, 'et change bien de couleur à chaque clic');
+  // la couleur voyage avec le composant
+  const rouge = mk('LED', 200, 0);
+  applyInspector(rouge, fld('coul', 'orange'));
+  const data = serializeGroup([rouge]);
+  board();
+  const copie = spawnGroup(data, 0, 0, true).made[0];
+  eq(copie.opt.coul, 'orange', 'copier-coller, sauvegardes et exemples la conservent');
+  eq(compColor(copie), lampColor('orange'), 'et elle se rallume de la bonne couleur');
+});
+
 /* ===================== bilan ===================== */
 console.log('\n' + (__fail ? '✗' : '✓') + ' ' + __pass + ' test(s) réussi(s), ' +
             __fail + ' échec(s)' + (__fail ? ' : ' + __failures.join(', ') : '') + '\n');
