@@ -1,7 +1,7 @@
 # Architecte Logique
 
 Jeu d'apprentissage de la logique numérique et de l'automatisme : des portes
-élémentaires jusqu'aux capteurs, aux régulateurs et aux automates. 142 missions
+élémentaires jusqu'aux capteurs, aux régulateurs et aux automates. 145 missions
 guidées, de « allume une ampoule » au processeur 1 bit, puis du thermostat au
 feu tricolore programmé et au circuit hydraulique.
 
@@ -28,9 +28,9 @@ d'outils :
 | Portes | les 7 portes de base, versions à 3 entrées, NAND·3, NOR·3 |
 | Mémoire | retard, bascule D, registre, registre à décalage, RAM 16×4 |
 | Calcul & bus | MUX/DEMUX (2 et 4 voies), additionneur, soustracteur, comparateur, décodeurs, encodeur, BCD→7 segments, ROM, bus, tunnels |
-| Temps & automatisme | TON, TOF, impulsion calibrée, détecteur de fronts, mémoire SR, diviseur ÷N, chien de garde, machine à états |
+| Temps & automatisme | TON, TOF, impulsion calibrée, détecteur de fronts, mémoire SR, diviseur ÷N, chien de garde, machine à états, **GRAFCET** (étapes, réceptivités, temporisations, choix de séquence) |
 | Régulation | CAN, CNA, PWM, thermostat à hystérésis, Schmitt, limiteur, rampe, régulateur proportionnel, **PID complet** (anti-emballement, RAZ) |
-| Sorties | ampoule, afficheurs (hex, décimal, octet), LED RVB, matrice 8×8, oscilloscope, sonde, buzzer, note, jauge, **écran de mesure 4 voies** et **enregistreur de courbes** |
+| Sorties | ampoule (**sept couleurs de voyant normalisées**), afficheurs (hex, décimal, octet), LED RVB, matrice 8×8, oscilloscope, sonde, buzzer, note, jauge, **écran de mesure 4 voies** et **enregistreur de courbes** |
 | Actionneurs & procédés | relais, moteur (vitesse + tachymètre), vérin (position + fins de course), électrovanne et pompe proportionnelles, sirène, pas-à-pas, servo, feu, barrière — et les procédés qui réagissent vraiment : **four**, **cuve**, **réservoir d'air comprimé**, **convoyeur**, plus la fluidique (**tuyau** qui bride le débit, **té** de répartition) |
 
 **Le tuteur.** Pendant une mission, le panneau indique en direct combien de
@@ -40,12 +40,27 @@ conversion en base NAND ou NOR si la mission l'impose) et la pose en fantômes,
 étape par étape, en expliquant chaque geste. Désactivé sur les missions boîte
 noire.
 
-**Des schémas tout prêts.** Le menu 📦 propose 27 montages chargeables, dont treize
+**Des schémas tout prêts.** Le menu 📦 propose 28 montages chargeables, dont quatorze
 procédés complets : station de pompage, four régulé en tout ou rien / proportionnel
 / PID, poste pneumatique, convoyeur avec évacuation, vitesse moteur asservie, serre
 automatisée, carrefour piloté par automate, capteurs en prise directe, circuit
-hydraulique à deux branches, remplissage automatique à deux seuils, et un
+hydraulique à deux branches, remplissage automatique à deux seuils, perceuse
+pilotée en GRAFCET, et un
 **atelier complet** où trois boucles tournent en parallèle.
+
+**Le GRAFCET.** Un cycle de machine ne se décrit pas en équations mais en
+étapes reliées par des transitions : une étape est active ou non, et les
+actions qu'on lui associe durent exactement le temps où elle l'est. Le bloc
+dessine le diagramme normalisé (CEI 60848) sur son boîtier, montre le jeton
+descendre, et ses sorties `X0…X5` s'alignent sur les cases pour qu'on lise le
+schéma et le câblage d'un coup d'œil. Réceptivités sur `R1…R4`, temporisations
+`t/5s`, choix de séquence, retour à l'étape initiale par `INIT`.
+
+**La mesure ne perd rien en chemin.** Un fil de mesure porte une valeur
+continue dans l'échelle 0-255 : une consigne de `100,4 °C` vise 100,4 °C, pas
+le palier le plus proche. Seuls les blocs qui travaillent sur des bits
+arrondissent — et c'est leur rôle : brancher un CAN sur une sonde, c'est
+précisément choisir de découper l'étendue en 256 crans.
 
 **Les réglages parlent en unités réelles.** Une consigne se donne en `°C`, en
 `bar`, en `%` ou en `tr/min`, jamais en valeur brute : chaque régulateur reprend
@@ -91,7 +106,7 @@ concatène entre `test/pre.js` (stubs DOM / Canvas / Audio / localStorage, plus
 une horloge `Date.now` pilotable) et `test/post.js` (les tests), puis exécute le
 tout dans un contexte `vm`. Aucun navigateur, aucune dépendance npm.
 
-148 tests couvrent le moteur, le séquentiel, les blocs numériques, l'analogique
+154 tests couvrent le moteur, le séquentiel, les blocs numériques, l'analogique
 et la régulation (dont une boucle fermée four + thermostat), l'édition,
 l'orientation, les tunnels, les puces, l'interface, le balisage et le guide.
 Deux tests valident automatiquement **tout** nouveau composant du registre

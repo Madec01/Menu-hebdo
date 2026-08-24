@@ -239,6 +239,14 @@ table.tt tr.tt-fail td:first-child::before{content:'✗ ';color:var(--red)}
 .fsm-grid{display:grid;grid-template-columns:auto repeat(4,1fr);gap:3px;align-items:center;
   font-family:var(--mono);font-size:9.5px;color:var(--dim);margin-top:4px}
 .fsm-grid select{font-size:10px;padding:2px}
+.gr-grid{display:grid;grid-template-columns:auto 1.5fr .8fr .7fr 1.2fr .7fr;gap:3px 4px;
+  align-items:center;font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:4px}
+.gr-grid select,.gr-grid input[type=number]{font-size:9.5px;padding:2px 3px;width:100%;
+  box-sizing:border-box;background:rgba(255,255,255,.05);border:1px solid rgba(120,160,220,.25);
+  border-radius:5px;color:#dbe6f5;font-family:var(--mono)}
+.gr-grid .rg-h{color:var(--violet);font-size:8px;letter-spacing:.08em}
+.gr-grid .gr-n{color:var(--violet);font-weight:700;font-size:10px}
+#inspector:has(.gr-grid){width:340px}
 .rom-grid{display:grid;grid-template-columns:auto 1fr 1fr;gap:3px 8px;align-items:center;
   font-family:var(--mono);font-size:10.5px;color:#a9b8d4}
 .rom-grid .rg-h{color:var(--violet);font-size:9px;letter-spacing:.1em}
@@ -1325,6 +1333,8 @@ class Component {
   }
   /* Position custom des pins (matrice : lignes à gauche, colonnes en bas) */
   pinPos(pin){
+    const d = REG[this.type];
+    if (d && d.pinPos) return d.pinPos(this, pin);
     if (this.type !== 'MATRIX' || pin.isOutput) return null;
     const gx = this.x + 26, gy = this.y + 12, cell = 17;
     if (pin.index < 8) return { x: this.x, y: gy + cell * (pin.index + .5) };
@@ -2485,6 +2495,17 @@ const EXAMPLES = [
     {t:'SRMEM',x:100,y:150},
     {t:'ECRAN',x:750,y:110,opt:{titre:'CUVE'}}],
    wires:[[0,2,2,0],[0,1,2,1],[2,0,1,0],[1,1,0,2],[0,0,3,0],[0,3,3,1]] }},
+{ name:'Perceuse en GRAFCET', icon:'⊟', diff:'Automatisme',
+  desc:'Le cycle d’une perceuse écrit dans le langage du métier : X0 attend le départ, X1 descend la broche jusqu’au capteur bas, X2 temporise 2 s en fond de trou, X3 remonte jusqu’au capteur haut, et ça reboucle. Appuie sur DÉPART et regarde le jeton descendre les étapes.',
+  data:{ comps:[
+    {t:'GRAFCET',x:300,y:60,opt:{nb:4,gr:[{cond:'R1'},{cond:'R2'},{cond:'1',tempo:2},{cond:'R3'}]}},
+    {t:'BUTTON',x:40,y:60},
+    {t:'JACK',x:700,y:250,opt:{sec:2}},
+    {t:'LED',x:640,y:60,opt:{coul:'blanc'},lbl:'ATTENTE'},
+    {t:'LED',x:640,y:400,opt:{coul:'orange'},lbl:'PERÇAGE'}],
+   wires:[[1,0,0,0],[2,0,0,2],[2,1,0,1],
+          [0,1,2,0],[0,3,2,1],
+          [0,0,3,0],[0,2,4,0]] }},
 { name:'Atelier complet', icon:'🏭', diff:'Expert',
   desc:'Une petite usine : une cuve alimentée par pompe, un four régulé, un convoyeur qui compte les pièces, et un écran central qui surveille les quatre grandeurs. Tout tourne en même temps — observe, puis modifie.',
   data:{ comps:[
@@ -3029,6 +3050,35 @@ function openInspector(c){
         'Pour chaque état (ligne) et chaque combinaison des entrées A et B (colonne), l\u2019état suivant.'));
       break;
     }
+    case 'GRAFCET': {
+      const nb = grNb(c);
+      const cibles = v => Array.from({ length:nb }, (_, k) =>
+        '<option value="' + k + '"' + (k === v ? ' selected' : '') + '>' + k + '</option>').join('');
+      let g = '<div class="gr-grid">' +
+        '<span class="rg-h">ÉT.</span><span class="rg-h">RÉCEPTIVITÉ</span>' +
+        '<span class="rg-h">t (s)</span><span class="rg-h">VERS</span>' +
+        '<span class="rg-h">OU BIEN</span><span class="rg-h">VERS</span>';
+      for (let i = 0; i < nb; i++){
+        const st = grStep(c, i);
+        g += '<span class="gr-n">X' + i + '</span>';
+        g += '<select data-gr="' + i + ',cond">' + GR_RECEPT.map(([k, lab]) =>
+          '<option value="' + k + '"' + (k === st.cond ? ' selected' : '') + '>' + lab + '</option>').join('') +
+          '</select>';
+        g += '<input type="number" data-gr="' + i + ',tempo" value="' + st.tempo +
+          '" min="0" max="120" step="0.5">';
+        g += '<select data-gr="' + i + ',cible">' + cibles(st.cible) + '</select>';
+        g += '<select data-gr="' + i + ',alt"><option value="-"' +
+          (st.alt === '-' ? ' selected' : '') + '>—</option>' + GR_RECEPT.slice(1).map(([k, lab]) =>
+          '<option value="' + k + '"' + (k === st.alt ? ' selected' : '') + '>' + lab + '</option>').join('') +
+          '</select>';
+        g += '<select data-gr="' + i + ',altCible">' + cibles(st.altCible) + '</select>';
+      }
+      B.push(inspField('Étapes et transitions', g + '</div>',
+        'Pour chaque étape : la <b>réceptivité</b> qui fait franchir la transition, une <b>temporisation</b> ' +
+        'facultative (0 = aucune), et l’étape d’arrivée. La colonne <b>OU BIEN</b> ouvre une seconde branche : ' +
+        'c’est le choix de séquence. Les actions se câblent sur X0…X5.'));
+      break;
+    }
     case 'ROM': {
       let g = '<div class="rom-grid"><span class="rg-h">ADR (4·2·1)</span><span class="rg-h">S1</span><span class="rg-h">S2</span>';
       for (let r = 0; r < 8; r++){
@@ -3074,6 +3124,17 @@ function openInspector(c){
 }
 function applyInspector(c, inp){
   const k = inp.dataset.k, romK = inp.dataset.rom, fsmK = inp.dataset.fsm;
+  if (inp.dataset.gr){
+    const [i, champ] = inp.dataset.gr.split(',');
+    const nb = grNb(c);
+    if (champ === 'tempo') grSet(c, +i, 'tempo', Math.max(0, Math.min(120, parseFloat(inp.value) || 0)));
+    else if (champ === 'cible' || champ === 'altCible')
+      grSet(c, +i, champ, Math.max(0, Math.min(nb - 1, parseInt(inp.value, 10) || 0)));
+    else if (GR_RECEPT.some(r => r[0] === inp.value) || inp.value === '-')
+      grSet(c, +i, champ, inp.value);
+    markDirty();
+    return;
+  }
   if (fsmK){
     const [st, kk] = fsmK.split(',').map(Number);
     if (!c.opt.tr) c.opt.tr = [[0,0,0,0],[1,1,1,1],[2,2,2,2],[3,3,3,3]];
@@ -5128,6 +5189,43 @@ const missions = [
       "Double-clique la cuve pour régler ses deux seuils : bas 20 %, haut 85 %.",
       "Vide la cuve à la main (entrée VID ou glissière) : dès 20 % la vanne s'ouvre et ne se referme qu'à 85 %."],
     why:"Sans mémoire, la vanne claquerait en permanence autour d'un seuil unique. Les <b>deux seuils</b> créent une zone morte, et la <b>bascule SR</b> retient la décision à l'intérieur de cette zone : c'est très exactement une régulation tout ou rien à hystérésis, câblée en composants séparés. Réservoir d'eau, cuve de fioul, bac tampon d'une machine : le montage est le même partout, et il tient en trois composants."} },
+{ id:"m143", ch:"Chapitre 29 · Le GRAFCET", title:"Étapes et transitions",
+  desc:"Découvre le langage des automaticiens. Pose un GRAFCET, règle-le sur 3 étapes, branche un BOUTON sur R1 et trois AMPOULES sur X0, X1, X2. Fais avancer le jeton d'étape en étape et observe : une seule étape est active à la fois. Mission libre.",
+  inputs:0, outputs:0, tt:[], par:0,
+  sol:{
+    plan:["BOUTON ─▶ R1 du GRAFCET","X0, X1, X2 ─▶ trois AMPOULES de couleurs différentes"],
+    steps:["Pose un GRAFCET (onglet Temps & automatisme) et règle-le sur <b>3 étapes</b> avec sa glissière.",
+      "Double-clique dessus : la grille montre une ligne par étape. Mets la réceptivité de X0, X1 et X2 sur <b>R1</b>.",
+      "Branche un BOUTON sur l'entrée R1 : chaque appui franchit une transition.",
+      "Câble X0, X1, X2 sur trois ampoules — clique chacune pour lui donner une couleur différente.",
+      "Appuie plusieurs fois : le jeton descend, puis reboucle sur l'étape 0. Une seule ampoule à la fois.",
+      "Remets la réceptivité de X1 sur <code>=1 (toujours)</code> avec une temporisation de 2 s : l'étape 1 se franchit toute seule au bout de deux secondes."],
+    why:"Voilà les deux seules notions du GRAFCET. Une <b>étape</b> est active ou non — et c'est tout ce qu'elle sait de son état. Une <b>transition</b> ne se franchit que si l'étape amont est active <i>et</i> que sa <b>réceptivité</b> est vraie ; alors l'amont s'éteint et l'aval s'allume, dans le même instant. Tout le reste — cycles de machine, feux, ascenseurs, machines à laver — n'est qu'un assemblage de ces deux briques. Et la règle « une seule étape active » est ce qui rend un automate lisible : à tout moment, on sait où en est la machine." } },
+{ id:"m144", ch:"Chapitre 29 · Le GRAFCET", title:"Le cycle de la perceuse",
+  desc:"🏆 Le cycle industriel type : la broche descend, perce, remonte, recommence. Un VÉRIN joue la broche, ses deux fins de course donnent les réceptivités. Charge l'exemple « Perceuse en GRAFCET » 📦 si tu veux comparer.",
+  inputs:0, outputs:0, tt:[], par:0,
+  sol:{
+    plan:["BOUTON (départ) ─▶ R1","VÉRIN S1 (sorti) ─▶ R2 · VÉRIN S0 (rentré) ─▶ R3",
+          "X1 ─▶ + du VÉRIN (descente) · X3 ─▶ − du VÉRIN (remontée)"],
+    steps:["Pose un GRAFCET à 4 étapes, un BOUTON et un VÉRIN (course 2 s).",
+      "Réceptivités : X0 attend <b>R1</b> (le départ), X1 attend <b>R2</b> (broche en bas), X2 attend <code>=1</code> avec une <b>temporisation de 2 s</b>, X3 attend <b>R3</b> (broche en haut).",
+      "Actions : X1 → entrée <b>+</b> du vérin (il descend tant que l'étape 1 dure), X3 → entrée <b>−</b> (il remonte).",
+      "Retours : sortie <b>S1</b> du vérin → R2, sortie <b>S0</b> → R3.",
+      "Appuie sur DÉPART : le cycle s'enchaîne tout seul et reboucle. Mets une ampoule sur X2 pour voir la temporisation de perçage.",
+      "Coupe le fil de S1 : le cycle se bloque à l'étape 1. C'est exactement ce que voit un dépanneur — l'étape allumée dit quel capteur manque."],
+    why:"Trois choses à retenir. D'abord l'<b>action est portée par l'étape</b> : le vérin descend parce que X1 est actif, pas parce qu'on a « lancé une descente ». Ensuite, chaque mouvement attend sa <b>confirmation par capteur</b> — jamais un délai « à l'aveugle » : c'est la différence entre une machine fiable et une machine qui casse des pièces le jour où elle ralentit. Enfin, la <b>temporisation</b> n'est pas un capteur : on l'emploie pour un temps de procédé (le perçage), pas pour attendre un mouvement." } },
+{ id:"m145", ch:"Chapitre 29 · Le GRAFCET", title:"Le choix de séquence",
+  desc:"Une machine de tri : après le contrôle, la pièce part au bac « bonne » ou au bac « rebut ». Utilise la colonne OU BIEN du GRAFCET pour ouvrir deux chemins depuis la même étape. Mission libre.",
+  inputs:0, outputs:0, tt:[], par:0,
+  sol:{
+    plan:["X0 : contrôle · R1 = pièce bonne ─▶ X1 · OU BIEN R2 = pièce mauvaise ─▶ X2",
+          "X1 et X2 rebouclent sur X0"],
+    steps:["Pose un GRAFCET à 3 étapes et deux INTERRUPTEURS sur R1 et R2.",
+      "Ligne X0 : réceptivité <b>R1</b> vers l'étape <b>1</b>, et dans la colonne <b>OU BIEN</b>, <b>R2</b> vers l'étape <b>2</b>.",
+      "Lignes X1 et X2 : réceptivité <code>=1</code> avec une temporisation de 1 s, cible <b>0</b>.",
+      "Branche une ampoule verte sur X1 (« bac bonne ») et une rouge sur X2 (« bac rebut »).",
+      "Bascule R1 : le jeton part à gauche. Bascule R2 : il part à droite. Les deux à la fois : la branche principale gagne."],
+    why:"C'est la <b>divergence en OU</b> du GRAFCET : depuis une même étape, plusieurs transitions concurrentes, dont une seule sera franchie. En norme, les réceptivités de ces transitions doivent être <b>exclusives</b> — deux chemins vrais en même temps, et le comportement dépendrait de l'ordre d'écriture, ce qu'on ne veut jamais sur une machine. Ici la branche principale est prioritaire, ce qui rend la chose déterministe ; sur un vrai automate, on écrirait plutôt R2·R̄1 pour lever toute ambiguïté." } },
 { id:"m140", ch:"Chapitre 28 · L'usine", title:"Ton atelier",
   desc:"🏆 Mission finale : assemble ton propre atelier. Au moins un procédé régulé (four, cuve ou réservoir d'air), un capteur en prise directe, un actionneur commandé, un ÉCRAN qui surveille tout et un ENREGISTREUR sur la grandeur qui t'intéresse. Charge l'exemple « Atelier complet » 📦 si tu veux un point de départ.",
   inputs:0, outputs:0, tt:[], par:0,
@@ -5386,7 +5484,8 @@ const FAM_SECTIONS = [
       '<b>Deux façons de s\u2019en servir.</b> Laissé <b>libre</b>, il simule : tu fixes la valeur toi-même (glissière, clic ou double-clic) pour tester ta logique. <b>Branché</b> sur l\u2019entrée <code>PROC</code> à la sortie d\u2019un procédé — la température d\u2019un four, le niveau d\u2019une cuve, la vitesse d\u2019un moteur — il devient un <b>vrai instrument</b> : il mesure en direct ce que fait l\u2019installation, et la glissière disparaît puisque c\u2019est le procédé qui commande.<br><br>' +
       '<b>Attention à l\u2019étendue de mesure.</b> Un thermomètre gradué de −10 à 50 °C plongé dans un four à 200 °C sature : il affiche 50 et passe en ambre. C\u2019est le vrai piège du métier — choisir un capteur adapté à la plage du procédé.' },
   { key:'time', t:'Temps & automatisme — attendre, compter, séquencer',
-    p:'Les vrais automates ne raisonnent pas qu\u2019en 0 et 1 : ils <b>attendent</b>. Temporisations, impulsions calibrées, mémoires d\u2019état — voici la boîte à outils exacte des automates programmables industriels, en version démontable.' },
+    p:'Les vrais automates ne raisonnent pas qu\u2019en 0 et 1 : ils <b>attendent</b>. Temporisations, impulsions calibrées, mémoires d\u2019état — voici la boîte à outils exacte des automates programmables industriels, en version démontable.<br><br>' +
+      '<b>Et au bout, le GRAFCET.</b> Quand un cycle compte plus de trois phases, on cesse de câbler des mémoires : on le <i>décrit</i>, en étapes et en transitions. C\u2019est le langage normalisé de l\u2019automatisme séquentiel, et c\u2019est aussi le document que lit le dépanneur pour savoir quel capteur manque.' },
   { key:'reg', t:'Régulation — maintenir une consigne',
     p:'Réguler, c\u2019est corriger en permanence l\u2019écart entre ce qu\u2019on veut et ce qu\u2019on mesure. Du simple thermostat au PID, ces blocs ferment la boucle entre un capteur et un actionneur.<br><br>' +
       '<b>Les réglages parlent en unités réelles.</b> Une consigne se donne en <code>°C</code>, en <code>bar</code>, en <code>%</code> ou en <code>tr/min</code> — jamais en valeur brute. Chaque régulateur regarde ce qui est branché sur son entrée de mesure, en reprend l\u2019unité et l\u2019étendue, et t\u2019ouvre un champ gradué dans cette unité : branche un four qui mesure de 0 à 250 °C, et le thermostat te demande une consigne <b>entre 0 et 250 °C</b>. Les seuils, l\u2019hystérésis et les limites suivent la même règle ; l\u2019hystérésis étant un <i>écart</i>, « ± 10 °C » veut bien dire dix degrés. Tant que rien n\u2019est branché, faute de mieux le réglage s\u2019exprime en <b>% de l\u2019échelle</b> — branche une mesure et il bascule tout seul dans la bonne unité.<br><br>' +
@@ -7195,6 +7294,168 @@ defComp('TE', {
   guide:{ txt:'Il <b>réunit</b> deux arrivées et <b>répartit</b> le débit total entre deux départs, selon la proportion que tu règles. De quoi alimenter deux cuves depuis une seule pompe, ou faire converger deux circuits.',
     ex:'POMPE → TÉ, puis chaque sortie vers une CUVE : règle la répartition à 70 / 30 et regarde la première se remplir plus vite.',
     real:'Dans une installation réelle, la répartition dépend des pertes de charge de chaque branche — on l’ajuste avec des vannes d’équilibrage. Ici, tu la règles directement.' }
+});
+/* ==================== GRAFCET (CEI 60848) ====================
+   Le langage de l'automatisme séquentiel : des ÉTAPES reliées par des
+   TRANSITIONS. Une étape est active ou non, et les ACTIONS qu'on lui associe
+   durent exactement le temps où elle l'est. Une transition est franchie
+   quand son étape amont est active ET que sa RÉCEPTIVITÉ est vraie : l'amont
+   s'éteint, l'aval s'allume. Cinq règles, et tout cycle de machine se décrit. */
+const GR_RECEPT = [
+  ['1',   '=1 (toujours)'],
+  ['R1',  'R1'], ['R2', 'R2'], ['R3', 'R3'], ['R4', 'R4'],
+  ['/R1', 'R1 à 0'], ['/R2', 'R2 à 0'], ['/R3', 'R3 à 0'], ['/R4', 'R4 à 0']
+];
+const GR_MAX = 6, GR_PAS = 38;
+function grNb(c){ return Math.max(2, Math.min(GR_MAX, (optOf(c, 'nb') | 0) || 4)); }
+function grPas(){ return GR_PAS; }
+/* Hauteur du boîtier : la colonne d'étapes, puis les sorties inutilisées */
+function grH(nb){ return 30 + (nb - 1) * GR_PAS + 30 + (GR_MAX - nb) * 12 + 18; }
+/* Étiquette d'une réceptivité, temporisation comprise */
+function grLabel(code, tempo){
+  const base = code === '1' ? '=1' : String(code).replace('/', '¬');
+  if (!tempo) return base;
+  const t = 't/' + tempo + 's';
+  return base === '=1' ? t : base + '·' + t;
+}
+/* Cette réceptivité est-elle vraie en ce moment ? */
+function grVrai(c, code){
+  if (code === '1') return true;
+  if (!code || code === '-') return false;
+  const neg = String(code).charAt(0) === '/';
+  const i = ['R1','R2','R3','R4'].indexOf(neg ? String(code).slice(1) : code);
+  if (i < 0) return false;
+  const v = c.inPins[i].state ? 1 : 0;
+  return neg ? !v : !!v;
+}
+/* Réglages d'une étape, avec les valeurs par défaut d'un cycle linéaire */
+function grStep(c, i){
+  const g = (c.opt.gr && c.opt.gr[i]) || {};
+  const nb = grNb(c), bornee = v => Math.max(0, Math.min(nb - 1, v | 0));
+  return { cond: g.cond || '1', tempo: +g.tempo || 0,
+           cible: g.cible == null ? (i + 1) % nb : bornee(g.cible),
+           alt:  g.alt || '-',
+           altCible: g.altCible == null ? 0 : bornee(g.altCible) };
+}
+function grSet(c, i, k, v){
+  if (!c.opt.gr) c.opt.gr = [];
+  if (!c.opt.gr[i]) c.opt.gr[i] = {};
+  c.opt.gr[i][k] = v;
+}
+defComp('GRAFCET', {
+  name:'GRAFCET (SÉQUENCEUR D’ÉTAPES)', short:'GRAFCET', family:'time',
+  color:'#b18cff', cost:34, seq:true,
+  glyph:'⊟', w:230, h:grH(4), main:'nb',
+  ins:[{ n:'R1' }, { n:'R2' }, { n:'R3' }, { n:'R4' }, { n:'INIT' }],
+  outs:[{ n:'X0' }, { n:'X1' }, { n:'X2' }, { n:'X3' }, { n:'X4' }, { n:'X5' }],
+  opts:[{ k:'nb', label:'Nombre d’étapes', min:2, max:GR_MAX, step:1, def:4, int:true,
+    hint:'Autant d’étapes que de phases dans le cycle. Chacune sort sur X0…X5.' }],
+  onOpt(c, k){ if (k === 'nb') c.h = grH(grNb(c)); },
+  init(c){ c.et = 0; c.tEt = 0; c.prevInit = 0; c.franchi = 0; },
+  save:c => ({ et: c.et || undefined }),
+  restore(c, s){ if (s && s.et != null) c.et = s.et; c.h = grH(grNb(c)); },
+  /* Les sorties d'étape s'alignent sur les cases dessinées : on lit le
+     diagramme et le câblage d'un seul coup d'œil. */
+  pinPos(comp, pin){
+    if (!pin.isOutput) return null;
+    const nb = grNb(comp);
+    if (pin.index < nb)
+      return { x: comp.x + comp.w, y: comp.y + 30 + pin.index * GR_PAS };
+    return { x: comp.x + comp.w,
+             y: comp.y + 30 + (nb - 1) * GR_PAS + 30 + (pin.index - nb) * 12 };
+  },
+  eval(c){
+    const nb = grNb(c);
+    c.outPins.forEach((p, i) => p.state = (i === c.et && i < nb) ? 1 : 0);
+  },
+  commit(c){
+    const now = Date.now(), nb = grNb(c);
+    if (!c.tEt) c.tEt = now;
+    if (c.et >= nb){ c.et = 0; c.tEt = now; }
+    // INIT : retour forcé à l'étape initiale, sur front montant
+    const ini = c.inPins[4].state ? 1 : 0;
+    if (ini && !c.prevInit){ c.et = 0; c.tEt = now; c.prevInit = ini; return; }
+    c.prevInit = ini;
+    const g = grStep(c, c.et), ecoule = (now - c.tEt) / 1000;
+    // La branche principale est prioritaire : c'est le « choix de séquence »
+    const okA = grVrai(c, g.cond) && ecoule >= g.tempo;
+    const okB = g.alt !== '-' && grVrai(c, g.alt);
+    if (okA || okB){
+      c.et = Math.max(0, Math.min(nb - 1, okA ? g.cible : g.altCible));
+      c.tEt = now;
+      c.franchi = now;
+    }
+  },
+  body(c, x, col, on, hov, t){
+    const nb = grNb(c), sx = c.x + 58, top = c.y + 30;
+    const flash = c.franchi && Date.now() - c.franchi < 260;
+    x.textBaseline = 'middle';
+    for (let i = 0; i < nb; i++){
+      const cy = top + i * GR_PAS, act = i === c.et, g = grStep(c, i), s2 = 22;
+      x.beginPath(); x.rect(sx - s2 / 2, cy - s2 / 2, s2, s2);
+      x.fillStyle = act ? c.hexA(col, .42) : 'rgba(255,255,255,.05)';
+      if (act){ x.shadowBlur = 14; x.shadowColor = col; }
+      x.fill(); x.shadowBlur = 0;
+      x.lineWidth = 1.4; x.strokeStyle = act ? col : 'rgba(255,255,255,.28)'; x.stroke();
+      if (i === 0){                        // étape initiale : double cadre
+        x.beginPath(); x.rect(sx - s2 / 2 - 4, cy - s2 / 2 - 4, s2 + 8, s2 + 8);
+        x.lineWidth = 1.3; x.strokeStyle = act ? col : 'rgba(255,255,255,.35)'; x.stroke();
+      }
+      x.font = "700 10px 'Chakra Petch', sans-serif"; x.textAlign = 'center';
+      x.fillStyle = act ? '#fff' : PAL.dim;
+      x.fillText(String(i), sx, cy + .5);
+      // liaison descendante, barre de transition, puis liaison vers l'étape suivante
+      const by = cy + GR_PAS / 2 - 2;
+      x.beginPath(); x.moveTo(sx, cy + s2 / 2); x.lineTo(sx, by);
+      if (i < nb - 1 && grStep(c, i).cible === i + 1)
+        { x.moveTo(sx, by); x.lineTo(sx, cy + GR_PAS - s2 / 2); }
+      x.lineWidth = 1.2; x.strokeStyle = 'rgba(255,255,255,.22)'; x.stroke();
+      const chaud = act && flash;
+      x.beginPath(); x.moveTo(sx - 11, by); x.lineTo(sx + 11, by);
+      x.lineWidth = chaud ? 2.8 : 1.8;
+      x.strokeStyle = chaud ? '#fff' : (act ? col : 'rgba(255,255,255,.35)');
+      x.stroke();
+      // réceptivité, à droite de la barre
+      x.textAlign = 'left'; x.fillStyle = act ? col : PAL.dim;
+      let lab = grLabel(g.cond, g.tempo);
+      if (g.cible !== (i + 1) % nb) lab += ' → ' + g.cible;
+      const dispo = c.w - (sx - c.x) - 34;
+      x.fillText(fitText(x, lab, dispo, '600', 8.5, "'IBM Plex Mono', monospace", 6),
+                 sx + 16, by - (g.alt !== '-' ? 5 : 0));
+      if (g.alt !== '-'){                  // divergence : le choix de séquence
+        x.fillStyle = act ? '#ffc23d' : 'rgba(255,194,61,.5)';
+        x.fillText(fitText(x, '⑂ ' + grLabel(g.alt, 0) + ' → ' + g.altCible, dispo,
+                           '600', 8.5, "'IBM Plex Mono', monospace", 6), sx + 16, by + 6);
+      }
+    }
+    // arc de rebouclage de la dernière transition, à gauche de la colonne
+    const bas = top + (nb - 1) * GR_PAS + GR_PAS / 2 - 2;
+    const cible = grStep(c, nb - 1).cible, yC = top + cible * GR_PAS;
+    const gx = c.x + 34;                 // couloir de retour, entre les pins et la colonne
+    x.beginPath();
+    x.moveTo(sx, bas); x.lineTo(gx, bas);
+    x.lineTo(gx, yC); x.lineTo(sx - 13, yC);
+    x.lineWidth = 1.2; x.strokeStyle = 'rgba(255,255,255,.24)'; x.stroke();
+    x.beginPath(); x.moveTo(sx - 12, yC); x.lineTo(sx - 18, yC - 3.5); x.lineTo(sx - 18, yC + 3.5);
+    x.fillStyle = 'rgba(255,255,255,.4)'; x.fill();
+    // pied : étape courante et temps passé dedans
+    x.font = "600 8px 'IBM Plex Mono', monospace"; x.textAlign = 'center'; x.textBaseline = 'top';
+    x.fillStyle = PAL.dim;
+    x.fillText('X' + c.et + ' actif · ' + ((Date.now() - (c.tEt || Date.now())) / 1000).toFixed(1) + ' s',
+               c.x + c.w / 2, c.y + c.h - 14);
+  },
+  tip(c){
+    const g = grStep(c, c.et), nb = grNb(c);
+    const l = ['Étape active : X' + c.et + ' (sur ' + nb + ')',
+      'Active depuis ' + ((Date.now() - (c.tEt || Date.now())) / 1000).toFixed(1) + ' s',
+      'Franchit vers ' + g.cible + ' quand : ' + grLabel(g.cond, g.tempo)];
+    if (g.alt !== '-') l.push('…ou vers ' + g.altCible + ' quand : ' + grLabel(g.alt, 0));
+    l.push('Les actions se câblent sur X0…X5 : elles durent tant que l’étape dure');
+    return l;
+  },
+  guide:{ txt:'Le <b>langage de l’automatisme séquentiel</b>, normalisé sous le nom GRAFCET (CEI 60848). Un cycle de machine ne se décrit pas en équations mais en <code>étapes</code> : une étape est active ou non, et les <b>actions</b> qu’on lui associe durent exactement le temps où elle l’est. Entre deux étapes, une <code>transition</code> — le petit trait horizontal — porte une <b>réceptivité</b>, la condition à remplir. Quand l’étape amont est active <i>et</i> que la réceptivité est vraie, la transition est franchie : l’amont s’éteint, l’aval s’allume. L’étape 0, à double cadre, est l’<b>étape initiale</b> : celle de la mise sous tension, et celle où <code>INIT</code> ramène.<br><br>Branche tes capteurs sur <code>R1…R4</code>, choisis pour chaque étape la réceptivité qui la fait avancer — avec sa <b>temporisation</b> éventuelle, le fameux <code>t/5s</code> — puis câble tes actionneurs sur <code>X0…X5</code>. Une seconde branche par étape ouvre le <b>choix de séquence</b> : « si la pièce est bonne, va à l’étape 4 ; sinon, à l’étape 5 ».<br><br>Pour une <b>action mémorisée</b> (qui survit à l’étape qui l’a déclenchée), câble l’étape sur le <code>S</code> d’une MÉMOIRE SR, et l’étape qui doit l’arrêter sur son <code>R</code> — c’est exactement la convention du métier.',
+    ex:'Perceuse : X0 attend le départ (R1), X1 descend la broche jusqu’au capteur bas (R2), X2 temporise 2 s en fond de trou, X3 remonte jusqu’au capteur haut (R3) et reboucle sur X0. Quatre étapes, quatre réceptivités, et le cycle tourne tout seul.',
+    real:'Le GRAFCET est né en France en 1977 et est devenu une norme internationale. Sur une machine réelle, c’est le document que lit le dépanneur à 3 h du matin : il regarde quelle étape est allumée, lit la réceptivité qui bloque, et sait quel capteur est en défaut. Un automate ne « plante » pas mystérieusement — il attend une condition qui n’arrive jamais.' }
 });
 defComp('PID', {
   name:'RÉGULATEUR PID', short:'PID', family:'reg', color:'#ffc23d', cost:40, seq:true,

@@ -2755,6 +2755,10 @@ T('T60 le guide documente les ateliers, les unités, les seuils et la tuyauterie
    ['seuil haut', 'le seuil haut des capteurs'],
    ['seuil bas', 'le seuil bas des capteurs'],
    ['raccord fluide', 'la tuyauterie'],
+   ['GRAFCET', 'le GRAFCET'],
+   ['réceptivité', 'les réceptivités'],
+   ['CEI 60848', 'la norme du GRAFCET'],
+   ['CEI 60073', 'les couleurs normalisées des voyants'],
    ['BRIDÉ', 'le bridage d’un tuyau trop étroit']]
     .forEach(([txt, what]) => ok(html.includes(txt), 'le guide parle de ' + what));
   ok(/TUYAU/.test(__el('guide-body').innerHTML), 'et présente le tuyau lui-même');
@@ -2949,6 +2953,111 @@ T('T153 les voyants prennent les couleurs normalisées du pupitre', () => {
   const copie = spawnGroup(data, 0, 0, true).made[0];
   eq(copie.opt.coul, 'orange', 'copier-coller, sauvegardes et exemples la conservent');
   eq(compColor(copie), lampColor('orange'), 'et elle se rallume de la bonne couleur');
+});
+
+T('T154 GRAFCET : étapes, réceptivités, temporisation et rebouclage', () => {
+  board();
+  const g = mk('GRAFCET', 0, 0);
+  const r1 = mk('SWITCH', -300, 0), r2 = mk('SWITCH', -300, 100);
+  link(r1, 0, g, 0); link(r2, 0, g, 1);
+  applyInspector(g, fld('o_nb', 3));
+  eq(grNb(g), 3, 'trois étapes');
+  // par défaut le cycle est linéaire et reboucle
+  eq(grStep(g, 0).cible, 1, 'X0 → X1'); eq(grStep(g, 2).cible, 0, 'la dernière reboucle');
+  // X0 attend R1
+  const gr = (i, ch, v) => applyInspector(g, Object.assign(fld('x', v), { dataset:{ gr:i + ',' + ch } }));
+  gr(0, 'cond', 'R1'); gr(1, 'cond', 'R2'); gr(2, 'cond', '1'); gr(2, 'tempo', 1);
+  sim();
+  eq(g.et, 0, 'on démarre sur l’étape initiale');
+  eq(g.outPins[0].state, 1, 'X0 est actif');
+  eq(g.outPins[1].state, 0, 'et lui seul');
+  // R1 encore à 0 : rien ne bouge, même après du temps
+  for (let i = 0; i < 5; i++){ __advance(200); sim(); }
+  eq(g.et, 0, 'sans réceptivité, l’étape ne passe pas — c’est ça, « l’automate attend »');
+  r1.state = 1; __advance(100); sim();
+  eq(g.et, 1, 'R1 franchit la transition');
+  sim();                                   // le franchissement se publie au cycle suivant
+  eq(g.outPins[1].state, 1, 'X1 prend le relais');
+  eq(g.outPins[0].state, 0, 'et X0 s’éteint : une seule étape active');
+  r1.state = 0; r2.state = 1; __advance(100); sim();
+  eq(g.et, 2, 'R2 fait avancer à X2');
+  // X2 : réceptivité toujours vraie mais temporisée à 1 s
+  __advance(300); sim();
+  eq(g.et, 2, 'la temporisation retient l’étape');
+  for (let i = 0; i < 6; i++){ __advance(200); sim(); }
+  eq(g.et, 0, 'après 1 s, la transition est franchie et le cycle reboucle');
+  // INIT ramène à l’étape initiale depuis n’importe où
+  r1.state = 1; __advance(100); sim();
+  eq(g.et, 1, 'reparti dans le cycle');
+  const ini = mk('SWITCH', -300, 200); link(ini, 0, g, 4);
+  ini.state = 1; __advance(100); sim();
+  eq(g.et, 0, 'INIT ramène à l’étape initiale');
+});
+
+T('T155 GRAFCET : choix de séquence, mémoire d’étape et broches alignées', () => {
+  board();
+  const g = mk('GRAFCET', 0, 0);
+  const a = mk('SWITCH', -300, 0), b = mk('SWITCH', -300, 100);
+  link(a, 0, g, 0); link(b, 0, g, 1);
+  applyInspector(g, fld('o_nb', 4));
+  const gr = (i, ch, v) => applyInspector(g, Object.assign(fld('x', v), { dataset:{ gr:i + ',' + ch } }));
+  // depuis X0 : R1 → X1 (pièce bonne), sinon R2 → X3 (rebut)
+  gr(0, 'cond', 'R1'); gr(0, 'cible', 1);
+  gr(0, 'alt', 'R2');  gr(0, 'altCible', 3);
+  sim();
+  b.state = 1; __advance(100); sim();
+  eq(g.et, 3, 'la branche « OU BIEN » aiguille vers l’étape 3');
+  // retour et vérification de la branche principale
+  applyInspector(g, Object.assign(fld('x', 0), { dataset:{ gr:'3,cible' } }));
+  b.state = 0; gr(3, 'cond', '1'); __advance(100); sim();
+  eq(g.et, 0, 'retour à l’étape initiale');
+  a.state = 1; __advance(100); sim();
+  eq(g.et, 1, 'la branche principale reste prioritaire');
+  // l'étape courante voyage avec le montage
+  const data = serializeGroup([g]);
+  board();
+  const copie = spawnGroup(data, 0, 0, true).made[0];
+  eq(copie.et, 1, 'l’étape active est sauvegardée');
+  eq(grStep(copie, 0).alt, 'R2', 'et la table des transitions aussi');
+  // la broche Xn est à la hauteur de la case n
+  eq(Math.round(copie.outPins[0].ly - copie.y), 30, 'X0 en face de l’étape 0');
+  eq(Math.round(copie.outPins[2].ly - copie.outPins[1].ly), GR_PAS, 'un pas d’étape entre deux broches');
+  // le boîtier grandit avec le nombre d'étapes
+  const h4 = copie.h;
+  applyInspector(copie, fld('o_nb', 6));
+  ok(copie.h > h4, 'six étapes : le boîtier s’allonge');
+});
+
+T('T156 l’exemple « Perceuse en GRAFCET » enchaîne son cycle', () => {
+  board();
+  const ex = EXAMPLES.find(e => e.name === 'Perceuse en GRAFCET');
+  ok(!!ex, 'exemple présent');
+  const m = spawnGroup(ex.data, 0, 0, true).made;
+  const g = m[0], dep = m[1], ver = m[2];
+  sim();
+  eq(g.et, 0, 'au repos sur l’étape initiale');
+  // le vérin ne bouge pas tant qu’on n’a pas donné le départ
+  for (let i = 0; i < 5; i++){ __advance(150); sim(); }
+  eq(g.et, 0, 'sans départ, rien ne se passe');
+  ok(ver.pos < 0.05, 'la broche est en haut');
+  dep.state = 1; __advance(100); sim(); sim();
+  eq(g.et, 1, 'départ donné : descente');
+  dep.state = 0;
+  // on suit le cycle complet en relevant chaque changement d'étape
+  const vues = [g.et], tps = {};
+  let t0 = Date.now();
+  for (let i = 0; i < 220; i++){
+    __advance(60); sim();
+    if (g.et !== vues[vues.length - 1]){
+      tps[vues[vues.length - 1]] = Date.now() - t0; t0 = Date.now();
+      vues.push(g.et);
+      if (vues.length > 4) break;
+    }
+  }
+  deq(vues.slice(0, 5), [1, 2, 3, 0], 'le cycle s’enchaîne 1 → 2 → 3 → 0');
+  ok(tps[2] >= 2000, 'l’étape de perçage a bien duré 2 s (' + tps[2] + ' ms)');
+  ok(tps[1] > 1500 && tps[1] < 3500, 'la descente attend le capteur bas (' + tps[1] + ' ms)');
+  ok(ver.pos < .05, 'la broche est revenue en haut');
 });
 
 /* ===================== bilan ===================== */
