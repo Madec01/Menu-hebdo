@@ -4068,6 +4068,8 @@ const missions = [
   desc:"Mission libre : A = Donnée, B = Mémoriser. Construis un circuit qui GARDE sa valeur quand B repasse à OFF. Indice : il faut une boucle de rétroaction ! Vérifie quand tu as compris le principe.",
   inputs:2, inLabels:['A (donnée)','B (mémoriser)'], outputs:1, tt:[], par:4,
   sol:{
+    demo:{ comps:[{t: "BUTTON", x: 0, y: 0}, {t: "BUTTON", x: 0, y: 320}, {t: "NOR", x: 280, y: 40}, {t: "NOR", x: 280, y: 240}, {t: "LED", x: 540, y: 40, opt: {"coul": "vert"}}, {t: "LED", x: 540, y: 240, opt: {"coul": "rouge"}}],
+           wires:[[1, 0, 2, 0], [3, 0, 2, 1], [2, 0, 3, 0], [0, 0, 3, 1], [2, 0, 4, 0], [3, 0, 5, 0]] },
     plan:["── Verrou SR (le cœur) ──", "R, NOR₂ ─▶ <b>NOR₁</b>  (= Q)", "NOR₁, S ─▶ <b>NOR₂</b>  (= Q̄)", "── Étage verrou D ──", "A, B ─▶ <b>ET₁</b>  (= S, « écrire 1 »)", "A ─▶ <b>NON</b> · NON, B ─▶ <b>ET₂</b>  (= R, « écrire 0 »)"],
     steps:[
       "Toute la magie tient dans une <b>boucle</b> : la sortie d'une porte revient nourrir l'entrée d'une autre, qui elle-même revient sur la première. Le circuit s'auto-entretient — c'est ça, mémoriser.",
@@ -4081,6 +4083,8 @@ const missions = [
   desc:"Mission libre : construis un circuit INSTABLE — une sortie qui clignote toute seule, sans horloge, tant que A est activé. Indice : mords-toi la queue avec un nombre IMPAIR d'inversions… Vérifie quand ça oscille !",
   inputs:1, inLabels:['A (activer)'], outputs:1, tt:[], par:1,
   sol:{
+    demo:{ comps:[{t: "SWITCH", x: 0, y: 80}, {t: "NAND", x: 220, y: 80}, {t: "NOT", x: 420, y: 80}, {t: "NOT", x: 580, y: 80}, {t: "LED", x: 760, y: 80}],
+           wires:[[0, 0, 1, 0], [1, 0, 2, 0], [2, 0, 3, 0], [3, 0, 1, 1], [1, 0, 4, 0]] },
     plan:["A, [sa propre sortie] ─▶ <b>NAND</b> ─▶ Ampoule", "— version anneau —", "NAND ─▶ <b>NON₁</b> ─▶ <b>NON₂</b> ─▶ retour au NAND"],
     steps:[
       "Pose un <b>NAND</b>. Relie A à son entrée du haut… et maintenant l'interdit délicieux : relie <b>sa propre sortie à son entrée du bas</b>. Branche aussi la sortie sur l'ampoule.",
@@ -4107,6 +4111,8 @@ const missions = [
   desc:"Voici la BASCULE D, le registre 1 bit des vrais processeurs. Au front montant de ▷ (l'instant où l'horloge passe de 0 à 1), elle photographie D et le garde sur Q. Découvre-la avec l'oscilloscope : c'est une mission libre, clique VÉRIFIER quand tu as observé le phénomène.",
   inputs:0, outputs:0, tt:[], par:0, grant:['DFF'],
   sol:{
+    demo:{ comps:[{t: "SWITCH", x: 0, y: 0}, {t: "CLOCK", x: 0, y: 200}, {t: "DFF", x: 260, y: 40}, {t: "SCOPE", x: 520, y: 240}, {t: "LED", x: 520, y: 20}],
+           wires:[[0, 0, 2, 0], [1, 0, 2, 1], [0, 0, 3, 0], [2, 0, 3, 1], [2, 0, 4, 0]] },
     plan:["INTERRUPTEUR ─▶ D (bascule)", "HORLOGE ─▶ ▷ (bascule)", "D ─▶ CH1 (oscillo) · Q ─▶ CH2", "Q ─▶ AMPOULE"],
     steps:["Pose une BASCULE D (onglet Mémoire & puces), un INTERRUPTEUR, une HORLOGE lente (1 Hz), une AMPOULE et un OSCILLOSCOPE.",
       "Câble : interrupteur → D, horloge → ▷ (le petit triangle), Q → ampoule.",
@@ -4119,6 +4125,8 @@ const missions = [
   desc:"Chaîne 4 bascules D qui partagent la MÊME horloge : à chaque front, chaque bascule confie son bit à la suivante. Les bits voyagent ! Injecte des impulsions avec un bouton et regarde-les défiler sur 4 ampoules. Mission libre.",
   inputs:0, outputs:0, tt:[], par:0, grant:['DFF'],
   sol:{
+    demo:{ comps:[{t: "BUTTON", x: 0, y: 0}, {t: "CLOCK", x: 0, y: 240}, {t: "DFF", x: 240, y: 60}, {t: "DFF", x: 440, y: 60}, {t: "DFF", x: 640, y: 60}, {t: "DFF", x: 840, y: 60}, {t: "LED", x: 240, y: 300}, {t: "LED", x: 440, y: 300}, {t: "LED", x: 640, y: 300}, {t: "LED", x: 840, y: 300}],
+           wires:[[0, 0, 2, 0], [2, 0, 3, 0], [3, 0, 4, 0], [4, 0, 5, 0], [1, 0, 2, 1], [1, 0, 3, 1], [1, 0, 4, 1], [1, 0, 5, 1], [2, 0, 6, 0], [3, 0, 7, 0], [4, 0, 8, 0], [5, 0, 9, 0]] },
     plan:["BOUTON ─▶ D₁", "Q₁ ─▶ D₂ · Q₂ ─▶ D₃ · Q₃ ─▶ D₄", "HORLOGE ─▶ ▷ des QUATRE bascules", "Q₁,Q₂,Q₃,Q₄ ─▶ 4 AMPOULES"],
     steps:["Pose 4 BASCULES D alignées, une HORLOGE (2 Hz), un BOUTON et 4 AMPOULES.",
       "Câble la chaîne : bouton → D de la 1ʳᵉ bascule, puis Q de chaque bascule → D de la suivante.",
@@ -4131,6 +4139,8 @@ const missions = [
   desc:"Le tour de magie du séquentiel : reboucle Q̄ d'une bascule sur son propre D, et elle s'inverse à chaque front — sa sortie bat DEUX FOIS moins vite que l'horloge. Enchaîne deux étages et tu obtiens un compteur binaire qui tourne tout seul. Mission libre.",
   inputs:0, outputs:0, tt:[], par:0, grant:['DFF'],
   sol:{
+    demo:{ comps:[{t: "CLOCK", x: 0, y: 80}, {t: "DFF", x: 220, y: 60}, {t: "DFF", x: 460, y: 60}, {t: "SCOPE", x: 700, y: 240}],
+           wires:[[0, 0, 1, 1], [1, 1, 1, 0], [1, 1, 2, 1], [2, 1, 2, 0], [0, 0, 3, 0], [1, 0, 3, 1]] },
     plan:["Q̄₁ ─▶ D₁ (rebouclage !)", "HORLOGE ─▶ ▷₁", "Q̄₁ ─▶ ▷₂ · Q̄₂ ─▶ D₂", "HORLOGE ─▶ CH1 · Q₁ ─▶ CH2 (oscillo)", "Q₂,Q₁ + 2×FAUX·0 ─▶ AFFICHEUR DÉC"],
     steps:["Pose une BASCULE D, une HORLOGE (4 Hz pour bien voir) et un OSCILLOSCOPE.",
       "Reboucle Q̄ sur D de la même bascule, et l'horloge sur ▷. À chaque front, la bascule capture son propre inverse : elle clignote deux fois moins vite.",
@@ -4143,6 +4153,8 @@ const missions = [
   desc:"Un compteur qui tourne à toute vitesse + un bouton qui gèle l'horloge = un dé impossible à tricher. Tant que le compteur file à 4 Hz, impossible de viser un chiffre : le relâcher, c'est tirer au sort. Mission libre.",
   inputs:0, outputs:0, tt:[], par:0, grant:['DFF'],
   sol:{
+    demo:{ comps:[{t: "CLOCK", x: 0, y: 0}, {t: "BUTTON", x: 0, y: 180}, {t: "AND", x: 220, y: 60}, {t: "DFF", x: 440, y: 20}, {t: "DFF", x: 660, y: 20}, {t: "LOW", x: 440, y: 280}, {t: "LOW", x: 440, y: 360}, {t: "DEC", x: 880, y: 120}],
+           wires:[[0, 0, 2, 0], [1, 0, 2, 1], [2, 0, 3, 1], [3, 1, 3, 0], [3, 1, 4, 1], [4, 1, 4, 0], [5, 0, 7, 0], [6, 0, 7, 1], [4, 0, 7, 2], [3, 0, 7, 3]] },
     plan:["HORLOGE + BOUTON ─▶ ET (le portillon)", "ET ─▶ ▷₁ · Q̄₁ ─▶ D₁", "Q̄₁ ─▶ ▷₂ · Q̄₂ ─▶ D₂", "FAUX·0, FAUX·0, Q₂, Q₁ ─▶ AFFICHEUR DÉC"],
     steps:["Construis d'abord le compteur ÷4 de la mission précédente : deux bascules rebouclées (Q̄→D), Q̄₁ pilotant ▷₂.",
       "Insère un ET entre l'horloge et le ▷ de la première bascule : horloge sur une entrée, un BOUTON sur l'autre. C'est le portillon : les tics ne passent que bouton enfoncé.",
@@ -4250,6 +4262,8 @@ const missions = [
   desc:"NOUVEAU POUVOIR : double-clique n'importe quel composant pour ouvrir son INSPECTEUR 🔧 et régler ses paramètres au chiffre près ! Première expérience : fabrique une horloge qui émet des impulsions BRÈVES — allumée 10 % du temps seulement — et observe sa forme d'onde à l'oscilloscope. Mission libre : VÉRIFIER quand tu as vu la différence.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "CLOCK", x: 0, y: 0, opt: {"freq": 2, "duty": 10}}, {t: "CLOCK", x: 0, y: 200, opt: {"freq": 2}}, {t: "SCOPE", x: 260, y: 80}, {t: "LED", x: 540, y: 0}, {t: "LED", x: 540, y: 200}],
+           wires:[[0, 0, 2, 0], [1, 0, 2, 1], [0, 0, 3, 0], [1, 0, 4, 0]] },
     plan:["HORLOGE (duty 10 %) ─▶ CH1 (oscillo)","HORLOGE normale (50 %) ─▶ CH2","chaque horloge ─▶ une AMPOULE"],
     steps:["Pose deux HORLOGES, un OSCILLOSCOPE et deux AMPOULES.",
       "Double-clique la première horloge : l'inspecteur s'ouvre. Règle Fréquence = 2 Hz et Rapport cyclique = 10 %.",
@@ -4260,6 +4274,8 @@ const missions = [
   desc:"Le composant RETARD peut maintenant retenir un signal pendant PLUSIEURS cycles (double-clic !). Sachant qu'un cycle dure environ 1/60 de seconde, construis un écho d'UNE SECONDE : tu actionnes un interrupteur… et une ampoule répond une seconde plus tard. Libre.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "SWITCH", x: 0, y: 80}, {t: "DELAY", x: 240, y: 40, opt: {"cycles": 60}}, {t: "LED", x: 480, y: 20}, {t: "LED", x: 480, y: 200}],
+           wires:[[0, 0, 1, 0], [1, 0, 2, 0], [0, 0, 3, 0]] },
     plan:["INTERRUPTEUR ─▶ RETARD (60 cycles) ─▶ AMPOULE 'écho'","INTERRUPTEUR ─▶ AMPOULE 'direct'"],
     steps:["Pose un INTERRUPTEUR, un RETARD et deux AMPOULES (une directe, une retardée).",
       "Double-clique le RETARD : règle « Retard ΔT » à 60 cycles — soit une seconde entière.",
@@ -4270,6 +4286,8 @@ const missions = [
   desc:"Le BRUIT tire à pile ou face — mais qui a dit que la pièce était équilibrée ? Avec l'inspecteur, règle sa probabilité à 75 % et prouve la triche : compare-le à un bruit honnête sur l'oscilloscope. Libre.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "NOISE", x: 0, y: 0, opt: {"prob": 75}}, {t: "NOISE", x: 0, y: 200, opt: {"prob": 50}}, {t: "SCOPE", x: 260, y: 80}, {t: "LED", x: 540, y: 0}, {t: "LED", x: 540, y: 200}],
+           wires:[[0, 0, 2, 0], [1, 0, 2, 1], [0, 0, 3, 0], [1, 0, 4, 0]] },
     plan:["BRUIT (75 %) ─▶ CH1 + AMPOULE","BRUIT (50 %) ─▶ CH2 + AMPOULE"],
     steps:["Pose deux BRUITS, un OSCILLOSCOPE, deux AMPOULES.",
       "Double-clique le premier bruit : Probabilité du 1 = 75 %. Laisse le second à 50 %.",
@@ -4280,6 +4298,8 @@ const missions = [
   desc:"Trois courts, trois longs, trois courts : le signal de détresse universel. Le SÉQUENCEUR accepte maintenant 16 pas et un motif tapé au clavier (double-clic !). Programme un S.O.S. en morse lumineux ET sonore. Libre.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "SEQ", x: 0, y: 60}, {t: "LED", x: 300, y: 40, opt: {"coul": "rouge"}}, {t: "BUZZER", x: 300, y: 200}],
+           wires:[[0, 0, 1, 0], [0, 0, 2, 0]] },
     plan:["SÉQUENCEUR 16 pas : 1010100111011100 ─▶ AMPOULE","SÉQUENCEUR ─▶ AVERTISSEUR"],
     steps:["Pose un SÉQUENCEUR, une AMPOULE et un AVERTISSEUR.",
       "Double-clique le séquenceur : Longueur = 16 pas, puis tape le motif 1010100111011100 — trois points (1,0 répété), trois traits (11,0 répété), trois points, silence.",
@@ -4290,6 +4310,8 @@ const missions = [
   desc:"Ton FEU TRICOLORE du chapitre 9 mentait : ses trois phases duraient pareil. Dans la vraie vie, le vert est long et l'orange très bref ! Avec deux séquenceurs synchronisés (même vitesse), pilote V et O du feu pour obtenir : vert 5 temps, orange 1 temps, rouge 2 temps. Libre.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "SEQ", x: 0, y: 0}, {t: "SEQ", x: 0, y: 200}, {t: "TRAFFIC", x: 360, y: 40}],
+           wires:[[0, 0, 2, 0], [1, 0, 2, 1]] },
     plan:["SEQ V : 11111000 ─▶ V (feu)","SEQ O : 00000100 ─▶ O (feu)","(rouge = automatique quand V=0 et O=0)"],
     steps:["Pose deux SÉQUENCEURS (8 pas) et un FEU TRICOLORE.",
       "Double-clique le premier : motif 11111000, vitesse 1.5 Hz → c'est la ligne du VERT (5 temps).",
@@ -4302,6 +4324,8 @@ const missions = [
   desc:"Voici la ROM : une mémoire morte de 8 lignes qui ne CALCULE rien — elle RÉCITE. Double-clique-la et coche sa table : tu viens de programmer une fonction sans poser une seule porte. Démo : fais-lui imiter un ET entre ses entrées 4 et 2. Libre.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "SWITCH", x: 0, y: 0}, {t: "SWITCH", x: 0, y: 180}, {t: "ROM", x: 260, y: 40}, {t: "LED", x: 520, y: 40}],
+           wires:[[0, 0, 2, 0], [1, 0, 2, 1], [2, 0, 3, 0]] },
     plan:["2 INTERRUPTEURS ─▶ entrées 4 et 2 (ROM)","S1 (ROM) ─▶ AMPOULE"],
     steps:["Pose une ROM (onglet Mémoire & puces), deux INTERRUPTEURS et une AMPOULE.",
       "Câble les interrupteurs sur les entrées 4 et 2, laisse l'entrée 1 en l'air, et S1 vers l'ampoule.",
@@ -4355,6 +4379,8 @@ const missions = [
   desc:"Branche un COMPTEUR sur une ROM : à chaque tic, une ligne différente est récitée. Résultat : une ANIMATION programmée image par image sur la matrice. C'est le principe du film ! Libre.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "CLOCK", x: 0, y: 60}, {t: "CNT4", x: 220, y: 20}, {t: "ROM", x: 460, y: 40}, {t: "MATRIX", x: 720, y: 20}],
+           wires:[[0, 0, 1, 0], [1, 1, 2, 0], [1, 2, 2, 1], [2, 0, 3, 0], [2, 1, 3, 1]] },
     plan:["HORLOGE ─▶ ▷ (CPT 4 bits)","sorties 4 et 2 (CPT) ─▶ entrées 4 et 2 (ROM)","S1/S2 (ROM) ─▶ lignes/colonnes (matrice)"],
     steps:["Pose une HORLOGE 1 Hz, un COMPTEUR 4 BITS, une ROM et une MATRICE.",
       "Câble : horloge → ▷ du compteur ; sorties 4 et 2 du compteur → entrées 4 et 2 de la ROM (cycle de 4 images : lignes 0, 2, 4, 6).",
@@ -4367,6 +4393,8 @@ const missions = [
   desc:"Voici le COMPTEUR 4 BITS tout fait : un front sur ▷, il ajoute 1 ; RZ le remet à zéro. Branche-le à un AFFICHEUR et à un bouton reset : ton premier compte-tours. Libre.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "BUTTON", x: 0, y: 0}, {t: "BUTTON", x: 0, y: 180}, {t: "CNT4", x: 260, y: 20}, {t: "DEC", x: 520, y: 20}],
+           wires:[[0, 0, 2, 0], [1, 0, 2, 1], [2, 0, 3, 0], [2, 1, 3, 1], [2, 2, 3, 2], [2, 3, 3, 3]] },
     plan:["BOUTON 'tic' ─▶ ▷ (CPT)","BOUTON 'raz' ─▶ RZ","8,4,2,1 (CPT) ─▶ 8,4,2,1 (AFFICHEUR)"],
     steps:["Pose un COMPTEUR 4 BITS, deux BOUTONS et un AFFICHEUR 7 segments.",
       "Câble le premier bouton sur ▷, le second sur RZ, et les quatre sorties du compteur sur l'afficheur (8→8, 4→4, 2→2, 1→1).",
@@ -4387,6 +4415,8 @@ const missions = [
   desc:"L'humanité compte en base 10, tes circuits en base 16. Réconcilie-les : force le compteur à revenir à 0 après le 9. L'astuce géniale : DÉTECTER le 10 (binaire 1010) et l'utiliser pour déclencher RZ. Libre.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "CLOCK", x: 0, y: 60}, {t: "CNT4", x: 220, y: 20}, {t: "AND", x: 480, y: 220}, {t: "DEC", x: 700, y: 20}],
+           wires:[[0, 0, 1, 0], [1, 0, 2, 0], [1, 2, 2, 1], [2, 0, 1, 1], [1, 0, 3, 0], [1, 1, 3, 1], [1, 2, 3, 2], [1, 3, 3, 3]] },
     plan:["HORLOGE ─▶ ▷ (CPT)","8 et 2 (CPT) ─▶ ET ─▶ RZ (CPT)","8,4,2,1 ─▶ AFFICHEUR"],
     steps:["Pose HORLOGE (2 Hz), COMPTEUR 4 BITS, une porte ET et un AFFICHEUR.",
       "Câble le compteur à l'afficheur, l'horloge sur ▷.",
@@ -4397,6 +4427,8 @@ const missions = [
   desc:"Assemble la mission précédente en vrai instrument : une horloge 1 Hz, un bouton MARCHE qui laisse passer (ou non) les tics, un bouton RAZ, un afficheur qui égrène les secondes de 0 à 9. Libre.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "CLOCK", x: 0, y: 0, opt: {"freq": 1}}, {t: "SWITCH", x: 0, y: 180}, {t: "AND", x: 240, y: 40}, {t: "CNT4", x: 480, y: 20}, {t: "AND", x: 740, y: 260}, {t: "BUTTON", x: 480, y: 380}, {t: "OR", x: 940, y: 300}, {t: "DEC", x: 740, y: 20}],
+           wires:[[0, 0, 2, 0], [1, 0, 2, 1], [2, 0, 3, 0], [3, 0, 4, 0], [3, 2, 4, 1], [4, 0, 6, 0], [5, 0, 6, 1], [6, 0, 3, 1], [3, 0, 7, 0], [3, 1, 7, 1], [3, 2, 7, 2], [3, 3, 7, 3]] },
     plan:["HORLOGE 1 Hz + INTERRUPTEUR 'marche' ─▶ ET ─▶ ▷ (CPT)","détecteur de 10 (8·2) OU bouton raz ─▶ RZ","8,4,2,1 ─▶ AFFICHEUR"],
     steps:["Reprends le montage modulo 10 (ou recommence-le : horloge → ET de 10 → RZ).",
       "Insère un ET entre l'horloge et ▷ : deuxième entrée = un INTERRUPTEUR « marche ». Ouvert, les tics sont bloqués : le chrono est en pause SANS perdre sa valeur.",
@@ -4407,6 +4439,8 @@ const missions = [
   desc:"Nouveau composant : la SONDE 📡, qui mesure la fréquence d'un signal en direct. Vérifie expérimentalement la loi des diviseurs : chaque bascule bouclée divise la fréquence par 2. Mesure, compare, admire. Libre.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "CLOCK", x: 0, y: 60}, {t: "PROBE", x: 220, y: 220}, {t: "DFF", x: 220, y: 40}, {t: "PROBE", x: 460, y: 220}, {t: "DFF", x: 460, y: 40}, {t: "PROBE", x: 700, y: 220}],
+           wires:[[0, 0, 1, 0], [0, 0, 2, 1], [2, 1, 2, 0], [2, 0, 3, 0], [2, 0, 4, 1], [4, 1, 4, 0], [4, 0, 5, 0]] },
     plan:["HORLOGE 8 Hz ─▶ SONDE 1 · ─▶ ▷ (bascule, Q̄→D)","Q ─▶ SONDE 2 · ─▶ ▷ (bascule 2, Q̄→D)","Q2 ─▶ SONDE 3"],
     steps:["Pose une HORLOGE réglée à 8 Hz (inspecteur !), deux BASCULES D bouclées (Q̄ → D chacune) et trois SONDES.",
       "Sonde 1 sur l'horloge, sonde 2 sur Q de la première bascule, sonde 3 sur Q de la seconde.",
@@ -4417,6 +4451,8 @@ const missions = [
   desc:"Deux horloges presque identiques — 3 Hz et 3,5 Hz — s'affrontent sur un XOR. Le résultat cligne étrangement : c'est le BATTEMENT, la différence des fréquences rendue visible. Musiciens, vous connaissez déjà. Libre.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "CLOCK", x: 0, y: 0, opt: {"freq": 3}}, {t: "CLOCK", x: 0, y: 200, opt: {"freq": 3.5}}, {t: "XOR", x: 260, y: 60}, {t: "SCOPE", x: 260, y: 300}, {t: "LED", x: 520, y: 60}, {t: "PROBE", x: 520, y: 220}],
+           wires:[[0, 0, 2, 0], [1, 0, 2, 1], [0, 0, 3, 0], [1, 0, 3, 1], [2, 0, 4, 0], [2, 0, 5, 0]] },
     plan:["HORLOGE 3 Hz ─▶ XOR + CH1","HORLOGE 3.5 Hz ─▶ XOR + CH2","XOR ─▶ AMPOULE + SONDE"],
     steps:["Pose deux HORLOGES, un XOR, une AMPOULE, une SONDE et un OSCILLOSCOPE.",
       "Inspecteur : première horloge à 3 Hz, seconde à 3,5 Hz. Branche-les sur le XOR et l'oscillo.",
@@ -4429,6 +4465,8 @@ const missions = [
   desc:"Quatre bascules D, une seule horloge partagée : un REGISTRE. Compose un nombre sur des interrupteurs, presse MÉMORISER — clac, photographié. Modifie les interrupteurs : la copie ne bronche pas. Libre.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "SWITCH", x: 0, y: 0}, {t: "SWITCH", x: 0, y: 140}, {t: "SWITCH", x: 0, y: 280}, {t: "SWITCH", x: 0, y: 420}, {t: "BUTTON", x: 0, y: 560}, {t: "DFF", x: 260, y: 0}, {t: "DFF", x: 260, y: 140}, {t: "DFF", x: 260, y: 280}, {t: "DFF", x: 260, y: 420}, {t: "DEC", x: 560, y: 160}],
+           wires:[[0, 0, 5, 0], [1, 0, 6, 0], [2, 0, 7, 0], [3, 0, 8, 0], [4, 0, 5, 1], [4, 0, 6, 1], [4, 0, 7, 1], [4, 0, 8, 1], [5, 0, 9, 0], [6, 0, 9, 1], [7, 0, 9, 2], [8, 0, 9, 3]] },
     plan:["4 INTERRUPTEURS ─▶ D des 4 bascules","BOUTON 'mémoriser' ─▶ les 4 ▷","les 4 Q ─▶ AFFICHEUR"],
     steps:["Pose 4 INTERRUPTEURS, 4 BASCULES D alignées (astuce : sélection + boutons d'alignement !), un BOUTON et un AFFICHEUR.",
       "Chaque interrupteur → D d'une bascule. LE MÊME bouton → les quatre ▷ (tire 4 câbles).",
@@ -4439,6 +4477,8 @@ const missions = [
   desc:"Un seul fil de données, un bouton d'horloge, et pourtant un nombre complet arrive à destination : tape tes bits UN PAR UN dans un registre à décalage, regarde-les se ranger sur l'afficheur. C'est la transmission série ! Libre.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "SWITCH", x: 0, y: 0}, {t: "BUTTON", x: 0, y: 200}, {t: "DFF", x: 260, y: 40}, {t: "DFF", x: 460, y: 40}, {t: "DFF", x: 660, y: 40}, {t: "DFF", x: 860, y: 40}, {t: "DEC", x: 1060, y: 20}],
+           wires:[[0, 0, 2, 0], [2, 0, 3, 0], [3, 0, 4, 0], [4, 0, 5, 0], [1, 0, 2, 1], [1, 0, 3, 1], [1, 0, 4, 1], [1, 0, 5, 1], [2, 0, 6, 0], [3, 0, 6, 1], [4, 0, 6, 2], [5, 0, 6, 3]] },
     plan:["INTERRUPTEUR 'data' ─▶ D1","Q1─▶D2, Q2─▶D3, Q3─▶D4 (chaîne)","BOUTON 'clock' ─▶ les 4 ▷","Q1..Q4 ─▶ AFFICHEUR"],
     steps:["Pose 4 BASCULES D en chaîne (Q de l'une → D de la suivante), un INTERRUPTEUR « data », un BOUTON « clock », un AFFICHEUR.",
       "L'interrupteur entre dans D de la première ; le bouton frappe les quatre ▷ en même temps.",
@@ -4459,6 +4499,8 @@ const missions = [
   desc:"Nouveaux composants : GROUPER ⊕ compresse 4 fils en UN câble-bus (qui transporte 0-15 d'un coup !), DÉGROUPER ⊖ les libère à l'autre bout. Fais voyager un nombre du clavier jusqu'à l'afficheur sur un unique câble doré. Libre.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "NIBBLE", x: 0, y: 60}, {t: "GROUP", x: 260, y: 60}, {t: "UNGROUP", x: 620, y: 60}, {t: "DEC", x: 880, y: 60}],
+           wires:[[0, 0, 1, 0], [0, 1, 1, 1], [0, 2, 1, 2], [0, 3, 1, 3], [1, 0, 2, 0], [2, 0, 3, 0], [2, 1, 3, 1], [2, 2, 3, 2], [2, 3, 3, 3]] },
     plan:["CLAVIER 4 bits ─▶ 8,4,2,1 (GROUPER)","BUS (1 seul câble !) ─▶ DÉGROUPER","8,4,2,1 ─▶ AFFICHEUR"],
     steps:["Pose un CLAVIER 4 BITS, un GROUPER, un DÉGROUPER (loin à droite) et un AFFICHEUR.",
       "Câble les 4 bits du clavier sur les entrées 8,4,2,1 du GROUPER.",
@@ -4469,6 +4511,8 @@ const missions = [
   desc:"Un registre qui ignore le monde SAUF quand tu ouvres son volet : combine portillon d'horloge (chapitre 15) et registre (m74) pour une cellule mémoire avec ÉCRITURE commandée — le vrai geste « enregistrer ». Libre.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "CLOCK", x: 0, y: 0}, {t: "SWITCH", x: 0, y: 160}, {t: "AND", x: 240, y: 40}, {t: "SWITCH", x: 0, y: 320}, {t: "SWITCH", x: 0, y: 440}, {t: "SWITCH", x: 0, y: 560}, {t: "SWITCH", x: 0, y: 680}, {t: "DFF", x: 500, y: 320}, {t: "DFF", x: 500, y: 440}, {t: "DFF", x: 500, y: 560}, {t: "DFF", x: 500, y: 680}, {t: "DEC", x: 780, y: 440}],
+           wires:[[0, 0, 2, 0], [1, 0, 2, 1], [3, 0, 7, 0], [4, 0, 8, 0], [5, 0, 9, 0], [6, 0, 10, 0], [2, 0, 7, 1], [2, 0, 8, 1], [2, 0, 9, 1], [2, 0, 10, 1], [7, 0, 11, 0], [8, 0, 11, 1], [9, 0, 11, 2], [10, 0, 11, 3]] },
     plan:["HORLOGE ─▶ ET ◀─ INTERRUPTEUR 'écrire'","ET ─▶ les 4 ▷","4 INTERRUPTEURS data ─▶ D ×4 · Q ×4 ─▶ AFFICHEUR"],
     steps:["Reprends ton registre 4 bits (m74) mais remplace le bouton par : HORLOGE rapide → porte ET → les quatre ▷.",
       "La deuxième entrée du ET = un INTERRUPTEUR « écrire » (le volet).",
@@ -4571,6 +4615,8 @@ const missions = [
   desc:"Une machine qui reconnaît un MOTIF DANS LE TEMPS : trois bascules mémorisent les trois derniers bits d'un séquenceur, un ET-3 bien câblé crie quand la séquence 1-0-1 vient de passer. Ta première machine à états ! Libre.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "SEQ", x: 0, y: 0}, {t: "CLOCK", x: 0, y: 200}, {t: "DFF", x: 280, y: 40}, {t: "DFF", x: 500, y: 40}, {t: "DFF", x: 720, y: 40}, {t: "NOT", x: 500, y: 300}, {t: "AND3", x: 940, y: 120}, {t: "LED", x: 1180, y: 120, opt: {"coul": "orange"}}],
+           wires:[[0, 0, 2, 0], [2, 0, 3, 0], [3, 0, 4, 0], [1, 0, 2, 1], [1, 0, 3, 1], [1, 0, 4, 1], [2, 0, 6, 0], [3, 0, 5, 0], [5, 0, 6, 1], [4, 0, 6, 2], [6, 0, 7, 0]] },
     plan:["SÉQUENCEUR ─▶ D1 · Q1─▶D2 · Q2─▶D3 (décalage)","HORLOGE ─▶ ▷ ×3 (même vitesse que le séquenceur !)","Q1, NON(Q2), Q3 ─▶ ET-3 ─▶ AMPOULE"],
     steps:["Pose un SÉQUENCEUR (motif au choix contenant 101), une HORLOGE, 3 BASCULES D en chaîne, un NON, un ET-3, une AMPOULE.",
       "Séquenceur → D de la première bascule ; horloge → les trois ▷. Règle les DEUX à la même vitesse avec l'inspecteur (ex. 2 Hz) : la fenêtre glisse d'un bit par tic.",
@@ -4591,6 +4637,8 @@ const missions = [
   desc:"Un coffre qui exige ses touches DANS L'ORDRE : d'abord A, puis Z. Appuyer Z avant A ne donne rien ; A arme, Z ouvre. Deux verrous en cascade — et un bouton rouge pour tout verrouiller. Libre.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "KEY", x: 0, y: 0, opt: {"key": "A"}}, {t: "KEY", x: 0, y: 180, opt: {"key": "Z"}}, {t: "BUTTON", x: 0, y: 360}, {t: "SRMEM", x: 260, y: 20}, {t: "AND", x: 500, y: 180}, {t: "SRMEM", x: 720, y: 180}, {t: "LED", x: 960, y: 180, opt: {"coul": "vert"}}],
+           wires:[[0, 0, 3, 0], [3, 0, 4, 0], [1, 0, 4, 1], [4, 0, 5, 0], [2, 0, 5, 1], [2, 0, 3, 1], [5, 0, 6, 0]] },
     plan:["TOUCHE A ─▶ S (verrou 1 'armé')","verrou1 ET TOUCHE Z ─▶ S (verrou 2 'ouvert') ─▶ AMPOULE","BOUTON reset ─▶ R des deux verrous"],
     steps:["Pose deux TOUCHES (A et Z), deux verrous SR (2 NON-OU croisés chacun), un ET, un BOUTON reset, une AMPOULE.",
       "Touche A → S du verrou 1 : « la première étape est faite », et ça reste vrai après relâchement.",
@@ -4611,6 +4659,8 @@ const missions = [
   desc:"Trois jurés, trois touches (A, Z, E) qu'ils MAINTIENNENT pour voter oui. Dès que la majorité est atteinte : lumière verte et carillon. Ton circuit de m83… branché sur de vrais doigts. Libre.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "KEY", x: 0, y: 0, opt: {"key": "A"}}, {t: "KEY", x: 0, y: 160, opt: {"key": "Z"}}, {t: "KEY", x: 0, y: 320, opt: {"key": "E"}}, {t: "AND", x: 260, y: 40}, {t: "XOR", x: 260, y: 220}, {t: "AND", x: 480, y: 260}, {t: "OR", x: 700, y: 140}, {t: "LED", x: 940, y: 140, opt: {"coul": "vert"}}, {t: "NOTE", x: 940, y: 320}],
+           wires:[[0, 0, 3, 0], [1, 0, 3, 1], [0, 0, 4, 0], [1, 0, 4, 1], [4, 0, 5, 0], [2, 0, 5, 1], [3, 0, 6, 0], [5, 0, 6, 1], [6, 0, 7, 0], [6, 0, 8, 0]] },
     plan:["TOUCHES A, Z, E ─▶ circuit de majorité (A·Z + E·(A⊕Z))","majorité ─▶ AMPOULE verte + NOTE","chaque touche ─▶ une petite AMPOULE témoin"],
     steps:["Pose trois TOUCHES réglées sur A, Z, E (double-clic pour changer la lettre !), trois AMPOULES témoins, le circuit de majorité (ET, XOR, ET, OU), une AMPOULE de verdict et une NOTE.",
       "Chaque touche vers son ampoule témoin (chacun voit son vote) ET vers le circuit de majorité.",
@@ -4621,6 +4671,8 @@ const missions = [
   desc:"Grand automate final : ARMEMENT par interrupteur-clé, DÉTECTION mémorisée (l'intrus reparti reste coupable !), sirène STROBOSCOPIQUE (son + lumière pulsés), et code de désarmement qui pardonne tout. Quatre sous-systèmes, une machine. Libre.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "SWITCH", x: 0, y: 0}, {t: "BUTTON", x: 0, y: 180}, {t: "AND", x: 240, y: 40}, {t: "SRMEM", x: 480, y: 40}, {t: "CLOCK", x: 480, y: 300, opt: {"freq": 4}}, {t: "AND", x: 720, y: 180}, {t: "SIREN", x: 960, y: 60}, {t: "LED", x: 960, y: 280, opt: {"coul": "rouge"}}],
+           wires:[[0, 0, 2, 0], [1, 0, 2, 1], [2, 0, 3, 0], [3, 0, 5, 0], [4, 0, 5, 1], [5, 0, 6, 0], [5, 0, 7, 0]] },
     plan:["INTERRUPTEUR-clé 'armé' ET BOUTON 'capteur' ─▶ S (verrou alerte)","verrou ET HORLOGE 4 Hz ─▶ AVERTISSEUR + AMPOULE rouge","TOUCHE code ─▶ R (désarme)","armé ─▶ AMPOULE témoin"],
     steps:["Pose : INTERRUPTEUR (la clé), BOUTON (le capteur de porte), verrou SR, HORLOGE 4 Hz, ET ×2, AVERTISSEUR, AMPOULES, TOUCHE (le code secret).",
       "ET n°1 : (clé armée) · (capteur) → S du verrou. Base désarmée = capteur ignoré ; armée = la moindre ouverture déclenche… pour toujours.",
@@ -4673,6 +4725,8 @@ const missions = [
   desc:"10, 9, 8… Ton compteur ne sait QUE monter — et pourtant il va descendre, par pure ruse mathématique : afficher son INVERSE. Quatre NON, un décollage de fusée, et la plus jolie astuce du binaire. Libre.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "CLOCK", x: 0, y: 60, opt: {"freq": 1}}, {t: "CNT4", x: 220, y: 20}, {t: "NOT", x: 460, y: 0}, {t: "NOT", x: 460, y: 120}, {t: "NOT", x: 460, y: 240}, {t: "NOT", x: 460, y: 360}, {t: "DEC", x: 700, y: 120}],
+           wires:[[0, 0, 1, 0], [1, 0, 2, 0], [1, 1, 3, 0], [1, 2, 4, 0], [1, 3, 5, 0], [2, 0, 6, 0], [3, 0, 6, 1], [4, 0, 6, 2], [5, 0, 6, 3]] },
     plan:["HORLOGE 1 Hz ─▶ ▷ (CPT)","8,4,2,1 (CPT) ─▶ 4 NON ─▶ 8,4,2,1 (AFFICHEUR)","ET-3 sur les NON (8,4,2) + détecteur ─▶ AVERTISSEUR au zéro"],
     steps:["Pose HORLOGE 1 Hz, COMPTEUR 4 BITS, quatre NON, un AFFICHEUR.",
       "Compteur → NON → afficheur, bit à bit : quand le compteur affiche n, l'écran montre 15−n.",
@@ -4750,6 +4804,8 @@ const missions = [
   desc:"⚔️ Deux chiffres, deux rythmes : les secondes comptent 0-9 (modulo 10) et leur débordement pousse les dizaines qui comptent 0-5 (modulo 6). Ensemble : 00 à 59, puis minuit du pauvre. Deux compteurs, deux détecteurs, un vrai garde-temps. Libre.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "CLOCK", x: 0, y: 60, opt: {"freq": 1}}, {t: "CNT4", x: 220, y: 20}, {t: "AND", x: 480, y: 260}, {t: "DEC", x: 480, y: 20}, {t: "CNT4", x: 760, y: 20}, {t: "DEC", x: 1000, y: 20}, {t: "AND", x: 760, y: 300}],
+           wires:[[0, 0, 1, 0], [1, 0, 2, 0], [1, 2, 2, 1], [2, 0, 1, 1], [1, 0, 3, 0], [1, 1, 3, 1], [1, 2, 3, 2], [1, 3, 3, 3], [2, 0, 4, 0], [4, 1, 6, 0], [4, 2, 6, 1], [6, 0, 4, 1], [4, 0, 5, 0], [4, 1, 5, 1], [4, 2, 5, 2], [4, 3, 5, 3]] },
     plan:["HORLOGE 1 Hz ─▶ ▷ CPT-unités · détecteur 10 (8·2) ─▶ RZ + ▷ CPT-dizaines","détecteur 6 (4·2) ─▶ RZ (dizaines)","chaque CPT ─▶ son AFFICHEUR"],
     steps:["Pose : HORLOGE 1 Hz (inspecteur !), deux COMPTEURS 4 BITS, deux AFFICHEURS, deux ET.",
       "Compteur des unités : horloge → ▷, ET(sorties 8 et 2) détecte 10 → RZ. Il affiche 0-9 (ta décade de m70).",
@@ -4782,6 +4838,8 @@ const missions = [
   desc:"Un appui bref sur un bouton doit allumer la lumière pendant 5 secondes, puis l'éteindre toute seule. Pose un BOUTON, une TEMPO AU DÉCLENCHEMENT (TOF) réglée sur 5 s et une AMPOULE. Clique VÉRIFIER quand ça marche.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "BUTTON", x: 0, y: 60}, {t: "TOF", x: 240, y: 60, opt: {"sec": 5}}, {t: "LED", x: 500, y: 60, opt: {"coul": "blanc"}}],
+           wires:[[0, 0, 1, 0], [1, 0, 2, 0]] },
     plan:["BOUTON ─▶ TOF (5 s)","TOF ─▶ AMPOULE"],
     steps:["Pose un BOUTON (onglet Entrées), une TEMPO AU DÉCLENCHEMENT (onglet Temps & automatisme) et une AMPOULE.",
       "Double-clique sur le TOF et règle la durée à 5 secondes.",
@@ -4793,6 +4851,8 @@ const missions = [
   desc:"Un capteur de porte déclenche une sirène — mais seulement si la porte reste ouverte plus de 3 secondes. Une porte entrebâillée une seconde ne doit rien déclencher. Utilise une TEMPO À L'ENCLENCHEMENT (TON).",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "SWITCH", x: 0, y: 60}, {t: "TON", x: 240, y: 60, opt: {"sec": 3}}, {t: "SIREN", x: 500, y: 50}],
+           wires:[[0, 0, 1, 0], [1, 0, 2, 0]] },
     plan:["INTERRUPTEUR (porte) ─▶ TON (3 s)","TON ─▶ SIRÈNE"],
     steps:["Pose un INTERRUPTEUR (il jouera le capteur de porte), une TEMPO À L'ENCLENCHEMENT et une SIRÈNE (onglet Actionneurs).",
       "Règle le TON sur 3 secondes au double-clic.",
@@ -4804,6 +4864,8 @@ const missions = [
   desc:"Fais avancer un COMPTEUR 4 BITS d'exactement un cran à chaque clic, quelle que soit la durée de l'appui. Le piège : un bouton maintenu ferait défiler le compteur. Il te faut une IMPULSION CALIBRÉE ou un DÉTECTEUR DE FRONTS.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "BUTTON", x: 0, y: 60}, {t: "EDGE", x: 240, y: 50}, {t: "CNT4", x: 500, y: 20}, {t: "DEC", x: 740, y: 20}],
+           wires:[[0, 0, 1, 0], [1, 0, 2, 0], [2, 0, 3, 0], [2, 1, 3, 1], [2, 2, 3, 2], [2, 3, 3, 3]] },
     plan:["BOUTON ─▶ DÉTECTEUR DE FRONTS","sortie ↑ ─▶ ▷ du COMPTEUR 4 BITS"],
     steps:["Pose un BOUTON, un DÉTECTEUR DE FRONTS et un COMPTEUR 4 BITS.",
       "Câble : bouton → E du détecteur, sortie ↑ du détecteur → entrée ▷ du compteur.",
@@ -4815,6 +4877,8 @@ const missions = [
   desc:"Surveille un signal vivant : tant qu'une horloge bat, tout va bien ; si elle s'arrête, une alarme doit partir. Pose une HORLOGE, un CHIEN DE GARDE (2 s) et une SIRÈNE — puis débranche l'horloge pour voir.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "CLOCK", x: 0, y: 60}, {t: "WDOG", x: 240, y: 50, opt: {"sec": 2}}, {t: "SIREN", x: 500, y: 50}],
+           wires:[[0, 0, 1, 0], [1, 0, 2, 0]] },
     plan:["HORLOGE ─▶ CHIEN DE GARDE (2 s)","⚠ ─▶ SIRÈNE"],
     steps:["Pose une HORLOGE (1 Hz), un CHIEN DE GARDE et une SIRÈNE.",
       "Règle le chien de garde sur 2 secondes.",
@@ -4828,6 +4892,8 @@ const missions = [
   desc:"Le montage le plus répandu de toute l'industrie : un bouton MARCHE lance le moteur, il continue tout seul quand on relâche, et un bouton ARRÊT le coupe. Utilise une MÉMOIRE SET/RESET et un MOTEUR.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "BUTTON", x: 0, y: 0}, {t: "BUTTON", x: 0, y: 200}, {t: "SRMEM", x: 260, y: 60}, {t: "MOTOR", x: 520, y: 50}],
+           wires:[[0, 0, 2, 0], [1, 0, 2, 1], [2, 0, 3, 0]] },
     plan:["BOUTON (marche) ─▶ S","BOUTON (arrêt) ─▶ R","Q ─▶ M du MOTEUR"],
     steps:["Pose deux BOUTONS, une MÉMOIRE SET/RESET (onglet Temps & automatisme) et un MOTEUR (onglet Actionneurs).",
       "Câble : premier bouton → S, second bouton → R, sortie Q → entrée M du moteur.",
@@ -4839,6 +4905,8 @@ const missions = [
   desc:"Reprends ton montage marche/arrêt et ajoute un ARRÊT D'URGENCE : enfoncé, il coupe le moteur ET interdit tout redémarrage tant qu'il n'est pas déverrouillé. Attention : sa sortie OK vaut 1 quand tout va bien.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "BUTTON", x: 0, y: 0}, {t: "BUTTON", x: 0, y: 180}, {t: "ESTOP", x: 0, y: 360}, {t: "NOT", x: 240, y: 360}, {t: "OR", x: 440, y: 240}, {t: "SRMEM", x: 660, y: 60}, {t: "MOTOR", x: 900, y: 50}],
+           wires:[[0, 0, 5, 0], [1, 0, 4, 0], [2, 0, 3, 0], [3, 0, 4, 1], [4, 0, 5, 1], [5, 0, 6, 0]] },
     plan:["ARRÊT D'URGENCE ─▶ NON ─▶ OU (avec le bouton arrêt)","OU ─▶ R de la mémoire","Q ─▶ MOTEUR"],
     steps:["Repars du montage précédent : deux boutons, une MÉMOIRE SR, un moteur.",
       "Pose un ARRÊT D'URGENCE et une porte NON.",
@@ -4850,6 +4918,8 @@ const missions = [
   desc:"Découvre le RELAIS : une petite commande qui pilote un circuit séparé. Branche VRAI·1 sur son entrée E, un interrupteur sur CMD, et une ampoule sur chacune de ses deux sorties NO et NF. Observe l'aiguillage.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "SWITCH", x: 0, y: 60}, {t: "HIGH", x: 0, y: 240}, {t: "RELAY", x: 240, y: 60}, {t: "LED", x: 500, y: 20, opt: {"coul": "vert"}}, {t: "LED", x: 500, y: 180, opt: {"coul": "rouge"}}],
+           wires:[[0, 0, 2, 0], [1, 0, 2, 1], [2, 0, 3, 0], [2, 1, 4, 0]] },
     plan:["INTERRUPTEUR ─▶ CMD","VRAI·1 ─▶ E","NO ─▶ AMPOULE 1 · NF ─▶ AMPOULE 2"],
     steps:["Pose un RELAIS, un INTERRUPTEUR, une constante VRAI·1 et deux AMPOULES.",
       "Câble : interrupteur → CMD (la bobine), VRAI·1 → E (le commun), NO → première ampoule, NF → seconde ampoule.",
@@ -4861,6 +4931,8 @@ const missions = [
   desc:"🏆 Un VÉRIN doit faire des allers-retours sans fin dès qu'on lance la marche. Le piège : ses fins de course S0 et S1 ne durent qu'un instant. Il te faut une seconde mémoire pour retenir le SENS du mouvement.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "BUTTON", x: 0, y: 0}, {t: "BUTTON", x: 0, y: 180}, {t: "SRMEM", x: 240, y: 40}, {t: "SRMEM", x: 480, y: 240}, {t: "AND", x: 700, y: 40}, {t: "JACK", x: 940, y: 180, opt: {"sec": 2}}],
+           wires:[[0, 0, 2, 0], [1, 0, 2, 1], [2, 0, 4, 0], [3, 1, 4, 1], [4, 0, 5, 0], [5, 1, 3, 0], [5, 0, 3, 1]] },
     plan:["MARCHE/ARRÊT ─▶ mémoire n°1 (autorisation)","S1 (sorti) ─▶ S · S0 (rentré) ─▶ R de la mémoire n°2 (sens)","mémoire2 ─▶ ET ─▶ entrée − · NON(mémoire2) ─▶ ET ─▶ entrée +"],
     steps:["Pose un VÉRIN, deux MÉMOIRES SET/RESET, deux portes ET, une porte NON et deux BOUTONS.",
       "Mémoire n°1 (autorisation) : bouton marche → S, bouton arrêt → R.",
@@ -4875,6 +4947,8 @@ const missions = [
   desc:"Un lampadaire doit s'allumer quand la nuit tombe. Pose un CAPTEUR DE LUMIÈRE, règle son seuil, et allume une AMPOULE quand la lumière passe SOUS ce seuil. Attention au sens : la sortie booléenne du capteur vaut 1 AU-DESSUS du seuil.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "LDR", x: 0, y: 60, opt: {"seuil": 40}}, {t: "NOT", x: 260, y: 70}, {t: "LED", x: 480, y: 60, opt: {"coul": "blanc"}}],
+           wires:[[0, 1, 1, 0], [1, 0, 2, 0]] },
     plan:["CAPTEUR DE LUMIÈRE (sortie SEU) ─▶ NON ─▶ AMPOULE"],
     steps:["Pose un CAPTEUR DE LUMIÈRE (onglet Capteurs), une porte NON et une AMPOULE.",
       "Double-clique sur le capteur : règle le seuil à 200 lux.",
@@ -4886,6 +4960,8 @@ const missions = [
   desc:"Une alarme doit sonner quand un obstacle passe SOUS 60 cm. Utilise le CAPTEUR DE DISTANCE et un BUZZER. Puis ajoute une TEMPO pour ne pas hurler pour un obstacle qui passe une demi-seconde.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "DIST", x: 0, y: 60, opt: {"seuil": 60}}, {t: "NOT", x: 260, y: 70}, {t: "TON", x: 460, y: 60, opt: {"sec": 0.5}}, {t: "BUZZER", x: 700, y: 60}],
+           wires:[[0, 1, 1, 0], [1, 0, 2, 0], [2, 0, 3, 0]] },
     plan:["CAPTEUR DE DISTANCE (SEU, seuil 60) ─▶ NON ─▶ TON (0,5 s) ─▶ BUZZER"],
     steps:["Pose un CAPTEUR DE DISTANCE, une porte NON, une TEMPO À L'ENCLENCHEMENT et un BUZZER.",
       "Règle le seuil du capteur à 60 cm, et le TON à 0,5 s.",
@@ -4897,6 +4973,8 @@ const missions = [
   desc:"Un couloir : la lumière s'allume au passage de quelqu'un et reste allumée 10 secondes après son départ. Combine DÉTECTEUR DE PRÉSENCE et TEMPO AU DÉCLENCHEMENT.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "PIR", x: 0, y: 60}, {t: "TOF", x: 260, y: 60, opt: {"sec": 10}}, {t: "LED", x: 500, y: 60, opt: {"coul": "blanc"}}],
+           wires:[[0, 0, 1, 0], [1, 0, 2, 0]] },
     plan:["DÉTECTEUR DE PRÉSENCE ─▶ TOF (10 s) ─▶ AMPOULE"],
     steps:["Pose un DÉTECTEUR DE PRÉSENCE (onglet Capteurs), une TEMPO AU DÉCLENCHEMENT et une AMPOULE.",
       "Règle le TOF sur 10 secondes.",
@@ -4908,6 +4986,8 @@ const missions = [
   desc:"🏆 Branche un CAPTEUR SONORE sur un COMPARATEUR À HYSTÉRÉSIS (Schmitt) et compare-le à un simple seuil. Règle le Schmitt à 170 / 85, puis fais varier la mesure autour de ces valeurs. Observe qui hésite et qui ne bronche pas.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "MIC", x: 0, y: 60, opt: {"val": 70, "seuil": 85}}, {t: "SCHMITT", x: 260, y: 40}, {t: "LED", x: 520, y: 20, opt: {"coul": "orange"}}, {t: "LED", x: 520, y: 200, opt: {"coul": "jaune"}}],
+           wires:[[0, 0, 1, 0], [1, 0, 2, 0], [0, 1, 3, 0]] },
     plan:["CAPTEUR SONORE (MES) ─▶ COMPARATEUR À HYSTÉRÉSIS ─▶ AMPOULE","CAPTEUR SONORE (SEU) ─▶ autre AMPOULE"],
     steps:["Pose un CAPTEUR SONORE, un COMPARATEUR À HYSTÉRÉSIS (onglet Régulation) et deux AMPOULES.",
       "Câble : sortie MES du capteur → entrée A du Schmitt → première ampoule ; sortie SEU du capteur → seconde ampoule.",
@@ -4920,6 +5000,8 @@ const missions = [
   desc:"Une CUVE doit se remplir toute seule : la pompe démarre au niveau bas et s'arrête au niveau haut — et surtout, elle ne redémarre pas avant d'être redescendue au niveau bas. Utilise une MÉMOIRE SET/RESET.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "CUVE", x: 420, y: 60, opt: {"haut": 85, "bas": 20}}, {t: "SRMEM", x: 80, y: 120}],
+           wires:[[0, 2, 1, 0], [0, 1, 1, 1], [1, 0, 0, 0]] },
     plan:["CUVE (BAS) ─▶ S · CUVE (HAUT) ─▶ R","Mémoire ─▶ REMP de la cuve"],
     steps:["Pose une CUVE (onglet Actionneurs) et une MÉMOIRE SET/RESET.",
       "Câble : sortie BAS de la cuve → S de la mémoire, sortie HAUT → R de la mémoire.",
@@ -4931,6 +5013,8 @@ const missions = [
   desc:"Complète ta cuve : ajoute une ÉLECTROVANNE de vidange commandée par un bouton, et interdis le remplissage et la vidange EN MÊME TEMPS. Un verrouillage, c'est une porte ET avec une inversion.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "CUVE", x: 460, y: 60, opt: {"haut": 85, "bas": 20}}, {t: "SRMEM", x: 80, y: 120}, {t: "SWITCH", x: 80, y: 340}, {t: "NOT", x: 280, y: 350}, {t: "AND", x: 480, y: 300}],
+           wires:[[0, 2, 1, 0], [0, 1, 1, 1], [1, 0, 4, 0], [3, 0, 4, 1], [2, 0, 3, 0], [2, 0, 0, 1], [4, 0, 0, 0]] },
     plan:["Bouton vidange ─▶ VID (cuve)","NON(vidange) ─▶ ET avec l'ordre de remplissage ─▶ REMP"],
     steps:["Repars du montage précédent, ajoute un BOUTON, une porte NON et une porte ET.",
       "Bouton → entrée VID de la cuve, et aussi → NON.",
@@ -4942,6 +5026,8 @@ const missions = [
   desc:"🏆 Un portail (VÉRIN) s'ouvre sur appui d'un bouton, attend 5 secondes grand ouvert, puis se referme tout seul. Il te faudra une mémoire de sens, une TEMPO et les fins de course.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "BUTTON", x: 0, y: 0}, {t: "SRMEM", x: 240, y: 40}, {t: "JACK", x: 480, y: 180, opt: {"sec": 2}}, {t: "TON", x: 760, y: 20, opt: {"sec": 5}}, {t: "NOT", x: 480, y: 20}],
+           wires:[[0, 0, 1, 0], [1, 0, 2, 0], [1, 0, 4, 0], [4, 0, 2, 1], [2, 1, 3, 0], [3, 0, 1, 1]] },
     plan:["Bouton ─▶ S mémoire-sens (ouvrir)","S1 (ouvert) ─▶ TON 5 s ─▶ R mémoire-sens","mémoire ─▶ + du vérin · NON(mémoire) ─▶ −"],
     steps:["Pose un VÉRIN, une MÉMOIRE SET/RESET, une TEMPO À L'ENCLENCHEMENT (5 s), un BOUTON et une porte NON.",
       "Bouton → S de la mémoire : appuyer ordonne l'ouverture.",
@@ -4954,6 +5040,8 @@ const missions = [
   desc:"Un tapis roulant (MOTEUR) avance ; un CAPTEUR DE PRÉSENCE compte les pièces qui passent. Après 4 pièces, le tapis s'arrête. Il te faut un COMPTEUR 4 BITS, un DÉTECTEUR DE FRONTS et une porte pour repérer la valeur 4.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "PIR", x: 0, y: 300}, {t: "EDGE", x: 240, y: 300}, {t: "CNT4", x: 460, y: 260}, {t: "BUTTON", x: 0, y: 0}, {t: "SRMEM", x: 240, y: 40}, {t: "CONV", x: 700, y: 40}],
+           wires:[[0, 0, 1, 0], [1, 0, 2, 0], [2, 2, 4, 1], [3, 0, 4, 0], [4, 0, 5, 0]] },
     plan:["PRÉSENCE ─▶ FRONTS (↑) ─▶ ▷ du COMPTEUR","sortie 4 du compteur ─▶ R de la mémoire de marche","mémoire ─▶ MOTEUR"],
     steps:["Pose un DÉTECTEUR DE PRÉSENCE, un DÉTECTEUR DE FRONTS, un COMPTEUR 4 BITS, une MÉMOIRE SR, un MOTEUR et deux boutons.",
       "Mémoire de marche : bouton marche → S, bouton arrêt → R, Q → M du moteur.",
@@ -4967,6 +5055,8 @@ const missions = [
   desc:"Ferme ta première boucle de régulation : un FOUR chauffe, mesure sa propre température, et un THERMOSTAT décide. Câble la sortie T° du four sur le thermostat, et la commande du thermostat vers l'entrée CHF du four — en passant par un CNA pour donner de la puissance.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "FOUR", x: 480, y: 60, opt: {"inert": 4}}, {t: "THERMO", x: 60, y: 60, opt: {"cons": 102, "hyst": 10}}, {t: "CNA", x: 300, y: -40}],
+           wires:[[0, 0, 1, 0], [1, 0, 2, 0], [2, 0, 0, 0]] },
     plan:["FOUR (T°) ─▶ THERMOSTAT (MES)","THERMOSTAT (CDE) ─▶ CNA (poids 128) ─▶ FOUR (CHF)"],
     steps:["Pose un FOUR (onglet Actionneurs), un THERMOSTAT À HYSTÉRÉSIS et un CNA (onglet Régulation).",
       "Câble : sortie T° du four → entrée MES du thermostat.",
@@ -4978,6 +5068,8 @@ const missions = [
   desc:"Un moteur ne connaît que marche et arrêt — et pourtant on veut régler sa vitesse. Utilise un POTENTIOMÈTRE, un MODULATEUR PWM et un MOTEUR. Baisse la fréquence du PWM à 1 Hz pour voir les impulsions une à une.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "POT", x: 0, y: 60}, {t: "PWM", x: 260, y: 40, opt: {"hz": 1}}, {t: "HIGH", x: 0, y: 300}, {t: "MOTOR", x: 520, y: 50}],
+           wires:[[0, 0, 1, 0], [2, 0, 1, 1], [1, 0, 3, 0]] },
     plan:["POTENTIOMÈTRE ─▶ VAL du PWM","VRAI·1 ─▶ EN du PWM","PWM ─▶ M du MOTEUR"],
     steps:["Pose un POTENTIOMÈTRE (onglet Capteurs), un MODULATEUR PWM, une constante VRAI·1 et un MOTEUR.",
       "Câble : potentiomètre → entrée VAL du PWM, VRAI·1 → entrée EN, sortie S → entrée M du moteur.",
@@ -4989,6 +5081,8 @@ const missions = [
   desc:"Remplace le thermostat de la mission 123 par un RÉGULATEUR PROPORTIONNEL suivi d'un PWM. Compare : les dents de scie disparaissent. Puis monte le gain à 10 et observe le système se remettre à osciller.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "FOUR", x: 720, y: 60, opt: {"inert": 6}}, {t: "PROP", x: 60, y: 60, opt: {"gain": 3}}, {t: "PWM", x: 300, y: 60}, {t: "HIGH", x: 60, y: 300}],
+           wires:[[0, 0, 1, 0], [1, 0, 2, 0], [3, 0, 2, 1], [2, 0, 0, 0]] },
     plan:["FOUR (T°) ─▶ RÉG. P (MES)","RÉG. P (CDE) ─▶ PWM (VAL)","VRAI·1 ─▶ PWM (EN)","PWM ─▶ CNA ─▶ FOUR (CHF)"],
     steps:["Pose un FOUR, un RÉGULATEUR PROPORTIONNEL, un MODULATEUR PWM, un CNA et une constante VRAI·1.",
       "Câble : T° du four → MES du régulateur ; CDE du régulateur → VAL du PWM ; VRAI·1 → EN du PWM.",
@@ -5000,6 +5094,8 @@ const missions = [
   desc:"Insère une RAMPE entre le potentiomètre et le PWM de ta commande de moteur. Règle la pente à 40 unités par seconde et compare le démarrage avec et sans.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "POT", x: 0, y: 60}, {t: "RAMPE", x: 260, y: 60}, {t: "PWM", x: 500, y: 60}, {t: "HIGH", x: 260, y: 280}, {t: "MOTOR", x: 740, y: 50}],
+           wires:[[0, 0, 1, 0], [1, 0, 2, 0], [3, 0, 2, 1], [2, 0, 4, 0]] },
     plan:["POTENTIOMÈTRE ─▶ RAMPE ─▶ PWM ─▶ MOTEUR"],
     steps:["Repars du montage de la mission 124 et intercale une RAMPE entre le potentiomètre et le PWM.",
       "Double-clique sur la rampe : règle la pente à 40 unités par seconde.",
@@ -5013,6 +5109,8 @@ const missions = [
   desc:"🏆 Programme une MACHINE À ÉTATS pour piloter un vrai FEU TRICOLORE : vert → orange → rouge → rouge encore (le temps du croisement) → vert. Une horloge donne le rythme, la table de transitions fait le reste.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "CLOCK", x: 0, y: 60}, {t: "FSM", x: 240, y: 20, opt: {"tr": [[1, 1, 1, 1], [2, 2, 2, 2], [3, 3, 3, 3], [0, 0, 0, 0]]}}, {t: "OR", x: 520, y: 220}, {t: "TRAFFIC", x: 760, y: 40}],
+           wires:[[0, 0, 1, 2], [1, 0, 3, 0], [1, 1, 3, 1], [1, 2, 2, 0], [1, 3, 2, 1], [2, 0, 3, 2]] },
     plan:["HORLOGE ─▶ ▷ de la MACHINE À ÉTATS","table : 0→1→2→3→0","É0 ─▶ Vert · É1 ─▶ Orange · É2 et É3 ─▶ Rouge"],
     steps:["Pose une MACHINE À ÉTATS (onglet Temps & automatisme), une HORLOGE lente (0,5 Hz) et un FEU TRICOLORE.",
       "Double-clique sur la machine : dans la table, mets toute la ligne 0 à « 1 », la ligne 1 à « 2 », la ligne 2 à « 3 », la ligne 3 à « 0 ». Le cycle est programmé, quelles que soient les entrées.",
@@ -5025,6 +5123,8 @@ const missions = [
   desc:"Reprends la machine à états, mais fais-la dépendre de ses entrées : elle ne quitte l'état 0 que si A vaut 1 (bouton de demande), et ne quitte l'état 2 que si B vaut 1 (capteur de fin de cycle). C'est un automate conditionnel.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "SWITCH", x: 0, y: 0}, {t: "SWITCH", x: 0, y: 160}, {t: "CLOCK", x: 0, y: 320}, {t: "FSM", x: 260, y: 20, opt: {"tr": [[0, 0, 1, 1], [2, 2, 2, 2], [2, 0, 2, 0]]}}, {t: "LED", x: 560, y: 20, opt: {"coul": "vert"}}, {t: "LED", x: 560, y: 160, opt: {"coul": "orange"}}, {t: "LED", x: 560, y: 300, opt: {"coul": "rouge"}}],
+           wires:[[0, 0, 3, 0], [1, 0, 3, 1], [2, 0, 3, 2], [3, 0, 4, 0], [3, 1, 5, 0], [3, 2, 6, 0]] },
     plan:["Table : état 0 → 0 sauf si A=1 (→1) · état 1 → 2 toujours · état 2 → 2 sauf si B=1 (→0)"],
     steps:["Pose une MACHINE À ÉTATS, une HORLOGE, deux INTERRUPTEURS (A et B) et quatre AMPOULES sur les sorties.",
       "Table, ligne 0 : les colonnes A0B0 et A0B1 restent à 0 ; les colonnes A1B0 et A1B1 vont à 1.",
@@ -5062,6 +5162,8 @@ const missions = [
   desc:"Un MOTEUR ne tient pas sa vitesse : charge-le, il ralentit. Sa sortie VIT dit sa vitesse réelle. Boucle-la sur un RÉGULATEUR PROPORTIONNEL qui commande un PWM : la vitesse se maintient, quoi qu'il arrive. Change l'inertie du moteur en cours de route pour le vérifier.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "MOTOR", x: 720, y: 60}, {t: "PROP", x: 60, y: 60, opt: {"gain": 4}}, {t: "PWM", x: 300, y: 60, opt: {"hz": 20}}, {t: "HIGH", x: 60, y: 300}],
+           wires:[[0, 0, 1, 0], [1, 0, 2, 0], [3, 0, 2, 1], [2, 0, 0, 0]] },
     plan:["MOTEUR (VIT) ─▶ RÉG. P (MES)","RÉG. P (CDE) ─▶ PWM (VAL)","VRAI·1 ─▶ PWM (EN)","PWM ─▶ M du MOTEUR"],
     steps:["Pose un MOTEUR, un RÉGULATEUR PROPORTIONNEL, un MODULATEUR PWM et une constante VRAI·1.",
       "Câble la sortie VIT du moteur vers l'entrée MES du régulateur : c'est la boucle de retour.",
@@ -5074,6 +5176,8 @@ const missions = [
   desc:"Un RÉSERVOIR D'AIR COMPRIMÉ doit rester entre 5 et 8 bar : le compresseur démarre quand la pression tombe trop bas et s'arrête quand elle est bonne. Utilise ses seuils HAUT et BAS avec une MÉMOIRE SR — et observe qu'il redémarre tout seul, à cause de la fuite.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "AIR", x: 420, y: 60, opt: {"haut": 8, "bas": 5}}, {t: "SRMEM", x: 80, y: 120}],
+           wires:[[0, 2, 1, 0], [0, 1, 1, 1], [1, 0, 0, 0]] },
     plan:["RÉSERVOIR (BAS) ─▶ S · RÉSERVOIR (HAUT) ─▶ R","Mémoire ─▶ COMP du réservoir"],
     steps:["Pose un RÉSERVOIR D'AIR COMPRIMÉ (onglet Actionneurs) et une MÉMOIRE SET/RESET.",
       "Câble : sortie BAS → S de la mémoire, sortie HAUT → R de la mémoire, sortie Q → entrée COMP.",
@@ -5086,6 +5190,8 @@ const missions = [
   desc:"🏆 Les fins de course ne connaissent que les extrémités. Grâce à la sortie POS du VÉRIN, arrête la tige à la MOITIÉ de sa course. Compare un COMPARATEUR simple et un COMPARATEUR À HYSTÉRÉSIS : le premier fait vibrer la commande, le second non.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "JACK", x: 480, y: 60, opt: {"sec": 2}}, {t: "SCHMITT", x: 60, y: 240, opt: {"haut": 135, "bas": 120}}, {t: "NOT", x: 300, y: 250}],
+           wires:[[0, 2, 1, 0], [1, 0, 2, 0], [2, 0, 0, 0]] },
     plan:["VÉRIN (POS) ─▶ COMPARATEUR À HYSTÉRÉSIS (seuils 120 / 135)","NON(sortie) ─▶ + du VÉRIN"],
     steps:["Pose un VÉRIN et un COMPARATEUR À HYSTÉRÉSIS (onglet Régulation), plus une porte NON.",
       "Câble : sortie POS du vérin → entrée A du comparateur.",
@@ -5098,6 +5204,8 @@ const missions = [
   desc:"🏆 Un CONVOYEUR fait défiler des pièces et émet une impulsion à chaque pièce. Compte-les : à la quatrième, arrête le tapis et sors un VÉRIN pour évacuer le lot. Un bouton relance le cycle.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "BUTTON", x: 0, y: 0}, {t: "SRMEM", x: 240, y: 40}, {t: "CONV", x: 500, y: 40, opt: {"esp": 2}}, {t: "EDGE", x: 760, y: 240}, {t: "CNT4", x: 960, y: 200}],
+           wires:[[0, 0, 1, 0], [1, 0, 2, 0], [2, 1, 3, 0], [3, 0, 4, 0], [4, 2, 1, 1]] },
     plan:["Bouton ─▶ S mémoire · sortie 4 du compteur ─▶ R mémoire","mémoire ─▶ M du convoyeur","CONVOYEUR (PIÈCE) ─▶ ▷ du COMPTEUR","sortie 4 ─▶ + du VÉRIN"],
     steps:["Pose un CONVOYEUR, un COMPTEUR 4 BITS, une MÉMOIRE SET/RESET, un VÉRIN et un BOUTON.",
       "Mémoire : bouton → S, sortie de poids 4 du compteur → R. Sortie Q → entrée M du convoyeur.",
@@ -5110,6 +5218,8 @@ const missions = [
   desc:"Branche un ENREGISTREUR sur ta boucle de four : la température sur V1, la consigne sur V2. Compare la courbe obtenue avec un THERMOSTAT (dents de scie) et avec un RÉGULATEUR PROPORTIONNEL (montée douce). Puis pousse le gain et observe les oscillations.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "FOUR", x: 480, y: 60, opt: {"inert": 6}}, {t: "THERMO", x: 60, y: 60, opt: {"cons": 110, "hyst": 12}}, {t: "COURBE", x: 760, y: 240, opt: {"duree": 60}}],
+           wires:[[0, 0, 1, 0], [1, 0, 0, 0], [0, 0, 2, 0]] },
     plan:["FOUR (T°) ─▶ ENREGISTREUR V1","POTAR (consigne) ─▶ ENREGISTREUR V2","boucle de régulation ─▶ FOUR (CHF)"],
     steps:["Reprends la boucle four + thermostat de la mission 123.",
       "Pose un ENREGISTREUR DE COURBES (onglet Sorties) : sortie T° du four → V1, et un POTENTIOMÈTRE réglé sur la valeur de consigne → V2.",
@@ -5122,6 +5232,8 @@ const missions = [
   desc:"Jusqu'ici tu réglais la mesure à la main. Branche maintenant la sortie T° d'un FOUR sur l'entrée PROC d'un CAPTEUR DE TEMPÉRATURE : il mesure en direct, sa glissière disparaît. Chauffe le four et regarde-le saturer en ambre au-delà de 50 °C.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "HIGH", x: 0, y: 60}, {t: "FOUR", x: 220, y: 40, opt: {"inert": 4}}, {t: "TEMPC", x: 500, y: 60}, {t: "ECRAN", x: 760, y: 40, opt: {"titre": "FOUR"}}],
+           wires:[[0, 0, 1, 0], [1, 0, 2, 0], [2, 0, 3, 0]] },
     plan:["VRAI·1 ─▶ CHF du FOUR","FOUR (T°) ─▶ PROC du CAPTEUR","CAPTEUR (MES) ─▶ ÉCRAN"],
     steps:["Pose un FOUR, un CAPTEUR DE TEMPÉRATURE (onglet Capteurs) et un ÉCRAN DE MESURE.",
       "Câble une constante VRAI·1 sur l'entrée CHF du four : il chauffe à pleine puissance.",
@@ -5134,6 +5246,8 @@ const missions = [
   desc:"🏆 Refais la régulation du four, mais avec un vrai capteur dans la boucle : FOUR → CAPTEUR → THERMOSTAT → FOUR. La consigne se donne en °C — mais dans l'ÉTENDUE du capteur, pas dans celle du four.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "FOUR", x: 560, y: 60, opt: {"inert": 4}}, {t: "TEMPC", x: 840, y: 60}, {t: "THERMO", x: 80, y: 60, opt: {"cons": 149, "hyst": 10}}, {t: "COURBE", x: 560, y: 300, opt: {"duree": 60}}],
+           wires:[[0, 0, 1, 0], [1, 0, 2, 0], [2, 0, 0, 0], [1, 0, 3, 0]] },
     plan:["FOUR (T°) ─▶ CAPTEUR (PROC)","CAPTEUR (MES) ─▶ THERMOSTAT (MES)","THERMOSTAT (CDE) ─▶ FOUR (CHF)"],
     steps:["Pose un FOUR, un CAPTEUR DE TEMPÉRATURE, un THERMOSTAT et un ENREGISTREUR.",
       "Câble la boucle : T° du four → PROC du capteur, MES du capteur → MES du thermostat, CDE du thermostat → CHF du four.",
@@ -5145,6 +5259,8 @@ const missions = [
   desc:"🏆 Remplace le thermostat par un RÉGULATEUR PID. Commence avec Kp seul : il reste un écart. Ajoute Ki : l'écart s'efface. Ajoute Kd : la montée est mieux amortie. Les trois barres du boîtier montrent la part de chaque terme.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "FOUR", x: 720, y: 60, opt: {"inert": 6}}, {t: "PID", x: 60, y: 40, opt: {"cons": 150, "kp": 2, "ki": 0.4, "kd": 0.6}}, {t: "PWM", x: 320, y: 60}, {t: "HIGH", x: 60, y: 320}, {t: "COURBE", x: 400, y: 320, opt: {"duree": 60}}],
+           wires:[[0, 0, 1, 0], [1, 0, 2, 0], [3, 0, 2, 1], [2, 0, 0, 0], [0, 0, 4, 0]] },
     plan:["FOUR (T°) ─▶ PID (MES)","PID (CDE) ─▶ PWM (VAL)","VRAI·1 ─▶ PWM (EN)","PWM ─▶ FOUR (CHF)"],
     steps:["Pose un FOUR (inertie 6 s), un RÉGULATEUR PID, un MODULATEUR PWM, une constante VRAI·1 et un ENREGISTREUR.",
       "Câble la boucle et branche la mesure sur l'enregistreur.",
@@ -5157,6 +5273,8 @@ const missions = [
   desc:"Une POMPE à fond, un TUYAU étroit, une CUVE : le remplissage plafonne. Le tuyau affiche « BRIDÉ ». Élargis son diamètre et regarde le débit repartir. Change la pompe n'y changera rien.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "HIGH", x: 0, y: 120}, {t: "PUMP", x: 200, y: 100}, {t: "TUYAU", x: 420, y: 120, opt: {"dn": 20}}, {t: "CUVE", x: 660, y: 60, opt: {"debit": 20}}, {t: "ECRAN", x: 900, y: 80, opt: {"titre": "DÉBIT"}}],
+           wires:[[0, 0, 1, 0], [1, 1, 2, 0], [2, 0, 3, 2], [2, 1, 4, 0], [3, 0, 4, 1]] },
     plan:["VRAI·1 ─▶ POMPE (M)","POMPE (REF) ═▶ TUYAU (E) ═▶ CUVE (E)","TUYAU (DÉB) ─▶ ÉCRAN"],
     steps:["Pose une POMPE, un TUYAU, une CUVE et un ÉCRAN DE MESURE.",
       "Câble d'abord la commande : VRAI·1 → M de la pompe.",
@@ -5193,6 +5311,8 @@ const missions = [
   desc:"Découvre le langage des automaticiens. Pose un GRAFCET, règle-le sur 3 étapes, branche un BOUTON sur R1 et trois AMPOULES sur X0, X1, X2. Fais avancer le jeton d'étape en étape et observe : une seule étape est active à la fois. Mission libre.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "GRAFCET", x: 260, y: 40, opt: {"nb": 3, "gr": [{"cond": "R1"}, {"cond": "R1"}, {"cond": "R1"}]}}, {t: "BUTTON", x: 0, y: 120}, {t: "LED", x: 620, y: 40, opt: {"coul": "vert"}}, {t: "LED", x: 620, y: 180, opt: {"coul": "orange"}}, {t: "LED", x: 620, y: 320, opt: {"coul": "rouge"}}],
+           wires:[[1, 0, 0, 0], [0, 0, 2, 0], [0, 1, 3, 0], [0, 2, 4, 0]] },
     plan:["BOUTON ─▶ R1 du GRAFCET","X0, X1, X2 ─▶ trois AMPOULES de couleurs différentes"],
     steps:["Pose un GRAFCET (onglet Temps & automatisme) et règle-le sur <b>3 étapes</b> avec sa glissière.",
       "Double-clique dessus : la grille montre une ligne par étape. Mets la réceptivité de X0, X1 et X2 sur <b>R1</b>.",
@@ -5218,6 +5338,8 @@ const missions = [
   desc:"Une machine de tri : après le contrôle, la pièce part au bac « bonne » ou au bac « rebut ». Utilise la colonne OU BIEN du GRAFCET pour ouvrir deux chemins depuis la même étape. Mission libre.",
   inputs:0, outputs:0, tt:[], par:0,
   sol:{
+    demo:{ comps:[{t: "GRAFCET", x: 300, y: 40, opt: {"nb": 3, "gr": [{"cond": "R1", "cible": 1, "alt": "R2", "altCible": 2}, {"cond": "1", "tempo": 1, "cible": 0}, {"cond": "1", "tempo": 1, "cible": 0}]}}, {t: "SWITCH", x: 0, y: 60}, {t: "SWITCH", x: 0, y: 240}, {t: "LED", x: 680, y: 120, opt: {"coul": "vert"}}, {t: "LED", x: 680, y: 280, opt: {"coul": "rouge"}}],
+           wires:[[1, 0, 0, 0], [2, 0, 0, 1], [0, 1, 3, 0], [0, 2, 4, 0]] },
     plan:["X0 : contrôle · R1 = pièce bonne ─▶ X1 · OU BIEN R2 = pièce mauvaise ─▶ X2",
           "X1 et X2 rebouclent sur X0"],
     steps:["Pose un GRAFCET à 3 étapes et deux INTERRUPTEURS sur R1 et R2.",
@@ -7896,24 +8018,36 @@ function openChipManager(){
   body.appendChild(imp);
   document.getElementById('chips-modal').classList.add('show');
 }
+/* Un composant est-il posable dans le contexte courant, et sinon pourquoi ?
+   Sorti de la boucle DOM pour être vérifiable directement. */
+function toolState(t, m){
+  if (!unlockedType(t)) return { dis:true, why:unlockTitle(t) };
+  if (!m) return { dis:false, why:FR_NAME[t] };
+  // Les sources ne sont bridées que sur une mission À TABLE DE VÉRITÉ : là, les
+  // interrupteurs d'essai sont fournis et verrouillés, en ajouter rendrait la
+  // table invérifiable. Sur une mission libre — les quatre cinquièmes du
+  // catalogue — le joueur doit pouvoir poser ses propres entrées, sans quoi la
+  // moitié des énoncés devient impossible à suivre.
+  const surTable = !!(m.tt && m.tt.length);
+  const capteur = REG[t] && REG[t].family === 'sense';
+  if (surTable && INPUT_TYPES.includes(t) && !capteur)
+    return { dis:true, why:'Entrées fournies par la mission : sers-toi des interrupteurs posés' };
+  if (m.allowed && LOGIC_TYPES.includes(t) && !m.allowed.includes(t))
+    return { dis:true, why:'Porte verrouillée : uniquement ' + m.allowed.join(', ') };
+  return { dis:false, why:FR_NAME[t] };
+}
 function updateToolbar(){
   const m = currentIdx >= 0 ? missions[currentIdx] : null;
   document.querySelectorAll('.tool-btn').forEach(b => {
     const t = b.dataset.type;
-    let dis = false, why = t ? FR_NAME[t] : b.title;
     if (b.dataset.chip){
-      if (m){ dis = true; why = 'Les puces personnalisées sont réservées au bac à sable'; }
-      b.disabled = dis; b.title = why; return;
+      b.disabled = !!m;
+      b.title = m ? 'Les puces personnalisées sont réservées au bac à sable' : b.title;
+      return;
     }
     if (!t){ b.disabled = !!m && b.id === 'btn-make-chip'; return; }
-    if (t && !unlockedType(t)){ dis = true; why = unlockTitle(t); }
-    else if (m){
-      if (INPUT_TYPES.includes(t)){ dis = true; why = 'Entrées fournies par la mission'; }
-      else if (m.allowed && LOGIC_TYPES.includes(t) && !m.allowed.includes(t)){
-        dis = true; why = 'Porte verrouillée : uniquement ' + m.allowed.join(', ');
-      }
-    }
-    b.disabled = dis; b.title = why;
+    const st = toolState(t, m);
+    b.disabled = st.dis; b.title = st.why;
   });
 }
 
@@ -8072,6 +8206,58 @@ function liveTick(){
 /* ---------- Fantômes et pas-à-pas ---------- */
 let tutor = null;      // { sol, step, ghosts:{index:Component} }
 
+/* Un composant du tuteur : même fabrique que la sérialisation, pour que les
+   réglages d'un montage de référence (nombre d'étapes, consigne, couleur…)
+   soient là dès le fantôme. */
+function tutorComp(sc){
+  return compFromData({ t:sc.t, x:sc.px != null ? sc.px : sc.x, y:sc.py != null ? sc.py : sc.y,
+                        opt:sc.opt, lbl:sc.lbl, s:sc.s, niv:sc.niv }, 0, 0, 0);
+}
+/* Montage de référence d'une mission libre : posé à même la mission, ou
+   emprunté à un exemple du menu 📦. */
+function missionDemo(m){
+  if (!m.sol) return null;
+  if (m.sol.demo) return m.sol.demo;
+  if (m.sol.ex){ const e = EXAMPLES.find(x => x.name === m.sol.ex); return e ? e.data : null; }
+  return null;
+}
+/* Tuteur des missions LIBRES : pas de table à résoudre, mais toujours des
+   étapes écrites — et parfois un montage de référence. On fabrique le même
+   objet « solution » que le solveur pour que le panneau, les fantômes et la
+   pose progressive fonctionnent exactement pareil. Sans cela, les quatre
+   cinquièmes du catalogue n'avaient aucune explication sur le schéma. */
+function buildFreeSolution(m){
+  const src = m.sol;
+  if (!src || !src.steps || !src.steps.length) return null;
+  const lay = missionDemo(m);
+  const comps = [], wires = [];
+  if (lay){
+    (lay.comps || []).forEach(sc => comps.push(Object.assign({ d:0 }, sc)));
+    (lay.wires || []).forEach(w => wires.push({ a:{ g:w[0] }, ap:w[1], b:{ g:w[2] }, bp:w[3] }));
+  }
+  const n = src.steps.length, C = comps.length;
+  const steps = src.steps.map((txt, i) => {
+    const de = C ? Math.round(i * C / n) : 0, a2 = C ? Math.round((i + 1) * C / n) : 0;
+    const list = [];
+    for (let k = de; k < a2; k++) list.push(k);
+    return { txt, why:'', comps:list, wires:[] };
+  });
+  // la dernière étape ramasse ce qui resterait (arrondis)
+  if (C) for (let k = 0; k < C; k++)
+    if (!steps.some(st => st.comps.includes(k))) steps[steps.length - 1].comps.push(k);
+  return { comps, wires, steps, conforme:true, libre:true, plan:src.plan || [], why:src.why || '' };
+}
+/* Recentre un montage de référence sur la vue courante */
+function layoutDemo(sol){
+  if (!sol.comps.length) return;
+  const xs = sol.comps.map(c => c.x), ys = sol.comps.map(c => c.y);
+  const x0 = Math.min(...xs), y0 = Math.min(...ys);
+  const lw = Math.max(...xs) - x0, lh = Math.max(...ys) - y0;
+  const ct = s2w(W / 2, H / 2 - 40);
+  const ox = Math.round((ct.x - lw / 2 - x0) / 16) * 16;
+  const oy = Math.round((ct.y - lh / 2 - y0) / 16) * 16;
+  sol.comps.forEach(c => { c.px = c.x + ox; c.py = c.y + oy; });
+}
 function layoutSolution(sol){
   const io = missionIO();
   const x0 = 250;
@@ -8087,18 +8273,15 @@ function openTutor(){
   if (currentIdx < 0) return;
   const m = missions[currentIdx];
   if (m.bb){ toast('🕵️ Pas de guide sur une boîte noire : c’est à toi de déduire !', 'error', 3600); return; }
-  const sol = buildSolution(m);
-  if (!sol || !sol.conforme){
-    toast('🧭 Cette mission demande une astuce que le tuteur ne sait pas dessiner — ouvre 💡 Solution : ' +
-          'les étapes y sont détaillées.', 'info', 5200);
+  let sol = buildSolution(m);
+  if (!sol || !sol.conforme) sol = buildFreeSolution(m);   // mission libre : ses étapes écrites
+  if (!sol){
+    toast('🧭 Cette mission n’a pas de marche à suivre — explore et clique VÉRIFIER.', 'info', 4200);
     return;
   }
-  layoutSolution(sol);
+  if (sol.libre) layoutDemo(sol); else layoutSolution(sol);
   tutor = { sol, step:0, ghosts:{}, made:{} };
-  sol.comps.forEach((sc, i) => {
-    const g = new Component(sc.px, sc.py, sc.t);
-    tutor.ghosts[i] = g;
-  });
+  sol.comps.forEach((sc, i) => { tutor.ghosts[i] = tutorComp(sc); });
   document.getElementById('tutor-box').classList.remove('hidden');
   document.getElementById('btn-tutor').classList.add('hidden');
   renderTutor();
@@ -8112,27 +8295,37 @@ function closeTutor(){
 }
 function renderTutor(){
   if (!tutor) return;
-  const st = tutor.sol.steps[tutor.step];
+  const sol = tutor.sol, st = sol.steps[tutor.step];
+  const posable = sol.comps.length > 0;      // sans montage de référence, rien à poser
   document.getElementById('tutor-step').textContent =
-    st ? ('ÉTAPE ' + (tutor.step + 1) + ' / ' + tutor.sol.steps.length) : 'TERMINÉ';
+    st ? ('ÉTAPE ' + (tutor.step + 1) + ' / ' + sol.steps.length) : 'TERMINÉ';
   document.getElementById('tutor-txt').innerHTML = st ? st.txt :
-    'Le circuit est complet. Actionne les entrées pour le comprendre, puis clique sur <b>Vérifier</b>.';
-  document.getElementById('tutor-why').innerHTML = st ? st.why : '';
-  document.getElementById('tutor-place').classList.toggle('hidden', !st);
+    (posable ? 'Le montage est complet. Actionne les entrées pour le comprendre, puis clique sur <b>Vérifier</b>.'
+             : 'Tu as toute la marche à suivre. Construis le montage, puis clique sur <b>Vérifier</b>.');
+  // sur une mission libre, le « pourquoi » de la mission tient lieu de conclusion
+  document.getElementById('tutor-why').innerHTML =
+    st ? (st.why || '') : (sol.libre ? (sol.why || '') : '');
+  document.getElementById('tutor-place').classList.toggle('hidden', !st || !posable);
+  document.getElementById('tutor-place').textContent =
+    sol.libre ? 'Poser sur le schéma' : 'Poser cette étape';
   document.getElementById('tutor-skip').classList.toggle('hidden', !st);
-  document.getElementById('tutor-all').classList.toggle('hidden', !st);
+  document.getElementById('tutor-skip').textContent = posable ? 'Étape suivante →' : 'Suivant →';
+  document.getElementById('tutor-all').classList.toggle('hidden', !st || !posable);
 }
 /* Matérialise l'étape courante (ses composants + les câbles devenus posables) */
 function tutorPlace(){
   if (!tutor) return;
   const st = tutor.sol.steps[tutor.step];
   if (!st) return;
+  if (!tutor.sol.comps.length){ tutorSkip(); return; }
   st.comps.forEach(i => delete tutor.ghosts[i]);
   applySolution(tutor.sol, tutor.step + 1, tutor.made);
   tutor.step++;
   renderTutor();
   AudioSys.connect();
-  if (tutor.step >= tutor.sol.steps.length) toast('🧭 Solution complète — compare-la à la table !', 'info', 3200);
+  if (tutor.step >= tutor.sol.steps.length)
+    toast(tutor.sol.libre ? '🧭 Montage de référence posé — fais-le tourner et modifie-le !'
+                          : '🧭 Solution complète — compare-la à la table !', 'info', 3200);
 }
 function tutorSkip(){
   if (!tutor) return;
@@ -8238,7 +8431,11 @@ function loadMission(idx){
     if (progress.done[m.id]) bh += '<span class="badge done">✓ Réussie</span>';
     badges.innerHTML = bh;
     show('btn-verify', true); show('btn-solution', true); show('btn-start', false);
-    show('btn-tutor', !m.bb && m.tt.length > 0 && m.inputs >= 1 && m.inputs <= 4);
+    // Le tuteur s'ouvre partout où il y a quelque chose à expliquer : sur une
+    // table de vérité il calcule la solution, sur une mission libre il déroule
+    // la marche à suivre — et pose le montage de référence quand il en a un.
+    show('btn-tutor', !m.bb && ((m.tt.length > 0 && m.inputs >= 1 && m.inputs <= 4) ||
+                                !!(m.sol && m.sol.steps && m.sol.steps.length)));
     buildTruthTable(m);
 
     // Placement des E/S verrouillées
@@ -8492,18 +8689,18 @@ function applySolution(sol, nSteps, made){
   sol.steps.slice(0, limit).forEach(st => st.comps.forEach(g => allowed.add(g)));
   sol.comps.forEach((sc, i) => {
     if (!allowed.has(i) || made[i]) return;
-    const c = new Component(sc.px != null ? sc.px : sc.x, sc.py != null ? sc.py : sc.y, sc.t);
+    const c = tutorComp(sc);
     components.push(c);
     made[i] = c;
   });
-  const pinOf = (ref, isOut) => {
+  const pinOf = (ref, ap) => {
     if (ref.in != null) return io.ins[ref.in] ? io.ins[ref.in].outPins[0] : null;
     if (ref.out != null) return io.outs[ref.out] ? io.outs[ref.out].inPins[0] : null;
     const c = made[ref.g];
-    return c ? (isOut ? c.outPins[0] : null) : null;
+    return c ? (c.outPins[ap || 0] || null) : null;
   };
   sol.wires.forEach(w => {
-    const a = pinOf(w.a, true);
+    const a = pinOf(w.a, w.ap);
     const bComp = w.b.out != null ? (io.outs[w.b.out] || null) : made[w.b.g];
     if (!a || !bComp) return;
     const bPin = w.b.out != null ? bComp.inPins[0] : bComp.inPins[w.bp];

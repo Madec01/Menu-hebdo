@@ -3060,6 +3060,88 @@ T('T156 l’exemple « Perceuse en GRAFCET » enchaîne son cycle', () => {
   ok(ver.pos < .05, 'la broche est revenue en haut');
 });
 
+T('T157 le tuteur s’ouvre sur toutes les missions, table ou libre', () => {
+  const sans = [];
+  missions.forEach((m, i) => {
+    if (m.bb) return;                                  // boîte noire : refus assumé
+    const sol = buildSolution(m) || buildFreeSolution(m);
+    if (!sol || !sol.steps || !sol.steps.length) sans.push(m.id + ' « ' + m.title + ' »');
+  });
+  ok(!sans.length, 'missions sans marche à suivre —\n      ' + sans.join('\n      '));
+});
+
+T('T158 les montages de référence des missions sont cohérents', () => {
+  const bad = [];
+  let avec = 0;
+  missions.forEach(m => {
+    const lay = missionDemo(m);
+    if (!lay) return;
+    avec++;
+    board();
+    const r = spawnGroup(lay, 0, 0, true);
+    (lay.wires || []).forEach(w => {
+      const a = r.made[w[0]], b = r.made[w[2]];
+      if (!a || !b) return bad.push(m.id + ' : câble vers un composant absent');
+      const op = a.outPins[w[1]], ip = b.inPins[w[3]];
+      if (!op) return bad.push(m.id + ' : ' + a.type + ' n’a pas de sortie #' + w[1]);
+      if (!ip) return bad.push(m.id + ' : ' + b.type + ' n’a pas d’entrée #' + w[3]);
+      if (op.kind !== ip.kind)
+        bad.push(m.id + ' : ' + a.type + '#' + w[1] + '(' + op.kind + ') → ' +
+                 b.type + '#' + w[3] + '(' + ip.kind + ')');
+    });
+    // deux câbles ne doivent pas viser la même entrée
+    const cibles = (lay.wires || []).map(w => w[2] + ':' + w[3]);
+    const dbl = cibles.filter((x, i) => cibles.indexOf(x) !== i);
+    if (dbl.length) bad.push(m.id + ' : entrée alimentée deux fois (' + [...new Set(dbl)].join(', ') + ')');
+    // et le montage doit tourner sans exploser
+    try { sim(); sim(); } catch (e){ bad.push(m.id + ' : simulation en erreur — ' + e.message); }
+  });
+  ok(avec >= 55, 'au moins 55 missions ont un montage de référence (' + avec + ')');
+  ok(!bad.length, 'montages incohérents —\n      ' + bad.join('\n      '));
+});
+
+T('T159 le tuteur pose vraiment le montage d’une mission libre', () => {
+  const idx = missions.findIndex(m => m.id === 'm77');
+  ok(idx >= 0, 'mission m77 présente');
+  loadMission(idx);
+  const avant = components.length;
+  openTutor();
+  ok(!!tutor, 'le tuteur s’ouvre sur une mission libre');
+  ok(tutor.sol.libre, 'en mode « marche à suivre »');
+  ok(tutor.sol.comps.length >= 4, 'avec un montage de référence');
+  tutorAll();
+  const poses = components.length - avant;
+  eq(poses, tutor.sol.comps.length, 'tout le montage est posé sur le plan');
+  ok(components.some(c => c.type === 'NIBBLE'), 'le clavier 4 bits en fait partie');
+  ok(wires.length >= 8, 'et les câbles avec (' + wires.length + ')');
+  sim();
+  const dec = components.find(c => c.type === 'DEC');
+  const nib = components.find(c => c.type === 'NIBBLE');
+  nib.value = 11; sim(); sim();
+  eq(dec.inPins.map(p => p.state ? 1 : 0).join(''), '1011', 'la valeur traverse le bus jusqu’à l’afficheur');
+  loadMission(-1);
+});
+
+T('T160 les entrées ne sont bridées que sur les missions à table de vérité', () => {
+  const libre = missions.find(m => m.id === 'm77');
+  const table = missions.find(m => m.tt && m.tt.length && m.inputs >= 2);
+  ok(!!table, 'au moins une mission à table');
+  ok(!toolState('NIBBLE', libre).dis, 'mission libre : le clavier 4 bits est disponible');
+  ok(!toolState('SWITCH', libre).dis, 'et les interrupteurs aussi');
+  ok(!toolState('CLOCK', libre).dis, 'et l’horloge');
+  ok(toolState('SWITCH', table).dis, 'mission à table : les entrées sont fournies');
+  ok(toolState('NIBBLE', table).dis, 'le clavier aussi : la table deviendrait invérifiable');
+  // les capteurs restent posables partout : ce sont des instruments, pas des entrées d’essai
+  ok(!toolState('TEMPC', table).dis, 'un capteur reste posable même sur une mission à table');
+  ok(!toolState('AND', libre).dis, 'et la logique n’est jamais bridée sans consigne explicite');
+  // une mission « NAND uniquement » verrouille bien les autres portes
+  const nandOnly = missions.find(m => m.allowed && m.allowed.length === 1);
+  if (nandOnly){
+    ok(toolState('AND', nandOnly).dis, 'mission à base imposée : les autres portes sont fermées');
+    ok(!toolState(nandOnly.allowed[0], nandOnly).dis, 'sauf celle qu’elle impose');
+  }
+});
+
 /* ===================== bilan ===================== */
 console.log('\n' + (__fail ? '✗' : '✓') + ' ' + __pass + ' test(s) réussi(s), ' +
             __fail + ' échec(s)' + (__fail ? ' : ' + __failures.join(', ') : '') + '\n');

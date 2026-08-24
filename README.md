@@ -35,10 +35,13 @@ d'outils :
 
 **Le tuteur.** Pendant une mission, le panneau indique en direct combien de
 lignes de la table sont justes et laquelle cloche. Le bouton « Guide-moi sur le
-schéma » calcule une solution complète (implicants premiers, couverture,
-conversion en base NAND ou NOR si la mission l'impose) et la pose en fantômes,
-étape par étape, en expliquant chaque geste. Désactivé sur les missions boîte
-noire.
+schéma » explique la marche à suivre **sur le plan de travail**, étape par
+étape, et pose les composants en fantômes au fur et à mesure. Sur une mission à
+table de vérité il calcule la solution lui-même (implicants premiers,
+couverture, conversion en base NAND ou NOR si la mission l'impose) ; sur une
+mission libre — les quatre cinquièmes du catalogue — il déroule les étapes
+écrites et pose le montage de référence quand la mission en fournit un (61 en
+ont un aujourd'hui). Désactivé sur les missions boîte noire.
 
 **Des schémas tout prêts.** Le menu 📦 propose 28 montages chargeables, dont quatorze
 procédés complets : station de pompage, four régulé en tout ou rien / proportionnel
@@ -106,7 +109,7 @@ concatène entre `test/pre.js` (stubs DOM / Canvas / Audio / localStorage, plus
 une horloge `Date.now` pilotable) et `test/post.js` (les tests), puis exécute le
 tout dans un contexte `vm`. Aucun navigateur, aucune dépendance npm.
 
-154 tests couvrent le moteur, le séquentiel, les blocs numériques, l'analogique
+158 tests couvrent le moteur, le séquentiel, les blocs numériques, l'analogique
 et la régulation (dont une boucle fermée four + thermostat), l'édition,
 l'orientation, les tunnels, les puces, l'interface, le balisage et le guide.
 Deux tests valident automatiquement **tout** nouveau composant du registre
