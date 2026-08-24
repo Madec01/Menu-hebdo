@@ -611,10 +611,12 @@ T('T39 analyseur : les boucles sont signalées, pas infinies', () => {
 /* ===================== 6. Missions ===================== */
 console.log('— Missions —');
 
-T('T40 catalogue : 106 missions, identifiants uniques, tables cohérentes', () => {
-  eq(missions.length, 106, 'nombre de missions');
+T('T40 catalogue : identifiants uniques, tables cohérentes, chapitres continus', () => {
+  ok(missions.length >= 118, 'catalogue complet (' + missions.length + ' missions)');
   const ids = new Set(missions.map(m => m.id));
-  eq(ids.size, 106, 'identifiants uniques');
+  eq(ids.size, missions.length, 'identifiants uniques');
+  const chapitres = [...new Set(missions.map(m => m.ch))];
+  ok(chapitres.length >= 20, chapitres.length + ' chapitres');
   missions.forEach((m, i) => {
     const tag = '#' + (i + 1) + ' ' + m.id;
     ok(m.title && m.ch && m.desc, tag + ' : intitulé complet');
