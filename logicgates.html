@@ -894,7 +894,9 @@ class Wire {
 /* Une valeur de bus arrivant sur ce pin sera-t-elle ramenée à 0/1 ? */
 function busNormalized(pin){
   const c = pin.comp;
-  if (c.type === 'UNGROUP') return false;      // seul consommateur légitime d'un bus
+  if (c.type === 'UNGROUP') return false;      // consommateur historique d'un bus
+  const d = REG[c.type];
+  if (d && d.ins[pin.index] && d.ins[pin.index].bus) return false;   // pin déclaré « bus »
   return LOGIC_TYPES.includes(c.type);
 }
 /* Écarte en éventail les fils partant d'un même pin de sortie */
@@ -4500,6 +4502,200 @@ defComp('WDOG', {
   guide:{ txt:'Il surveille qu’un signal <code>continue de bouger</code>. Chaque front remet son sablier à zéro ; si plus rien ne vient pendant le délai, il lève une alarme. Un système figé est souvent plus dangereux qu’un système à l’arrêt.',
     ex:'Capteur de rotation d’un tapis → chien de garde (2 s) → sirène : le tapis bloqué déclenche l’alerte, même si rien n’a « échoué » explicitement.',
     real:'Tous les calculateurs embarqués en ont un : si le programme se bloque, le chien de garde ne reçoit plus sa caresse et redémarre la machine. Voitures, satellites, box internet.' }
+});
+/* ---------- Calcul & données : décoder, aiguiller, mémoriser ---------- */
+defComp('DEC24', {
+  name:'DÉCODEUR 2 → 4', short:'DÉC 2·4', family:'calc', color:'#b18cff', cost:6,
+  glyph:'2→4', w:104, h:104, ins:[{n:'A'},{n:'B'},{n:'EN'}], outs:[{n:'0'},{n:'1'},{n:'2'},{n:'3'}],
+  eval(c){
+    const en = c.inPins[2].state ? 1 : 0;
+    const k = (c.inPins[0].state ? 2 : 0) + (c.inPins[1].state ? 1 : 0);
+    c.outPins.forEach((p, i) => p.state = (en && i === k) ? 1 : 0);
+  },
+  value:c => c.inPins[2].state ? String((c.inPins[0].state ? 2 : 0) + (c.inPins[1].state ? 1 : 0)) : '—',
+  sub:() => 'une sortie active',
+  expr:(c, i, A) => 'décode' + i + '(' + A(0) + ',' + A(1) + ')',
+  guide:{ txt:'Deux bits d’<code>adresse</code> désignent une sortie parmi quatre : elle passe à 1, les trois autres restent à 0. L’entrée <code>EN</code> (validation) éteint tout quand elle vaut 0.',
+    ex:'Clavier 4 bits (2 bits du bas) → décodeur → 4 ampoules : le code binaire devient une position.',
+    real:'C’est ainsi qu’un processeur choisit une case mémoire, et qu’un clavier de calculatrice repère la touche appuyée.' }
+});
+defComp('DEC38', {
+  name:'DÉCODEUR 3 → 8', short:'DÉC 3·8', family:'calc', color:'#b18cff', cost:12,
+  glyph:'3→8', w:110, h:206,
+  ins:[{n:'4'},{n:'2'},{n:'1'}],
+  outs:[{n:'0'},{n:'1'},{n:'2'},{n:'3'},{n:'4'},{n:'5'},{n:'6'},{n:'7'}],
+  eval(c){
+    const k = (c.inPins[0].state ? 4 : 0) + (c.inPins[1].state ? 2 : 0) + (c.inPins[2].state ? 1 : 0);
+    c.outPins.forEach((p, i) => p.state = (i === k) ? 1 : 0);
+  },
+  value:c => String((c.inPins[0].state ? 4 : 0) + (c.inPins[1].state ? 2 : 0) + (c.inPins[2].state ? 1 : 0)),
+  expr:(c, i, A) => 'décode' + i + '(' + A(0) + ',' + A(1) + ',' + A(2) + ')',
+  guide:{ txt:'Même principe en plus large : 3 bits d’adresse, 8 sorties, <code>une seule</code> active à la fois. C’est le codage « one-hot » : au lieu d’un nombre, une position.',
+    ex:'Compteur 4 bits → décodeur 3→8 → 8 ampoules en ligne : un chenillard qui compte.',
+    real:'Les sélecteurs de puce (chip select) des mémoires et des périphériques sont des décodeurs de ce type.' }
+});
+defComp('ENC42', {
+  name:'ENCODEUR PRIORITAIRE 4 → 2', short:'ENC 4·2', family:'calc', color:'#b18cff', cost:6,
+  glyph:'4→2', w:110, h:110,
+  ins:[{n:'0'},{n:'1'},{n:'2'},{n:'3'}], outs:[{n:'A'},{n:'B'},{n:'V'}],
+  eval(c){
+    let k = -1;
+    for (let i = 3; i >= 0; i--) if (c.inPins[i].state){ k = i; break; }
+    c.outPins[0].state = k > 1 ? 1 : 0;
+    c.outPins[1].state = (k === 1 || k === 3) ? 1 : 0;
+    c.outPins[2].state = k >= 0 ? 1 : 0;
+  },
+  value:c => { let k = -1; for (let i = 3; i >= 0; i--) if (c.inPins[i].state){ k = i; break; }
+    return k < 0 ? '—' : String(k); },
+  sub:() => 'priorité au plus haut',
+  expr:(c, i, A) => 'encode' + i + '(…)',
+  guide:{ txt:'L’opération inverse du décodeur : quatre entrées, et la sortie donne le <code>numéro</code> de celle qui est active, en binaire. Si plusieurs sont actives, la plus haute l’emporte — d’où le mot « prioritaire ». La sortie <code>V</code> dit si au moins une entrée est active.',
+    ex:'Quatre boutons d’étage → encodeur → afficheur : l’ascenseur sait quel étage est demandé, et privilégie le plus haut.',
+    real:'Les contrôleurs d’interruption des processeurs sont exactement ça : plusieurs périphériques appellent, un seul est servi — le plus prioritaire.' }
+});
+defComp('MUX4', {
+  name:'MULTIPLEXEUR 4 → 1', short:'MUX·4', family:'calc', color:'#b18cff', cost:10,
+  glyph:'4→1', w:110, h:158,
+  ins:[{n:'D0'},{n:'D1'},{n:'D2'},{n:'D3'},{n:'S1'},{n:'S0'}], outs:[{n:'S'}],
+  eval(c){
+    const k = (c.inPins[4].state ? 2 : 0) + (c.inPins[5].state ? 1 : 0);
+    c.outPins[0].state = c.inPins[k].state ? 1 : 0;
+  },
+  value:c => 'D' + ((c.inPins[4].state ? 2 : 0) + (c.inPins[5].state ? 1 : 0)),
+  expr:(c, i, A) => 'aiguille(' + A(0) + ',' + A(1) + ',' + A(2) + ',' + A(3) + ')',
+  guide:{ txt:'Quatre entrées de données, deux bits de sélection : la sortie recopie <code>celle qu’on désigne</code>. Un aiguillage à quatre voies.',
+    ex:'Quatre capteurs → MUX·4, et un compteur 2 bits sur la sélection : tu les lis l’un après l’autre sur un seul fil. C’est du multiplexage temporel.',
+    real:'Une carte d’acquisition ou un microcontrôleur ne possède qu’un seul convertisseur analogique : un multiplexeur lui présente les entrées à tour de rôle.' }
+});
+defComp('DMUX4', {
+  name:'DÉMULTIPLEXEUR 1 → 4', short:'DMUX·4', family:'calc', color:'#b18cff', cost:6,
+  glyph:'1→4', w:110, h:110,
+  ins:[{n:'D'},{n:'S1'},{n:'S0'}], outs:[{n:'0'},{n:'1'},{n:'2'},{n:'3'}],
+  eval(c){
+    const k = (c.inPins[1].state ? 2 : 0) + (c.inPins[2].state ? 1 : 0);
+    const d = c.inPins[0].state ? 1 : 0;
+    c.outPins.forEach((p, i) => p.state = (i === k) ? d : 0);
+  },
+  value:c => '→ ' + ((c.inPins[1].state ? 2 : 0) + (c.inPins[2].state ? 1 : 0)),
+  expr:(c, i, A) => 'voie' + i + '(' + A(0) + ')',
+  guide:{ txt:'L’inverse du multiplexeur : une donnée, deux bits de sélection, et la donnée ressort sur <code>la voie choisie</code>. Les trois autres restent à 0.',
+    ex:'Un MUX·4 puis un DMUX·4 pilotés par le même compteur : quatre signaux traversent un fil unique et se retrouvent chacun à leur place.',
+    real:'C’est le principe du multiplexage : une seule ligne partagée dans le temps plutôt que quatre câbles.' }
+});
+defComp('BCD7', {
+  name:'DÉCODEUR BCD → 7 SEGMENTS', short:'BCD·7SEG', family:'calc', color:'#b18cff', cost:20,
+  glyph:'8', w:118, h:190,
+  ins:[{n:'8'},{n:'4'},{n:'2'},{n:'1'}],
+  outs:[{n:'a'},{n:'b'},{n:'c'},{n:'d'},{n:'e'},{n:'f'},{n:'g'}],
+  eval(c){
+    const v = (c.inPins[0].state ? 8 : 0) + (c.inPins[1].state ? 4 : 0) +
+              (c.inPins[2].state ? 2 : 0) + (c.inPins[3].state ? 1 : 0);
+    const T = ['1111110','0110000','1101101','1111001','0110011','1011011','1011111','1110000',
+               '1111111','1111011','1110111','0011111','1001110','0111101','1001111','1000111'];
+    const row = T[v];
+    c.outPins.forEach((p, i) => p.state = +row[i]);
+    c.digit = v;
+  },
+  value:c => '0123456789AbCdEF'[c.digit || 0],
+  sub:() => 'a b c d e f g',
+  expr:(c, i, A) => 'segment' + 'abcdefg'[i] + '(…)',
+  guide:{ txt:'Il traduit un nombre de 4 bits en <code>sept commandes de segments</code> (a en haut, puis b, c, d, e, f, et g au milieu). C’est la mission « décodeur 7 segments » du chapitre 20, en un boîtier — 20 portes de logique condensées.',
+    ex:'Clavier 4 bits → BCD·7SEG → sept ampoules disposées en 8 : fabrique ton propre afficheur, segment par segment.',
+    real:'Le 7447, sorti en 1968, fait exactement cela. On le trouve encore dans les réveils, les balances et les tableaux de bord.' }
+});
+defComp('ADD4', {
+  name:'ADDITIONNEUR 4 BITS (BUS)', short:'ADD 4b', family:'calc', color:'#b18cff', cost:20,
+  glyph:'Σ', w:112, h:104,
+  ins:[{n:'A', bus:true},{n:'B', bus:true},{n:'Ci'}], outs:[{n:'S', bus:true},{n:'Co'}],
+  eval(c){
+    const a = (c.inPins[0].state | 0) & 15, b = (c.inPins[1].state | 0) & 15;
+    const t = a + b + (c.inPins[2].state ? 1 : 0);
+    c.outPins[0].state = t & 15;
+    c.outPins[1].state = t > 15 ? 1 : 0;
+    c.sum = t;
+  },
+  value:c => String((c.sum | 0) & 15),
+  sub:c => ((c.inPins[0].state | 0) & 15) + ' + ' + ((c.inPins[1].state | 0) & 15) +
+           ((c.sum | 0) > 15 ? ' → retenue' : ''),
+  expr:(c, i, A) => (i === 0 ? 'somme4(' : 'retenue4(') + A(0) + ', ' + A(1) + ')',
+  guide:{ txt:'Quatre additionneurs complets chaînés, sur des <code>bus</code> : A et B arrivent sous forme de valeurs 0-15, la somme repart en valeur, et <code>Co</code> signale le dépassement. Un seul câble au lieu de douze.',
+    ex:'Deux claviers 4 bits → GROUPER → ADD 4b → DÉGROUPER → afficheur décimal : une calculatrice en six composants.',
+    real:'Additionner sur des bus plutôt que bit à bit, c’est exactement le saut d’abstraction que font les ingénieurs quand un circuit devient trop gros pour être dessiné fil par fil.' }
+});
+defComp('REGB', {
+  name:'REGISTRE (BUS)', short:'REGISTRE', family:'mem', color:'#5aa2ff', cost:24, seq:true,
+  glyph:'▤', w:112, h:104,
+  ins:[{n:'D', bus:true},{n:'▷'},{n:'RZ'}], outs:[{n:'Q', bus:true}],
+  init(c){ c.val = 0; c.prevClk = null; },
+  eval(c){
+    c.pendD = c.inPins[0].state | 0;
+    c.pendClk = c.inPins[1].state ? 1 : 0;
+    c.pendRst = c.inPins[2].state ? 1 : 0;
+    c.outPins[0].state = c.val;
+  },
+  commit(c){
+    if (c.pendRst) c.val = 0;
+    else if (c.prevClk !== null && c.pendClk && !c.prevClk){ c.val = c.pendD & 255; c.justLatched = Date.now(); }
+    c.prevClk = c.pendClk;
+  },
+  value:c => String(c.val),
+  sub:() => 'photographie au front ▷',
+  expr:(c, i, A) => 'mém[' + A(0) + ']',
+  guide:{ txt:'Une rangée de bascules D partageant la même horloge : au <code>front montant</code> de ▷, le registre photographie la valeur présente sur le bus D et la garde. <code>RZ</code> le remet à zéro.',
+    ex:'Compteur → registre, avec un bouton sur ▷ : tu figes la valeur au moment exact où tu appuies. C’est une fonction « mémoire » de chronomètre.',
+    real:'Un processeur, c’est essentiellement des registres reliés par des opérateurs. Les fameux « 64 bits » désignent la largeur de ces registres.' }
+});
+defComp('SHIFT8', {
+  name:'REGISTRE À DÉCALAGE 8 BITS', short:'DÉCAL. 8b', family:'mem', color:'#5aa2ff', cost:48, seq:true,
+  glyph:'⇥', w:120, h:110,
+  ins:[{n:'D'},{n:'▷'},{n:'RZ'}], outs:[{n:'Q', bus:true},{n:'S'}],
+  init(c){ c.val = 0; c.prevClk = null; },
+  eval(c){
+    c.pendD = c.inPins[0].state ? 1 : 0;
+    c.pendClk = c.inPins[1].state ? 1 : 0;
+    c.pendRst = c.inPins[2].state ? 1 : 0;
+    c.outPins[0].state = c.val;
+    c.outPins[1].state = (c.val >> 7) & 1;
+  },
+  commit(c){
+    if (c.pendRst) c.val = 0;
+    else if (c.prevClk !== null && c.pendClk && !c.prevClk)
+      c.val = ((c.val << 1) | c.pendD) & 255;
+    c.prevClk = c.pendClk;
+  },
+  value:c => c.val.toString(2).padStart(8, '0'),
+  sub:c => 'valeur ' + c.val,
+  expr:(c, i, A) => 'décale(' + A(0) + ')',
+  guide:{ txt:'À chaque front d’horloge, tous les bits avancent d’un cran et le bit présent sur <code>D</code> entre par la droite ; celui qui sort part sur <code>S</code>. Le contenu complet est aussi disponible en parallèle sur le bus Q.',
+    ex:'Séquenceur → D, horloge → ▷ : tu écris un motif bit à bit, et il apparaît en entier sur Q. Série vers parallèle !',
+    real:'C’est le traducteur universel de l’électronique : un port série envoie les bits l’un après l’autre, un registre à décalage les recompose en octets. Ton clavier, ta carte SD et tes rubans de LED fonctionnent ainsi.' }
+});
+defComp('RAM16', {
+  name:'MÉMOIRE RAM 16 × 4', short:'RAM 16', family:'mem', color:'#5aa2ff', cost:64, seq:true,
+  glyph:'▦', w:126, h:126,
+  ins:[{n:'ADR', bus:true},{n:'D', bus:true},{n:'W'},{n:'▷'}], outs:[{n:'Q', bus:true}],
+  init(c){ c.cells = new Array(16).fill(0); c.prevClk = null; },
+  restore(c, s){ if (s.cells) c.cells = s.cells.slice(); },
+  eval(c){
+    const a = (c.inPins[0].state | 0) & 15;
+    c.adr = a;
+    c.pendD = (c.inPins[1].state | 0) & 15;
+    c.pendW = c.inPins[2].state ? 1 : 0;
+    c.pendClk = c.inPins[3].state ? 1 : 0;
+    c.outPins[0].state = c.cells[a] || 0;
+  },
+  commit(c){
+    if (c.prevClk !== null && c.pendClk && !c.prevClk && c.pendW){
+      c.cells[c.adr] = c.pendD; c.justLatched = Date.now();
+    }
+    c.prevClk = c.pendClk;
+  },
+  value:c => '[' + (c.adr || 0) + '] = ' + (c.cells[c.adr || 0] || 0),
+  sub:c => c.pendW ? 'écriture au prochain ▷' : 'lecture',
+  tip:c => ['Contenu : ' + c.cells.join(' ')],
+  guide:{ txt:'Seize cases de 4 bits. L’adresse choisit la case, qui est <code>lue en permanence</code> sur Q ; pour écrire, il faut mettre <code>W</code> à 1 et donner un front d’horloge. Lecture immédiate, écriture volontaire : c’est tout le contrat d’une mémoire vive.',
+    ex:'Compteur → ADR : tu balayes la mémoire et tu lis son contenu case par case, comme un processeur lit son programme.',
+    real:'Volatile : coupe le courant, tout disparaît. C’est la différence entre la RAM et la ROM que tu as programmée au chapitre 14 — et c’est pour cela qu’un ordinateur « perd » ce qui n’est pas enregistré.' }
 });
 /* @@COMPOSANTS@@ */
 registerComponents();

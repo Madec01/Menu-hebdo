@@ -962,6 +962,166 @@ T('T74 NAND·3 et NOR·3', () => {
   eq(gateCost('NAND3'), 2, 'coût de la porte élargie');
 });
 
+T('T75 décodeurs 2→4 et 3→8 : une seule sortie active', () => {
+  board();
+  const sw = [0,1,2].map(i => mk('SWITCH', 0, i * 100));
+  const d24 = mk('DEC24', 300, 0), d38 = mk('DEC38', 300, 400);
+  link(sw[0], 0, d24, 0); link(sw[1], 0, d24, 1); link(sw[2], 0, d24, 2);
+  sw.forEach((s, i) => link(s, 0, d38, i));
+  for (let v = 0; v < 8; v++){
+    drive(sw, [(v >> 2) & 1, (v >> 1) & 1, v & 1]);
+    const on38 = d38.outPins.map(p => p.state).reduce((a, b) => a + b, 0);
+    eq(on38, 1, 'DÉC 3→8 : une seule sortie pour ' + v);
+    eq(d38.outPins[v].state, 1, 'DÉC 3→8 : sortie ' + v);
+    const k = (v >> 2) & 1 ? 2 : 0, kk = k + ((v >> 1) & 1);
+    if (v & 1) eq(d24.outPins[kk].state, 1, 'DÉC 2→4 validé : sortie ' + kk);
+    else eq(d24.outPins.reduce((a, p) => a + p.state, 0), 0, 'DÉC 2→4 : EN=0 éteint tout');
+  }
+});
+
+T('T76 encodeur prioritaire 4→2', () => {
+  board();
+  const sw = [0,1,2,3].map(i => mk('SWITCH', 0, i * 90));
+  const e = mk('ENC42', 300, 0);
+  sw.forEach((s, i) => link(s, 0, e, i));
+  drive(sw, [0,0,0,0]);
+  eq(e.outPins[2].state, 0, 'aucune entrée : V=0');
+  [[1,0,0,0,0],[0,1,0,0,1],[0,0,1,0,2],[0,0,0,1,3]].forEach(r => {
+    drive(sw, r.slice(0, 4));
+    const v = (e.outPins[0].state ? 2 : 0) + (e.outPins[1].state ? 1 : 0);
+    eq(v, r[4], 'entrée ' + r[4] + ' encodée');
+    eq(e.outPins[2].state, 1, 'V=1');
+  });
+  drive(sw, [1,1,0,1]);
+  eq((e.outPins[0].state ? 2 : 0) + (e.outPins[1].state ? 1 : 0), 3, 'priorité au numéro le plus haut');
+});
+
+T('T77 MUX·4 et DMUX·4', () => {
+  board();
+  const d = [0,1,2,3].map(i => mk('SWITCH', 0, i * 80));
+  const s1 = mk('SWITCH', 0, 400), s0 = mk('SWITCH', 0, 480);
+  const mx = mk('MUX4', 300, 0), out = mk('LED', 600, 0);
+  d.forEach((x, i) => link(x, 0, mx, i));
+  link(s1, 0, mx, 4); link(s0, 0, mx, 5); link(mx, 0, out, 0);
+  d.forEach((x, i) => x.state = i % 2);          // D0=0 D1=1 D2=0 D3=1
+  for (let k = 0; k < 4; k++){
+    s1.state = (k >> 1) & 1; s0.state = k & 1; sim();
+    eq(out.inPins[0].state ? 1 : 0, k % 2, 'MUX·4 voie ' + k);
+  }
+  board();
+  const src = mk('SWITCH', 0, 0), a = mk('SWITCH', 0, 100), b = mk('SWITCH', 0, 200);
+  const dm = mk('DMUX4', 300, 0);
+  link(src, 0, dm, 0); link(a, 0, dm, 1); link(b, 0, dm, 2);
+  src.state = 1;
+  for (let k = 0; k < 4; k++){
+    a.state = (k >> 1) & 1; b.state = k & 1; sim();
+    deq(dm.outPins.map(p => p.state), [0,1,2,3].map(i => i === k ? 1 : 0), 'DMUX·4 voie ' + k);
+  }
+});
+
+T('T78 décodeur BCD → 7 segments : les 16 chiffres', () => {
+  board();
+  const sw = [0,1,2,3].map(i => mk('SWITCH', 0, i * 80));
+  const dec = mk('BCD7', 300, 0);
+  sw.forEach((s, i) => link(s, 0, dec, i));
+  const attendu = {
+    0:'1111110', 1:'0110000', 2:'1101101', 3:'1111001', 4:'0110011',
+    5:'1011011', 6:'1011111', 7:'1110000', 8:'1111111', 9:'1111011'
+  };
+  for (let v = 0; v <= 9; v++){
+    drive(sw, [(v>>3)&1, (v>>2)&1, (v>>1)&1, v&1]);
+    eq(dec.outPins.map(p => p.state).join(''), attendu[v], 'chiffre ' + v);
+  }
+  drive(sw, [1,1,1,1]);
+  eq(dec.digit, 15, 'les valeurs 10-15 affichent A-F');
+});
+
+T('T79 additionneur 4 bits sur bus, avec retenue', () => {
+  board();
+  const swA = [0,1,2,3].map(i => mk('SWITCH', 0, i * 70));
+  const swB = [0,1,2,3].map(i => mk('SWITCH', 200, i * 70));
+  const gA = mk('GROUP', 400, 0), gB = mk('GROUP', 400, 300), add = mk('ADD4', 620, 100);
+  const ug = mk('UNGROUP', 820, 100);
+  swA.forEach((s, i) => link(s, 0, gA, i));
+  swB.forEach((s, i) => link(s, 0, gB, i));
+  link(gA, 0, add, 0); link(gB, 0, add, 1); link(add, 0, ug, 0);
+  const bits = v => [(v>>3)&1, (v>>2)&1, (v>>1)&1, v&1];
+  [[5,3],[9,9],[15,1],[7,8],[0,0]].forEach(([a, b]) => {
+    swA.forEach((s, i) => s.state = bits(a)[i]);
+    swB.forEach((s, i) => s.state = bits(b)[i]);
+    sim();
+    eq(add.outPins[0].state, (a + b) & 15, a + ' + ' + b + ' (4 bits)');
+    eq(add.outPins[1].state, a + b > 15 ? 1 : 0, a + ' + ' + b + ' : retenue');
+    eq(ug.outPins.map(p => p.state).join(''), bits((a + b) & 15).join(''), 'bits restitués');
+  });
+  ok(!add.inPins[0].busWarn, 'un pin déclaré « bus » n’est pas signalé comme normalisé');
+});
+
+T('T80 registre sur bus : photographie au front, remise à zéro', () => {
+  board();
+  const sw = [0,1,2,3].map(i => mk('SWITCH', 0, i * 70));
+  const g = mk('GROUP', 300, 0), r = mk('REGB', 520, 0);
+  const clk = mk('SWITCH', 0, 400), rst = mk('SWITCH', 0, 480);
+  sw.forEach((s, i) => link(s, 0, g, i));
+  link(g, 0, r, 0); link(clk, 0, r, 1); link(rst, 0, r, 2);
+  drive(sw, [1,0,1,1]);                       // 11
+  eq(r.val, 0, 'rien tant qu’il n’y a pas de front');
+  clk.state = 1; sim();
+  eq(r.val, 11, 'valeur capturée au front montant');
+  drive(sw, [0,1,0,0]); clk.state = 0; sim();
+  eq(r.val, 11, 'la valeur reste figée entre deux fronts');
+  clk.state = 1; sim();
+  eq(r.val, 4, 'nouvelle capture');
+  rst.state = 1; sim();
+  eq(r.val, 0, 'remise à zéro au niveau');
+});
+
+T('T81 registre à décalage 8 bits : série vers parallèle', () => {
+  board();
+  const d = mk('SWITCH', 0, 0), clk = mk('SWITCH', 0, 100), rst = mk('SWITCH', 0, 200);
+  const sh = mk('SHIFT8', 300, 0);
+  link(d, 0, sh, 0); link(clk, 0, sh, 1); link(rst, 0, sh, 2);
+  rst.state = 1; sim(); rst.state = 0; sim();
+  const motif = [1,0,1,1,0,0,1,0];
+  motif.forEach(b => { d.state = b; clk.state = 0; sim(); clk.state = 1; sim(); });
+  eq(sh.val, parseInt(motif.join(''), 2), 'les 8 bits sont entrés en série');
+  sim();                                       // les sorties publient l’état après le commit
+  eq(sh.outPins[0].state, parseInt(motif.join(''), 2), 'disponibles en parallèle sur le bus');
+  eq(sh.outPins[1].state, motif[0], 'le premier bit entré ressort en série');
+  rst.state = 1; sim();
+  eq(sh.val, 0, 'remise à zéro');
+});
+
+T('T82 RAM 16 × 4 : écriture au front, lecture immédiate', () => {
+  board();
+  const sw = [0,1,2,3].map(i => mk('SWITCH', 0, i * 70));
+  const sd = [0,1,2,3].map(i => mk('SWITCH', 200, i * 70));
+  const gA = mk('GROUP', 400, 0), gD = mk('GROUP', 400, 300);
+  const W = mk('SWITCH', 0, 400), CK = mk('SWITCH', 0, 480);
+  const ram2 = mk('RAM16', 620, 0), out = mk('UNGROUP', 860, 0);
+  sw.forEach((s, i) => link(s, 0, gA, i));
+  sd.forEach((s, i) => link(s, 0, gD, i));
+  link(gA, 0, ram2, 0); link(gD, 0, ram2, 1); link(W, 0, ram2, 2); link(CK, 0, ram2, 3);
+  link(ram2, 0, out, 0);
+  const bits = v => [(v>>3)&1, (v>>2)&1, (v>>1)&1, v&1];
+  const ecrire = (a, v) => {
+    sw.forEach((s, i) => s.state = bits(a)[i]);
+    sd.forEach((s, i) => s.state = bits(v)[i]);
+    W.state = 1; CK.state = 0; sim(); CK.state = 1; sim(); W.state = 0; CK.state = 0; sim();
+  };
+  ecrire(3, 9); ecrire(10, 5); ecrire(0, 15);
+  const lire = a => { sw.forEach((s, i) => s.state = bits(a)[i]); sim(); return ram2.outPins[0].state; };
+  eq(lire(3), 9, 'case 3');
+  eq(lire(10), 5, 'case 10');
+  eq(lire(0), 15, 'case 0');
+  eq(lire(7), 0, 'case jamais écrite');
+  // sans W, le front n’écrit rien
+  sw.forEach((s, i) => s.state = bits(3)[i]);
+  sd.forEach((s, i) => s.state = bits(1)[i]);
+  CK.state = 0; sim(); CK.state = 1; sim();
+  eq(lire(3), 9, 'écriture refusée quand W=0');
+});
+
 /* ===================== 7. Interface & export ===================== */
 console.log('— Interface & export —');
 
