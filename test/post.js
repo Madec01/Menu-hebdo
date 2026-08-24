@@ -2238,6 +2238,210 @@ T('T127 glissière : le dessin et l’infobulle en parlent', () => {
   ok(!/glisse la barre/.test(compTipData(led).lines.join(' ')), 'rien à dire sur un composant sans réglage');
 });
 
+/* ===================== 6octies. Mesures et procédés ===================== */
+console.log('— Mesures & procédés —');
+
+T('T128 convention de commande : 1 = pleine puissance, valeur dosée = proportionnel', () => {
+  board();
+  const c = mk('AND', 0, 0);
+  const p = c.inPins[0];
+  p.state = 0;   eq(anaIn(p), 0, 'zéro');
+  p.state = 1;   eq(anaIn(p), 255, 'un interrupteur commande à fond');
+  p.state = 128; eq(anaIn(p), 128, 'valeur dosée respectée');
+  p.state = 999; eq(anaIn(p), 255, 'borné');
+});
+
+T('T129 chaque actionneur renvoie sa mesure', () => {
+  const attendu = {
+    MOTOR:['VIT','TR'], JACK:['S0','S1','POS'], VALVE:['DÉB'], PUMP:['DÉB'],
+    SERVO:['POS'], CUVE:['NIV','HAUT','BAS','PRES'], FOUR:['T°','CHAUD'],
+    AIR:['PRES','HAUT','BAS'], CONV:['VIT','PIÈCE'], STEPPER:['POS']
+  };
+  Object.keys(attendu).forEach(t => {
+    const d = REG[t];
+    ok(d, t + ' existe');
+    deq(d.outs.map(o => o.n), attendu[t], t + ' : sorties attendues');
+    ok(d.outs.some(o => o.bus), t + ' : au moins une mesure analogique');
+  });
+  // et la barrière historique aussi
+  board();
+  const b = mk('BARRIER', 0, 0), sw = mk('SWITCH', -200, 0);
+  link(sw, 0, b, 0);
+  eq(b.outputs, 1, 'la barrière a désormais une sortie d’angle');
+  sw.state = 1;
+  for (let i = 0; i < 60; i++){ sim(); drawScene(0); }
+  ok(b.outPins[0].state > 200, 'angle mesuré une fois ouverte (' + b.outPins[0].state + ')');
+});
+
+T('T130 moteur : vitesse avec inertie, tachymètre, commande dosée', () => {
+  board();
+  const pot = mk('POT', 0, 0), pwm = mk('PWM', 250, 0), m = mk('MOTOR', 500, 0);
+  const en = mk('HIGH', 0, 300);
+  link(pot, 0, pwm, 0); link(en, 0, pwm, 1); link(pwm, 0, m, 0);
+  applyInspector(m, fld('o_inert', 1));
+  applyInspector(pot, fld('o_val', 100));            // pleine commande
+  sim();
+  eq(Math.round(m.vit), 0, 'à l’arrêt au départ');
+  for (let i = 0; i < 3; i++){ __advance(200); sim(); }
+  ok(m.vit > 20 && m.vit < 250, 'la vitesse monte progressivement (' + Math.round(m.vit) + ')');
+  for (let i = 0; i < 30; i++){ __advance(200); sim(); }
+  ok(m.vit > 200, 'régime établi (' + Math.round(m.vit) + ')');
+  sim();
+  ok(m.outPins[0].state > 200, 'vitesse publiée sur le bus');
+  // le tachymètre compte les tours
+  const tours0 = m.tours;
+  for (let i = 0; i < 40; i++){ __advance(200); sim(); }
+  ok(m.tours > tours0, 'le tachymètre compte les tours (' + m.tours + ')');
+  // commande à mi-valeur : vitesse plus basse
+  applyInspector(pot, fld('o_val', 30));
+  for (let i = 0; i < 40; i++){ __advance(200); sim(); }
+  ok(m.vit < 150, 'commande réduite → vitesse réduite (' + Math.round(m.vit) + ')');
+  // arrêt
+  applyInspector(pot, fld('o_val', 0));
+  for (let i = 0; i < 40; i++){ __advance(200); sim(); }
+  eq(m.vit, 0, 'le moteur s’arrête');
+});
+
+T('T131 vérin et servo : la position se mesure', () => {
+  board();
+  const s = mk('SWITCH', 0, 0), j = mk('JACK', 300, 0), jauge = mk('JAUGE', 700, 0);
+  link(s, 0, j, 0); link(j, 2, jauge, 0);
+  applyInspector(j, fld('o_sec', 1));
+  s.state = 1;
+  for (let i = 0; i < 4; i++){ __advance(150); sim(); }
+  const pos = j.outPins[2].state;
+  ok(pos > 60 && pos < 220, 'position intermédiaire mesurée (' + pos + ')');
+  eq(jauge.raw, pos, 'la jauge reçoit la position');
+  ok(!j.outPins[0].state && !j.outPins[1].state, 'entre les deux fins de course');
+  for (let i = 0; i < 10; i++){ __advance(150); sim(); }
+  eq(j.outPins[2].state, 255, 'sorti : mesure au maximum');
+  eq(j.outPins[1].state, 1, 'et fin de course sorti');
+  // servo : consigne vs position réelle
+  board();
+  const pot = mk('POT', 0, 0), sv = mk('SERVO', 300, 0);
+  link(pot, 0, sv, 0);
+  applyInspector(pot, fld('o_val', 100));
+  sim();
+  eq(sv.outPins[0].state, 0, 'la mesure part de zéro même si la consigne est à fond');
+  for (let i = 0; i < 4; i++){ __advance(150); sim(); }
+  const p1 = sv.outPins[0].state;
+  ok(p1 > 10 && p1 < 250, 'le bras est en chemin (' + p1 + ')');
+  for (let i = 0; i < 15; i++){ __advance(150); sim(); }
+  ok(sv.outPins[0].state > 245, 'consigne atteinte');
+});
+
+T('T132 débits dosables : vanne, pompe et cuve', () => {
+  board();
+  const pot = mk('POT', 0, 0), v = mk('VALVE', 250, 0), pu = mk('PUMP', 250, 300);
+  link(pot, 0, v, 0); link(pot, 0, pu, 0);
+  applyInspector(pot, fld('o_val', 50)); sim();
+  const ouv = v.outPins[0].state;
+  ok(ouv > 100 && ouv < 160, 'vanne à demi ouverte → débit à demi (' + ouv + ')');
+  for (let i = 0; i < 10; i++){ __advance(150); sim(); }
+  ok(pu.outPins[0].state > 100 && pu.outPins[0].state < 160, 'pompe à mi-débit');
+  // cuve : un remplissage dosé est plus lent
+  board();
+  const sw = mk('SWITCH', 0, 0), cuve = mk('CUVE', 300, 0);
+  link(sw, 0, cuve, 0);
+  applyInspector(cuve, fld('o_debit', 40));
+  cuve.niv = 0; sw.state = 1;
+  for (let i = 0; i < 5; i++){ __advance(200); sim(); }
+  const plein = cuve.niv;
+  ok(plein > 25, 'à pleine commande, ça monte vite (' + Math.round(plein) + ' %)');
+  sim();                                       // les sorties publient l’état après le commit
+  eq(cuve.outPins[3].state, Math.round(cuve.niv * 2.55), 'la pression suit le niveau');
+  board();
+  const g = mk('GROUP', 0, 0), sw2 = [0,1,2,3].map(i => mk('SWITCH', -200, i * 70));
+  const cuve2 = mk('CUVE', 300, 0);
+  sw2.forEach((x, i) => link(x, 0, g, i));
+  link(g, 0, cuve2, 0);
+  applyInspector(cuve2, fld('o_debit', 40));
+  cuve2.niv = 0;
+  drive(sw2, [1,0,0,0]);                       // bus = 8 sur 15 → environ 3 % de la pleine commande
+  for (let i = 0; i < 5; i++){ __advance(200); sim(); }
+  ok(cuve2.niv < plein, 'commande dosée → remplissage plus lent (' + cuve2.niv.toFixed(1) + ' %)');
+});
+
+T('T133 réservoir d’air : compresseur, consommation et fuite', () => {
+  board();
+  const comp = mk('SWITCH', 0, 0), use = mk('SWITCH', 0, 200), air = mk('AIR', 300, 0);
+  link(comp, 0, air, 0); link(use, 0, air, 1);
+  applyInspector(air, fld('o_debit', 5)); applyInspector(air, fld('o_fuite', 0));
+  air.bar = 0; sim();
+  eq(air.outPins[2].state, 1, 'réservoir vide : seuil bas actif');
+  comp.state = 1;
+  for (let i = 0; i < 12; i++){ __advance(200); sim(); }
+  ok(air.bar > 7.5, 'le compresseur remplit (' + air.bar.toFixed(1) + ' bar)');
+  eq(air.outPins[1].state, 1, 'seuil haut atteint');
+  ok(air.outPins[0].state > 190, 'pression publiée sur le bus');
+  comp.state = 0; use.state = 1;
+  for (let i = 0; i < 12; i++){ __advance(200); sim(); }
+  ok(air.bar < 4, 'la consommation le vide (' + air.bar.toFixed(1) + ' bar)');
+  // la fuite seule fait baisser la pression
+  use.state = 0; air.bar = 8;
+  applyInspector(air, fld('o_fuite', 20));
+  for (let i = 0; i < 20; i++){ __advance(200); sim(); }
+  ok(air.bar < 8, 'même à l’arrêt, ça fuit (' + air.bar.toFixed(1) + ' bar)');
+});
+
+T('T134 convoyeur : vitesse mesurée et comptage des pièces', () => {
+  board();
+  const sw = mk('SWITCH', 0, 0), conv = mk('CONV', 300, 0);
+  const edge = mk('CNT4', 700, 0);
+  link(sw, 0, conv, 0); link(conv, 1, edge, 0);
+  applyInspector(conv, fld('o_esp', 1));            // une pièce par seconde
+  sw.state = 1;
+  for (let i = 0; i < 10; i++){ __advance(200); sim(); }
+  ok(conv.vit > 200, 'le tapis a pris sa vitesse (' + Math.round(conv.vit) + ')');
+  const n0 = conv.n;
+  for (let i = 0; i < 25; i++){ __advance(200); sim(); }
+  ok(conv.n > n0 + 2, 'des pièces sont sorties (' + conv.n + ')');
+  ok(edge.cval > 0, 'et le compteur les a comptées (' + edge.cval + ')');
+  sw.state = 0;
+  for (let i = 0; i < 15; i++){ __advance(200); sim(); }
+  eq(conv.vit, 0, 'tapis arrêté');
+  const n1 = conv.n;
+  for (let i = 0; i < 10; i++){ __advance(200); sim(); }
+  eq(conv.n, n1, 'plus aucune pièce à l’arrêt');
+});
+
+T('T135 enregistreur : deux voies échantillonnées dans le temps', () => {
+  board();
+  const pot = mk('POT', 0, 0), four = mk('FOUR', 250, 0), rec = mk('COURBE', 600, 0);
+  link(pot, 0, four, 0); link(four, 0, rec, 0); link(pot, 0, rec, 1);
+  applyInspector(rec, fld('o_duree', 30));
+  applyInspector(pot, fld('o_val', 100));
+  applyInspector(four, fld('o_inert', 2));
+  eq(rec.buf1.length, 0, 'buffer vide au départ');
+  for (let i = 0; i < 40; i++){ __advance(200); sim(); }
+  ok(rec.buf1.length > 5, 'la voie 1 enregistre (' + rec.buf1.length + ' points)');
+  eq(rec.buf1.length, rec.buf2.length, 'les deux voies restent synchrones');
+  ok(rec.buf1[rec.buf1.length - 1] > rec.buf1[0], 'la température monte au fil du temps');
+  ok(rec.buf2.every(v => v === rec.buf2[0]), 'la consigne reste plate');
+  // la fenêtre borne le nombre de points
+  for (let i = 0; i < 400; i++){ __advance(200); sim(); }
+  ok(rec.buf1.length <= 180, 'fenêtre glissante bornée (' + rec.buf1.length + ')');
+  drawScene(0);
+});
+
+T('T136 boucle de vitesse : le tachymètre régule le moteur', () => {
+  board();
+  const m = mk('MOTOR', 600, 0), reg = mk('PROP', 200, 0), pwm = mk('PWM', 400, 0);
+  const en = mk('HIGH', 200, 400);
+  link(m, 0, reg, 0);                     // la vitesse mesurée revient au régulateur
+  link(reg, 0, pwm, 0); link(en, 0, pwm, 1); link(pwm, 0, m, 0);
+  applyInspector(reg, fld('o_cons', 150)); applyInspector(reg, fld('o_gain', 4));
+  applyInspector(m, fld('o_inert', .5));
+  applyInspector(pwm, fld('o_hz', 20));
+  for (let i = 0; i < 120; i++){ __advance(100); sim(); }
+  ok(m.vit > 100 && m.vit < 210, 'la vitesse se cale autour de la consigne (' +
+     Math.round(m.vit) + ' pour 150)');
+  // on augmente la consigne : la vitesse suit
+  applyInspector(reg, fld('o_cons', 220));
+  for (let i = 0; i < 120; i++){ __advance(100); sim(); }
+  ok(m.vit > 150, 'nouvelle consigne suivie (' + Math.round(m.vit) + ')');
+});
+
 /* ===================== 7. Guide ===================== */
 console.log('— Guide —');
 

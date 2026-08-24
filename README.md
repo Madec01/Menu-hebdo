@@ -1,7 +1,7 @@
 # Architecte Logique
 
 Jeu d'apprentissage de la logique numérique et de l'automatisme : des portes
-élémentaires jusqu'aux capteurs, aux régulateurs et aux automates. 130 missions
+élémentaires jusqu'aux capteurs, aux régulateurs et aux automates. 135 missions
 guidées, de « allume une ampoule » au processeur 1 bit, puis du thermostat au
 feu tricolore programmé.
 
@@ -12,7 +12,7 @@ progression, les puces, les sauvegardes et le bac à sable.
 
 ## Ce que contient le jeu
 
-**~84 composants** répartis en neuf familles, avec une recherche dans la barre
+**~87 composants** répartis en neuf familles, avec une recherche dans la barre
 d'outils :
 
 | Famille | Contenu |
@@ -25,7 +25,7 @@ d'outils :
 | Temps & automatisme | TON, TOF, impulsion calibrée, détecteur de fronts, mémoire SR, diviseur ÷N, chien de garde, machine à états |
 | Régulation | CAN, CNA, PWM, thermostat à hystérésis, Schmitt, limiteur, rampe, régulateur proportionnel |
 | Sorties | ampoule, afficheurs (hex, décimal, octet), LED RVB, matrice 8×8, oscilloscope, sonde, buzzer, note, jauge |
-| Actionneurs | relais, moteur, vérin à fins de course, électrovanne, pompe, sirène, pas-à-pas, servo, feu, barrière, **four** et **cuve** (procédés qui réagissent vraiment) |
+| Actionneurs & procédés | relais, moteur (vitesse + tachymètre), vérin (position + fins de course), électrovanne et pompe proportionnelles, sirène, pas-à-pas, servo, feu, barrière — et les procédés qui réagissent vraiment : **four**, **cuve**, **réservoir d'air comprimé**, **convoyeur** |
 
 **Le tuteur.** Pendant une mission, le panneau indique en direct combien de
 lignes de la table sont justes et laquelle cloche. Le bouton « Guide-moi sur le
@@ -33,6 +33,15 @@ schéma » calcule une solution complète (implicants premiers, couverture,
 conversion en base NAND ou NOR si la mission l'impose) et la pose en fantômes,
 étape par étape, en expliquant chaque geste. Désactivé sur les missions boîte
 noire.
+
+**Commander et mesurer.** Tout actionneur accepte la même commande en tout ou
+rien (`1` = pleine puissance) ou dosée (`2`…`255`, depuis un PWM, un CNA ou un
+régulateur), et **renvoie ce qu'il fait vraiment** : vitesse et tours d'un
+moteur, position d'un vérin ou d'un servo, débit d'une vanne, niveau et pression
+d'une cuve, angle d'une barrière. C'est ce retour qui permet de fermer une
+boucle — et l'**enregistreur de courbes** trace deux mesures dans le temps pour
+juger une régulation à sa forme : montée, dépassement, oscillation, écart
+résiduel.
 
 **Confort.** Infobulle au survol (état de chaque pin, réglages, valeur d'un
 câble), rotation par quarts de tour et miroir (`R`, `M`), noms de composants
@@ -52,7 +61,7 @@ concatène entre `test/pre.js` (stubs DOM / Canvas / Audio / localStorage, plus
 une horloge `Date.now` pilotable) et `test/post.js` (les tests), puis exécute le
 tout dans un contexte `vm`. Aucun navigateur, aucune dépendance npm.
 
-119 tests couvrent le moteur, le séquentiel, les blocs numériques, l'analogique
+133 tests couvrent le moteur, le séquentiel, les blocs numériques, l'analogique
 et la régulation (dont une boucle fermée four + thermostat), l'édition,
 l'orientation, les tunnels, les puces, l'interface, le balisage et le guide.
 Deux tests valident automatiquement **tout** nouveau composant du registre
