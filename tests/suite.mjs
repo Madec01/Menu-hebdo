@@ -1908,28 +1908,30 @@ cas("panneau-vivant", async (nav) => {
   // le bouton qu'on vient de cliquer reste `activeElement`, et bloquait tout.
   const r = await jeu(`(() => {
     vue.ongletActif = "stocks"; majOnglets(); majPanneau();
-    const lire = () => {
-      const l = [...document.querySelectorAll('#contenuPanneau .item')]
-        .find(e => /Pommes de terre/.test(e.textContent));
-      return l ? l.querySelector('.qte').textContent : null;
-    };
+    const ligne = () => [...document.querySelectorAll('#contenuPanneau .item.matiere')]
+      .find(e => /Pommes de terre/.test(e.textContent));
+    const lire = () => { const l = ligne(); return l ? l.querySelector('.qte').textContent : null; };
+    // Les réglages ne s'ouvrent qu'à la demande : on clique la ligne d'abord.
+    const replie = !document.querySelector('#contenuPanneau .btRang.serre');
+    ligne().click();
     const avant = lire();
-    const rang = document.querySelectorAll('#contenuPanneau .btRang')[0];
+    const rang = document.querySelector('#contenuPanneau .btRang.serre');
     const b = rang.querySelectorAll('button')[1];
     // Un vrai clic donne le focus au bouton : c'est ce qui bloquait tout.
     b.focus();
     const focus = document.activeElement.tagName;
     b.click();
     const apres = lire();
-    return { avant, apres, focus };
+    return { avant, apres, focus, replie };
   })()`);
+  v("une matière est repliée tant qu'on ne la choisit pas", r.replie);
   v.egal("on part de zéro", r.avant, "0,0 kg");
   v("le poids bouge tout de suite", r.apres !== r.avant, r.avant + " → " + r.apres);
   v.egal("alors que le focus est resté sur le bouton", r.focus, "BUTTON");
 
   // Mais un champ en cours de saisie reste protégé : c'était la raison du garde-fou.
   const champ = await jeu(`(() => {
-    sauterAge(2); vue.ongletActif = "stocks"; majPanneau();
+    sauterAge(2); vue.ongletActif = "stocks"; vue.stockOuvert = 'pdt_brutes'; majPanneau();
     const rg = reglageStock('pdt_brutes'); rg.mode = 'seuil'; majPanneau();
     const inp = document.querySelector('#contenuPanneau input[type=number]');
     if (!inp) return { ok:false, dit:"aucun champ" };
@@ -2023,6 +2025,163 @@ cas("onglets-progressifs", async (nav) => {
 
   await page.close();
   return { echecs: v.echecs.concat(erreurs), note: "4 onglets au départ, 8 à l'arrivée" };
+});
+
+cas("vendredi-cette-semaine", async (nav) => {
+  const { page, jeu, sim, erreurs } = await contexte(nav);
+  const v = verif();
+
+  // De quoi vendre au comptant : les commerces du coin passent tous les soirs.
+  await jeu(`(() => { sauterAge(3); ajouterStock('sachet', 600); })()`);
+
+  // Ce qui arrive dans la semaine attend le vendredi soir plutôt que d'interrompre.
+  const rangee = await jeu(`(() => {
+    const avant = document.querySelectorAll('#notifs > *').length;
+    evenement("Essai", "Un fait de la semaine.", "ok");
+    return { notifs: document.querySelectorAll('#notifs > *').length - avant,
+             dansLaSemaine: etat.stats.semaineCourante.evenements.length };
+  })()`);
+  v.egal("un événement ne dérange personne sur le moment", rangee.notifs, 0);
+  v.egal("il est rangé dans la semaine en cours", rangee.dansLaSemaine, 1);
+
+  // Le vendredi soir ouvre sur « Cette semaine » : les trois jauges et leur écart.
+  await sim(5);
+  const page1 = await jeu(`(() => {
+    const s = etat.stats.historiqueSemaines[etat.stats.historiqueSemaines.length-1];
+    const v2 = document.querySelector('#voletSemaine');
+    return {
+      volet: !!v2,
+      jauges: v2 ? v2.querySelectorAll('.jsBloc').length : 0,
+      lignes: v2 ? v2.querySelectorAll('.evLigne').length : 0,
+      avant: !!s.jaugesAvant, apres: !!s.jaugesApres,
+      garde: s.evenements.some(e => e.quoi === "Essai"),
+      texte: v2 ? v2.textContent : ""
+    };
+  })()`);
+  v("le vendredi s'ouvre sur la semaine", page1.volet);
+  v.egal("les trois jauges y sont", page1.jauges, 3);
+  v("l'événement de la semaine y a suivi", page1.garde);
+  v("et il est affiché", page1.lignes >= 1, page1.lignes + " lignes");
+  v("la semaine sait d'où et où elle est partie", page1.avant && page1.apres);
+
+  // La clôture appartient à la semaine qu'on présente, pas à la suivante.
+  const rangement = await jeu(`(() => {
+    const h = etat.stats.historiqueSemaines;
+    return { neuve: etat.stats.semaineCourante.evenements.map(e => e.quoi),
+             pleine: h[h.length-1].evenements.length };
+  })()`);
+  v("celle qu'on montre a gardé les siens", rangement.pleine >= 1);
+  v("et la semaine neuve ne les reprend pas", !rangement.neuve.includes("Essai"),
+    rangement.neuve.join(","));
+
+  // Les commerces du coin ne se disent plus tous les soirs : une fois, le vendredi.
+  const local = await jeu(`(() => {
+    const h = etat.stats.historiqueSemaines;
+    return h.some(s => s.evenements.some(e => e.quoi === "Commerces du coin"));
+  })()`);
+  v("les ventes au comptant se résument le vendredi", local);
+
+  await page.close();
+  return { echecs: v.echecs.concat(erreurs), note: page1.jauges + " jauges, événements rangés" };
+});
+
+cas("le-contremaitre-explique", async (nav) => {
+  const { page, jeu, erreurs } = await contexte(nav);
+  const v = verif();
+
+  // Chaque système qui s'ouvre lui vaut ses phrases, et il ne se tait plus après l'âge 1.
+  const table = await jeu(`(() => {
+    const parAge = {};
+    for (const l of LECONS) parAge[l.age] = (parAge[l.age]||0) + 1;
+    return { parAge, total: LECONS.length,
+             ids: new Set(LECONS.map(l => l.id)).size,
+             courtes: LECONS.filter(l => l.dit.length < 40).length };
+  })()`);
+  for (const a of [1,2,3,4,5])
+    v("l'âge " + a + " a de quoi être expliqué", (table.parAge[a]||0) >= 3,
+      (table.parAge[a]||0) + " leçons");
+  v.egal("aucune leçon en double", table.ids, table.total);
+  v.egal("et aucune phrase creuse", table.courtes, 0);
+
+  // Une leçon par jour, jamais deux, et jamais deux fois la même.
+  const rythme = await jeu(`(() => {
+    sauterAge(2); etat.meta.lecons = [];
+    const un = leconDuJour(), deux = leconDuJour();
+    // Sur une longue partie, il ne se répète jamais.
+    const dits = [un, deux].filter(Boolean);
+    for (let j=0;j<40;j++){ const l = leconDuJour(); if (l) dits.push(l); }
+    return { un, deux, dits, uniques: new Set(dits).size, memoire: etat.meta.lecons.length };
+  })()`);
+  v("il dit quelque chose dès le premier jour", !!rythme.un);
+  v("mais jamais deux fois la même", rythme.uniques === rythme.dits.length, rythme.dits.join(","));
+  v.egal("et il se souvient de tout ce qu'il a dit", rythme.memoire, rythme.dits.length);
+
+  // Il ne parle d'un système qu'une fois celui-ci ouvert.
+  const avance = await jeu(`(() => {
+    etat.meta.lecons = []; sauterAge(1);
+    const dits = [];
+    for (let j=0;j<12;j++){ const l = leconDuJour(); if (l) dits.push(l); }
+    return dits;
+  })()`);
+  v("à l'âge 1 il ne parle ni du labo ni de la marque",
+    !avance.some(id => /^labo_|^marq_|^conv_/.test(id)), avance.join(","));
+
+  // Et l'âge de la maison a sa réplique, ce qui n'était pas le cas.
+  const fin = await jeu(`(() => {
+    const d = [];
+    parle("");
+    for (const c of ["age2","age3","age4","age5"]){
+      paroleContexte(c, {});
+      d.push(document.querySelector('#bulleTexte').textContent.length);
+    }
+    return d;
+  })()`);
+  v("les quatre âges suivants ont leur mot", fin.every(n => n > 40), fin.join(","));
+
+  await page.close();
+  return { echecs: v.echecs.concat(erreurs), note: table.total + " leçons sur 5 âges" };
+});
+
+cas("pourquoi-ce-prix", async (nav) => {
+  const { page, jeu, erreurs } = await contexte(nav);
+  const v = verif();
+
+  await jeu(`sauterAge(3)`);
+
+  // Une commande dit d'où vient son prix : quel marché, et ce que la marque y pèse.
+  const mot = await jeu(`(() => {
+    const c = creerContrat('sachet');
+    return { prime: c.prime, mot: pourquoiPrix(c),
+             nomMarche: PALIERS.some(p => pourquoiPrix(c).startsWith(p.nom)) };
+  })()`);
+  v("le prix garde la trace de ce que la marque y a pesé", typeof mot.prime === "number", String(mot.prime));
+  v("et la carte nomme le marché", mot.nomMarche, mot.mot);
+  v("sans jargon", !/coefficient|multiplicateur|palier/i.test(mot.mot), mot.mot);
+
+  // Le standing se lit ligne par ligne, et la somme retombe sur la cible.
+  const det = await jeu(`(() => {
+    const d = detailStanding();
+    const somme = d.reduce((t,x) => t + x.valeur, 0);
+    return { lignes: d.length, somme, cible: cibleStanding(),
+             nommees: d.every(x => x.quoi.length > 5) };
+  })()`);
+  v("le standing se décompose", det.lignes >= 3, det.lignes + " lignes");
+  v("chaque ligne se nomme", det.nommees);
+  v.proche("et la somme est bien ce qu'on vise", Math.min(100, Math.max(0, det.somme)), det.cible, 0.6);
+
+  // Le changement de sachet se voit dans la décomposition.
+  const bouge = await jeu(`(() => {
+    const av = cibleStanding();
+    const haut = LOGOS.reduce((a,b) => (b.standing||0) > (a.standing||0) ? b : a);
+    etat.marque.logo = haut.id;
+    return { av, ap: cibleStanding(),
+             cite: detailStanding().some(x => x.quoi.includes(haut.nom)) };
+  })()`);
+  v("un logo plus chic monte la cible", bouge.ap > bouge.av, bouge.av + " → " + bouge.ap);
+  v("et il est nommé dans la décomposition", bouge.cite);
+
+  await page.close();
+  return { echecs: v.echecs.concat(erreurs), note: det.lignes + " lignes de standing" };
 });
 
 /* ============================================================== Exécution ==*/

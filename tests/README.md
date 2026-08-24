@@ -45,6 +45,9 @@ La suite sort en code 1 si un cas échoue.
 | `rupture-et-pret` | à sec, le jeu propose d'acheter — et d'emprunter s'il n'y a plus rien |
 | `panneau-vivant` | un achat se voit tout de suite, une saisie en cours n'est pas écrasée |
 | `onglets-progressifs` | quatre onglets au départ, huit à l'arrivée, chacun annoncé une fois |
+| `vendredi-cette-semaine` | ce qui se juge à la semaine attend le vendredi, et s'y lit d'un coup |
+| `le-contremaitre-explique` | chaque âge a ses leçons, une par jour, jamais deux fois la même |
+| `pourquoi-ce-prix` | une commande dit d'où vient son prix, le standing se décompose |
 
 ## Les invariants, aussi dans le jeu
 

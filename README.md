@@ -102,18 +102,27 @@ sachets se comptent à l'unité.
   la ligne sort par seconde, et combien de kilos de pommes de terre il faut
   réellement pour un kilo de chips vendables (la recette en demande 4,8 ; tout
   ce qui dépasse est du gâchis ou de l'en-cours).
-- **Réapprovisionnement programmable** : pour chaque matière, le seuil de
-  déclenchement et la taille du lot se règlent, avec le rappel de ce que
-  l'atelier consomme par jour et de ce que le lot coûtera.
+- **Réapprovisionnement programmable** : chaque matière tient sur une ligne —
+  son prix, ce qu'il en reste, combien de jours d'avance, comment elle se
+  recommande — et ne déplie ses boutons d'achat et son réglage que si on la
+  choisit. Trois réglages seulement : à la main, au seuil, chaque semaine.
 - Ouvriers simulés individuellement : déplacement A\*, portage au bac roulant,
   tenue de poste, fatigue, moral, compétences qui montent, embauche et
   démission. Un ouvrier lâche son poste quand un poste en aval crie famine.
 - Trésorerie complète (salaires, loyer, électricité, emprunts, découvert,
   dépôt de bilan), marché des matières fluctuant, commandes avec délai et
   pénalité de retard, réputation, vente du surplus aux commerces du coin
-- Phase de décision du vendredi soir : bilan, graphique, 4 décisions maximum,
-  jauge d'objectif
-- Le contremaître, qui porte tout le didacticiel et tout le diagnostic
+- **Le vendredi soir, une page « Cette semaine »** : les trois jauges de la
+  marque et ce qu'elles ont gagné ou perdu, puis tout ce qui s'est passé sans
+  vous déranger — un marché qui s'ouvre, un client devenu fidèle ou parti, un
+  label décroché ou menacé, le coup du concurrent, ce que les commerces du coin
+  ont pris. En dessous le bilan, le graphique, et 4 décisions maximum.
+  **Seul l'immédiat interrompt** (une panne, une livraison, une rupture) ; tout
+  ce qui se juge à la semaine attend le vendredi, où ça se lit d'un coup.
+- Le contremaître, qui porte tout le didacticiel et tout le diagnostic — et
+  **qui ne se tait pas après l'âge 1** : chaque système qui s'ouvre (les
+  convoyeurs, la qualité, la marque, le laboratoire, les cadres) lui vaut trois
+  phrases, dites une par jour et seulement quand la situation s'y prête.
 - Un **onglet Guide** : schéma de la chaîne, fiche de chaque recette, prix de
   revient matière par produit, tableau des machines, et dix sections
   dépliables sur les mécaniques (le temps, l'argent, les commandes, l'équipe,
@@ -153,6 +162,11 @@ sachets se comptent à l'unité.
   standing ; la centrale d'achat veut du volume et **se ferme si la marque est
   trop chic**. On ne peut pas être les deux, et c'est tout le jeu. Un marché
   fermé dit toujours ce qui lui manque, un marché ouvert ce qu'il paie.
+- **Aucune jauge n'est un chiffre tombé du ciel** : chaque commande porte, sous
+  le nom du client, le marché d'où il vient et ce que la marque a pesé dans son
+  prix ; et l'onglet Marque décompose le standing ligne à ligne — ce que vaut le
+  logo, le sachet, le nom, et le fait de vendre au-dessus ou en dessous du prix
+  courant.
 - **Des clients qui se souviennent** : livré à l'heure et sans réclamation
   plusieurs fois de suite, un client devient fidèle — il revient plus souvent,
   commande plus gros, paie mieux. Déçu deux fois, il part chez le concurrent et
@@ -283,12 +297,16 @@ réelles** à la vitesse ×1.
 
 ## Tests
 
-`node tests/suite.mjs` pilote le jeu dans un vrai navigateur : trente cas qui
+`node tests/suite.mjs` pilote le jeu dans un vrai navigateur : trente-trois cas qui
 couvrent le didacticiel, la chaîne, la conservation de la matière, le réseau de
 convoyeurs, la qualité, les modes, les cinq âges, les auto-vérifications, la
 sauvegarde, le rythme, la performance, la recherche, le raccord entre bandes,
 les quais et rangements, les bâtiments d'équipe, la cour, le garde-manger du
-labo, les raccords courts, les croisements, l'équipe, les stocks, la marque, les labels, le concurrent, les clients, les cadres, la fin de partie, la vitesse du jeu, les ruptures de stock et l'ouverture progressive du panneau. Voir [`tests/README.md`](tests/README.md).
+labo, les raccords courts, les croisements, l'équipe, les stocks, la marque,
+les labels, le concurrent, les clients, les cadres, la fin de partie, la
+vitesse du jeu, les ruptures de stock, l'ouverture progressive du panneau, la
+page du vendredi soir, les leçons du contremaître et la lisibilité des prix.
+Voir [`tests/README.md`](tests/README.md).
 
 ## Organisation du code
 

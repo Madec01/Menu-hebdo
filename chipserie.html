@@ -127,20 +127,23 @@ input,select{font:inherit;color:inherit}
 }
 #panneau.replie{flex-basis:44px}
 #panneau.replie .ongletsLabel,#panneau.replie #contenuPanneau{display:none}
-#onglets{display:flex;flex-wrap:wrap;border-bottom:1px solid var(--bord);background:var(--fond)}
-#onglets button{
-  flex:1 1 auto;padding:11px 3px;font-size:10.5px;letter-spacing:0;color:var(--texte-faible);
-  white-space:nowrap;
-  border-bottom:2px solid transparent;transition:color .12s,border-color .12s,background .12s;
+#onglets{
+  display:flex;flex-wrap:wrap;gap:3px;padding:7px 9px;background:var(--fond);
+  border-bottom:1px solid var(--bord);
 }
-#onglets button:hover{color:var(--texte-doux);background:var(--fond2)}
-#onglets button.actif{color:var(--or);border-bottom-color:var(--or);background:var(--fond2)}
+#onglets button{
+  flex:0 1 auto;padding:5px 9px;font-size:11px;color:var(--texte-faible);
+  white-space:nowrap;border-radius:999px;background:transparent;border:1px solid transparent;
+  transition:color .12s,background .12s,border-color .12s;
+}
+#onglets button:hover{color:var(--texte);background:var(--fond3)}
+#onglets button.actif{color:#241b03;background:var(--or);border-color:var(--or);font-weight:600}
 @keyframes ongletNeuf{
-  0%,100%{ color:var(--or); border-bottom-color:transparent }
-  50%    { color:var(--or); border-bottom-color:var(--or) }
+  0%,100%{ color:var(--texte-faible); border-color:transparent }
+  50%    { color:var(--or);           border-color:var(--or) }
 }
 #onglets button.neuf{animation:ongletNeuf 1.1s ease-in-out 8}
-#contenuPanneau{flex:1;overflow-y:auto;padding:14px}
+#contenuPanneau{flex:1;overflow-y:auto;padding:14px 14px 22px}
 
 /* barres de défilement discrètes */
 ::-webkit-scrollbar{width:9px;height:9px}
@@ -149,13 +152,22 @@ input,select{font:inherit;color:inherit}
 ::-webkit-scrollbar-thumb:hover{background:#4c545e}
 
 /* ---------- Briques d'interface ---------- */
-h2.titrePan{font-size:16px;font-weight:600;margin-bottom:3px}
-p.sousTitre{font-size:12px;color:var(--texte-faible);margin-bottom:12px}
-.bloc{background:var(--fond3);border:1px solid var(--bord);border-radius:var(--r);padding:11px;margin-bottom:10px}
-.bloc h3{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--texte-faible);margin-bottom:8px;font-weight:600}
-.ligne{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:3px 0;font-size:13px}
-.ligne .k{color:var(--texte-doux)}
-.ligne .v{font-variant-numeric:tabular-nums;font-weight:600}
+h2.titrePan{font-size:17px;font-weight:600;margin-bottom:3px;letter-spacing:-.01em}
+p.sousTitre{font-size:12px;color:var(--texte-faible);margin-bottom:16px}
+/* Un bloc n'est plus une boîte dans une boîte : un fond à peine posé, un titre
+   fin, et de l'air entre les groupes. C'est l'air qui sépare, pas les traits. */
+.bloc{background:var(--fond3);border-radius:var(--r);padding:12px 13px;margin-bottom:14px}
+.bloc h3{
+  font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--texte-faible);
+  font-weight:700;margin:-1px 0 9px;padding-bottom:7px;border-bottom:1px solid rgba(255,255,255,.05);
+}
+.ligne{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:4px 0;font-size:13px}
+/* Une phrase entière ne se met pas en colonne de droite : elle passe dessous. */
+.ligne.longue{display:block}
+.ligne.longue .v{display:block;text-align:left;margin-top:1px;font-weight:600}
+/* La clé garde sa ligne, c'est la valeur qui passe à la ligne si besoin. */
+.ligne .k{color:var(--texte-doux);flex:1 1 auto;min-width:0}
+.ligne .v{font-variant-numeric:tabular-nums;font-weight:600;flex:0 1 auto;text-align:right}
 .vide{color:var(--texte-faible);font-size:12.5px;font-style:italic;padding:8px 0}
 
 .bt{
@@ -285,6 +297,16 @@ p.sousTitre{font-size:12px;color:var(--texte-faible);margin-bottom:12px}
 .champTexte:focus{outline:none;border-color:var(--or)}
 
 /* ---------- Listes du panneau ---------- */
+/* Une matière se lit d'un coup d'œil et ne montre ses réglages que si on la
+   choisit : le panneau reste une liste, pas un mur de boutons. */
+.item.matiere{cursor:pointer;padding:8px 6px;margin:0 -6px;border-radius:6px;transition:background .12s}
+.item.matiere:hover{background:rgba(255,255,255,.035)}
+.item.matiere.ouvert{background:var(--fond);border-bottom-color:transparent}
+.item.matiere.court .qte{color:var(--or)}
+.item .chevron{color:var(--texte-faible);font-size:15px;transition:transform .15s;line-height:1}
+.item.matiere.ouvert .chevron{transform:rotate(90deg)}
+.btRang.serre{margin-top:5px}
+.btRang.serre .bt{padding:5px 4px;font-size:11.5px}
 .item{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.045)}
 .item:last-child{border-bottom:none}
 .puce{width:16px;height:16px;border-radius:3px;flex:0 0 16px;border:1px solid rgba(0,0,0,.35)}
@@ -302,6 +324,26 @@ table.tab th{text-align:left;font-size:10px;letter-spacing:.09em;text-transform:
 table.tab td{padding:5px 6px;border-top:1px solid rgba(255,255,255,.05);font-variant-numeric:tabular-nums}
 table.tab tr:hover td{background:rgba(255,255,255,.028)}
 .sousVolet{font-size:11.5px;color:var(--texte-faible);line-height:1.45;margin-bottom:9px}
+
+/* ---------- Vendredi soir : cette semaine ---------- */
+.jaugesSemaine{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px}
+.jsBloc{background:var(--fond3);border:1px solid var(--bord);border-radius:var(--r);padding:9px 11px}
+.jsNom{font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--texte-faible)}
+.jsVal{font-size:22px;font-weight:600;line-height:1.1;margin:2px 0 6px;font-variant-numeric:tabular-nums}
+.jsDelta{font-size:11px;color:var(--texte-faible);margin-top:5px}
+.jsDelta.haut{color:var(--vert)}
+.jsDelta.bas{color:var(--rouge)}
+.evSemaine{display:flex;flex-direction:column}
+.evLigne{
+  display:flex;gap:12px;align-items:baseline;padding:7px 0 7px 11px;
+  border-left:2px solid var(--bord);
+}
+.evLigne + .evLigne{border-top:1px solid rgba(255,255,255,.04)}
+.evLigne.ok{border-left-color:var(--vert)}
+.evLigne.att{border-left-color:var(--or)}
+.evLigne.ko{border-left-color:var(--rouge)}
+.evQuoi{flex:0 0 34%;font-size:12.5px;font-weight:600;color:var(--texte-doux)}
+.evTexte{flex:1;font-size:12px;color:var(--texte-faible);line-height:1.45}
 .puceTab{display:inline-block;width:8px;height:8px;border-radius:2px;vertical-align:middle}
 
 /* ---------- La rupture de stock ---------- */
@@ -376,6 +418,13 @@ table.tab tr:hover td{background:rgba(255,255,255,.028)}
   border-radius:4px;font-size:11.5px;font-variant-numeric:tabular-nums;text-align:right;
 }
 .reapproNb:focus{outline:none;border-color:var(--or)}
+/* Le « pourquoi » d'un prix ou d'un chiffre, dit juste à côté de lui. */
+.blocMot{font-size:11.5px;color:var(--texte-faible);line-height:1.45;margin-bottom:7px}
+.motPrix{font-size:10.5px;color:var(--or);margin:-2px 0 7px;opacity:.85}
+.carte .cOrigine{font-size:11.5px;color:var(--or);margin:-2px 0 6px;opacity:.9}
+.ligne.totalStanding{margin-top:5px;padding-top:6px;border-top:1px solid var(--bord)}
+.ligne.totalStanding .k{font-weight:600}
+.ligne.totalStanding .v{font-weight:600;color:#9b6dc9}
 .reapproNote{margin-top:5px;font-size:10.5px;color:var(--texte-faible);line-height:1.4}
 .reapproNote.alerte{color:var(--or)}
 .modesReappro{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px}
@@ -1445,6 +1494,73 @@ const ONGLETS = [
   { id:"guide",     nom:"Guide" }
 ];
 
+/* --------------------------------------------------------- Les leçons
+   Le contremaître ne se tait pas après l'âge 1. Chaque système qui s'ouvre lui
+   vaut trois phrases, dites une par jour, et seulement quand la situation s'y
+   prête : on explique un convoyeur à quelqu'un qui vient d'en poser un, pas à
+   quelqu'un qui n'en a pas. Une leçon ne se dit qu'une fois (§3.3). */
+const LECONS = [
+  /* --- l'atelier, âge 1 --- */
+  { id:"base_vendredi", age:1,
+    quand: () => etat.stats.historiqueSemaines.length >= 1,
+    dit:"Le vendredi soir, c'est là que tout se décide, patron. Une commande signée vaut mieux que trois sachets vendus au coin de la rue." },
+  { id:"base_operateur", age:1,
+    quand: () => U().machines.some(m => m.etat === "sans_operateur"),
+    dit:"Une machine sans personne devant ne tourne pas. Cliquez dessus, ou prenez le bouton qui place tout le monde d'un coup." },
+  { id:"base_stock", age:1,
+    quand: () => etat.stats.historiqueSemaines.length >= 2,
+    dit:"Regardez ce qu'on consomme dans l'onglet Stocks avant de commander. On rachète sur des chiffres, pas au feeling." },
+
+  /* --- les convoyeurs, âge 2 --- */
+  { id:"conv_poser", age:2,
+    dit:"Les bandes, maintenant. On clique sur une machine, puis sur la suivante, et je fais passer la marchandise toute seule. Plus personne à porter des bacs." },
+  { id:"conv_croiser", age:2,
+    quand: () => U().convoyeurs.length >= 2,
+    dit:"Deux bandes qui se rencontrent, vous choisissez : se brancher, et tout part au même endroit ; se croiser, et chacune garde sa route. Le bouton est dans la barre du bas." },
+  { id:"conv_debit", age:2,
+    quand: () => U().machines.some(m => m.etat === "sortie_pleine"),
+    dit:"Ça bouchonne quelque part. Une bande ne fait pas de miracle : si l'aval ne suit pas, il faut une deuxième machine, pas un deuxième convoyeur." },
+
+  /* --- la qualité, âge 3 --- */
+  { id:"qual_huile", age:3,
+    quand: () => U().machines.some(m => MACHINES[m.type].bainHuile),
+    dit:"L'huile, patron. Elle brunit, et plus elle brunit, plus on jette. Un clic sur la friteuse et je refais le bain." },
+  { id:"qual_tri", age:3,
+    dit:"Une table de tri à la sortie, ça écarte le raté avant qu'il parte chez le client. Ça coûte moins cher qu'une réclamation." },
+  { id:"qual_proprete", age:3,
+    quand: () => U().salete > 0.35,
+    dit:"Un atelier propre, ça se voit dans les sachets et dans le moral. Le bouton de nettoyage est dans l'onglet Détail." },
+
+  /* --- la marque, âge 3 --- */
+  { id:"marq_ouvre", age:3,
+    dit:"On existe assez pour avoir une tête, patron. Onglet Marque : le logo, le sachet, le nom. C'est ce que les clients voient avant nos chips." },
+  { id:"marq_standing", age:3,
+    quand: () => etat.stats.historiqueSemaines.length >= 4,
+    dit:"Le standing, c'est la place qu'on nous donne dans le rayon. On le monte en soignant le sachet et en refusant de brader." },
+  { id:"marq_marches", age:3,
+    quand: () => paliersOuverts().length >= 2,
+    dit:"Chaque marché regarde autre chose. La centrale veut du volume et se méfie du chic ; l'épicerie fine, c'est l'inverse. On ne peut pas plaire à tout le monde." },
+
+  /* --- le laboratoire, âge 4 --- */
+  { id:"labo_ouvre", age:4,
+    dit:"On ne va pas fabriquer toute notre vie ce que les autres ont inventé. Un bureau d'études, et on met au point nos propres recettes." },
+  { id:"labo_accords", age:4,
+    quand: () => etat.recherche && etat.recherche.recettes.length >= 1,
+    dit:"Certains ingrédients vont ensemble, d'autres se battent. Le jury le sent tout de suite — lisez ses commentaires avant de relancer une étude." },
+  { id:"labo_tendance", age:4,
+    quand: () => etat.stats.historiqueSemaines.length >= 8,
+    dit:"La mode tourne toutes les six semaines. Une recette qui colle à ce que les gens cherchent en ce moment se vend nettement mieux." },
+
+  /* --- la maison, âge 5 --- */
+  { id:"maison_cadres", age:5,
+    dit:"On est trop gros pour que vous teniez tout, patron. Un bureau, quelqu'un dedans, et il s'occupe d'une chose à ma place." },
+  { id:"maison_labels", age:5,
+    dit:"Les labels, ça se mérite sur la durée : on tient une condition plusieurs semaines, puis on paie l'audit. Après, le client paie plus cher sans discuter." },
+  { id:"maison_rival", age:5,
+    quand: () => etat.rival && partMarche() < 0.5,
+    dit:"En face, ils prennent du rayon. On ne les rattrape pas en baissant les prix : on les rattrape en étant connus et en tenant nos délais." }
+];
+
 /* ---------------------------------------------------------------- Les cadres
    Trois postes de bureau. Chacun coûte cher tous les jours et occupe un bureau
    d'études — donc embaucher un cadre, c'est renoncer à une étude plus rapide. */
@@ -1595,6 +1711,7 @@ const vue = {
   alpha:0,               // interpolation entre deux ticks
   secousse:0,
   panneauReplie:false,
+  stockOuvert:null,      // la matière dont on a déplié les réglages
   filesAttenteBulle:[]
 };
 
@@ -1715,6 +1832,7 @@ function nouvellePartie(nomEntreprise, modeChoisi){
       vitesse: 0,
       vitesseAvant: 1,        // la vitesse qu'on rend au joueur après un écran
       ongletsVus: [],         // les onglets déjà annoncés
+      lecons: [],             // ce que le contremaître a déjà expliqué
       age: 1,
       prochainId: 2,          // 1 et 2 sont réservés aux deux quais
       dernierJourTraite: -1,
@@ -1811,6 +1929,27 @@ function cibleStanding(){
   c += bonusStandingLabels();
   return clamp(c, 0, 100);
 }
+
+/** Le même calcul, mais ligne par ligne : le joueur doit pouvoir lire d'où
+ *  vient sa place dans le rayon, sinon la jauge n'est qu'un chiffre (§3.2). */
+function detailStanding(){
+  const m = etat.marque;
+  if (!m) return [];
+  const q = (t,id,def) => t.find(x => x.id === id) || def;
+  const lg = q(LOGOS, m.logo, null), mo = q(MOTIFS_SACHET, m.motif, null);
+  const fo = q(FONDS_SACHET, m.fond, null), st = q(STYLES_NOM, m.styleNom, null);
+  const l = [{ quoi:"Une maison qui débute", valeur:40 }];
+  if (lg) l.push({ quoi:"Logo « " + lg.nom + " »", valeur: lg.standing || 0 });
+  if (mo) l.push({ quoi:"Sachet « " + mo.nom + " »", valeur: mo.standing || 0 });
+  if (fo) l.push({ quoi:"Fond « " + fo.nom + " »", valeur: fo.standing || 0 });
+  if (st) l.push({ quoi:"Nom « " + st.nom + " »", valeur: st.standing || 0 });
+  const prix = clamp((m.primePrix - 1) * 90, -22, 22);
+  l.push({ quoi: prix >= 0 ? "Vous vendez au-dessus du prix courant" : "Vous vendez en dessous du prix courant",
+           valeur: prix });
+  for (const lb of labelsObtenus())
+    if (lb.standing) l.push({ quoi:"Label « " + lb.nom + " »", valeur: lb.standing });
+  return l;
+}
 /** Le concurrent démarre plus connu que vous : il était là avant. */
 function creerRival(){
   const r = choix(RIVAUX);
@@ -1838,9 +1977,11 @@ function surcoutMatiere(){
 
 function semaineVierge(){
   return { produits:{}, livres:{}, ca:0, depenses:0, depensesParMotif:{},
+           evenements:[],  // ce qu'on racontera vendredi soir, plutôt qu'en passant
            achats:{},      // ce qu'on a fait livrer, par matière
            coutAchats:{},  // et ce que ça a coûté
            consommes:{},   // ce que les machines ont avalé
+           venteLocale:0,  // ce que les commerces du coin ont pris au fil des jours
            pannes:0, retards:0, rebuts:0, reclamations:0, faits:[] };
 }
 
@@ -3153,6 +3294,7 @@ function debutJournee(){
   for (const m of u.machines) m.produitAujourdhui = 0;
   majMarche();
   reapprovisionner();
+  leconDuJour();
 }
 
 function finJournee(){
@@ -3162,7 +3304,7 @@ function finJournee(){
   const dus = etat.finances.creances.filter(c => c.jour <= jourCourant());
   for (const c of dus){
     encaisser(c.montant, "vente");
-    notif("Paiement reçu", c.client + " a réglé " + euros(c.montant) + ".", "ok");
+    evenement("Paiement reçu", c.client + " a réglé " + euros(c.montant) + ".", "ok");
     son("argent");
   }
   etat.finances.creances = etat.finances.creances.filter(c => c.jour > jourCourant());
@@ -3213,10 +3355,6 @@ function finJournee(){
   u.salete = clamp(u.salete + 0.012 + u.machines.length*0.0015, 0, 1);
   alerterSalete(saleteAvant, u.salete);
 
-  // 6. Rupture de matière : le joueur ne doit pas la découvrir en voyant
-  //    ses machines à l'arrêt (§3.2 — le problème s'annonce).
-  alerterRupture();
-
   // 7. État de la caisse
   verifierFaillite();
 
@@ -3236,6 +3374,10 @@ function finJournee(){
   // En dernier : la semaine vient d'être bouclée et les commandes proposées,
   // donc les onglets qui en dépendent peuvent s'ouvrir dès ce soir.
   verifierOnglets();
+
+  // La rupture de matière ferme la marche : c'est le seul écran qui peut
+  // attendre un jour, et il ne doit jamais s'empiler sur le vendredi soir.
+  alerterRupture();
 }
 
 /** Ce que l'atelier consomme d'une matière en une journée pleine : sert à
@@ -3343,7 +3485,7 @@ function majMoral(){
 function alerterSalete(avant, apres){
   const seuil = (s, v) => avant < v && apres >= v;
   if (seuil(avant, 0.5)){
-    notif("L'atelier se salit", "Ça pèse sur le moral, et sur ce qui sort des machines. Un nettoyage s'impose.", "att");
+    evenement("L'atelier se salit", "Ça pèse sur le moral, et sur ce qui sort des machines. Un nettoyage s'impose.", "att");
     parle("Patron, l'atelier est dans un état. L'équipe le voit, et ça se retrouve dans les sachets. Onglet Détail, il y a un bouton pour nettoyer.", 12000);
   } else if (seuil(avant, 0.8)){
     notif("L'atelier est crasseux", "L'équipe parle de partir. Nettoyez avant de perdre du monde.", "ko");
@@ -3654,6 +3796,18 @@ function motPalier(p){
 
 function paliersOuverts(){ return PALIERS.filter(palierOuvert); }
 
+/** Pourquoi ce client-là paie ce prix-là. Une ligne, sans jargon. */
+function pourquoiPrix(c){
+  const p = palierParId(c.palier || "local");
+  const pct = Math.round(((c.prime != null ? c.prime : 1) - 1) * 100);
+  let mot;
+  if (pct >= 4) mot = "+" + pct + " % pour votre marque";
+  else if (pct <= -4) mot = pct + " % : votre marque ne pèse pas encore";
+  else mot = "au prix courant";
+  if (c.fidelite >= 2) mot += ", client fidèle";
+  return p.nom + " · " + mot;
+}
+
 /** Ce que ce palier consent à payer, d'après ce à quoi il tient. */
 function primePalier(p){
   const w = p.poids;
@@ -3693,6 +3847,9 @@ function creerContrat(produitId){
   return {
     id: nouvelId(),
     client: cl.nom, ton: cl.ton, palier: cl.palier || "local", fidelite: fid,
+    // Ce que la marque a pesé dans ce prix-là, figé au moment de l'offre :
+    // c'est ce qu'on montrera sur la carte pour fermer la boucle du « pourquoi ».
+    prime: primePalier(pal),
     produitId, quantite, livre:0,
     prixUnitaire,
     dateLimite: jourCourant() + semaines*CONFIG.joursParSemaine,
@@ -3763,15 +3920,20 @@ function livrerContrats(){
     c.livre += q;
 
     const montant = q * c.prixUnitaire;
+    // Quand l'envoi solde la commande, « Commande honorée » suit dans la foulée
+    // et dit la même chose en mieux : on se tait ici (§3.2, moins de bruit).
+    const acheve = c.livre >= c.quantite;
     if (c.paiement){
       etat.finances.creances.push({ montant, jour: jourCourant() + c.paiement, client: c.client });
-      notif("Expédition", quantiteItem(c.produitId, q, true) + " partis chez " + c.client +
-            " · " + euros(montant) + " payés dans " + c.paiement + " jours.", "");
+      if (!acheve)
+        notif("Expédition", quantiteItem(c.produitId, q, true) + " partis chez " + c.client +
+              " · " + euros(montant) + " payés dans " + c.paiement + " jours.", "");
     } else {
       encaisser(montant, "vente");
       flottant(U().quaiSortie.x+1, U().quaiSortie.y+1, "+" + Math.round(montant) + " €", "#5cba6b");
       son("argent");
-      notif("Expédition", quantiteItem(c.produitId, q, true) + " partis chez " + c.client + " : " + euros(montant) + ".", "ok");
+      if (!acheve)
+        notif("Expédition", quantiteItem(c.produitId, q, true) + " partis chez " + c.client + " : " + euros(montant) + ".", "ok");
     }
     compter(etat.progression.vendus, c.produitId, q);
     compter(etat.stats.semaineCourante.livres, c.produitId, q);
@@ -3798,7 +3960,7 @@ function livrerContrats(){
         fic.serie++;
         fic.ratees = 0;
         if (fic.serie === 4)
-          notif("Un client fidèle", c.client + " ne travaille plus qu'avec vous. " +
+          evenement("Un client devient fidèle", c.client + " ne travaille plus qu'avec vous. " +
                 "Attendez-vous à de plus gros volumes.", "ok");
       } else {
         fic.serie = 0;
@@ -3807,7 +3969,8 @@ function livrerContrats(){
           fic.bouderie = 6;
           fic.ratees = 0;
           if (etat.rival) etat.rival.avance = clamp((etat.rival.avance||0) + 0.05, -0.15, 0.2);
-          notif("Un client s'en va", c.client + " part chez " + (etat.rival ? etat.rival.nom : "la concurrence") +
+          evenement("Un client s'en va", c.client + " part chez " +
+                (etat.rival ? etat.rival.nom : "la concurrence") +
                 ". Il ne reproposera rien avant six semaines.", "ko");
           fait(c.client + " est parti chez le concurrent");
           son("refus");
@@ -3847,7 +4010,7 @@ function reserveContrats(produitId){
  *  Ils ne prennent que du bon : la marchandise ratée reste sur les bras. */
 function vendreSurplus(){
   if (!etat.venteAuto) return;
-  let total = 0, detail = [];
+  let total = 0;
   for (const id in ITEMS){
     if (!ITEMS[id].vente) continue;
     const surplus = Math.floor(stockDe(id) - reserveContrats(id));
@@ -3859,34 +4022,56 @@ function vendreSurplus(){
     compter(etat.progression.vendus, id, surplus);
     compter(etat.stats.semaineCourante.livres, id, surplus);
     total += prix;
-    detail.push(quantiteItem(id, surplus, true));
+    etat.stats.semaineCourante.venteLocale = (etat.stats.semaineCourante.venteLocale || 0) + prix;
   }
   if (total > 0){
     flottant(U().quaiSortie.x+1, U().quaiSortie.y+1, "+" + Math.round(total) + " €", "#5cba6b");
     son("argent");
-    notif("Commerces du coin", detail.join(", ") + " partis pour " + euros(total) + ".", "ok");
   }
 }
 
 /* ------------------------------------------------------- Fin de semaine */
 function fait(t){ etat.stats.semaineCourante.faits.push(t); }
 
+/* Un événement de la semaine. Il ne dérange pas le joueur quand il arrive :
+   il attend le vendredi soir, où tout se lit d'un coup. Les notifications
+   restent pour l'immédiat — une panne, une livraison, une rupture. */
+function evenement(quoi, texte, ton){
+  etat.stats.semaineCourante.evenements.push({ quoi, texte, ton: ton || "" });
+}
+
+/** Les trois jauges à un instant donné, pour pouvoir dire ce qui a bougé. */
+function jauges(){
+  return { notoriete: notoriete(), confiance: confianceEffective(), standing: standing() };
+}
+
 function finSemaine(){
   const s = etat.stats.semaineCourante;
   s.semaine = semaineCourante();
   s.resultat = s.ca - s.depenses;
   s.solde = etat.finances.solde;
+
+  // La clôture appartient à la semaine qu'on va présenter : on la fait avant de
+  // tourner la page, pour que ses événements s'affichent au bon endroit.
+  if (s.venteLocale > 0)
+    evenement("Commerces du coin", "Ils ont pris pour " + euros(s.venteLocale) +
+              " de marchandise cette semaine, sans commande.", "");
+
+  s.jaugesAvant = etat.meta.jaugesDebut || jauges();
+  majLabels();
+  majStanding(s);
+  majRival();
+  majCadres();
+  majClients();
+  s.jaugesApres = jauges();
+  etat.meta.jaugesDebut = s.jaugesApres;
+
   etat.stats.historiqueSemaines.push(s);
   if (etat.stats.historiqueSemaines.length > 60) etat.stats.historiqueSemaines.shift();
 
   etat.stats.semaineCourante = semaineVierge();
   etat.progression.produitsSemaine = {};
   livraisonHebdo();          // la livraison du lundi, pour qui l'a choisie
-  majLabels();
-  majStanding(s);
-  majRival();
-  majCadres();
-  majClients();
 
   // Nouvelles propositions de commande
   const produits = Object.keys(ITEMS).filter(id => ITEMS[id].vente && (ITEMS[id].ageMin||1) <= etat.meta.age);
@@ -3947,7 +4132,8 @@ function majRival(){
     r.standing  = clamp(r.standing  + (c.standing||0), 0, 100);
     r.avance = clamp((r.avance||0) + (c.part||0), -0.15, 0.2);
     fait(r.nom + " " + c.texte);
-    notif("Chez le concurrent", r.nom + " " + c.texte + ".", (c.part||0) > 0 ? "att" : "");
+    evenement("Chez le concurrent", r.nom + " " + c.texte + ".",
+              (c.part||0) > 0 ? "att" : "ok");
   }
   r.avance = (r.avance || 0) * 0.85;      // un coup s'estompe
   r.part = clamp(1 - partMarche() + r.avance, 0.1, 0.9);
@@ -4002,15 +4188,14 @@ function majLabels(){
     if (m.ok){
       L.suite[l.id] = (L.suite[l.id] || 0) + 1;
       if (!labelObtenu(l.id) && L.suite[l.id] === l.semaines)
-        notif("Label à portée", "« " + l.nom + " » est tenu depuis " + l.semaines +
+        evenement("Un label est à portée", "« " + l.nom + " » est tenu depuis " + l.semaines +
               " semaines. L'auditeur peut passer — onglet Marque.", "ok");
     } else {
       L.suite[l.id] = 0;
       if (labelObtenu(l.id)){
         L.obtenus = L.obtenus.filter(x => x !== l.id);
-        notif("Label perdu", "« " + l.nom + " » ne tient plus : " + m.dit + ".", "ko");
+        evenement("Un label est perdu", "« " + l.nom + " » ne tient plus : " + m.dit + ".", "ko");
         fait("Label « " + l.nom + " » perdu");
-        son("refus");
       }
     }
   }
@@ -4059,8 +4244,12 @@ function majStanding(semaine){
   const avant = m.standing;
   m.standing = clamp(m.standing + (cibleStanding() - m.standing) * 0.28, 0, 100);
   const d = m.standing - avant;
-  if (Math.abs(d) >= 3)
+  if (Math.abs(d) >= 3){
     fait(d > 0 ? "La marque est montée en gamme" : "La marque est descendue en gamme");
+    evenement(d > 0 ? "La marque monte en gamme" : "La marque descend en gamme",
+      "Standing " + Math.round(avant) + " → " + Math.round(m.standing) + ". " +
+      motStanding(m.standing), d > 0 ? "ok" : "att");
+  }
   // Un palier qui s'ouvre est une nouvelle qui mérite d'être dite.
   const ouverts = paliersOuverts().map(p => p.id);
   m.paliersConnus = m.paliersConnus || [];
@@ -4068,7 +4257,7 @@ function majStanding(semaine){
   m.paliersConnus = ouverts;
   for (const id of neufs){
     const p = palierParId(id);
-    notif("Un marché s'ouvre", "« " + p.nom + " » vous accepte désormais. " + p.resume, "ok");
+    evenement("Un marché s'ouvre", "« " + p.nom + " » vous accepte désormais. " + p.resume, "ok");
     fait("Le marché « " + p.nom + " » s'ouvre");
   }
 }
@@ -4494,10 +4683,9 @@ function verifierDeblocages(annoncer){
   if (annoncer && neufs.length){
     const noms = neufs.slice(0,3).map(o => o.nom).join(", ") +
                  (neufs.length > 3 ? " et " + (neufs.length-3) + " autres" : "");
-    notif("Le garde-manger s'agrandit",
+    evenement("Le garde-manger s'agrandit",
           neufs.length + " " + pluriel(neufs.length,"nouvel ingrédient","nouveaux ingrédients") +
           " au labo : " + noms + ".", "ok");
-    son("valide");
   }
   return neufs;
 }
@@ -4750,7 +4938,7 @@ function majTendance(){
   while (n === avant) n = hasardInt(0, TENDANCES.length-1);
   etat.recherche.tendance = n;
   if (etat.meta.age >= 4){
-    notif("Le marché bouge", tendanceCourante().texte, "att");
+    evenement("Le marché bouge", tendanceCourante().texte, "att");
     parle(tendanceCourante().texte + " Une recette qui colle à ça se vendra mieux.", 11000);
   }
 }
@@ -6762,9 +6950,26 @@ function paroleContexte(cle, d){
     reclamation:d.client + " nous renvoie de la marchandise ratée. Faut trier avant d'expédier, patron, sinon on va tous les perdre.",
     age3:       "Les gros clients arrivent, et eux, ils regardent ce qu'il y a dans le carton. Il va falloir trier — et surveiller l'huile.",
     age2:       "On a cassé le mur du fond. Convoyeurs, tambour d'assaisonnement, ensacheuse — et le sachet, qui rapporte bien plus que le vrac.",
+    age4:       "On sort de l'artisanat, patron. Un bureau d'études, et on invente nos recettes au lieu de refaire celles des autres.",
+    age5:       "Voilà une maison, une vraie. Des cadres pour tenir ce que je ne peux plus tenir, des labels pour qu'on nous croie sur parole.",
     fin_contenu:"Voilà, on a fait le tour de ce qui est bâti. L'hygiène, la saison, les autres sites : ça viendra. En attendant, faites tourner."
   }[cle];
   if (p) parle(p, 12000);
+}
+
+/** Une leçon par jour, jamais deux, et seulement quand la situation s'y prête.
+ *  C'est ce qui fait que le contremaître continue d'apprendre le jeu au joueur
+ *  bien après l'âge 1, sans jamais l'assommer d'un bloc de texte (§3.3). */
+function leconDuJour(){
+  const vues = etat.meta.lecons || (etat.meta.lecons = []);
+  for (const l of LECONS){
+    if (l.age > etat.meta.age || vues.includes(l.id)) continue;
+    if (l.quand && !l.quand()) continue;
+    vues.push(l.id);
+    parle(l.dit, 13000);
+    return l.id;
+  }
+  return null;
 }
 
 /** Le diagnostic à la demande : le contremaître lit l'usine pour le joueur. */
@@ -7325,7 +7530,7 @@ function verifierOnglets(){
     const neuf = etat.meta.ongletsVus.length > 0;   // au tout début, on n'annonce rien
     etat.meta.ongletsVus.push(o.id);
     if (!neuf || !o.dit) continue;
-    notif("Un onglet s'ouvre", "« " + o.nom + " » — " + o.dit, "ok");
+    evenement("Un onglet s'ouvre", "« " + o.nom + " » — " + o.dit, "ok");
     parle(o.dit, 12000);
     const b = document.querySelector('#onglets button[data-o="' + o.id + '"]');
     if (b){ b.classList.add("neuf"); setTimeout(() => b.classList.remove("neuf"), 12000); }
@@ -7371,9 +7576,9 @@ function bouton(texte, action, classe){
   b.onclick = action;
   return b;
 }
-function ligne(k, v, classe){
+function ligne(k, v, classe, classeLigne){
   const d = document.createElement("div");
-  d.className = "ligne";
+  d.className = "ligne" + (classeLigne ? " " + classeLigne : "");
   d.innerHTML = '<span class="k"></span><span class="v '+(classe||"")+'"></span>';
   d.querySelector(".k").textContent = k;
   d.querySelector(".v").textContent = v;
@@ -7907,16 +8112,30 @@ function panneauStocks(z){
     if (!it.achat || (it.ageMin||1) > etat.meta.age) continue;
     const p = prixAchat(id);
     const tend = p > it.achat*1.05 ? "tendHausse" : p < it.achat*0.95 ? "tendBaisse" : "";
+    // Une matière tient sur une ligne. Six boutons par matière, c'était un mur :
+    // on ne déplie les réglages que de celle qu'on regarde.
+    const ouvert = vue.stockOuvert === id;
+    const rp0 = debloque("reappro") ? reglageStock(id) : { mode:"aucun" };
+    const auto0 = autonomieDe(id);
     const l = document.createElement("div");
-    l.className = "item";
-    l.innerHTML = '<span class="puce"></span><span class="nom"></span><span class="qte"></span>';
+    l.className = "item matiere" + (ouvert ? " ouvert" : "") + (auto0 < 2 ? " court" : "");
+    l.innerHTML = '<span class="puce"></span><span class="nom"></span>'+
+                  '<span class="qte"></span><span class="chevron">›</span>';
     l.querySelector(".puce").style.background = it.couleur;
-    l.querySelector(".nom").innerHTML = it.nom + '<br><span class="sub">' +
-      '<span class="'+tend+'">'+ nb(p,2) + ' € ' + (it.unite === "kg" ? 'le kg' : 'pièce') + '</span></span>';
+    const sous = [];
+    sous.push('<span class="'+tend+'">'+ nb(p,2) + ' € ' + (it.unite === "kg" ? 'le kg' : 'pièce') + '</span>');
+    if (auto0 < 0.05) sous.push("à sec");
+    else if (isFinite(auto0)) sous.push(nb(auto0,1) + " " + pluriel(auto0,"jour") + " d'avance");
+    if (rp0.mode === "seuil") sous.push("au seuil");
+    else if (rp0.mode === "hebdo") sous.push("chaque lundi");
+    l.querySelector(".nom").innerHTML = it.nom + '<br><span class="sub">' + sous.join(" · ") + '</span>';
     l.querySelector(".qte").textContent = mesure(id, stockDe(id));
+    l.onclick = () => { vue.stockOuvert = ouvert ? null : id; majPanneau(); };
     bm.appendChild(l);
+    if (!ouvert) continue;
+
     const r = document.createElement("div");
-    r.className = "btRang";
+    r.className = "btRang serre";
     // On achète par lots qui ont un sens : des centaines de kilos, ou des pièces.
     const lots = it.unite === "kg" ? [50,200,500] : [10,50,100];
     for (const q of lots)
@@ -7964,12 +8183,11 @@ function panneauStocks(z){
         phrase("En faire livrer", champ(rp.hebdo, v => rp.hebdo = v), u2 + " chaque lundi.");
 
       if (rp.mode !== "aucun"){
-        const parJour = uneJourneeDe(id)*2, auto = autonomieDe(id);
+        const parJour = uneJourneeDe(id)*2;
         const note = elem('<div class="reapproNote"></div>');
         note.textContent =
-          "L'atelier en consomme environ " + mesure(id, parJour) + " par jour" +
-          (isFinite(auto) ? ", il y a de quoi tenir " + nb(auto,1) + " " + pluriel(auto,"jour") : "") +
-          ". La livraison coûtera " + euros((rp.mode === "hebdo" ? rp.hebdo : rp.lot) * prixAchat(id)) + ".";
+          "L'atelier en consomme environ " + mesure(id, parJour) + " par jour. La livraison coûtera " +
+          euros((rp.mode === "hebdo" ? rp.hebdo : rp.lot) * prixAchat(id)) + ".";
         bloc.appendChild(note);
         const br = document.createElement("div");
         br.className = "btRang";
@@ -8020,7 +8238,7 @@ function panneauPersonnel(z){
     f.appendChild(info);
     b.appendChild(f);
 
-    b.appendChild(ligne("En ce moment", texteEtatOuvrier(o)));
+    b.appendChild(ligne("En ce moment", texteEtatOuvrier(o), "", "longue"));
     const jm = elem('<div><div style="font-size:11px;color:var(--texte-faible)">Moral</div><div class="jauge vert"><i></i></div></div>');
     jm.querySelector("i").style.width = Math.round(o.moral*100)+"%";
     if (o.moral < 0.35) jm.querySelector(".jauge").className = "jauge rouge";
@@ -8266,7 +8484,9 @@ function panneauCommandes(z){
   z.appendChild(ba);
 
   // Les clients se souviennent : qui revient, qui boude.
-  const connus = Object.keys(etat.stats.clients).filter(n => CLIENTS.some(c => c.nom === n));
+  // Un client dont on n'a jamais rien livré n'a rien à dire : on ne l'affiche pas.
+  const connus = Object.keys(etat.stats.clients).filter(n => CLIENTS.some(c => c.nom === n))
+    .filter(n => { const f = etat.stats.clients[n]; return f.commandes > 0 || f.ca > 0 || f.bouderie > 0; });
   if (connus.length){
     const bf = blocTitre("Vos clients");
     bf.appendChild(elem('<div style="font-size:11.5px;color:var(--texte-faible);line-height:1.4;margin-bottom:7px">'+
@@ -8293,9 +8513,15 @@ function panneauCommandes(z){
     const bp = blocTitre("Sur le bureau");
     bp.appendChild(elem('<div style="font-size:12px;color:var(--texte-faible);margin-bottom:6px">'+
       'On décide vendredi soir.</div>'));
-    for (const c of etat.contrats.proposes)
-      bp.appendChild(elem('<div class="ligne"><span class="k">'+c.client+'</span><span class="v">'+
-        quantiteItem(c.produitId,c.quantite,true)+'</span></div>'));
+    for (const c of etat.contrats.proposes){
+      const l = elem('<div class="ligne"><span class="k"></span><span class="v"></span></div>');
+      l.querySelector(".k").textContent = c.client;
+      l.querySelector(".v").textContent = quantiteItem(c.produitId,c.quantite,true);
+      bp.appendChild(l);
+      const o = elem('<div class="motPrix"></div>');
+      o.textContent = pourquoiPrix(c);
+      bp.appendChild(o);
+    }
     z.appendChild(bp);
   }
 
@@ -8471,6 +8697,7 @@ function ouvrirVendredi(bilan){
         <div class="sous">Semaine ${bilan.semaine+1} · ${etat.meta.nomEntreprise}</div>
       </div>
       <div class="volet bandeauObjectif" id="voletObjectif"></div>
+      <div class="volet" id="voletSemaine"></div>
       <div class="volets">
         <div class="volet" id="voletBilan"></div>
         <div class="volet" id="voletDecisions"></div>
@@ -8480,6 +8707,10 @@ function ouvrirVendredi(bilan){
         <button class="bt plein" id="btLancer" style="padding:13px 34px">Lancer la semaine</button>
       </div>
     </div>`;
+
+  /* --- Volet 0 : ce qui s'est passé. C'est ici qu'atterrit tout ce qui se
+         ratait en notifications pendant la semaine. --- */
+  remplirCetteSemaine($("#voletSemaine"), bilan);
 
   /* --- Volet 1 : le bilan --- */
   const vb = $("#voletBilan");
@@ -8659,12 +8890,13 @@ function construireDecisions(){
 function carteDecision(d){
   const c = document.createElement("div");
   c.className = "carte";
-  let type = "", titre = "", corps = "", avis = "", actions = [];
+  let type = "", titre = "", corps = "", avis = "", origine = "", actions = [];
 
   if (d.sorte === "contrat"){
     const k = d.contrat;
     type = "Commande"; c.classList.add();
     titre = k.client;
+    origine = pourquoiPrix(k);
     corps = quantiteItem(k.produitId, k.quantite, false) +
             " à " + euros(k.prixUnitaire) + (ITEMS[k.produitId].unite === "kg" ? " le kg" : " pièce") +
             ", soit " + euros(k.quantite*k.prixUnitaire) + ". " +
@@ -8707,10 +8939,13 @@ function carteDecision(d){
   }
 
   const classe = { contrat:"tContrat", rh:"tRh", achat:"tAchat", banque:"tBanque", invest:"tInvest" }[d.sorte];
-  c.innerHTML = '<div class="cType '+classe+'"></div><div class="cTitre"></div><div class="cCorps"></div>' +
+  c.innerHTML = '<div class="cType '+classe+'"></div><div class="cTitre"></div>' +
+                (origine ? '<div class="cOrigine"></div>' : '') +
+                '<div class="cCorps"></div>' +
                 (avis ? '<div class="cAvis"></div>' : '');
   c.querySelector(".cType").textContent = type;
   c.querySelector(".cTitre").textContent = titre;
+  if (origine) c.querySelector(".cOrigine").textContent = origine;
   c.querySelector(".cCorps").textContent = corps;
   if (avis) c.querySelector(".cAvis").textContent = "« " + avis + " »";
 
@@ -9030,6 +9265,63 @@ function fermerRupture(){
   majPanneau();
 }
 
+
+/* ====================================================== Cette semaine
+   Le vendredi soir est le battement du jeu : c'est là qu'on lit ce qui a
+   bougé. Les trois jauges d'abord, puis les événements, dans l'ordre où ils
+   sont arrivés. Rien n'est calculé ici — tout a été noté au fil de la semaine. */
+function remplirCetteSemaine(v, bilan){
+  const ev = bilan.evenements || [];
+  const av = bilan.jaugesAvant, ap = bilan.jaugesApres;
+  v.innerHTML = "<h2>Cette semaine</h2>";
+
+  /* --- les trois jauges et leur mouvement --- */
+  if (av && ap){
+    const rang = document.createElement("div");
+    rang.className = "jaugesSemaine";
+    const une = (nom, a, b, teinte) => {
+      const d = b - a;
+      const e = document.createElement("div");
+      e.className = "jsBloc";
+      e.innerHTML = '<div class="jsNom"></div><div class="jsVal"></div>' +
+                    '<div class="jauge" style="height:6px"><i></i></div><div class="jsDelta"></div>';
+      e.querySelector(".jsNom").textContent = nom;
+      e.querySelector(".jsVal").textContent = Math.round(b);
+      const i = e.querySelector("i");
+      i.style.width = clamp(b,0,100) + "%";
+      i.style.background = teinte;
+      const dd = e.querySelector(".jsDelta");
+      if (Math.abs(d) < 0.5){ dd.textContent = "stable"; }
+      else {
+        dd.textContent = (d > 0 ? "+" : "−") + Math.abs(Math.round(d)) + " cette semaine";
+        dd.classList.add(d > 0 ? "haut" : "bas");
+      }
+      rang.appendChild(e);
+    };
+    une("Notoriété", av.notoriete, ap.notoriete, "#e2b62c");
+    une("Confiance", av.confiance, ap.confiance, "#5cba6b");
+    une("Standing",  av.standing,  ap.standing,  "#9b6dc9");
+    v.appendChild(rang);
+  }
+
+  /* --- ce qui est arrivé --- */
+  if (!ev.length){
+    v.appendChild(elem('<div class="vide">Semaine tranquille. Rien à signaler.</div>'));
+    return;
+  }
+  const liste = document.createElement("div");
+  liste.className = "evSemaine";
+  for (const e of ev){
+    const l = document.createElement("div");
+    l.className = "evLigne " + (e.ton || "");
+    l.innerHTML = '<div class="evQuoi"></div><div class="evTexte"></div>';
+    l.querySelector(".evQuoi").textContent = e.quoi;
+    l.querySelector(".evTexte").textContent = e.texte;
+    liste.appendChild(l);
+  }
+  v.appendChild(liste);
+}
+
 /* ============================================================================
    UI — onglet Guide
    Tout est calculé à partir de DONNÉES : recettes, rendements et prix de
@@ -9296,8 +9588,14 @@ function SECTIONS_GUIDE(){
   { titre:"Le temps qui passe", corps:
     "<p>Une journée de travail fait <b>8 heures</b>, et dure <b>40 secondes</b> à la vitesse ×1. "+
     "La semaine fait <b>5 jours</b>, du lundi au vendredi.</p>"+
-    "<p>Vendredi 17 h, tout s'arrête : c'est le <b>bilan de la semaine</b>. On y voit ce qui est rentré, "+
-    "ce qui est sorti, et on y prend au plus quatre décisions. La partie est enregistrée à ce moment-là.</p>"+
+    "<p>Vendredi 17 h, tout s'arrête : c'est le <b>bilan de la semaine</b>. Il s'ouvre sur "+
+    "<b>Cette semaine</b> — les trois jauges de la marque et ce qu'elles ont gagné ou perdu, puis "+
+    "tout ce qui s'est passé sans vous déranger : un marché qui s'ouvre, un client devenu fidèle ou "+
+    "parti, un label décroché ou menacé, le coup du concurrent, ce que les commerces du coin ont "+
+    "pris. En dessous, ce qui est rentré, ce qui est sorti, et au plus quatre décisions. La partie "+
+    "est enregistrée à ce moment-là.</p>"+
+    "<p>C'est voulu : <b>seul l'immédiat vous interrompt</b> — une panne, une livraison, une rupture. "+
+    "Tout ce qui se juge à la semaine attend le vendredi, où ça se lit d'un coup.</p>"+
     "<p>On peut mettre en pause quand on veut avec <kbd>Espace</kbd> et construire tranquillement.</p>" },
 
   { titre:"L'argent", corps:
@@ -9450,7 +9748,11 @@ function SECTIONS_GUIDE(){
     "écouler vous fait connaître et vous descend en gamme ; monter en gamme vous ferme la grande "+
     "surface.</p>"+
     "<p>Un marché fermé dit toujours ce qui lui manque. Un marché ouvert dit ce qu'il paie, au-dessus "+
-    "ou en dessous du prix courant.</p>"+
+    "ou en dessous du prix courant. Et <b>chaque commande porte son pourquoi</b> : sous le nom du "+
+    "client, le marché d'où il vient et ce que votre marque a pesé dans son prix.</p>"+
+    "<p>De même pour le standing : l'onglet Marque le décompose ligne à ligne — ce que vaut le logo, "+
+    "le sachet, le nom, et le fait de vendre au-dessus ou en dessous du prix courant. Aucune jauge "+
+    "n'est un chiffre tombé du ciel.</p>"+
     "<p><b>Les labels</b> ne s'achètent pas, ils se tiennent. Chacun demande une condition dans "+
     "l'atelier — un sol propre, du matériel entretenu, peu de rebut, une huile jamais fatiguée, une "+
     "matière achetée aux producteurs du bassin — tenue plusieurs semaines de suite. Quand c'est le "+
@@ -9467,7 +9769,9 @@ function SECTIONS_GUIDE(){
     "en grand sur le mur de l'atelier — c'est votre usine, ça se voit.</p>" },
 
   { titre:"Les stocks et le réapprovisionnement", corps:
-    "<p>Onglet <b>Stocks</b>. Chaque matière se règle d'un seul choix, et il n'y en a que trois :</p>"+
+    "<p>Onglet <b>Stocks</b>. Chaque matière tient sur une ligne — son prix, ce qu'il en reste, "+
+    "combien de jours d'avance, comment elle se recommande. Un clic dessus déplie ses boutons "+
+    "d'achat et son réglage. Il n'y a que trois réglages :</p>"+
     "<p><b>À la main</b> — rien n'arrive tout seul, vous commandez quand vous voulez.<br>"+
     "<b>Au seuil</b> — <i>quand il en reste moins de tant, en faire livrer tant</i>. C'est ce qu'il "+
     "faut quand la consommation est irrégulière : on ne tombe jamais en panne.<br>"+
@@ -9534,7 +9838,10 @@ function SECTIONS_GUIDE(){
     "<li>Goutte de sueur sur un ouvrier : <b>il fatigue</b>. Bras croisés : <b>il n'a rien à faire</b>.</li>"+
     "</ul>"+
     "<p>Le survol d'une machine donne l'essentiel en trois lignes. La fiche complète est dans l'onglet "+
-    "Détail. Et le contremaître, en bas à gauche, répond toujours si on lui clique dessus.</p>" },
+    "Détail. Et le contremaître, en bas à gauche, répond toujours si on lui clique dessus.</p>"+
+    "<p>Il ne se tait pas non plus après les premiers jours : chaque fois qu'un système s'ouvre — les "+
+    "convoyeurs, la qualité, la marque, le laboratoire, les cadres — il l'explique en quelques phrases, "+
+    "une par jour, et seulement quand la situation s'y prête. Il ne répète jamais.</p>" },
 
   { titre:"Sauvegarder", corps:
     "<p>La partie est enregistrée <b>automatiquement</b> à chaque fin de semaine, et en quittant la page.</p>"+
@@ -10980,6 +11287,25 @@ function panneauMarque(z){
           ". Il montera semaine après semaine."
         : "Attention : vos choix tirent le standing vers " + Math.round(cible) + ". Il va redescendre.";
   z.appendChild(bj);
+
+  /* --- d'où vient le standing : jamais un chiffre sans son pourquoi --- */
+  const bd = blocTitre("D'où vient votre place dans le rayon");
+  bd.appendChild(elem('<div class="blocMot">Le standing vise ' + Math.round(cible) +
+    '. Il s\'en rapproche un peu chaque semaine.</div>'));
+  for (const d of detailStanding()){
+    if (Math.abs(d.valeur) < 0.5 && d.valeur !== 40) continue;
+    const l = elem('<div class="ligne"><span class="k"></span><span class="v"></span></div>');
+    l.querySelector(".k").textContent = d.quoi;
+    const v = l.querySelector(".v");
+    v.textContent = (d.valeur > 0 ? "+" : "") + Math.round(d.valeur);
+    if (d.valeur > 0 && d.valeur !== 40) v.style.color = "var(--vert)";
+    else if (d.valeur < 0) v.style.color = "var(--rouge)";
+    bd.appendChild(l);
+  }
+  const lt = elem('<div class="ligne totalStanding"><span class="k">Ce que ça vise</span><span class="v"></span></div>');
+  lt.querySelector(".v").textContent = Math.round(cible) + " / 100";
+  bd.appendChild(lt);
+  z.appendChild(bd);
 
   /* --- les marchés --- */
   const bm = blocTitre("Les marchés");
