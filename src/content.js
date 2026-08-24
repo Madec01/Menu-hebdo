@@ -21,7 +21,7 @@ window.CORE = window.CORE || {};
     { id: 'B-09', name: 'Surregime',   icon: '!>', color: '#ffce3d', dur: 12, weight: 8,
       desc: 'Vitesse x2, consommation x3', tiers: [2, 2.4, 3],
       apply: function (s, t) { s.speed *= t; s.burn *= 3; } },
-    { id: 'B-14', name: 'Sablier fele', icon: '[]', color: '#5ff0e0', dur: 10, weight: 5,
+    { id: 'B-14', name: 'Sablier fele', icon: '[]', color: '#5ff0e0', dur: 10, weight: 5, lock: 'sablier',
       desc: 'Le chrono se fige', tiers: [10, 13, 16], freeze: true, apply: function () {} }
   ];
 
@@ -110,7 +110,7 @@ window.CORE = window.CORE || {};
     { id: 'U-03', fam: 'RESERVOIR', name: 'Goutte a goutte', rar: 1, max: 2,
       desc: 'Chaque bloc de minerai rend 1 L', flag: 'oreFuel', apply: function () {} },
 
-    { id: 'U-05', fam: 'RESERVOIR', name: 'Recuperateur', rar: 1, max: 1,
+    { id: 'U-05', fam: 'RESERVOIR', name: 'Recuperateur', rar: 1, max: 1, lock: 'recuperateur',
       desc: 'Chaque chute de 10 m rend 3 L : tomber devient une ressource',
       flag: 'fallFuel', apply: function () {} },
 
@@ -130,7 +130,7 @@ window.CORE = window.CORE || {};
       desc: 'La roche qui te tombe dessus se transforme en minerai',
       flag: 'scavenger', apply: function () {} },
 
-    { id: 'T-04', fam: 'TERRAIN', name: 'Casse-cou', rar: 1, max: 1,
+    { id: 'T-04', fam: 'TERRAIN', name: 'Casse-cou', rar: 1, max: 1, lock: 'cassecou',
       desc: '+40 % de vitesse tant que la Faille est a moins de 15 lignes',
       flag: 'daredevil', apply: function () {} },
 
@@ -142,15 +142,15 @@ window.CORE = window.CORE || {};
       desc: 'Integrite +1',
       apply: function (s, n) { s.hpBonus = (s.hpBonus || 0) + n; } },
 
-    { id: 'P-09', fam: 'PILOTAGE', name: 'Foreuse gravitationnelle', rar: 2, max: 1,
+    { id: 'P-09', fam: 'PILOTAGE', name: 'Foreuse gravitationnelle', rar: 2, max: 1, lock: 'gravitationnelle',
       desc: 'En chute, on fore vers le bas a pleine vitesse sans ralentir',
       flag: 'gravDrill', apply: function () {} },
 
-    { id: 'L-02', fam: 'LEGENDAIRE', name: 'Noyau instable', rar: 2, max: 1,
+    { id: 'L-02', fam: 'LEGENDAIRE', name: 'Noyau instable', rar: 2, max: 1, lock: 'instable',
       desc: 'Tous les 60 m, une explosion creuse un rayon de 5',
       flag: 'unstable', apply: function () {} },
 
-    { id: 'L-06', fam: 'LEGENDAIRE', name: 'Perpetuel', rar: 2, max: 1,
+    { id: 'L-06', fam: 'LEGENDAIRE', name: 'Perpetuel', rar: 2, max: 1, lock: 'perpetuel',
       desc: 'L\'elan ne retombe jamais a l\'interieur d\'un niveau',
       flag: 'perpetual', apply: function (s) { s.elanLoss = 0; } }
   ];
@@ -189,10 +189,12 @@ window.CORE = window.CORE || {};
       apply: function (s, n) { s.fuelMax += 40 * n; } },
     { id: 'injection', name: 'Injection propre', desc: 'Consommation -15 %', cost: 280, growth: 1.8, max: 5,
       apply: function (s, n) { s.burn *= Math.pow(0.85, n); } },
-    { id: 'elargisseur', name: 'Elargisseur', desc: 'Largeur +1', cost: 620, growth: 2.4, max: 4,
+    { id: 'elargisseur', name: 'Elargisseur', desc: 'Largeur +1', cost: 620, growth: 2.4, max: 4, lock: 'elargisseur',
       apply: function (s, n) { s.width += n; } },
     { id: 'chenilles', name: 'Chenilles', desc: 'Deplacement +2,5', cost: 160, growth: 1.6, max: 6,
-      apply: function (s, n) { s.roll += 2.5 * n; s.climb += 1.5 * n; } }
+      apply: function (s, n) { s.roll += 2.5 * n; s.climb += 1.5 * n; } },
+    { id: 'stellaire', name: 'Tete stellaire', desc: 'Force +9', cost: 900, growth: 2.1, max: 6,
+      lock: 'stellaire', apply: function (s, n) { s.force += 9 * n; } }
   ];
 
   /* ------------------------------------------------------------- METIERS */
@@ -204,7 +206,13 @@ window.CORE = window.CORE || {};
     { id: 'MT-3', name: 'Le Chanceux', desc: '50 % de bonus en plus dans la roche',
       apply: function (s) { s.luck *= 1.5; } },
     { id: 'MT-9', name: 'Le Camionneur', desc: 'Reservoir +60 L, consommation -20 %',
-      apply: function (s) { s.fuelMax += 60; s.burn *= 0.8; } }
+      lock: 'camionneur', apply: function (s) { s.fuelMax += 60; s.burn *= 0.8; } },
+    { id: 'MT-6', name: 'Le Tunnelier', desc: 'Largeur 4 d\'entree de jeu, vitesse -25 %',
+      lock: 'tunnelier', apply: function (s) { s.width += 2; s.speed *= 0.75; } },
+    { id: 'MT-7', name: 'Le Parieur', desc: 'Demarre une couche plus bas, sans passif de depart',
+      lock: 'parieur', skip: 2, apply: function () {} },
+    { id: 'MT-8', name: 'L\'Ascete', desc: 'Aucun bonus ne t\'affecte, mais +1 carte a chaque choix',
+      lock: 'ascete', apply: function (s) { s.ascete = true; s.extraCard = (s.extraCard || 0) + 1; } }
   ];
 
   /* --------------------------------------------------------------- TIRAGE */
@@ -213,9 +221,13 @@ window.CORE = window.CORE || {};
     return [60 - 25 * t, 30 + 10 * t, 9 + 11 * t];
   }
 
+  function ouvert(item) {
+    return !item.lock || (CORE.SAVE && CORE.SAVE.isUnlocked(item.lock));
+  }
+
   function draw(rng, owned, layerId, count) {
     var w = rarityWeights(layerId);
-    var pool = PASSIVES.filter(function (p) { return (owned[p.id] || 0) < p.max; });
+    var pool = PASSIVES.filter(function (p) { return ouvert(p) && (owned[p.id] || 0) < p.max; });
     var out = [];
     for (var k = 0; k < count && pool.length; k++) {
       var weighted = [];
@@ -228,7 +240,8 @@ window.CORE = window.CORE || {};
       pool = pool.filter(function (p) { return p !== chosen; });
     }
     // une carte sur six devient un pacte
-    var pactPool = PACTS.filter(function (p) { return !(owned[p.id] || 0); });
+    var pactPool = (CORE.SAVE && CORE.SAVE.isUnlocked('pactes'))
+      ? PACTS.filter(function (p) { return !(owned[p.id] || 0); }) : [];
     if (pactPool.length && out.length && rng.chance(1 / 6)) {
       out[rng.int(0, out.length - 1)] = rng.pick(pactPool);
     }
@@ -236,7 +249,7 @@ window.CORE = window.CORE || {};
   }
 
   function rollBonus(rng, allowMalus) {
-    var table = allowMalus ? BONUS.concat(MALUS) : BONUS;
+    var table = (allowMalus ? BONUS.concat(MALUS) : BONUS).filter(ouvert);
     var weighted = [];
     table.forEach(function (b) {
       for (var i = 0; i < b.weight; i++) weighted.push(b);
@@ -248,7 +261,7 @@ window.CORE = window.CORE || {};
     BONUS: BONUS, MALUS: MALUS, BONUS_BY_ID: BONUS_BY_ID,
     PASSIVES: PASSIVES, PACTS: PACTS, ALL: ALL, PASSIVE_BY_ID: PASSIVE_BY_ID,
     PARTS: PARTS, JOBS: JOBS,
-    draw: draw, rollBonus: rollBonus,
+    draw: draw, rollBonus: rollBonus, ouvert: ouvert,
     RAR_NAME: ['commun', 'rare', 'legendaire'],
     partCost: function (part, owned) {
       return Math.round(part.cost * Math.pow(part.growth, owned));

@@ -333,7 +333,7 @@ window.CORE = window.CORE || {};
       if (kept.length === cells.length) break;
       cells = kept;
     }
-    return cells.length >= 2 ? cells : null;
+    return cells.length >= (CFG.FALL.minMass || 2) ? cells : null;
   }
 
   function unlockExit(world) {

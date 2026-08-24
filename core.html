@@ -40,6 +40,15 @@
   #hp i{width:16px;height:16px;border:2px solid #ff5a6e;border-radius:3px;display:block}
   #hp i.on{background:#ff3b52;box-shadow:0 0 8px rgba(255,59,82,.7)}
   #hp i.off{opacity:.3}
+  #dry{position:absolute;inset:0;background:rgba(8,4,5,.82);display:none;
+    align-items:center;justify-content:center;pointer-events:auto;z-index:5}
+  #dry.on{display:flex}
+  #dry .dbox{width:min(560px,92vw);background:var(--panel);border:2px solid #ff3b52;
+    border-radius:10px;padding:26px;text-align:center;box-shadow:0 0 60px rgba(255,59,82,.25)}
+  #dry .dt{font-size:32px;font-weight:800;letter-spacing:6px;color:#ff5a6e}
+  #dry .ds{font-size:13px;color:var(--dim);margin:10px 0 22px;line-height:1.7}
+  #dry .drow{display:flex;gap:12px}
+  #dry .btn{margin-top:0;font-size:13px;padding:14px 10px}
   #restartMsg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
     font-size:30px;font-weight:800;letter-spacing:6px;color:#ff5a6e;display:none;
     text-shadow:0 3px 20px rgba(0,0,0,.9)}
@@ -119,6 +128,24 @@
     color:var(--dim);margin-top:18px}
   .keys b{color:var(--txt)}
   .goldtag{color:var(--or);font-weight:700}
+  .unlock{background:#1b1508;border:1px solid var(--or);border-radius:8px;padding:14px;
+    margin-bottom:8px;text-align:left}
+  .unlock .un{font-size:16px;font-weight:800;color:var(--or);letter-spacing:1px}
+  .unlock .ud{font-size:12px;color:#c9bfa4;margin-top:4px}
+  .prog{display:flex;align-items:center;gap:10px;margin:7px 0;font-size:12px}
+  .prog .pl{flex:1;color:#b9c0cb}
+  .prog .pv{color:var(--dim);font-variant-numeric:tabular-nums;min-width:74px;text-align:right}
+  .prog .pb{width:130px;height:6px;background:#22252c;border:1px solid var(--line);
+    border-radius:3px;overflow:hidden}
+  .prog .pb i{display:block;height:100%;background:linear-gradient(90deg,#ff8a3d,#ffd24a)}
+  .prog.done .pl{color:#78ffb4}
+  .tiers{display:flex;gap:8px;justify-content:center;margin:14px 0 4px;flex-wrap:wrap}
+  .tier{padding:8px 16px;border:1px solid var(--line);border-radius:6px;font-size:12px;
+    cursor:pointer;color:var(--dim)}
+  .tier.on{border-color:var(--acc);color:var(--txt);background:#221a12}
+  .tier.no{opacity:.3;cursor:not-allowed}
+  .linkbtn{background:none;border:0;color:var(--dim);font:inherit;font-size:12px;
+    text-decoration:underline;cursor:pointer;padding:8px}
 </style>
 </head>
 <body>
@@ -133,6 +160,16 @@
   <div id="quota"></div>
   <div id="hp"></div>
   <div id="restartMsg">NIVEAU RELANCE</div>
+  <div id="dry">
+    <div class="dbox">
+      <div class="dt">PANNE SECHE</div>
+      <div class="ds">La foreuse est a l'arret. Il faut du carburant, ou tout reprendre depuis le haut.</div>
+      <div class="drow">
+        <button class="btn" id="dryBuy">BIDON D'URGENCE</button>
+        <button class="btn ghost" id="dryRestart">RELANCER LE NIVEAU</button>
+      </div>
+    </div>
+  </div>
   <div id="combo"></div>
   <div id="eventBanner"></div>
   <div id="challenges"></div>
@@ -163,7 +200,18 @@
     <span><b>R</b> — recommencer le niveau</span>
     <span><b>M</b> — son</span>
   </div>
-  <div class="sub" id="bestTotal" style="margin-top:18px"></div>
+  <h2 style="text-align:center">Profondeur</h2>
+  <div class="tiers" id="tiers"></div>
+  <div class="sub" id="bestTotal" style="margin-top:14px"></div>
+  <div style="text-align:center"><button class="linkbtn" id="openCarnet">CARNET DU MINEUR</button></div>
+</div></div>
+
+<div class="screen" id="scCarnet"><div class="box">
+  <h1 style="font-size:34px;letter-spacing:6px">CARNET</h1>
+  <div class="sub" id="carnetStats"></div>
+  <h2>A debloquer</h2>
+  <div id="carnetList"></div>
+  <button class="btn ghost" id="closeCarnet">RETOUR</button>
 </div></div>
 
 <div class="screen" id="scStation"><div class="box">
@@ -184,7 +232,10 @@
 <div class="screen" id="scEnd"><div class="box">
   <h1 id="endTitle">LE C<span>OE</span>UR</h1>
   <div class="sub" id="endSub"></div>
+  <div id="endUnlocks"></div>
   <table id="endTable"></table>
+  <h2>Prochains deblocages</h2>
+  <div id="endProgress"></div>
   <button class="btn" id="endAgain">REJOUER</button>
 </div></div>
 
@@ -224,6 +275,8 @@ window.CORE = window.CORE || {};
     // --- roche qui s'effondre ----------------------------------------------
     FALL: {
       shake: 0.4,          // duree du tremblement d'avertissement
+      minSpan: 4,          // largeur de vide a partir de laquelle la voute cede
+      minMass: 5,          // en dessous, ce n'est pas un effondrement, c'est un caillou
       maxMass: 150,        // au-dela, la masse est consideree comme portante
       speed: 26,           // vitesse de chute d'une masse, en blocs/s
       damage: 1            // integrite perdue si elle nous tombe dessus
@@ -244,7 +297,8 @@ window.CORE = window.CORE || {};
       burnUp: 1.5,         // forer vers le haut consomme plus
       burnRoll: 0.05,      // L/s en roulant dans une galerie
       bidon: 32,           // L rendus par un bidon
-      reserveSpeed: 1 / 3, // vitesse en panne seche
+      emergency: 50,       // litres du bidon d'urgence, en pleine panne
+      emergencyPrice: 150, // il se paie plus cher qu'a la station
       alertAt: 20,         // seuil du filet de securite et de l'alarme
       rescueRadius: 20,    // sous le seuil, un bidon est garanti dans ce rayon
       freeTop: 35,         // ration de secours offerte au depart d'un niveau
@@ -325,22 +379,22 @@ window.CORE = window.CORE || {};
   /* 14 niveaux courts. Une nouveaute par niveau, jamais de remplissage.
      faille : multiplicateur de vitesse de la Faille pour ce niveau. */
   CFG.LEVELS = [
-    { id: '1-1', layer: 1, name: 'Premiere coupe',   type: 'descente',     top: 0,    height: 100, gold: 29, silver: 42, bronze: 59, faille: 0.75 },
-    { id: '1-2', layer: 1, name: 'La croute',        type: 'sceau',        top: 100,  height: 120, sealHard: 5, gold: 32, silver: 46, bronze: 64, faille: 0.85 },
+    { id: '1-1', layer: 1, name: 'Premiere coupe',   type: 'descente',     top: 0,    height: 100, gold: 22, silver: 32, bronze: 46, faille: 0.75 },
+    { id: '1-2', layer: 1, name: 'La croute',        type: 'sceau',        top: 100,  height: 120, sealHard: 5, gold: 25, silver: 36, bronze: 52, faille: 0.85 },
 
-    { id: '2-1', layer: 2, name: 'Bancs de gres',    type: 'descente',     top: 220,  height: 110, gold: 24, silver: 34, bronze: 48, faille: 1.0 },
-    { id: '2-2', layer: 2, name: 'La grande veine',  type: 'filon',        top: 330,  height: 110, gold: 23, silver: 33, bronze: 46, faille: 1.0 },
-    { id: '2-3', layer: 2, name: 'Le gisement',      type: 'gisement',     top: 440,  height: 110, quota: 10, gold: 27, silver: 39, bronze: 55, faille: 0.9 },
-    { id: '2-4', layer: 2, name: 'Effondrement',     type: 'effondrement', top: 550,  height: 110, gold: 22, silver: 31, bronze: 44, faille: 1.35 },
-    { id: '2-5', layer: 2, name: 'Le grand vide',    type: 'chute',        top: 660,  height: 110, gold: 17, silver: 24, bronze: 33, faille: 1.1 },
-    { id: '2-6', layer: 2, name: 'Le Sceau calcaire', type: 'sceau',       top: 770,  height: 110, sealHard: 14, gold: 19, silver: 27, bronze: 38, faille: 1.1 },
+    { id: '2-1', layer: 2, name: 'Bancs de gres',    type: 'descente',     top: 220,  height: 110, gold: 18, silver: 26, bronze: 39, faille: 1.0 },
+    { id: '2-2', layer: 2, name: 'La grande veine',  type: 'filon',        top: 330,  height: 110, gold: 21, silver: 30, bronze: 44, faille: 1.0 },
+    { id: '2-3', layer: 2, name: 'Le gisement',      type: 'gisement',     top: 440,  height: 110, quota: 10, gold: 20, silver: 29, bronze: 43, faille: 0.9 },
+    { id: '2-4', layer: 2, name: 'Effondrement',     type: 'effondrement', top: 550,  height: 110, gold: 18, silver: 25, bronze: 37, faille: 1.35 },
+    { id: '2-5', layer: 2, name: 'Le grand vide',    type: 'chute',        top: 660,  height: 110, gold: 15, silver: 21, bronze: 31, faille: 1.1 },
+    { id: '2-6', layer: 2, name: 'Le Sceau calcaire', type: 'sceau',       top: 770,  height: 110, sealHard: 14, gold: 17, silver: 24, bronze: 35, faille: 1.1 },
 
-    { id: '3-1', layer: 3, name: 'Eclats',           type: 'descente',     top: 880,  height: 115, gold: 21, silver: 30, bronze: 41, faille: 1.15 },
-    { id: '3-2', layer: 3, name: 'Le dedale',        type: 'dedale',       top: 995,  height: 120, gold: 52, silver: 74, bronze: 104, faille: 0.8 },
-    { id: '3-3', layer: 3, name: 'Coeur de geode',   type: 'gisement',     top: 1115, height: 120, quota: 14, gold: 19, silver: 28, bronze: 39, faille: 1.0 },
-    { id: '3-4', layer: 3, name: 'La faille vive',   type: 'effondrement', top: 1235, height: 120, gold: 18, silver: 26, bronze: 36, faille: 1.5 },
-    { id: '3-5', layer: 3, name: 'Le puits',         type: 'chute',        top: 1355, height: 125, gold: 15, silver: 21, bronze: 29, faille: 1.25 },
-    { id: '3-6', layer: 3, name: 'Le Sceau de quartz', type: 'sceau',      top: 1480, height: 120, sealHard: 26, gold: 17, silver: 24, bronze: 34, faille: 1.3 }
+    { id: '3-1', layer: 3, name: 'Eclats',           type: 'descente',     top: 880,  height: 115, gold: 19, silver: 27, bronze: 39, faille: 1.15 },
+    { id: '3-2', layer: 3, name: 'Le dedale',        type: 'dedale',       top: 995,  height: 120, gold: 50, silver: 71, bronze: 105, faille: 0.8 },
+    { id: '3-3', layer: 3, name: 'Coeur de geode',   type: 'gisement',     top: 1115, height: 120, quota: 14, gold: 18, silver: 25, bronze: 37, faille: 1.0 },
+    { id: '3-4', layer: 3, name: 'La faille vive',   type: 'effondrement', top: 1235, height: 120, gold: 13, silver: 18, bronze: 27, faille: 1.5 },
+    { id: '3-5', layer: 3, name: 'Le puits',         type: 'chute',        top: 1355, height: 125, gold: 11, silver: 16, bronze: 24, faille: 1.25 },
+    { id: '3-6', layer: 3, name: 'Le Sceau de quartz', type: 'sceau',      top: 1480, height: 120, sealHard: 26, gold: 12, silver: 17, bronze: 25, faille: 1.3 }
   ];
 
   /* ---------------------------------------------------- EVENEMENTS DE COUCHE */
@@ -366,6 +420,51 @@ window.CORE = window.CORE || {};
     { id: 'straight', label: '25 blocs sans changer de sens',  gold: 110, check: function (st) { return st.straight >= 25; } },
     { id: 'ore10',    label: 'Ramasser 10 minerais',           gold: 85, check: function (st) { return st.ore >= 10; } },
     { id: 'fall30',   label: 'Chuter de 30 blocs d\'un coup',  gold: 100, check: function (st) { return st.bigFall >= 30; } }
+  ];
+
+  /* ------------------------------------------------------------- CARNET */
+  /* Ce qui se debloque d'une expedition a l'autre. C'est la seule chose qui
+     donne une raison de relancer : on voit toujours ce qui est a une partie. */
+  CFG.UNLOCKS = [
+    { id: 'pactes',    nom: 'Les pactes',              stat: 'runs',      but: 3,
+      desc: 'Des cartes noires : gros gain, vrai prix' },
+    { id: 'sablier',   nom: 'Le Sablier fele',         stat: 'bonuses',   but: 20,
+      desc: 'Un bonus qui fige le chrono' },
+    { id: 'elargisseur', nom: 'Elargisseur',           stat: 'ore',       but: 260,
+      desc: 'Une piece de boutique : largeur de taille +1' },
+    { id: 'camionneur', nom: 'Metier : Le Camionneur', stat: 'cans',      but: 15,
+      desc: 'Reservoir +60 L, consommation -20 %' },
+    { id: 'recuperateur', nom: 'Passif : Recuperateur', stat: 'cans',     but: 30,
+      desc: 'Chaque chute de 10 m rend du carburant' },
+    { id: 'cassecou',  nom: 'Passif : Casse-cou',      stat: 'buried',    but: 8,
+      desc: '+40 % de vitesse quand la Faille est proche' },
+    { id: 'gravitationnelle', nom: 'Passif : Foreuse gravitationnelle', stat: 'collapses', but: 220,
+      desc: 'En chute, on fore a pleine vitesse' },
+    { id: 'instable',  nom: 'Passif : Noyau instable', stat: 'collapses', but: 700,
+      desc: 'Une explosion creuse tous les 60 m' },
+    { id: 'perpetuel', nom: 'Passif : Perpetuel',      stat: 'medOr',     but: 14,
+      desc: 'L\'elan ne retombe jamais' },
+    { id: 'tunnelier', nom: 'Metier : Le Tunnelier',   stat: 'bestLayer', but: 2,
+      desc: 'Largeur 4 d\'entree de jeu, vitesse -25 %' },
+    { id: 'parieur',   nom: 'Metier : Le Parieur',     stat: 'bestLayer', but: 3,
+      desc: 'Demarre une couche plus bas' },
+    { id: 'stellaire', nom: 'Piece : Tete stellaire',  stat: 'bestDepth', but: 1300,
+      desc: 'La meilleure tete de forage de la boutique' },
+    { id: 'graine',    nom: 'Mode : Graine du jour',   stat: 'finished',  but: 1,
+      desc: 'Tout le monde creuse la meme planete' },
+    { id: 'profondeur2', nom: 'PROFONDEUR II',         stat: 'finished',  but: 1,
+      desc: 'Roche plus dure, Faille plus rapide — et une carte de plus a chaque station' },
+    { id: 'ascete',    nom: 'Metier : L\'Ascete',      stat: 'cleanRuns', but: 1,
+      desc: 'Aucun bonus ne t\'affecte, mais +1 carte a chaque choix' },
+    { id: 'profondeur3', nom: 'PROFONDEUR III',        stat: 'deepWins',  but: 1,
+      desc: 'Le vrai test : deux points d\'integrite seulement' }
+  ];
+
+  /* Modificateurs des paliers de difficulte. */
+  CFG.DEPTHS = [
+    { id: 0, nom: 'PROFONDEUR I',   hard: 1,    faille: 1,    cards: 3, hp: 0 },
+    { id: 1, nom: 'PROFONDEUR II',  hard: 1.3,  faille: 1.25, cards: 4, hp: 0 },
+    { id: 2, nom: 'PROFONDEUR III', hard: 1.55, faille: 1.45, cards: 4, hp: -1 }
   ];
 
   CORE.CFG = CFG;
@@ -428,7 +527,7 @@ window.CORE = window.CORE || {};
     { id: 'B-09', name: 'Surregime',   icon: '!>', color: '#ffce3d', dur: 12, weight: 8,
       desc: 'Vitesse x2, consommation x3', tiers: [2, 2.4, 3],
       apply: function (s, t) { s.speed *= t; s.burn *= 3; } },
-    { id: 'B-14', name: 'Sablier fele', icon: '[]', color: '#5ff0e0', dur: 10, weight: 5,
+    { id: 'B-14', name: 'Sablier fele', icon: '[]', color: '#5ff0e0', dur: 10, weight: 5, lock: 'sablier',
       desc: 'Le chrono se fige', tiers: [10, 13, 16], freeze: true, apply: function () {} }
   ];
 
@@ -517,7 +616,7 @@ window.CORE = window.CORE || {};
     { id: 'U-03', fam: 'RESERVOIR', name: 'Goutte a goutte', rar: 1, max: 2,
       desc: 'Chaque bloc de minerai rend 1 L', flag: 'oreFuel', apply: function () {} },
 
-    { id: 'U-05', fam: 'RESERVOIR', name: 'Recuperateur', rar: 1, max: 1,
+    { id: 'U-05', fam: 'RESERVOIR', name: 'Recuperateur', rar: 1, max: 1, lock: 'recuperateur',
       desc: 'Chaque chute de 10 m rend 3 L : tomber devient une ressource',
       flag: 'fallFuel', apply: function () {} },
 
@@ -537,7 +636,7 @@ window.CORE = window.CORE || {};
       desc: 'La roche qui te tombe dessus se transforme en minerai',
       flag: 'scavenger', apply: function () {} },
 
-    { id: 'T-04', fam: 'TERRAIN', name: 'Casse-cou', rar: 1, max: 1,
+    { id: 'T-04', fam: 'TERRAIN', name: 'Casse-cou', rar: 1, max: 1, lock: 'cassecou',
       desc: '+40 % de vitesse tant que la Faille est a moins de 15 lignes',
       flag: 'daredevil', apply: function () {} },
 
@@ -549,15 +648,15 @@ window.CORE = window.CORE || {};
       desc: 'Integrite +1',
       apply: function (s, n) { s.hpBonus = (s.hpBonus || 0) + n; } },
 
-    { id: 'P-09', fam: 'PILOTAGE', name: 'Foreuse gravitationnelle', rar: 2, max: 1,
+    { id: 'P-09', fam: 'PILOTAGE', name: 'Foreuse gravitationnelle', rar: 2, max: 1, lock: 'gravitationnelle',
       desc: 'En chute, on fore vers le bas a pleine vitesse sans ralentir',
       flag: 'gravDrill', apply: function () {} },
 
-    { id: 'L-02', fam: 'LEGENDAIRE', name: 'Noyau instable', rar: 2, max: 1,
+    { id: 'L-02', fam: 'LEGENDAIRE', name: 'Noyau instable', rar: 2, max: 1, lock: 'instable',
       desc: 'Tous les 60 m, une explosion creuse un rayon de 5',
       flag: 'unstable', apply: function () {} },
 
-    { id: 'L-06', fam: 'LEGENDAIRE', name: 'Perpetuel', rar: 2, max: 1,
+    { id: 'L-06', fam: 'LEGENDAIRE', name: 'Perpetuel', rar: 2, max: 1, lock: 'perpetuel',
       desc: 'L\'elan ne retombe jamais a l\'interieur d\'un niveau',
       flag: 'perpetual', apply: function (s) { s.elanLoss = 0; } }
   ];
@@ -596,10 +695,12 @@ window.CORE = window.CORE || {};
       apply: function (s, n) { s.fuelMax += 40 * n; } },
     { id: 'injection', name: 'Injection propre', desc: 'Consommation -15 %', cost: 280, growth: 1.8, max: 5,
       apply: function (s, n) { s.burn *= Math.pow(0.85, n); } },
-    { id: 'elargisseur', name: 'Elargisseur', desc: 'Largeur +1', cost: 620, growth: 2.4, max: 4,
+    { id: 'elargisseur', name: 'Elargisseur', desc: 'Largeur +1', cost: 620, growth: 2.4, max: 4, lock: 'elargisseur',
       apply: function (s, n) { s.width += n; } },
     { id: 'chenilles', name: 'Chenilles', desc: 'Deplacement +2,5', cost: 160, growth: 1.6, max: 6,
-      apply: function (s, n) { s.roll += 2.5 * n; s.climb += 1.5 * n; } }
+      apply: function (s, n) { s.roll += 2.5 * n; s.climb += 1.5 * n; } },
+    { id: 'stellaire', name: 'Tete stellaire', desc: 'Force +9', cost: 900, growth: 2.1, max: 6,
+      lock: 'stellaire', apply: function (s, n) { s.force += 9 * n; } }
   ];
 
   /* ------------------------------------------------------------- METIERS */
@@ -611,7 +712,13 @@ window.CORE = window.CORE || {};
     { id: 'MT-3', name: 'Le Chanceux', desc: '50 % de bonus en plus dans la roche',
       apply: function (s) { s.luck *= 1.5; } },
     { id: 'MT-9', name: 'Le Camionneur', desc: 'Reservoir +60 L, consommation -20 %',
-      apply: function (s) { s.fuelMax += 60; s.burn *= 0.8; } }
+      lock: 'camionneur', apply: function (s) { s.fuelMax += 60; s.burn *= 0.8; } },
+    { id: 'MT-6', name: 'Le Tunnelier', desc: 'Largeur 4 d\'entree de jeu, vitesse -25 %',
+      lock: 'tunnelier', apply: function (s) { s.width += 2; s.speed *= 0.75; } },
+    { id: 'MT-7', name: 'Le Parieur', desc: 'Demarre une couche plus bas, sans passif de depart',
+      lock: 'parieur', skip: 2, apply: function () {} },
+    { id: 'MT-8', name: 'L\'Ascete', desc: 'Aucun bonus ne t\'affecte, mais +1 carte a chaque choix',
+      lock: 'ascete', apply: function (s) { s.ascete = true; s.extraCard = (s.extraCard || 0) + 1; } }
   ];
 
   /* --------------------------------------------------------------- TIRAGE */
@@ -620,9 +727,13 @@ window.CORE = window.CORE || {};
     return [60 - 25 * t, 30 + 10 * t, 9 + 11 * t];
   }
 
+  function ouvert(item) {
+    return !item.lock || (CORE.SAVE && CORE.SAVE.isUnlocked(item.lock));
+  }
+
   function draw(rng, owned, layerId, count) {
     var w = rarityWeights(layerId);
-    var pool = PASSIVES.filter(function (p) { return (owned[p.id] || 0) < p.max; });
+    var pool = PASSIVES.filter(function (p) { return ouvert(p) && (owned[p.id] || 0) < p.max; });
     var out = [];
     for (var k = 0; k < count && pool.length; k++) {
       var weighted = [];
@@ -635,7 +746,8 @@ window.CORE = window.CORE || {};
       pool = pool.filter(function (p) { return p !== chosen; });
     }
     // une carte sur six devient un pacte
-    var pactPool = PACTS.filter(function (p) { return !(owned[p.id] || 0); });
+    var pactPool = (CORE.SAVE && CORE.SAVE.isUnlocked('pactes'))
+      ? PACTS.filter(function (p) { return !(owned[p.id] || 0); }) : [];
     if (pactPool.length && out.length && rng.chance(1 / 6)) {
       out[rng.int(0, out.length - 1)] = rng.pick(pactPool);
     }
@@ -643,7 +755,7 @@ window.CORE = window.CORE || {};
   }
 
   function rollBonus(rng, allowMalus) {
-    var table = allowMalus ? BONUS.concat(MALUS) : BONUS;
+    var table = (allowMalus ? BONUS.concat(MALUS) : BONUS).filter(ouvert);
     var weighted = [];
     table.forEach(function (b) {
       for (var i = 0; i < b.weight; i++) weighted.push(b);
@@ -655,7 +767,7 @@ window.CORE = window.CORE || {};
     BONUS: BONUS, MALUS: MALUS, BONUS_BY_ID: BONUS_BY_ID,
     PASSIVES: PASSIVES, PACTS: PACTS, ALL: ALL, PASSIVE_BY_ID: PASSIVE_BY_ID,
     PARTS: PARTS, JOBS: JOBS,
-    draw: draw, rollBonus: rollBonus,
+    draw: draw, rollBonus: rollBonus, ouvert: ouvert,
     RAR_NAME: ['commun', 'rare', 'legendaire'],
     partCost: function (part, owned) {
       return Math.round(part.cost * Math.pow(part.growth, owned));
@@ -999,7 +1111,7 @@ window.CORE = window.CORE || {};
       if (kept.length === cells.length) break;
       cells = kept;
     }
-    return cells.length >= 2 ? cells : null;
+    return cells.length >= (CFG.FALL.minMass || 2) ? cells : null;
   }
 
   function unlockExit(world) {
@@ -1388,6 +1500,7 @@ window.CORE = window.CORE || {};
   'use strict';
   var KEY = 'core.records.v2';
   var GKEY = 'core.ghosts.v2';
+  var MKEY = 'core.carnet.v1';
 
   function load(key, def) {
     try { return JSON.parse(localStorage.getItem(key)) || def; }
@@ -1424,7 +1537,56 @@ window.CORE = window.CORE || {};
       var g = load(GKEY, {})[levelId];
       return g && g.p && g.p.length >= 4 ? g : null;
     },
-    reset: function () { save(KEY, { levels: {}, total: null }); save(GKEY, {}); }
+    reset: function () {
+      save(KEY, { levels: {}, total: null }); save(GKEY, {}); save(MKEY, { stats: {}, unlocked: {} });
+    },
+
+    /* --------------------------------------------------------- LE CARNET */
+    carnet: function () {
+      var m = load(MKEY, null);
+      if (!m) m = { stats: {}, unlocked: {} };
+      if (!m.stats) m.stats = {};
+      if (!m.unlocked) m.unlocked = {};
+      return m;
+    },
+    /* Ajoute des compteurs et renvoie la liste des deblocages obtenus. */
+    addStats: function (delta) {
+      var m = CORE.SAVE.carnet();
+      for (var k in delta) m.stats[k] = (m.stats[k] || 0) + delta[k];
+      var neufs = CORE.SAVE.check(m);
+      save(MKEY, m);
+      return neufs;
+    },
+    /* Pose un record (max) plutot qu'un cumul. */
+    setBest: function (key, value) {
+      var m = CORE.SAVE.carnet();
+      if ((m.stats[key] || 0) >= value) return [];
+      m.stats[key] = value;
+      var neufs = CORE.SAVE.check(m);
+      save(MKEY, m);
+      return neufs;
+    },
+    check: function (m) {
+      var neufs = [];
+      CORE.CFG.UNLOCKS.forEach(function (u) {
+        if (m.unlocked[u.id]) return;
+        if ((m.stats[u.stat] || 0) >= u.but) { m.unlocked[u.id] = 1; neufs.push(u); }
+      });
+      return neufs;
+    },
+    isUnlocked: function (id) { return !!CORE.SAVE.carnet().unlocked[id]; },
+    /* Les trois deblocages les plus proches : c'est ce qui donne envie de relancer. */
+    proches: function (n) {
+      var m = CORE.SAVE.carnet();
+      return CORE.CFG.UNLOCKS
+        .filter(function (u) { return !m.unlocked[u.id]; })
+        .map(function (u) {
+          var v = m.stats[u.stat] || 0;
+          return { u: u, valeur: v, part: Math.min(1, v / u.but) };
+        })
+        .sort(function (a, b) { return b.part - a.part; })
+        .slice(0, n || 3);
+    }
   };
 })(window.CORE);
 
@@ -1493,8 +1655,8 @@ window.CORE = window.CORE || {};
       if (G.event.id === 'coupure') s.vision = 4;
     }
 
-    // panne seche : on peut finir, tres lentement
-    if (G.reserve) { s.speed *= CFG.FUEL.reserveSpeed; s.turboBlocked = true; }
+    // panne seche : la foreuse est a l'arret, le joueur doit choisir
+    if (G.reserve) { s.speed = 0; s.turboBlocked = true; }
 
     s.width = Math.max(1, Math.min(6, Math.round(s.width)));
     s.length = Math.max(1, Math.min(4, Math.round(s.length)));
@@ -1503,15 +1665,21 @@ window.CORE = window.CORE || {};
   }
 
   /* --------------------------------------------------------------- RUN */
-  function startRun(job) {
+  function startRun(job, depthTier) {
+    G.meta = { runs: 1, ore: 0, cans: 0, bonuses: 0, collapses: 0, buried: 0 };
     G.run = {
+      depth: depthTier || 0,
       job: job, parts: {}, passives: {}, gold: 0,
       levelIndex: 0, splits: [], medals: [], total: 0,
       shopClosedFor: 0, restarts: 0, lost: 0, fuelCarry: undefined,
       seed: (Math.random() * 1e9) | 0
     };
-    startLevel(0);
+    CORE.SAVE.addStats({ runs: 1 });
+    G.meta.runs = 0;
+    startLevel(job && job.skip ? job.skip : 0);
   }
+
+  function tier() { return CFG.DEPTHS[G.run ? (G.run.depth || 0) : 0]; }
 
   function startLevel(index) {
     var def = CFG.LEVELS[index];
@@ -1519,6 +1687,10 @@ window.CORE = window.CORE || {};
     var pre = computeStats();
     G.run.levelIndex = index;
     G.world = W.generate(def, layer, G.run.seed + index * 7919, pre.luck);
+    var tr = tier();
+    if (tr.hard !== 1) {
+      for (var hi = 0; hi < G.world.hard.length; hi++) G.world.hard[hi] *= tr.hard;
+    }
     G.drill = CORE.DRILL.create(G.world);
     G.buffs = []; G.pickups = []; G.parts = []; G.toasts = [];
     G.levelTime = 0; G.freeze = 0; G.souffle = 0; G.ore = 0; G.shake = 0;
@@ -1526,10 +1698,12 @@ window.CORE = window.CORE || {};
     G.combo = 0; G.comboT = 0; G.comboMult = 1;
     G.hitstop = 0; G.slowmo = 0; G.flash = null; G.desat = 0;
     G.lowWarned = false; G.reserve = false; G.rescueT = 0;
-    G.hp = CFG.HP + (pre.hpBonus || 0); G.iframes = 0; G.stun = 0; G.falls = [];
+    G.dryChoice = false;
+    G.hp = Math.max(1, CFG.HP + (pre.hpBonus || 0) + tier().hp); G.iframes = 0; G.stun = 0; G.falls = [];
     G.failleCd = 0; G.sealBroken = false; G.turboCharge = 0;
     G.world.failleRow = G.world.top - 3;
     G.fallSeen = new Set();
+    G.scan = null;
     G.levelToken = (G.levelToken || 0) + 1;
     G.nextBlast = def.top + 60;
     G.st = { up: 0, bonus: 0, reserve: 0, straight: 0, ore: 0, bigFall: 0, fuelEnd: 0 };
@@ -1567,6 +1741,7 @@ window.CORE = window.CORE || {};
 
   /* ------------------------------------------------------------- BONUS */
   function addBuff(def) {
+    if (G.stats && G.stats.ascete && !def.stun && !def.leak && def.id.charAt(0) !== 'M') return 0;
     var found = null;
     for (var i = 0; i < G.buffs.length; i++) if (G.buffs[i].def.id === def.id) found = G.buffs[i];
     var maxLvl = def.tiers ? def.tiers.length : 1;
@@ -1638,13 +1813,16 @@ window.CORE = window.CORE || {};
   /* ------------------------------------------------------- EFFONDREMENTS */
   /* Une masse privee d'appui tremble, puis lache. Le danger est toujours
      annonce : 0,4 s de fissures avant la chute. */
-  function checkCollapse(cx, cy) {
-    if (G.stats.propper && cy < G.drill.y - 3) return;
-    for (var ox = -3; ox <= 3; ox++) {
-      var x = cx + ox, y = cy - 1;
+  function checkCollapse() {
+    var sc = G.scan;
+    G.scan = null;
+    if (!sc) return;
+    if (G.stats.propper && sc.y < G.drill.y - 3) return;
+    for (var x = sc.x0 - 2; x <= sc.x1 + 2; x++) {
+      var y = sc.y - 1;
       if (!G.world.inside(x, y)) continue;
       if (G.fallSeen.has(y * G.world.w + x)) continue;
-      var mass = W.looseMass(G.world, x, y, 3, CFG.FALL.maxMass);
+      var mass = W.looseMass(G.world, x, y, CFG.FALL.minSpan, CFG.FALL.maxMass);
       if (!mass) continue;
       mass.forEach(function (c) { G.fallSeen.add(c[1] * G.world.w + c[0]); });
       G.falls.push({ cells: mass, state: 'shake', t: CFG.FALL.shake, off: 0, dy: 0 });
@@ -1694,6 +1872,7 @@ window.CORE = window.CORE || {};
     });
     burst(fall.cells[0][0], fall.cells[0][1] + dy, '#8a7a68', 12);
     G.shake = Math.max(G.shake, 9);
+    G.meta.collapses++;
     addTurbo(CFG.TURBO.collapse * (G.stats.quakeTurbo || 1));
     SFX.rockfall();
   }
@@ -1755,7 +1934,7 @@ window.CORE = window.CORE || {};
     if (G.levelTime < F.delay) return;
 
     var el = G.levelTime - F.delay;
-    var mult = (def.faille || 1) * (G.sealBroken ? F.sealBoost : 1);
+    var mult = (def.faille || 1) * tier().faille * (G.sealBroken ? F.sealBoost : 1);
     world.failleRow += (F.speed + F.accel * el) * mult * dt;
 
     var row = Math.min(Math.floor(world.failleRow), world.top + def.height - 1);
@@ -1777,6 +1956,7 @@ window.CORE = window.CORE || {};
     if (world.failleRow > d.y - 0.3 && G.failleCd <= 0) {
       G.failleCd = 3;
       G.stun = 0.7;
+      G.meta.buried++;
       damage(1, 'ENSEVELI');
       if (G.levelToken !== tok) return;
       var push = CFG.FAILLE.catchPush;
@@ -1801,12 +1981,12 @@ window.CORE = window.CORE || {};
     if (G.fuel <= 0) {
       G.fuel = 0;
       G.reserve = true;
+      G.dryChoice = true;
       G.st.reserve++;
-      rescueCan();
       toast('PANNE SECHE', '#ff5a6e', true);
       flash('#ff5a6e', 0.5);
       G.shake = 12;
-      SFX.malus();
+      SFX.alarm();
     } else if (!G.lowWarned && G.fuel < CFG.FUEL.alertAt) {
       G.lowWarned = true;
       SFX.alarm();
@@ -1856,15 +2036,23 @@ window.CORE = window.CORE || {};
     var beh = W.BEHAVIOUR[type];
 
     if (type === W.T.SEAL) G.sealBroken = true;
+    // On n'analyse pas la voute case par case : une taille de 5x3 declencherait
+    // quinze analyses par coup. On note l'emprise du coup et on l'examine une
+    // seule fois par image.
+    if (!G.scan) G.scan = { x0: cx, x1: cx, y: cy };
+    else {
+      if (cx < G.scan.x0) G.scan.x0 = cx;
+      if (cx > G.scan.x1) G.scan.x1 = cx;
+      if (cy < G.scan.y) G.scan.y = cy;
+    }
     // gravats au fond des galeries : un tunnel doit avoir l'air creuse
     if (world.at(cx, cy + 1) !== W.T.EMPTY && Math.random() < 0.55) {
       world.debris.add(world.idx(cx, cy));
     }
-    checkCollapse(cx, cy);
     if (G.combo > 0) addTurbo(CFG.TURBO.block);
 
     if (type === W.T.ORE) {
-      G.ore++; G.st.ore++;
+      G.ore++; G.st.ore++; G.meta.ore++;
       addTurbo(CFG.TURBO.ore);
       bumpCombo();
       G.run.gold += Math.round(layer.oreValue * stats.value * G.comboMult);
@@ -1982,6 +2170,8 @@ window.CORE = window.CORE || {};
   function update(dt, input) {
     if (G.state !== 'play') return;
 
+    // en panne seche, tout s'arrete : le chrono aussi, le temps de decider
+    if (G.dryChoice) return;
     if (G.hitstop > 0) { G.hitstop -= dt; return; }
     if (G.slowmo > 0) { G.slowmo -= dt; dt *= 0.35; }
 
@@ -2043,13 +2233,6 @@ window.CORE = window.CORE || {};
     // fuite de carburant (malus)
     G.buffs.forEach(function (b) { if (b.def.leak) burn(b.def.leak * dt); });
 
-    // En panne seche, on re-arme le filet de securite regulierement : une partie
-    // ne doit jamais pouvoir se bloquer faute de carburant.
-    if (G.reserve) {
-      G.rescueT -= dt;
-      if (G.rescueT <= 0) { G.rescueT = 3; rescueCan(); }
-    }
-
     // legendaire : explosion tous les 60 m
     if (stats.unstable) {
       var depth = world.depthAt(d.y);
@@ -2088,6 +2271,7 @@ window.CORE = window.CORE || {};
     }
     if (G.marker) G.marker.t -= dt;
     var tok0 = G.levelToken;
+    checkCollapse();
     updateFaille(dt);
     if (G.levelToken !== tok0) return;
     updateFalls(dt);
@@ -2156,7 +2340,7 @@ window.CORE = window.CORE || {};
         toast(p.bonus.name, p.bonus.color, false);
         flash(p.bonus.color, 0.3);
       } else {
-        G.st.bonus++;
+        G.st.bonus++; G.meta.bonuses++;
         addTurbo(CFG.TURBO.bonus);
         bumpCombo();
         G.hitstop = 0.10;                       // arret sur image
@@ -2173,6 +2357,7 @@ window.CORE = window.CORE || {};
       toast('+ or', '#ffd24a', false);
     } else if (p.kind === W.KIND.CARBURANT) {
       var l = CFG.FUEL.bidon * (stats.bigCans ? 2 : 1);
+      G.meta.cans++;
       refuel(l);
       SFX.fuel();
       toast('+' + l + ' L', '#8ac46a', false);
@@ -2213,17 +2398,27 @@ window.CORE = window.CORE || {};
     G.run.medals.push(medal);
     G.run.total += t;
     var isRecord = CORE.SAVE.record(def.id, t, medal);
+
+    // On verse au carnet a chaque niveau : la progression survit meme si on
+    // quitte au milieu d'une expedition.
+    var neufs = CORE.SAVE.addStats(G.meta);
+    G.meta = { runs: 0, ore: 0, cans: 0, bonuses: 0, collapses: 0, buried: 0 };
+    if (medal === 'or') neufs = neufs.concat(CORE.SAVE.addStats({ medOr: 1 }));
+    neufs = neufs.concat(CORE.SAVE.setBest('bestDepth', def.top + def.height));
+    neufs = neufs.concat(CORE.SAVE.setBest('bestLayer', def.layer));
+    G.unlocked = neufs;
     if (isRecord) CORE.SAVE.saveGhost(def.id, t, G.ghostRec);
     SFX.drill(false, 0);
     SFX.level();
 
     var rng = CORE.makeRng((G.run.seed + G.run.levelIndex * 131) | 0);
-    G.drawnCards = C.draw(rng, G.run.passives, def.layer, 3);
+    var nCards = tier().cards + (G.stats.extraCard || 0);
+    G.drawnCards = C.draw(rng, G.run.passives, def.layer, nCards);
     G.cardChosen = false;
     G.lastResult = {
       def: def, time: t, medal: medal, ore: G.ore, record: isRecord,
       challenges: G.challenges.slice(), bonusGold: bonusGold,
-      restarts: G.run.restarts, lost: G.run.lost,
+      restarts: G.run.restarts, lost: G.run.lost, unlocked: G.unlocked || [],
       last: G.run.levelIndex >= CFG.LEVELS.length - 1
     };
     G.state = 'station';
@@ -2251,6 +2446,25 @@ window.CORE = window.CORE || {};
     return true;
   }
 
+  /* Panne seche : relancer le niveau, ou payer un bidon d'urgence. */
+  function dryRestart() {
+    G.dryChoice = false;
+    G.reserve = false;
+    restartLevel();
+  }
+
+  function dryBuy() {
+    if (G.run.gold < CFG.FUEL.emergencyPrice) return false;
+    G.run.gold -= CFG.FUEL.emergencyPrice;
+    G.fuel = Math.min(G.fuelMax, CFG.FUEL.emergency);
+    G.reserve = false;
+    G.dryChoice = false;
+    G.lowWarned = false;
+    SFX.fuel();
+    toast('+' + CFG.FUEL.emergency + ' L', '#8ac46a', true);
+    return true;
+  }
+
   function buyFuel() {
     if (!shopOpen()) return false;
     if (G.run.gold < CFG.FUEL.canPrice) return false;
@@ -2264,6 +2478,10 @@ window.CORE = window.CORE || {};
   function nextLevel() {
     if (G.run.levelIndex >= CFG.LEVELS.length - 1) {
       CORE.SAVE.recordTotal(G.run.total);
+      var fin = { finished: 1 };
+      if (G.run.restarts === 0) fin.cleanRuns = 1;
+      if ((G.run.depth || 0) >= 1) fin.deepWins = 1;
+      G.endUnlocked = CORE.SAVE.addStats(fin);
       G.state = 'end';
       return;
     }
@@ -2273,7 +2491,8 @@ window.CORE = window.CORE || {};
   CORE.GAME = {
     G: G, startRun: startRun, startLevel: startLevel, update: update,
     computeStats: computeStats, chooseCard: chooseCard, buyPart: buyPart,
-    nextLevel: nextLevel, medalFor: medalFor, shopOpen: shopOpen, buyFuel: buyFuel
+    nextLevel: nextLevel, medalFor: medalFor, shopOpen: shopOpen, buyFuel: buyFuel, tier: tier,
+    dryRestart: dryRestart, dryBuy: dryBuy
   };
 })(window.CORE);
 
@@ -3008,17 +3227,62 @@ window.CORE = window.CORE || {};
   }
 
   function show(id) {
-    ['scMenu', 'scStation', 'scEnd'].forEach(function (s) { $(s).classList.remove('on'); });
+    ['scMenu', 'scStation', 'scEnd', 'scCarnet'].forEach(function (s) { $(s).classList.remove('on'); });
     if (id) $(id).classList.add('on');
     $('hud').style.display = id ? 'none' : 'block';
   }
 
   /* ---------------------------------------------------------------- MENU */
+  var chosenTier = 0;
+
+  function buildTiers() {
+    var host = $('tiers');
+    host.innerHTML = '';
+    CFG.DEPTHS.forEach(function (dp, i) {
+      var open = i === 0 || CORE.SAVE.isUnlocked(i === 1 ? 'profondeur2' : 'profondeur3');
+      if (!open && i > 0 && !CORE.SAVE.isUnlocked('profondeur2')) { /* affiche quand meme, grise */ }
+      var el = document.createElement('div');
+      el.className = 'tier' + (open ? (i === chosenTier ? ' on' : '') : ' no');
+      el.textContent = dp.nom + (open ? '' : ' (verrouille)');
+      el.onclick = function () { if (!open) return; chosenTier = i; buildTiers(); };
+      host.appendChild(el);
+    });
+  }
+
+  function progressRow(p) {
+    var pct = Math.round(p.part * 100);
+    return '<div class="prog' + (p.part >= 1 ? ' done' : '') + '">' +
+      '<span class="pl">' + p.u.nom + '</span>' +
+      '<span class="pb"><i style="width:' + pct + '%"></i></span>' +
+      '<span class="pv">' + Math.min(p.valeur, p.u.but) + ' / ' + p.u.but + '</span></div>';
+  }
+
+  function buildCarnet() {
+    var m = CORE.SAVE.carnet();
+    var st = m.stats;
+    $('carnetStats').innerHTML =
+      'expeditions <b>' + (st.runs || 0) + '</b> &nbsp;·&nbsp; terminees <b>' + (st.finished || 0) + '</b>' +
+      ' &nbsp;·&nbsp; profondeur record <b>' + (st.bestDepth || 0) + ' m</b><br>' +
+      'minerai <b>' + (st.ore || 0) + '</b> &nbsp;·&nbsp; bidons <b>' + (st.cans || 0) + '</b>' +
+      ' &nbsp;·&nbsp; bonus <b>' + (st.bonuses || 0) + '</b> &nbsp;·&nbsp; effondrements <b>' +
+      (st.collapses || 0) + '</b> &nbsp;·&nbsp; ensevelissements <b>' + (st.buried || 0) + '</b>';
+    $('carnetList').innerHTML = CFG.UNLOCKS.map(function (u) {
+      var v = st[u.stat] || 0;
+      var done = !!m.unlocked[u.id];
+      return '<div class="prog' + (done ? ' done' : '') + '">' +
+        '<span class="pl">' + (done ? '[x] ' : '') + u.nom +
+        '<span style="color:var(--dim)"> — ' + u.desc + '</span></span>' +
+        '<span class="pb"><i style="width:' + Math.round(Math.min(1, v / u.but) * 100) + '%"></i></span>' +
+        '<span class="pv">' + Math.min(v, u.but) + ' / ' + u.but + '</span></div>';
+    }).join('');
+    show('scCarnet');
+  }
+
   function buildMenu() {
     var host = $('jobs');
     host.innerHTML = '';
     var rng = CORE.makeRng((Math.random() * 1e9) | 0);
-    var pool = C.JOBS.slice();
+    var pool = C.JOBS.filter(C.ouvert);
     rng.shuffle(pool);
     pool.slice(0, 3).forEach(function (job) {
       var el = document.createElement('div');
@@ -3027,13 +3291,19 @@ window.CORE = window.CORE || {};
         '</div><div class="ds">' + job.desc + '</div>';
       el.onclick = function () {
         CORE.SFX.init();
-        GAME.startRun(job);
+        GAME.startRun(job, chosenTier);
         show(null);
       };
       host.appendChild(el);
     });
+    buildTiers();
     var bt = CORE.SAVE.bestTotal();
-    $('bestTotal').textContent = bt ? 'Meilleure expedition : ' + fmtLong(bt) : '';
+    var pr = CORE.SAVE.proches(2);
+    $('bestTotal').innerHTML =
+      (bt ? 'Meilleure expedition : ' + fmtLong(bt) + '<br>' : '') +
+      (pr.length ? '<span style="color:var(--dim)">a debloquer : ' +
+        pr.map(function (p) { return p.u.nom + ' (' + Math.min(p.valeur, p.u.but) + '/' + p.u.but + ')'; })
+          .join(' &nbsp;·&nbsp; ') + '</span>' : '');
     show('scMenu');
   }
 
@@ -3114,7 +3384,7 @@ window.CORE = window.CORE || {};
       if (GAME.buyFuel()) { CORE.SFX.fuel(); buildShop(); }
     };
     host.appendChild(fuelEl);
-    C.PARTS.forEach(function (part) {
+    C.PARTS.filter(C.ouvert).forEach(function (part) {
       var owned = G.run.parts[part.id] || 0;
       var cost = C.partCost(part, owned);
       var maxed = owned >= part.max;
@@ -3134,6 +3404,15 @@ window.CORE = window.CORE || {};
   /* ------------------------------------------------------------------ FIN */
   function buildEnd() {
     var run = G.run;
+    var neufs = (G.endUnlocked || []).concat(G.unlocked || []);
+    $('endUnlocks').innerHTML = neufs.length
+      ? neufs.map(function (u) {
+          return '<div class="unlock"><div class="un">DEBLOQUE — ' + u.nom + '</div>' +
+            '<div class="ud">' + u.desc + '</div></div>';
+        }).join('')
+      : '';
+    $('endProgress').innerHTML = CORE.SAVE.proches(3).map(progressRow).join('') ||
+      '<div class="prog"><span class="pl">tout est debloque</span></div>';
     $('endSub').innerHTML = 'Expedition terminee en <b style="color:var(--acc);font-size:20px">' +
       fmtLong(run.total) + '</b>' +
       (CORE.SAVE.bestTotal() === run.total ? '<br><span style="color:var(--or)">nouveau record</span>' : '');
@@ -3226,6 +3505,19 @@ window.CORE = window.CORE || {};
     $('hp').style.opacity = G.iframes > 0 ? (0.4 + 0.6 * Math.abs(Math.sin(G.time * 20))) : 1;
     $('restartMsg').style.display = G.justRestarted > 0 ? 'block' : 'none';
 
+    var dry = $('dry');
+    if (G.dryChoice && !dry.classList.contains('on')) {
+      dry.classList.add('on');
+      var can = G.run.gold >= CFG.FUEL.emergencyPrice;
+      var btn = $('dryBuy');
+      btn.disabled = !can;
+      btn.textContent = can
+        ? 'BIDON D\'URGENCE — ' + CFG.FUEL.emergencyPrice + ' $  (+' + CFG.FUEL.emergency + ' L)'
+        : 'PAS ASSEZ D\'OR (' + CFG.FUEL.emergencyPrice + ' $)';
+    } else if (!G.dryChoice && dry.classList.contains('on')) {
+      dry.classList.remove('on');
+    }
+
     var list = [];
     for (var id in G.run.passives) {
       var p = C.PASSIVE_BY_ID[id];
@@ -3253,6 +3545,10 @@ window.CORE = window.CORE || {};
         if (G.state === 'end') buildEnd(); else show(null);
       };
       $('endAgain').onclick = function () { buildMenu(); };
+      $('openCarnet').onclick = function () { buildCarnet(); };
+      $('closeCarnet').onclick = function () { buildMenu(); };
+      $('dryBuy').onclick = function () { GAME.dryBuy(); $('dry').classList.remove('on'); };
+      $('dryRestart').onclick = function () { GAME.dryRestart(); $('dry').classList.remove('on'); };
     }
   };
 })(window.CORE);

@@ -40,6 +40,15 @@
   #hp i{width:16px;height:16px;border:2px solid #ff5a6e;border-radius:3px;display:block}
   #hp i.on{background:#ff3b52;box-shadow:0 0 8px rgba(255,59,82,.7)}
   #hp i.off{opacity:.3}
+  #dry{position:absolute;inset:0;background:rgba(8,4,5,.82);display:none;
+    align-items:center;justify-content:center;pointer-events:auto;z-index:5}
+  #dry.on{display:flex}
+  #dry .dbox{width:min(560px,92vw);background:var(--panel);border:2px solid #ff3b52;
+    border-radius:10px;padding:26px;text-align:center;box-shadow:0 0 60px rgba(255,59,82,.25)}
+  #dry .dt{font-size:32px;font-weight:800;letter-spacing:6px;color:#ff5a6e}
+  #dry .ds{font-size:13px;color:var(--dim);margin:10px 0 22px;line-height:1.7}
+  #dry .drow{display:flex;gap:12px}
+  #dry .btn{margin-top:0;font-size:13px;padding:14px 10px}
   #restartMsg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
     font-size:30px;font-weight:800;letter-spacing:6px;color:#ff5a6e;display:none;
     text-shadow:0 3px 20px rgba(0,0,0,.9)}
@@ -119,6 +128,24 @@
     color:var(--dim);margin-top:18px}
   .keys b{color:var(--txt)}
   .goldtag{color:var(--or);font-weight:700}
+  .unlock{background:#1b1508;border:1px solid var(--or);border-radius:8px;padding:14px;
+    margin-bottom:8px;text-align:left}
+  .unlock .un{font-size:16px;font-weight:800;color:var(--or);letter-spacing:1px}
+  .unlock .ud{font-size:12px;color:#c9bfa4;margin-top:4px}
+  .prog{display:flex;align-items:center;gap:10px;margin:7px 0;font-size:12px}
+  .prog .pl{flex:1;color:#b9c0cb}
+  .prog .pv{color:var(--dim);font-variant-numeric:tabular-nums;min-width:74px;text-align:right}
+  .prog .pb{width:130px;height:6px;background:#22252c;border:1px solid var(--line);
+    border-radius:3px;overflow:hidden}
+  .prog .pb i{display:block;height:100%;background:linear-gradient(90deg,#ff8a3d,#ffd24a)}
+  .prog.done .pl{color:#78ffb4}
+  .tiers{display:flex;gap:8px;justify-content:center;margin:14px 0 4px;flex-wrap:wrap}
+  .tier{padding:8px 16px;border:1px solid var(--line);border-radius:6px;font-size:12px;
+    cursor:pointer;color:var(--dim)}
+  .tier.on{border-color:var(--acc);color:var(--txt);background:#221a12}
+  .tier.no{opacity:.3;cursor:not-allowed}
+  .linkbtn{background:none;border:0;color:var(--dim);font:inherit;font-size:12px;
+    text-decoration:underline;cursor:pointer;padding:8px}
 </style>
 </head>
 <body>
@@ -133,6 +160,16 @@
   <div id="quota"></div>
   <div id="hp"></div>
   <div id="restartMsg">NIVEAU RELANCE</div>
+  <div id="dry">
+    <div class="dbox">
+      <div class="dt">PANNE SECHE</div>
+      <div class="ds">La foreuse est a l'arret. Il faut du carburant, ou tout reprendre depuis le haut.</div>
+      <div class="drow">
+        <button class="btn" id="dryBuy">BIDON D'URGENCE</button>
+        <button class="btn ghost" id="dryRestart">RELANCER LE NIVEAU</button>
+      </div>
+    </div>
+  </div>
   <div id="combo"></div>
   <div id="eventBanner"></div>
   <div id="challenges"></div>
@@ -163,7 +200,18 @@
     <span><b>R</b> — recommencer le niveau</span>
     <span><b>M</b> — son</span>
   </div>
-  <div class="sub" id="bestTotal" style="margin-top:18px"></div>
+  <h2 style="text-align:center">Profondeur</h2>
+  <div class="tiers" id="tiers"></div>
+  <div class="sub" id="bestTotal" style="margin-top:14px"></div>
+  <div style="text-align:center"><button class="linkbtn" id="openCarnet">CARNET DU MINEUR</button></div>
+</div></div>
+
+<div class="screen" id="scCarnet"><div class="box">
+  <h1 style="font-size:34px;letter-spacing:6px">CARNET</h1>
+  <div class="sub" id="carnetStats"></div>
+  <h2>A debloquer</h2>
+  <div id="carnetList"></div>
+  <button class="btn ghost" id="closeCarnet">RETOUR</button>
 </div></div>
 
 <div class="screen" id="scStation"><div class="box">
@@ -184,7 +232,10 @@
 <div class="screen" id="scEnd"><div class="box">
   <h1 id="endTitle">LE C<span>OE</span>UR</h1>
   <div class="sub" id="endSub"></div>
+  <div id="endUnlocks"></div>
   <table id="endTable"></table>
+  <h2>Prochains deblocages</h2>
+  <div id="endProgress"></div>
   <button class="btn" id="endAgain">REJOUER</button>
 </div></div>
 

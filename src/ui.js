@@ -13,17 +13,62 @@ window.CORE = window.CORE || {};
   }
 
   function show(id) {
-    ['scMenu', 'scStation', 'scEnd'].forEach(function (s) { $(s).classList.remove('on'); });
+    ['scMenu', 'scStation', 'scEnd', 'scCarnet'].forEach(function (s) { $(s).classList.remove('on'); });
     if (id) $(id).classList.add('on');
     $('hud').style.display = id ? 'none' : 'block';
   }
 
   /* ---------------------------------------------------------------- MENU */
+  var chosenTier = 0;
+
+  function buildTiers() {
+    var host = $('tiers');
+    host.innerHTML = '';
+    CFG.DEPTHS.forEach(function (dp, i) {
+      var open = i === 0 || CORE.SAVE.isUnlocked(i === 1 ? 'profondeur2' : 'profondeur3');
+      if (!open && i > 0 && !CORE.SAVE.isUnlocked('profondeur2')) { /* affiche quand meme, grise */ }
+      var el = document.createElement('div');
+      el.className = 'tier' + (open ? (i === chosenTier ? ' on' : '') : ' no');
+      el.textContent = dp.nom + (open ? '' : ' (verrouille)');
+      el.onclick = function () { if (!open) return; chosenTier = i; buildTiers(); };
+      host.appendChild(el);
+    });
+  }
+
+  function progressRow(p) {
+    var pct = Math.round(p.part * 100);
+    return '<div class="prog' + (p.part >= 1 ? ' done' : '') + '">' +
+      '<span class="pl">' + p.u.nom + '</span>' +
+      '<span class="pb"><i style="width:' + pct + '%"></i></span>' +
+      '<span class="pv">' + Math.min(p.valeur, p.u.but) + ' / ' + p.u.but + '</span></div>';
+  }
+
+  function buildCarnet() {
+    var m = CORE.SAVE.carnet();
+    var st = m.stats;
+    $('carnetStats').innerHTML =
+      'expeditions <b>' + (st.runs || 0) + '</b> &nbsp;·&nbsp; terminees <b>' + (st.finished || 0) + '</b>' +
+      ' &nbsp;·&nbsp; profondeur record <b>' + (st.bestDepth || 0) + ' m</b><br>' +
+      'minerai <b>' + (st.ore || 0) + '</b> &nbsp;·&nbsp; bidons <b>' + (st.cans || 0) + '</b>' +
+      ' &nbsp;·&nbsp; bonus <b>' + (st.bonuses || 0) + '</b> &nbsp;·&nbsp; effondrements <b>' +
+      (st.collapses || 0) + '</b> &nbsp;·&nbsp; ensevelissements <b>' + (st.buried || 0) + '</b>';
+    $('carnetList').innerHTML = CFG.UNLOCKS.map(function (u) {
+      var v = st[u.stat] || 0;
+      var done = !!m.unlocked[u.id];
+      return '<div class="prog' + (done ? ' done' : '') + '">' +
+        '<span class="pl">' + (done ? '[x] ' : '') + u.nom +
+        '<span style="color:var(--dim)"> — ' + u.desc + '</span></span>' +
+        '<span class="pb"><i style="width:' + Math.round(Math.min(1, v / u.but) * 100) + '%"></i></span>' +
+        '<span class="pv">' + Math.min(v, u.but) + ' / ' + u.but + '</span></div>';
+    }).join('');
+    show('scCarnet');
+  }
+
   function buildMenu() {
     var host = $('jobs');
     host.innerHTML = '';
     var rng = CORE.makeRng((Math.random() * 1e9) | 0);
-    var pool = C.JOBS.slice();
+    var pool = C.JOBS.filter(C.ouvert);
     rng.shuffle(pool);
     pool.slice(0, 3).forEach(function (job) {
       var el = document.createElement('div');
@@ -32,13 +77,19 @@ window.CORE = window.CORE || {};
         '</div><div class="ds">' + job.desc + '</div>';
       el.onclick = function () {
         CORE.SFX.init();
-        GAME.startRun(job);
+        GAME.startRun(job, chosenTier);
         show(null);
       };
       host.appendChild(el);
     });
+    buildTiers();
     var bt = CORE.SAVE.bestTotal();
-    $('bestTotal').textContent = bt ? 'Meilleure expedition : ' + fmtLong(bt) : '';
+    var pr = CORE.SAVE.proches(2);
+    $('bestTotal').innerHTML =
+      (bt ? 'Meilleure expedition : ' + fmtLong(bt) + '<br>' : '') +
+      (pr.length ? '<span style="color:var(--dim)">a debloquer : ' +
+        pr.map(function (p) { return p.u.nom + ' (' + Math.min(p.valeur, p.u.but) + '/' + p.u.but + ')'; })
+          .join(' &nbsp;·&nbsp; ') + '</span>' : '');
     show('scMenu');
   }
 
@@ -119,7 +170,7 @@ window.CORE = window.CORE || {};
       if (GAME.buyFuel()) { CORE.SFX.fuel(); buildShop(); }
     };
     host.appendChild(fuelEl);
-    C.PARTS.forEach(function (part) {
+    C.PARTS.filter(C.ouvert).forEach(function (part) {
       var owned = G.run.parts[part.id] || 0;
       var cost = C.partCost(part, owned);
       var maxed = owned >= part.max;
@@ -139,6 +190,15 @@ window.CORE = window.CORE || {};
   /* ------------------------------------------------------------------ FIN */
   function buildEnd() {
     var run = G.run;
+    var neufs = (G.endUnlocked || []).concat(G.unlocked || []);
+    $('endUnlocks').innerHTML = neufs.length
+      ? neufs.map(function (u) {
+          return '<div class="unlock"><div class="un">DEBLOQUE — ' + u.nom + '</div>' +
+            '<div class="ud">' + u.desc + '</div></div>';
+        }).join('')
+      : '';
+    $('endProgress').innerHTML = CORE.SAVE.proches(3).map(progressRow).join('') ||
+      '<div class="prog"><span class="pl">tout est debloque</span></div>';
     $('endSub').innerHTML = 'Expedition terminee en <b style="color:var(--acc);font-size:20px">' +
       fmtLong(run.total) + '</b>' +
       (CORE.SAVE.bestTotal() === run.total ? '<br><span style="color:var(--or)">nouveau record</span>' : '');
@@ -231,6 +291,19 @@ window.CORE = window.CORE || {};
     $('hp').style.opacity = G.iframes > 0 ? (0.4 + 0.6 * Math.abs(Math.sin(G.time * 20))) : 1;
     $('restartMsg').style.display = G.justRestarted > 0 ? 'block' : 'none';
 
+    var dry = $('dry');
+    if (G.dryChoice && !dry.classList.contains('on')) {
+      dry.classList.add('on');
+      var can = G.run.gold >= CFG.FUEL.emergencyPrice;
+      var btn = $('dryBuy');
+      btn.disabled = !can;
+      btn.textContent = can
+        ? 'BIDON D\'URGENCE — ' + CFG.FUEL.emergencyPrice + ' $  (+' + CFG.FUEL.emergency + ' L)'
+        : 'PAS ASSEZ D\'OR (' + CFG.FUEL.emergencyPrice + ' $)';
+    } else if (!G.dryChoice && dry.classList.contains('on')) {
+      dry.classList.remove('on');
+    }
+
     var list = [];
     for (var id in G.run.passives) {
       var p = C.PASSIVE_BY_ID[id];
@@ -258,6 +331,10 @@ window.CORE = window.CORE || {};
         if (G.state === 'end') buildEnd(); else show(null);
       };
       $('endAgain').onclick = function () { buildMenu(); };
+      $('openCarnet').onclick = function () { buildCarnet(); };
+      $('closeCarnet').onclick = function () { buildMenu(); };
+      $('dryBuy').onclick = function () { GAME.dryBuy(); $('dry').classList.remove('on'); };
+      $('dryRestart').onclick = function () { GAME.dryRestart(); $('dry').classList.remove('on'); };
     }
   };
 })(window.CORE);
