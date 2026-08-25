@@ -269,9 +269,15 @@ panneau solaire, thermocouple, et le chapitre 32 du cours (dont une leçon
 l'ampoule allumée trois secondes » qui s'appuie sur le compteur `c.tenu` de la
 dynamo, déjà en place).
 
-**Phase 3 — l'alternatif.** Lot 6 : condensateur et bobine (c'est là que
-`simDt` sert, avec des sous-pas de temps). Lot 7 : source alternative,
-résonance, pont redresseur, chapitre.
+**Phase 3 — l'alternatif.** Lot 6 : condensateur et bobine d'inductance
+(c'est là qu'il faudra des **sous-pas de temps** : une image de 16 ms est
+beaucoup trop grossière pour un circuit RC), **et un générateur de tension
+alternative** — demandé explicitement par l'auteur, à ne pas oublier :
+fréquence et amplitude réglables, phase accumulée avec le pas de temps et non
+avec `Date.now()`. Lot 7 : résonance, pont redresseur, chapitre.
+→ attention, l'oscilloscope n'échantillonne qu'une fois par image (~60 points
+par seconde) : au-delà de quelques hertz, la sinusoïde deviendra illisible. À
+traiter dans le lot 6.
 
 **Phase 4 — l'éther.** Lot 8 : la distance et les obstacles. Lot 9 : accord
 LC, AM et FM. Lot 10 : Morse, numérique, le son, chapitre final.
