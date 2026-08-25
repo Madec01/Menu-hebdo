@@ -17,6 +17,7 @@ version en cours, il suffit d'en recopier une par-dessus `logicgates.html`.
 | `logicgates-v6.6.html` | v6.6 : barre d'outils refondue — trois ateliers, onglets redistribués, barre de favoris, repli |
 | `logicgates-v6.7.html` | v6.7 : la leçon sur le schéma (pages, halo, reprise), bandeau de victoire, sommaire des leçons |
 | `logicgates-v6.8.html` | v6.8 : plus de colonne latérale — énoncé en bandeau, table repliable, boutons flottants, leçon en carte large |
+| `logicgates-v6.9.html` | v6.9 : le cartouche de leçon posé sur le plan — placement automatique, trait vers la cible, déplaçable |
 
 Les copies antérieures ne connaissent évidemment pas les tests des versions
 suivantes : on vérifie seulement qu'elles démarrent.
@@ -31,5 +32,6 @@ node test/run.js versions/logicgates-v6.4.html --smoke
 node test/run.js versions/logicgates-v6.5.html --smoke
 node test/run.js versions/logicgates-v6.6.html --smoke
 node test/run.js versions/logicgates-v6.7.html --smoke
-node test/run.js versions/logicgates-v6.8.html            # suite complète
+node test/run.js versions/logicgates-v6.8.html --smoke
+node test/run.js versions/logicgates-v6.9.html            # suite complète
 ```

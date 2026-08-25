@@ -27,15 +27,6 @@ fait, et **supprimer la section entière** quand tout est terminé.
 
 ## Refonte de l'affichage (en cours)
 
-- **Lot 1** — supprimer la colonne de droite `#mission-panel`. L'énoncé monte
-  en bandeau fin en haut au centre (repliable), le diagnostic en direct se
-  place dessous, la table de vérité devient un panneau repliable en bas à
-  gauche, et Vérifier / Solution / Effacer forment une barre flottante.
-- **Lot 2** — le **cartouche de leçon posé sur la grille** : taille fixe donc
-  toujours lisible, placé près des composants dont l'étape parle, relié à eux
-  par un trait, déplaçable à la main. Il porte la pagination `‹ n / N ›`,
-  « Montre-moi » et « Tout poser », et déroule le « pourquoi ça marche » après
-  la victoire.
 - **Lot 3** — le sommaire devient **la carte du cours** : 30 tuiles de
   chapitre avec anneau de progression, leçons en pastilles numérotées
   (grise à faire, verte réussie, dorée objectif atteint), bouton Reprendre.

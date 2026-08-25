@@ -40,8 +40,17 @@ d'outils :
 **L'écran est au circuit.** Il n'y a plus de colonne latérale : l'énoncé est un
 bandeau fin en haut (repliable d'un clic), la table de vérité et les compteurs
 un petit bloc repliable en bas à droite, les boutons d'action une colonne
-étroite, et **la leçon une carte large posée au-dessus du plan**. Le milieu de
-l'écran appartient au schéma.
+étroite. Le milieu de l'écran appartient au schéma.
+
+**Le cartouche de leçon.** L'explication n'est plus rangée sur le côté : c'est
+une carte posée **sur le plan, à côté des composants dont la page parle**, et
+reliée à eux par un trait. Elle garde une taille lisible quel que soit le zoom,
+et se replace à chaque page : elle cherche le coin le plus vide, **rétrécit
+quand aucun trou n'est assez large**, compte double les entrées et sorties
+verrouillées — ce sont elles qu'on actionne — et ne recouvre **jamais** ce
+qu'elle désigne. Si elle gêne quand même, on l'attrape par sa barre de titre
+pour la poser ailleurs ; un double-clic sur cette barre la remet en placement
+automatique.
 
 **La leçon sur le schéma.** Pendant une mission, le bandeau indique en direct
 combien de lignes de la table sont justes et laquelle cloche. Le bouton « La
@@ -169,7 +178,7 @@ concatène entre `test/pre.js` (stubs DOM / Canvas / Audio / localStorage, plus
 une horloge `Date.now` pilotable) et `test/post.js` (les tests), puis exécute le
 tout dans un contexte `vm`. Aucun navigateur, aucune dépendance npm.
 
-183 tests couvrent le moteur, le séquentiel, les blocs numériques, l'analogique
+186 tests couvrent le moteur, le séquentiel, les blocs numériques, l'analogique
 et la régulation (dont une boucle fermée four + thermostat), l'édition,
 l'orientation, les tunnels, les puces, l'interface, le balisage et le guide.
 Deux tests valident automatiquement **tout** nouveau composant du registre

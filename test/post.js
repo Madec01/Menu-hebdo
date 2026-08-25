@@ -4108,6 +4108,86 @@ T('T182 le bandeau de victoire ne laisse pas dépasser l’énoncé', () => {
   loadMission(-1);
 });
 
+T('T183 le cartouche se pose à côté de ce dont la page parle', () => {
+  const idx = missions.findIndex(m => m.id === 'm7');
+  loadMission(idx);
+  openTutor();
+  ok(tutor, 'la leçon est ouverte');
+  tutorAll();                                  // tout est posé : de vraies cibles
+  tutor.step = 1; renderTutor();
+  const z = zoneUtile();
+  ok(z.w > 200 && z.h > 150, 'la zone libre est exploitable (' + Math.round(z.w) + '×' + Math.round(z.h) + ')');
+  const r = placeLecon();
+  ok(r, 'la carte est posée');
+  ok(r.x >= z.x - .5 && r.y >= z.y - .5, 'elle ne déborde pas en haut à gauche');
+  ok(r.x + r.w <= z.x + z.w + .5, 'ni à droite');
+  ok(r.y + r.h <= z.y + z.h + .5, 'ni en bas — donc jamais sous la barre d’outils');
+  // elle ne recouvre jamais ce qu’elle désigne
+  const cibles = cibleLecon();
+  ok(cibles && cibles.length, 'la page désigne bien quelque chose');
+  const cible = bboxEcran(cibles);
+  eq(recouvrement(r, cible), 0, 'elle ne recouvre pas sa propre cible');
+  // et elle reste près : sinon le trait n’aurait aucun sens
+  const d = Math.hypot(r.x + r.w/2 - (cible.x + cible.w/2), r.y + r.h/2 - (cible.y + cible.h/2));
+  ok(d < 900, 'elle reste à portée de regard (' + Math.round(d) + ' px)');
+  closeTutor();
+});
+
+T('T184 elle suit les pages, se laisse poser à la main, et se recolle', () => {
+  loadMission(missions.findIndex(m => m.id === 'm7'));
+  openTutor(); tutorAll();
+  tutor.step = 0; renderTutor();
+  const a = placeLecon();
+  tutor.step = 2; renderTutor();
+  const b = placeLecon();
+  ok(a && b, 'les deux pages posent la carte');
+  // posée à la main : la position demandée est respectée
+  lessonPose = { x:120, y:300 };
+  const c = placeLecon();
+  near(c.x, 120, 1, 'la carte va où on la pose');
+  near(c.y, 300, 1, 'en X comme en Y');
+  // mais jamais hors de la zone utile
+  const z = zoneUtile();
+  lessonPose = { x:-800, y:-800 };
+  const d = placeLecon();
+  ok(d.x >= z.x - .5 && d.y >= z.y - .5, 'on ne peut pas la perdre hors de l’écran');
+  lessonPose = { x:99999, y:99999 };
+  const e = placeLecon();
+  ok(e.x + e.w <= z.x + z.w + .5 && e.y + e.h <= z.y + z.h + .5, 'ni de l’autre côté');
+  // se recoller rend le placement automatique
+  lessonPose = null;
+  const f = placeLecon();
+  ok(f, 'elle se replace toute seule');
+  closeTutor();
+  eq(lessonPose, null, 'fermer la leçon oublie la position posée à la main');
+  eq(lessonRect, null, 'et la carte n’occupe plus rien');
+  eq(placeLecon(), null, 'leçon fermée : rien à poser');
+  loadMission(-1);
+});
+
+T('T185 le halo épouse l’encombrement réel, rotation comprise', () => {
+  // bw/bh et non w/h : sur un composant tourné d’un quart de tour, le halo
+  // tombait de travers
+  ok(/roundRect\(c\.x - 9, c\.y - 9, c\.bw \+ 18, c\.bh \+ 18/.test(__HTML),
+     'le halo est tracé sur bw/bh');
+  board();
+  const c = mk('DEC', 200, 200);
+  const w0 = c.bw, h0 = c.bh;
+  c.rot = 1;
+  eq(c.bw, h0, 'un quart de tour échange largeur et hauteur');
+  eq(c.bh, w0, 'dans les deux sens');
+  // le rectangle écran suit la rotation
+  cam.x = 0; cam.y = 0; cam.z = 1;
+  const r = bboxEcran([c]);
+  near(r.w, h0, .5, 'le rectangle écran suit');
+  near(r.h, w0, .5, 'lui aussi');
+  // et le zoom
+  cam.z = 2;
+  const r2 = bboxEcran([c]);
+  near(r2.w, h0 * 2, .5, 'le zoom double la largeur à l’écran');
+  cam.z = 1;
+});
+
 /* ===================== bilan ===================== */
 console.log('\n' + (__fail ? '✗' : '✓') + ' ' + __pass + ' test(s) réussi(s), ' +
             __fail + ' échec(s)' + (__fail ? ' : ' + __failures.join(', ') : '') + '\n');
