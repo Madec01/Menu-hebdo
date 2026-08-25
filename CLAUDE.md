@@ -19,6 +19,26 @@ toutes les explications doivent être en français simple, sans jargon.
 - Expliquer ce que tu comptes faire et attendre validation avant toute
   modification.
 
+## Le travail par lots
+
+- Le travail avance par **lots** : un lot livré, l'auteur l'essaie, il valide
+  ou il signale, puis on passe au suivant.
+- **À la fin de chaque lot**, refaire le point : la liste des lots qui restent,
+  et le **détail du prochain** — ce qu'il contient exactement, ce que l'auteur
+  pourra faire à la fin, et ce qui touche au moteur.
+
+## L'auteur attend des propositions, pas seulement de l'exécution
+
+- Il est **ouvert aux propositions d'amélioration** : si quelque chose peut
+  être fait mieux, plus simple, plus juste ou plus parlant, le dire.
+- Il **veut un avis franc sur ses idées** : dire quand une idée est bonne,
+  dire quand elle coûte cher pour ce qu'elle rapporte, et proposer l'autre
+  chemin. Ne pas approuver par politesse.
+- Il **accueille les idées** qui ne viennent pas de lui : un composant qui
+  manque, une leçon qui manque, un geste qui ferait gagner du temps.
+- Cela ne change rien à la règle du dessus : on propose, on explique, et on
+  attend la validation avant de coder.
+
 ## Le carnet de bord : note.md
 
 `note.md` est le fichier à lire **en premier** quand une session démarre : il
@@ -54,10 +74,9 @@ fait, et **supprimer la section entière** quand tout est terminé.
 Le bouton existe déjà dans la barre du bas, grisé, marqué « bientôt ».
 Quatre phases, dans cet ordre :
 
-1. **Le continu** — un vrai calcul de tensions et de courants (solveur
-   nodal), un troisième type de liaison à côté du logique et du fluide, pile
-   avec résistance interne, et le retour du courant rendu explicite en
-   utilisant le rail comme masse.
+1. ~~**Le continu**~~ — la partie technique est **faite** (solveur nodal,
+   liaison de puissance, mesure, générateur, oscilloscope, rails et tunnels).
+   Il ne reste que son **chapitre de cours**, suivi dans `note.md`.
 2. **Produire** — aimant qu'on fait passer dans une bobine à la souris,
    dynamo à manivelle dont l'effort augmente avec la charge, turbine
    alimentée par le four ou la chaudière, panneau solaire, thermocouple.
