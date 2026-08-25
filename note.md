@@ -5,10 +5,10 @@ dans `CLAUDE.md`.
 
 ## Où en est le projet
 
-- **v6.11**, branche `claude/architecte-logique-v5-vntfkp`, **194 tests verts**
+- **v6.12**, branche `claude/architecte-logique-v5-vntfkp`, **195 tests verts**
   (`npm test`).
 - `logicgates.html` : ~12 500 lignes, un seul `<script>`, aucune dépendance.
-- Copies figées dans `versions/` (v5.1 → v6.11), avec leur tableau dans
+- Copies figées dans `versions/` (v5.1 → v6.12), avec leur tableau dans
   `versions/README.md`.
 - Catalogue : **148 leçons en 30 chapitres** — 63 à table de vérité (dont 8
   boîtes noires) et 85 libres.
@@ -21,8 +21,14 @@ dans `CLAUDE.md`.
 **vrai solveur nodal** qui résout tout le circuit d'un coup.
 
 Ce qu'on peut faire : la boucle pile → interrupteur → ampoule → masse → pile.
-Deux ampoules en parallèle et la pile s'affaisse, visiblement. On débranche le
-retour à la masse et tout s'éteint.
+Deux ampoules en parallèle et la pile s'affaisse, visiblement. On ouvre la
+boucle et tout s'éteint.
+
+**v6.12 — les trois défauts trouvés par l'auteur en essayant le lot 1**, tous
+corrigés : les câbles qui serpentaient (trois causes, dont un vieux bug
+d'écartement cumulatif qui touchait TOUS les domaines), l'éclat des ampoules
+qui se figeait au-delà de deux, et le circuit qui refusait de fonctionner sans
+masse. Voir « Décisions » ci-dessous.
 
 Avant ça (v6.8 → v6.10) : la refonte de l'affichage en trois lots — bandeau
 `#enonce`, `#infos` repliable, `#actions` ; cartouche de leçon posé sur le
@@ -52,10 +58,28 @@ plan ; sommaire devenu carte du cours.
 - **`simDt`, une horloge unique pour tout le circuit.** Créée mais pas encore
   utilisée : elle servira aux composants à mémoire (phase 3). Les composants
   existants gardent chacun leur `c.lastT` — ne pas les convertir sans raison.
-- **Sans masse, rien ne se calcule.** C'est voulu : un circuit est une boucle.
-  `elecMasse` dit si une masse est posée, `elecOn` si le solveur a du travail
-  (il sort immédiatement quand aucun composant de puissance n'est sur le plan
-  — coût nul pour tous les circuits existants).
+- **La masse n'est PAS nécessaire.** Erreur du premier jet, corrigée en v6.12 :
+  le solveur refusait de calculer sans masse, et une masse abandonnée dans un
+  coin suffisait à réveiller le circuit. Désormais chaque circuit indépendant
+  posé sur le plan choisit son propre zéro — la masse si elle en fait partie,
+  sinon le `−` d'une de ses sources. La leçon « un circuit est une boucle »
+  vient de la boucle ouverte, pas de l'absence d'un symbole.
+  `elecOn` dit si le solveur a du travail (il sort immédiatement quand aucun
+  composant de puissance n'est sur le plan — coût nul pour l'existant).
+- **Toutes les bornes de puissance sont à la même hauteur** (`ENER_Y = 40`, via
+  `enerPinPos`), quelle que soit la taille du boîtier : sans ça, deux
+  composants côte à côte n'ont jamais leurs bornes en face et le fil décroche.
+  Un composant qui pose ses bornes lui-même doit aussi les étiqueter lui-même
+  (`enerLabels`) — le rendu générique ne le fait plus pour lui.
+- **`spreadRoutes` repart de `_raw`, jamais de `_rp`.** Bug historique trouvé
+  en v6.12 : l'écartement des couloirs relisait le tracé DÉJÀ écarté et
+  s'ajoutait à chaque image. Les fils dérivaient selon l'historique
+  d'affichage. C'était la cause principale des « câbles qui font n'importe
+  quoi », toutes familles confondues.
+- **L'éclat d'un filament suit la puissance^2,2**, pas la puissance. Sinon la
+  baisse d'éclat quand on ajoute des ampoules en parallèle passe sous le seuil
+  de perception. La couleur va du rouge-orangé au blanc chaud (`filColor`) :
+  c'est le levier visuel le plus efficace, et il est physiquement juste.
 
 ## Pièges du fichier (durement acquis)
 
@@ -92,8 +116,15 @@ plan ; sommaire devenu carte du cours.
 
 Découpage validé avec l'auteur. Un lot, on livre, il teste, il valide.
 
-**Phase 1 — le continu.** Lot 2 : résistance, potentiomètre, voltmètre,
-ampèremètre, court-circuit signalé. Lot 3 : le chapitre 31 du cours.
+**Phase 1 — le continu.** Lot 2 (demandé complet, en une seule livraison) :
+résistance, potentiomètre, voltmètre, ampèremètre, **générateur de tension**
+réglable à la souris avec limitation de courant, **oscilloscope ⚡** (deux
+sondes de tension + une entrée de mesure, base de temps réelle appuyée sur
+`simDt`), et le court-circuit signalé.
+→ la limitation de courant n'est pas linéaire : il faudra résoudre, vérifier si
+la limite est franchie, et refaire le calcul avec la source bridée. C'est le
+seul ajout d'architecture du lot 2.
+Lot 3 : le chapitre 31 du cours.
 → le lot 3 devra ajouter **une vraie condition de réussite** : aujourd'hui une
 leçon sans table de vérité est gagnée dès qu'on clique sur « Vérifier »
 (`logicgates.html`, gestionnaire de `btn-verify`, la ligne `if (!m.tt.length)`).

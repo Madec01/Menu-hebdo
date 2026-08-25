@@ -4267,7 +4267,7 @@ T('T187 la boucle : fermée ça s’allume, ouverte il ne se passe rien', () => 
   near(Math.abs(b.p.u), 4.5, .05, 'et elle retrouve ses 4,5 V à vide');
 });
 
-T('T188 sans retour à la masse, un circuit n’est pas un circuit', () => {
+T('T188 c’est la BOUCLE qui compte, pas la masse', () => {
   const b = boucle();
   sim();
   ok(b.l.p > 0.8, 'au départ elle éclaire');
@@ -4276,13 +4276,27 @@ T('T188 sans retour à la masse, un circuit n’est pas un circuit', () => {
   sim();
   near(b.l.i, 0, 1e-3, 'la boucle est rompue : plus rien ne circule');
   near(b.l.p, 0, 1e-3, 'et l’ampoule s’éteint');
-  // sans aucune masse sur le plan, rien ne se calcule non plus
+  // en revanche une boucle fermée SANS masse marche très bien : une lampe de
+  // poche n’a pas de fil de terre. La masse ne sert qu’à fixer le zéro.
   board();
   const p = mk('PILE', 0, 0), l = mk('LAMPE', 200, 0);
+  p.opt.ri = 0.01;
   link(p, 0, l, 0); link(l, 0, p, 0);
   sim();
   ok(!elecMasse, 'aucune masse posée');
-  near(l.i, 0, 1e-3, 'donc aucun courant, même en boucle fermée');
+  ok(l.p > 0.8, 'et pourtant l’ampoule éclaire : ' + l.p + ' W');
+  near(l.u, 4.5, .05, 'elle reçoit toute la tension');
+  // faute de masse, le zéro est pris sur le − de la pile : les tensions
+  // affichées restent lisibles (4,5 V d’un côté, 0 V au retour)
+  near(p.outPins[0].state, 4.5, .05, 'le + est à 4,5 V');
+  near(p.inPins[0].state, 0, 1e-3, 'le − est le zéro');
+  // une masse abandonnée dans un coin, reliée à rien, ne change rien
+  const g = mk('MASSE', 0, 400);
+  sim();
+  ok(elecMasse, 'la masse est bien détectée');
+  ok(l.p > 0.8, 'le circuit marche toujours');
+  near(p.outPins[0].state, 4.5, .05, 'et les tensions ne se sont pas mises à flotter');
+  near(g.inPins[0].state, 0, 1e-3, 'la masse esseulée reste à 0 V');
 });
 
 T('T189 la loi d’Ohm se constate : U = R × I, et la puissance suit', () => {
@@ -4305,13 +4319,28 @@ T('T190 la pile faiblit quand on tire dessus, et ça se voit', () => {
   // une deuxième ampoule en parallèle : deux fois plus de courant demandé
   const l2 = mk('LAMPE', 400, 200);
   link(b.k, 0, l2, 0);
-  link(l2, 0, b.g, 1);
+  link(l2, 0, b.g, 0);            // même borne de retour : c'est une barre
   sim();
   const deux = Math.abs(b.p.u);
   ok(deux < seule - .1, 'avec deux ampoules la pile s’affaisse : ' + deux + ' < ' + seule);
   ok(b.l.p < eclatSeule - .05, 'et la première éclaire moins qu’avant');
   near(b.l.p, l2.p, .02, 'les deux ampoules éclairent pareil : elles ont la même tension');
   ok(Math.abs(b.p.i) > 1.9 * b.l.i - .05, 'la pile débite la somme des deux courants');
+  // et la baisse ne s'arrête pas à la deuxième : chaque ampoule ajoutée retire
+  // encore ~10 % de puissance à toutes les autres.
+  const suite = [b.l.p];
+  for (let n = 3; n <= 6; n++){
+    const ln = mk('LAMPE', 400, 200 * n);
+    link(b.k, 0, ln, 0); link(ln, 0, b.g, 0);
+    sim();
+    suite.push(b.l.p);
+  }
+  for (let i = 1; i < suite.length; i++)
+    ok(suite[i] < suite[i-1] * .95,
+       'ampoule ' + (i + 2) + ' : la puissance baisse encore (' +
+       suite[i-1].toFixed(3) + ' → ' + suite[i].toFixed(3) + ' W)');
+  ok(suite[suite.length-1] < suite[0] * .7,
+     'de 2 à 6 ampoules, chacune perd plus de 30 % de sa puissance');
 });
 
 T('T191 en série on partage la tension, en parallèle on partage le courant', () => {
@@ -4352,6 +4381,27 @@ T('T192 le solveur ne coûte rien quand aucun circuit électrique n’est posé'
   ok(elecOn, 'avec de la puissance sur le plan, le solveur travaille');
   eq(l2.inPins[0].state, 1, 'la logique marche toujours à côté');
   ok(b.l.p > 0.8, 'et l’ampoule éclaire toujours');
+});
+
+T('T192b les fils de puissance vont droit, et ne dérivent pas', () => {
+  board();
+  // deux composants d'énergie posés à la même hauteur : leurs bornes sont
+  // exactement en face, quelles que soient leurs tailles de boîtier.
+  const p = mk('PILE', 0, 100), k = mk('INTERP', 300, 100), l = mk('LAMPE', 600, 100);
+  eq(p.outPins[0].y, k.inPins[0].y, 'la sortie de la pile et l’entrée de l’interrupteur sont à la même hauteur');
+  eq(k.outPins[0].y, l.inPins[0].y, 'idem entre l’interrupteur et l’ampoule');
+  const w = link(p, 0, k, 0);
+  const R = w.route();
+  const memeY = R.every(pt => Math.abs(pt.y - R[0].y) < .01);
+  ok(memeY, 'le tracé ne fait aucun décrochement : ' + JSON.stringify(R.map(q => Math.round(q.y))));
+  // l'écartement des couloirs ne doit pas se cumuler d'une image à l'autre
+  const l2 = mk('LAMPE', 600, 400);
+  link(k, 0, l, 0); link(k, 0, l2, 0);
+  spreadRoutes();
+  const t1 = wires.map(x => x._rp.map(q => [Math.round(q.x*100), Math.round(q.y*100)]));
+  spreadRoutes(); spreadRoutes(); spreadRoutes();
+  const t2 = wires.map(x => x._rp.map(q => [Math.round(q.x*100), Math.round(q.y*100)]));
+  deq(t2, t1, 'trois images de plus ne déplacent pas les fils d’un pixel');
 });
 
 T('T193 l’atelier ⚡ est complet : composants, guide, sauvegarde', () => {
