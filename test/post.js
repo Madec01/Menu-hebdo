@@ -2864,7 +2864,11 @@ T('T149 trois ateliers : la palette se recompose, les favoris ne bougent pas', (
   ok(phys && !phys.bientot, 'l’atelier Énergie & ondes n’est plus « bientôt »');
   setAppMode('phys');
   eq(appMode, 'phys', 'et il s’ouvre');
-  deq(cles(), ['ener','wire'], 'énergie : le continu et le câblage');
+  deq(cles(), ['ener','wirep'], 'énergie : le continu et son propre câblage');
+  const cab = TOOL_TABS.find(t => t.key === 'wirep');
+  ok(cab.items.indexOf('RAILP8') < cab.items.indexOf('RAIL8'),
+     'les rails de puissance passent AVANT ceux de signal');
+  ok(cab.items.includes('TUNP'), 'et le tunnel de puissance y est');
   ok(!cles().includes('gate') && !cles().includes('sense'),
      'ni portes logiques ni capteurs de process côté énergie');
   setAppMode('proc');

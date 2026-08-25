@@ -5,10 +5,10 @@ dans `CLAUDE.md`.
 
 ## Où en est le projet
 
-- **v6.14**, branche `claude/architecte-logique-v5-vntfkp`, **206 tests verts**
+- **v6.15**, branche `claude/architecte-logique-v5-vntfkp`, **206 tests verts**
   (`npm test`).
 - `logicgates.html` : ~12 500 lignes, un seul `<script>`, aucune dépendance.
-- Copies figées dans `versions/` (v5.1 → v6.14), avec leur tableau dans
+- Copies figées dans `versions/` (v5.1 → v6.15), avec leur tableau dans
   `versions/README.md`.
 - Catalogue : **148 leçons en 30 chapitres** — 63 à table de vérité (dont 8
   boîtes noires) et 85 libres.
@@ -23,6 +23,27 @@ dans `CLAUDE.md`.
 Ce qu'on peut faire : la boucle pile → interrupteur → ampoule → masse → pile.
 Deux ampoules en parallèle et la pile s'affaisse, visiblement. On ouvre la
 boucle et tout s'éteint.
+
+**v6.15 — le câblage de l'atelier ⚡, et le fusible.** L'onglet Câblage de
+l'atelier énergie est maintenant le sien (`wirep`) : les barres et le tunnel de
+PUISSANCE en tête, ceux de signal en dessous pour les sorties de mesure.
+Avant, il n'offrait que les rails logiques, qui refusent la puissance à juste
+titre — d'où la confusion. Les barres de puissance sont aussi **redessinées**
+en jeu de barres épais à têtes de vis hexagonales, impossibles à confondre avec
+le mince liseré ambre du rail de signal. Et quand on se trompe malgré tout, le
+message de refus **nomme le jumeau à prendre**.
+
+Nouveau composant : le **FUSIBLE** (calibre réglable, fond au-delà, se remplace
+au clic).
+
+**Lot 3 mis en pause par l'auteur.** Les deux mécanismes qu'il demandait sont
+déjà en place et inertes tant qu'aucune leçon ne s'en sert :
+- `m.check(components, wires)` — la troisième façon de gagner, pour les leçons
+  sans table de vérité. Rend `true`, ou la phrase qui dit ce qui manque.
+  Vocabulaire d'appui : `ckTous`, `ckUn`, `ckAllumees`, `ckSources`,
+  `ckDebite`, `ckBoucle`, juste avant `const missions`.
+- `m.dom` — l'atelier de la leçon ; `loadMission` y bascule tout seul.
+Reste à écrire : les dix leçons du chapitre 31, et les montages d'exemple.
 
 **v6.14 — confort et câblage.** Rail et tunnel de puissance (`RAILP4`,
 `RAILP8`, `TUNP`). Le **clic simple sélectionne** (et actionne toujours le
