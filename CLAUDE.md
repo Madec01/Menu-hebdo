@@ -19,6 +19,20 @@ toutes les explications doivent être en français simple, sans jargon.
 - Expliquer ce que tu comptes faire et attendre validation avant toute
   modification.
 
+## Le carnet de bord : note.md
+
+`note.md` est le fichier à lire **en premier** quand une session démarre : il
+dit où en est le projet, ce qui vient d'être fait, et les pièges du fichier
+principal.
+
+- Le mettre à jour **dès qu'un morceau de travail est terminé** (et pas
+  seulement quand l'auteur annonce un « clear » : un clear efface la mémoire
+  sans prévenir).
+- Y écrire ce qui sert à reprendre le travail : l'état, les décisions prises
+  et pourquoi, les pièges rencontrés. Pas l'historique détaillé — c'est le
+  rôle des messages de commit.
+- Le garder court. Ce qui est fini et sans conséquence, on l'efface.
+
 # Feuille de route
 
 Cette section est **temporaire** : c'est un pense-bête, pas de la
