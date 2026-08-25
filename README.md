@@ -28,6 +28,7 @@ d'outils :
 | Portes | les 7 portes de base, versions à 3 entrées, NAND·3, NOR·3 |
 | Mémoire | retard, bascule D, registre, registre à décalage, RAM 16×4 |
 | Calcul & bus | MUX/DEMUX (2 et 4 voies), additionneur, soustracteur, comparateur, décodeurs, encodeur, BCD→7 segments, ROM, bus, tunnels |
+| Câblage | tunnels (nœuds nommés), **rails de distribution** 4 / 8 / 12 bornes ou longueur libre, **cadres de commentaire** titrés |
 | Temps & automatisme | TON, TOF, impulsion calibrée, détecteur de fronts, mémoire SR, diviseur ÷N, chien de garde, machine à états, **GRAFCET** (étapes, réceptivités, temporisations, choix de séquence) |
 | Régulation | CAN, CNA, PWM, thermostat à hystérésis, Schmitt, limiteur, rampe, régulateur proportionnel, **PID complet** (anti-emballement, RAZ) |
 | Sorties | ampoule (**sept couleurs de voyant normalisées**), afficheurs (hex, décimal, octet), LED RVB, matrice 8×8, oscilloscope, sonde, buzzer, note, jauge, **écran de mesure 4 voies** et **enregistreur de courbes** |
@@ -115,11 +116,22 @@ superposer. Un fil qui revient en arrière contourne les boîtiers. Trois modes
 au choix (`⌐` angles droits, `∿` courbes, `／` direct), et le double-clic sur
 un câble pose une poignée à glisser pour reprendre la main.
 
-**Confort.** Infobulle au survol (état de chaque pin, réglages, valeur d'un
-câble), rotation par quarts de tour et miroir (`R`, `M`), noms de composants
-masquables (`N`), recadrage automatique (`F`), niveau de détail au zoom,
-mise en évidence du voisinage, encapsulation d'une sélection en puce,
-annuler/refaire, export PNG recadré.
+**Câbler vite, ranger le plan.** Tirer un fil et le **lâcher dans le vide**
+propose les composants qui savent recevoir ce signal, et celui qu'on choisit
+arrive posé *et* câblé — du bon côté, donc sans fil qui repart en arrière. Les
+**guides d'alignement** collent les blocs sur leurs voisins pendant le
+déplacement. Les **cadres titrés** (`▭` dans le bandeau de sélection)
+regroupent une fonction et l'emportent quand on les déplace. Le **rail de
+distribution** remplace vingt fils convergents par vingt moignons. `Ctrl+F`
+cherche parmi les composants posés et s'y rend ; un **plan miniature** apparaît
+dès que le montage déborde de l'écran.
+
+**Confort.** Infobulle au survol (état de chaque pin dans son unité, réglages,
+valeur d'un câble), **menu contextuel au clic droit** avec les raccourcis,
+rotation par quarts de tour et miroir (`R`, `M`), noms de composants masquables
+(`N`), recadrage automatique (`F`), révélation des pannes (`P`), niveau de
+détail au zoom, mise en évidence du voisinage, encapsulation d'une sélection en
+puce, annuler/refaire (boutons et `Ctrl+Z`/`Ctrl+Y`), export PNG recadré.
 
 ## Tests
 
@@ -133,7 +145,7 @@ concatène entre `test/pre.js` (stubs DOM / Canvas / Audio / localStorage, plus
 une horloge `Date.now` pilotable) et `test/post.js` (les tests), puis exécute le
 tout dans un contexte `vm`. Aucun navigateur, aucune dépendance npm.
 
-166 tests couvrent le moteur, le séquentiel, les blocs numériques, l'analogique
+172 tests couvrent le moteur, le séquentiel, les blocs numériques, l'analogique
 et la régulation (dont une boucle fermée four + thermostat), l'édition,
 l'orientation, les tunnels, les puces, l'interface, le balisage et le guide.
 Deux tests valident automatiquement **tout** nouveau composant du registre

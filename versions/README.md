@@ -13,6 +13,7 @@ version en cours, il suffit d'en recopier une par-dessus `logicgates.html`.
 | `logicgates-v6.2.html` | v6.2 : mesure continue (fin du plafond 8 bits), GRAFCET, pannes à diagnostiquer, voyants de couleur, tuteur sur toutes les missions, 148 missions |
 | `logicgates-v6.3.html` | v6.3 : GRAFCET normalisé (divergences ET/OU, réceptivités en expression, temps de scrutation) avec éditeur graphique dédié |
 | `logicgates-v6.4.html` | v6.4 : tracé des câbles en angles droits, écartement des couloirs, trois modes de tracé |
+| `logicgates-v6.5.html` | v6.5 : rail de distribution, cadres titrés, pose d'un composant déjà relié, guides d'alignement, menu contextuel, plan miniature, recherche sur le plan |
 
 Les copies antérieures ne connaissent évidemment pas les tests des versions
 suivantes : on vérifie seulement qu'elles démarrent.
@@ -23,5 +24,6 @@ node test/run.js versions/logicgates-v6.0.html --smoke
 node test/run.js versions/logicgates-v6.1.html --smoke
 node test/run.js versions/logicgates-v6.2.html --smoke
 node test/run.js versions/logicgates-v6.3.html --smoke
-node test/run.js versions/logicgates-v6.4.html            # suite complète
+node test/run.js versions/logicgates-v6.4.html --smoke
+node test/run.js versions/logicgates-v6.5.html            # suite complète
 ```

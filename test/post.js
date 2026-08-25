@@ -2771,6 +2771,10 @@ T('T60 le guide documente les ateliers, les unités, les seuils et la tuyauterie
    ['angles arrondis', 'les angles arrondis'],
    ['plan miniature', 'le plan miniature'],
    ['rail de distribution', 'le rail de distribution'],
+   ['déjà relié', 'la pose d’un composant déjà relié'],
+   ['guides d’alignement', 'les guides d’alignement'],
+   ['clic droit', 'le menu contextuel'],
+   ['Ctrl+F', 'la recherche sur le plan'],
    ['BRIDÉ', 'le bridage d’un tuyau trop étroit']]
     .forEach(([txt, what]) => ok(html.includes(txt), 'le guide parle de ' + what));
   ok(/TUYAU/.test(__el('guide-body').innerHTML), 'et présente le tuyau lui-même');
@@ -3620,6 +3624,133 @@ T('T169 le plan miniature ne s’affiche que quand il sert, et navigue', () => {
   near(centre.y, cible.y + cible.bh / 2, 2, 'en X comme en Y');
   ok(!miniClick(W - 20, 20), 'un clic ailleurs ne la concerne pas');
   cam.z = 1; cam.x = 0; cam.y = 0;
+});
+
+T('T170 tirer un fil dans le vide propose et pose le composant câblé', () => {
+  board();
+  const a = mk('SWITCH', 0, 0);
+  // depuis une sortie logique : on propose de la logique et des sorties
+  const sugg = (openQuick(a.outPins[0], 400, 300), quickTypes(quickFrom));
+  ok(sugg.length > 0, 'des composants sont proposés');
+  ok(sugg.includes('LED') || sugg.includes('AND'), 'et ce sont les bons (' + sugg.slice(0,4) + ')');
+  ok(!sugg.includes('SWITCH'), 'pas une source : elle n’a rien pour recevoir');
+  // on en choisit un : il est posé ET câblé, du bon côté
+  const n0 = components.length, w0 = wires.length;
+  const c = quickPlace('AND');
+  eq(components.length, n0 + 1, 'le composant est posé');
+  eq(wires.length, w0 + 1, 'et câblé du même geste');
+  eq(wires[wires.length-1].outPin, a.outPins[0], 'depuis la broche restée en l’air');
+  eq(wires[wires.length-1].inPin.comp, c, 'vers le nouveau venu');
+  ok(c.x > 400 - 200, 'posé à droite : le fil ne repart pas en arrière');
+  eq(quickFrom, null, 'et le menu se referme');
+
+  // depuis une ENTRÉE : on propose des sources, et le composant se pose à gauche
+  board();
+  const l = mk('LED', 600, 300);
+  openQuick(l.inPins[0], 300, 300);
+  const src = quickTypes(quickFrom);
+  ok(src.includes('SWITCH') || src.includes('HIGH'), 'des sources sont proposées');
+  const c2 = quickPlace('HIGH');
+  ok(c2.x < s2w(300, 300).x, 'posé à gauche de la broche');
+  eq(wires[wires.length-1].inPin, l.inPins[0], 'et câblé vers l’entrée');
+  sim(); sim();
+  eq(l.inPins[0].state, 1, 'le montage fonctionne aussitôt');
+
+  // les natures sont respectées : un port fluide n’appelle que de la tuyauterie
+  board();
+  const pu = mk('PUMP', 0, 0);
+  openQuick(pu.outPins[1], 400, 300);           // REF, port fluide
+  const flu = quickTypes(quickFrom);
+  ok(flu.includes('TUYAU'), 'la tuyauterie est proposée');
+  ok(!flu.includes('AND'), 'mais pas une porte logique');
+  flu.forEach(t => {
+    const p = new Component(0, 0, t);
+    ok(p.inPins.some(x => x.kind === 'flu'), t + ' a bien un raccord fluide');
+  });
+  closeQuick();
+
+  // la recherche filtre, et un composant interdit par la mission n’est pas offert
+  board();
+  const b2 = mk('SWITCH', 0, 0);
+  openQuick(b2.outPins[0], 400, 300);
+  quickFilter = 'ampoule';
+  ok(quickTypes(quickFrom).includes('LED'), 'la recherche retrouve l’ampoule');
+  quickFilter = 'zzzz';
+  eq(quickTypes(quickFrom).length, 0, 'et ne trouve rien quand il n’y a rien');
+  closeQuick();
+});
+
+T('T171 les guides d’alignement collent le bloc sur ses voisins', () => {
+  board();
+  const a = mk('AND', 200, 200), b = mk('OR', 600, 500);
+  // presque aligné à gauche : ça s'accroche
+  let r = alignGuides(b, 204, 500);
+  eq(r.x, 200, 'bord gauche recalé sur celui du voisin');
+  ok(alignLines.some(g => g.vert), 'et la ligne verticale est tracée');
+  // presque aligné en haut
+  r = alignGuides(b, 900, 197);
+  eq(r.y, 200, 'bord haut recalé');
+  ok(alignLines.some(g => !g.vert), 'ligne horizontale');
+  // les centres s'alignent aussi
+  const cy = a.y + a.bh / 2;
+  r = alignGuides(b, 900, cy - b.bh / 2 + 3);
+  near(r.y + b.bh / 2, cy, 0.01, 'les centres se rejoignent');
+  // trop loin : rien ne bouge
+  r = alignGuides(b, 900, 700);
+  eq(r.x, 900, 'hors tolérance, la position est respectée');
+  eq(r.y, 700, 'en X comme en Y');
+  eq(alignLines.length, 0, 'et aucun guide n’est tracé');
+  // un bloc ne s’aligne pas sur lui-même
+  r = alignGuides(a, 200, 200);
+  eq(alignLines.length, 0, 'pas de guide sur soi-même');
+});
+
+T('T172 le cadre de commentaire range le plan et emporte son contenu', () => {
+  board();
+  const a = mk('AND', 200, 200), b = mk('OR', 500, 260), loin = mk('NOT', 1400, 900);
+  selection.clear(); selection.add(a); selection.add(b);
+  const z = encadrerSelection();
+  ok(!!z && z.type === 'ZONE', 'le cadre est créé depuis la sélection');
+  ok(z.x < a.x && z.y < a.y, 'il englobe le premier');
+  ok(z.x + z.w > b.x + b.bw && z.y + z.h > b.y + b.bh, 'et le second');
+  const dedans = zoneContenu(z);
+  eq(dedans.length, 2, 'il contient les deux composants');
+  ok(!dedans.includes(loin), 'et pas celui qui est loin');
+  // il ne se prend que par sa barre de titre
+  ok(compHit(z, z.x + 40, z.y + 8), 'la barre de titre le sélectionne');
+  ok(!compHit(z, z.x + 40, z.y + 120), 'le reste du cadre laisse passer les clics');
+  eq(pickComp(a.x + 10, a.y + 10), a, 'un composant sous le cadre reste attrapable');
+  // il ne compte pas comme une porte
+  eq(gateCost('ZONE') || 0, 0, 'il ne coûte aucune porte');
+  // la taille et le titre voyagent avec le montage
+  applyInspector(z, Object.assign(fld('o_titre', 'Boucle de température'), { tagName:'INPUT' }));
+  const data = serializeGroup([z]);
+  board();
+  const copie = spawnGroup(data, 0, 0, true).made[0];
+  eq(optOf(copie, 'titre'), 'Boucle de température', 'le titre est conservé');
+  eq(copie.w, z.w, 'la largeur aussi');
+  eq(copie.h, z.h, 'et la hauteur');
+});
+
+T('T173 trouver un composant sur le plan et s’y rendre', () => {
+  board();
+  const four = mk('FOUR', 2000, 1400);
+  const led = mk('LED', 0, 0);
+  led.customLabel = 'Alarme';
+  cam.z = 1; cam.x = 0; cam.y = 0;
+  eq(findMatches('four').length, 1, 'le four est retrouvé par son nom');
+  eq(findMatches('four')[0], four, 'et c’est le bon');
+  eq(findMatches('alarme')[0], led, 'une étiquette personnalisée aussi');
+  eq(findMatches('zzz').length, 0, 'et rien quand rien ne correspond');
+  eq(findMatches('').length, 2, 'sans filtre : tout le plan');
+  ok(findMatches('')[0].customLabel, 'les composants étiquetés viennent en tête');
+  // s'y rendre
+  gotoComp(four);
+  const centre = s2w(W / 2, H / 2);
+  near(centre.x, four.x + four.bw / 2, 2, 'la vue se centre sur le composant');
+  near(centre.y, four.y + four.bh / 2, 2, 'en X comme en Y');
+  ok(selection.has(four), 'et il est sélectionné pour qu’on le repère');
+  cam.z = 1; cam.x = 0; cam.y = 0; selection.clear();
 });
 
 /* ===================== bilan ===================== */
