@@ -20,6 +20,7 @@ version en cours, il suffit d'en recopier une par-dessus `logicgates.html`.
 | `logicgates-v6.9.html` | v6.9 : le cartouche de leçon posé sur le plan — placement automatique, trait vers la cible, déplaçable |
 | `logicgates-v6.10.html` | v6.10 : la carte du cours — 30 tuiles de chapitre, anneaux de progression, leçons en pastilles |
 | `logicgates-v6.11.html` | v6.11 : ⚡ Énergie & ondes, phase 1 — solveur nodal du continu, troisième type de liaison (bornes hexagonales), pile à résistance interne, ampoule, interrupteur de puissance, rail de masse |
+| `logicgates-v6.19.html` | v6.19 : ⚡ lot 5 — chaudière, turbine à vapeur, panneau solaire, thermopile, chapitre 32 ; et six onglets qui débordaient de l'écran, dégonflés dans les trois ateliers |
 | `logicgates-v6.18.html` | v6.18 : l'atelier ⚡ passe à quatre onglets (Le continu · Mesure · Produire · Câblage) — une rangée de quinze tuiles débordait de l'écran et le composant du bout devenait introuvable |
 | `logicgates-v6.17.html` | v6.17 : ⚡ lot 4 — produire du courant : aimant qu'on promène, bobine (loi de Faraday), dynamo à manivelle avec effort et retard sentis, oscilloscope enfin signé |
 | `logicgates-v6.16.html` | v6.16 : ⚡ lot 3 — chapitre 31 « Le courant continu » (10 leçons à vraie condition de réussite), la leçon ouvre son atelier, quatre montages d'exemple ⚡ |
@@ -51,5 +52,6 @@ node test/run.js versions/logicgates-v6.14.html --smoke
 node test/run.js versions/logicgates-v6.15.html --smoke
 node test/run.js versions/logicgates-v6.16.html --smoke
 node test/run.js versions/logicgates-v6.17.html --smoke
-node test/run.js versions/logicgates-v6.18.html           # suite complète
+node test/run.js versions/logicgates-v6.18.html --smoke
+node test/run.js versions/logicgates-v6.19.html           # suite complète
 ```

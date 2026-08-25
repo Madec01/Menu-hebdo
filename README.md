@@ -183,7 +183,7 @@ concatène entre `test/pre.js` (stubs DOM / Canvas / Audio / localStorage, plus
 une horloge `Date.now` pilotable) et `test/post.js` (les tests), puis exécute le
 tout dans un contexte `vm`. Aucun navigateur, aucune dépendance npm.
 
-216 tests couvrent le moteur, le séquentiel, les blocs numériques, l'analogique
+221 tests couvrent le moteur, le séquentiel, les blocs numériques, l'analogique
 et la régulation (dont une boucle fermée four + thermostat), l'édition,
 l'orientation, les tunnels, les puces, l'interface, le balisage et le guide.
 Deux tests valident automatiquement **tout** nouveau composant du registre

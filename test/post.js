@@ -2853,9 +2853,9 @@ T('T148 les réglages se donnent dans l’unité de la mesure branchée', () => 
 T('T149 trois ateliers : la palette se recompose, les favoris ne bougent pas', () => {
   const cles = () => modeTabs().map(t => t.key);
   setAppMode('elec');
-  deq(cles(), ['in','gate','mem','calc','out','wire'], 'électronique : six onglets');
+  deq(cles(), ['in','gate','mem','calc','data','out','wire'], 'électronique : sept onglets');
   setAppMode('proc');
-  deq(cles(), ['pupi','sense','act','reg','time','sup','wire'], 'process : sept onglets');
+  deq(cles(), ['pupi','sense','act','proce','reg','time','sup','wire'], 'process : huit onglets');
   ok(!cles().includes('gate'), 'pas de portes côté process');
   ok(!cles().includes('calc'), 'ni de calcul');
   eq(localStorage.getItem('al2_mode'), 'proc', 'le choix est mémorisé');
@@ -2868,8 +2868,14 @@ T('T149 trois ateliers : la palette se recompose, les favoris ne bougent pas', (
   // aucune rangée ne doit déborder : au-delà d'une dizaine de tuiles, le
   // composant du bout devient introuvable (il faut deviner qu'on peut faire
   // défiler la rangée).
-  modeTabs().forEach(t => ok(t.items.length <= 10,
-    'onglet « ' + t.name + ' » : ' + t.items.length + ' tuiles, c’est trop'));
+  // Aucune rangée ne doit déborder, DANS AUCUN ATELIER : `.tool-row` défile en
+  // silence (barre masquée), donc la tuile du bout devient introuvable.
+  ['elec','proc','phys'].forEach(d => {
+    setAppMode(d);
+    modeTabs().forEach(t => ok(t.items.length <= 11,
+      'atelier ' + d + ', onglet « ' + t.name + ' » : ' + t.items.length + ' tuiles, c’est trop'));
+  });
+  setAppMode('phys');            // on rend la main dans l'atelier qu'on testait
   const cab = TOOL_TABS.find(t => t.key === 'wirep');
   ok(cab.items.indexOf('RAILP8') < cab.items.indexOf('RAIL8'),
      'les rails de puissance passent AVANT ceux de signal');
@@ -4732,22 +4738,26 @@ function poseDemo(id){
   return { idx, m:missions[idx], made:r.made };
 }
 
-T('T205 le chapitre 31 : dix leçons, à la fin, dans l’atelier ⚡', () => {
-  const ch = chapitres().find(c => /Chapitre 31/.test(c.nom || c.ch || c.name || ''));
-  const lec = missions.filter(m => /Chapitre 31/.test(m.ch));
-  eq(lec.length, 10, 'dix leçons');
-  ok(ch, 'le chapitre apparaît dans la carte du cours');
-  // consécutives et à la fin du catalogue
-  const prem = missions.findIndex(m => /Chapitre 31/.test(m.ch));
-  eq(prem + lec.length, missions.length, 'elles sont à la toute fin du catalogue');
-  lec.forEach((m, i) => {
-    eq(missions[prem + i].id, m.id, 'consécutives');
-    eq(m.dom, 'phys', m.id + ' : ouvre l’atelier Énergie');
+T('T205 les chapitres ⚡ : à la fin du cours, et dans leur atelier', () => {
+  const lec = missions.filter(m => m.dom === 'phys');
+  eq(missions.filter(m => /Chapitre 31/.test(m.ch)).length, 10, 'dix leçons au chapitre 31');
+  eq(missions.filter(m => /Chapitre 32/.test(m.ch)).length, 8, 'huit au chapitre 32');
+  eq(lec.length, 18, 'dix-huit leçons dans l’atelier ⚡ en tout');
+  // toutes à la fin du catalogue, et groupées
+  const prem = missions.findIndex(m => m.dom === 'phys');
+  eq(prem + lec.length, missions.length, 'elles occupent la fin du catalogue');
+  for (let k = prem; k < missions.length; k++)
+    eq(missions[k].dom, 'phys', 'aucune leçon étrangère au milieu');
+  lec.forEach(m => {
     eq(m.tt.length, 0, m.id + ' : pas de table de vérité');
     ok(typeof m.check === 'function', m.id + ' : a une vraie condition de réussite');
     ok(m.sol.demo, m.id + ' : a un montage de référence');
   });
-  // et charger une leçon bascule vraiment d’atelier
+  // les chapitres apparaissent dans la carte du cours, l’un après l’autre
+  const noms = chapitres().map(c => c.ch || c.nom || c.name || '');
+  ok(/Chapitre 31/.test(noms[noms.length - 2]), 'le chapitre 31 est l’avant-dernier');
+  ok(/Chapitre 32/.test(noms[noms.length - 1]), 'le chapitre 32 est le dernier');
+  // et charger une leçon bascule dans l’atelier ⚡
   setAppMode('elec');
   loadMission(prem);
   eq(appMode, 'phys', 'la leçon emmène dans son atelier');
@@ -4774,11 +4784,29 @@ T('T206 la condition de réussite regarde le circuit, pas le clic', () => {
   loadMission(-1);
 });
 
-T('T207 chaque leçon du chapitre est réussie par son propre montage', () => {
+/* Joue le montage : certaines leçons demandent un GESTE (promener l'aimant,
+   tourner la manivelle) ou simplement du temps (monter en pression). Un
+   montage de référence n'est bon que s'il est réellement jouable. */
+function joueMontage(tours){
+  for (let k = 0; k < (tours || 60); k++){
+    components.filter(c => c.type === 'AIMANT').forEach(a => {
+      const b = components.find(c => c.type === 'BOBINE');
+      if (!b) return;
+      const cx = b.x + b.bw / 2 - a.bw / 2;
+      a.x = cx + Math.sin(k * .5) * 220;              // des allers-retours francs
+    });
+    components.filter(c => c.type === 'DYNAMO').forEach(d =>
+      manivelleVers(d, d.x + d.bw / 2 + Math.cos(k * .12) * 50,
+                       d.y + 112 + Math.sin(k * .12) * 50));
+    __advance(60); sim();
+  }
+}
+
+T('T207 chaque leçon ⚡ est réussie par son propre montage', () => {
   const rates = [];
-  missions.filter(m => /Chapitre 31/.test(m.ch)).forEach(m => {
-    const d = poseDemo(m.id);
-    for (let k = 0; k < 3; k++){ __advance(60); sim(); }
+  missions.filter(m => m.dom === 'phys').forEach(m => {
+    poseDemo(m.id);
+    joueMontage();
     const r = m.check(components, wires);
     if (r !== true) rates.push(m.id + ' « ' + m.title +' » → ' + r);
   });
@@ -5028,6 +5056,171 @@ T('T213 aimant, bobine et dynamo sont complets et rangés', () => {
   board();
   spawnGroup(data, 0, 0, false);
   near(components[0].ang, 1.23, .02, 'la position de la manivelle est retrouvée');
+  board();
+});
+
+
+console.log('\n— ⚡ Lot 5 : produire autrement, et rejoindre le Process —');
+
+/* Chaudière chauffée à fond, turbine branchée dessus, et ce qu'on veut derrière */
+function centrale(charges){
+  board();
+  const h = mk('SWITCH', 0, 0); h.state = 1;         // pleine chauffe (HIGH vaut toujours 1)
+  const ch = mk('CHAUD', 200, 0), tu = mk('TURBINE', 500, 0), m = mk('MASSE', 1000, 0);
+  ch.opt.montee = 4; ch.opt.fuite = 2;
+  tu.opt.ke = 20; tu.opt.rb = 1;
+  link(h, 0, ch, 0);                                  // CHF
+  link(ch, 2, tu, 1);                                 // VAP → VAP
+  link(m, 0, tu, 0);                                  // le retour
+  const ls = [];
+  for (let k = 0; k < (charges || 0); k++){
+    const l = mk('LAMPE', 750, k * 200);
+    link(tu, 0, l, 0); link(l, 0, m, 0);
+    ls.push(l);
+  }
+  return { ch, tu, m, ls };
+}
+function chauffe(n, ms){ for (let k = 0; k < n; k++){ __advance(ms || 100); sim(); } }
+
+T('T214 la chaudière : de la chaleur, de l’eau, et de la pression', () => {
+  board();
+  const h = mk('SWITCH', 0, 0); h.state = 1;
+  const ch = mk('CHAUD', 200, 0);
+  ch.opt.montee = 4; ch.opt.fuite = 2;
+  link(h, 0, ch, 0);
+  chauffe(30);
+  ok(ch.bar > 3, 'la pression monte quand on chauffe : ' + ch.bar.toFixed(1) + ' bar');
+  ok(ch.outPins[0].state > 0, 'et elle est publiée sur la mesure');
+  // on coupe la chauffe : elle redescend toute seule
+  h.state = 0; ch.opt.fuite = 25; sim();
+  const avant = ch.bar;
+  chauffe(60);
+  ok(ch.bar < avant - .5, 'chauffe coupée, la pression retombe (' +
+     avant.toFixed(1) + ' → ' + ch.bar.toFixed(1) + ' bar)');
+  // la surpression est signalée
+  h.state = 1; ch.opt.haut = 2;
+  chauffe(40);
+  eq(ch.outPins[1].state, 1, 'au-delà du seuil, la sortie HAUT passe à 1');
+});
+
+T('T215 la turbine : sans vapeur rien, et ce qu’elle produit, elle le paie', () => {
+  // sans vapeur, elle ne tourne pas
+  board();
+  const tu = mk('TURBINE', 0, 0), m = mk('MASSE', 500, 0), l = mk('LAMPE', 250, 200);
+  link(m, 0, tu, 0); link(tu, 0, l, 0); link(l, 0, m, 0);
+  chauffe(30);
+  near(tu.vit, 0, .05, 'aucune vapeur : la roue ne tourne pas');
+  near(tu.emf, 0, .05, 'et elle ne produit rien');
+  // avec la chaudière, elle démarre et allume
+  const c = centrale(1);
+  chauffe(60);
+  ok(c.ch.bar > 2, 'la chaudière est montée en pression : ' + c.ch.bar.toFixed(1) + ' bar');
+  ok(c.tu.vit > 1, 'la turbine tourne : ' + c.tu.vit.toFixed(1) + ' rad/s');
+  ok(c.ls[0].p > .1, 'et l’ampoule éclaire : ' + fmtWatt(c.ls[0].p));
+  const seule = c.tu.besoin, vitSeule = c.tu.vit, eclSeule = c.ls[0].p;
+  // trois ampoules sur la MÊME chaudière : elle ne suit plus. La turbine
+  // réclame plus de vapeur, n'en obtient pas assez, ralentit — et tout le
+  // monde éclaire moins. C'est la leçon.
+  const c3 = centrale(3);
+  chauffe(60);
+  ok(c3.tu.vit < vitSeule,
+     'la chaudière ne suit pas : la turbine ralentit (' + vitSeule.toFixed(1) +
+     ' → ' + c3.tu.vit.toFixed(1) + ' rad/s)');
+  ok(c3.ls[0].p < eclSeule,
+     'et chaque ampoule éclaire moins (' + fmtWatt(eclSeule) + ' → ' + fmtWatt(c3.ls[0].p) + ')');
+  // avec une chaudière à la hauteur, en revanche, elle réclame bien davantage
+  const g = centrale(3);
+  g.ch.opt.montee = 6; g.ch.opt.fuite = 1;
+  chauffe(90);
+  ok(g.tu.besoin > seule * 1.3,
+     'chaudière suffisante : elle ouvre la vapeur pour tenir sa vitesse (' +
+     Math.round(seule / 2.55) + ' % → ' + Math.round(g.tu.besoin / 2.55) + ' %)');
+  ok(g.tu.pelec > c3.tu.pelec,
+     'et elle produit vraiment plus : ' + fmtWatt(c3.tu.pelec) + ' → ' + fmtWatt(g.tu.pelec));
+  // on coupe la chauffe : tout retombe, dans l'ordre
+  components.filter(x => x.type === 'SWITCH').forEach(x => x.state = 0);
+  chauffe(160);
+  near(g.tu.vit, 0, .4, 'chauffe coupée, la turbine s’arrête');
+  ok(g.ls[0].p < .02, 'et les ampoules s’éteignent');
+});
+
+T('T216 le panneau solaire : la lumière devient du courant', () => {
+  board();
+  const s = mk('SOLAIRE', 0, 0), r = mk('RESIS', 400, 0), m = mk('MASSE', 700, 0);
+  s.opt.soleil = 0; s.opt.uco = 9; s.opt.icc = .5; r.opt.r = 100;
+  link(s, 0, r, 0); link(r, 0, m, 0); link(m, 0, s, 0);
+  __advance(50); sim();
+  near(s.emf, 0, .05, 'dans le noir, il ne produit rien');
+  s.opt.soleil = 100; __advance(50); sim();
+  near(s.emf, 9, .1, 'en plein soleil, il donne sa tension à vide');
+  ok(r.i > .05, 'et il débite dans la charge : ' + fmtAmp(r.i));
+  // c'est une source de COURANT : sous une charge faible, il plafonne
+  r.opt.r = 1; __advance(50); sim();
+  eq(s.limite, 1, 'charge trop gourmande : il plafonne');
+  near(Math.abs(s.i), .5, .02, 'exactement à son courant maximal');
+  ok(Math.abs(s.u) < 3, 'et il a lâché la tension : ' + fmtVolt(s.u));
+  // la chaîne complète : une ampoule l'éclaire
+  board();
+  const p = mk('PILE', 0, 0), l1 = mk('LAMPE', 300, 0), g = mk('MASSE', 600, 0);
+  link(p, 0, l1, 0); link(l1, 0, g, 0); link(g, 0, p, 0);
+  const s2 = mk('SOLAIRE', 300, 130);                 // juste sous l’ampoule
+  s2.opt.soleil = 0;
+  const l2 = mk('LAMPE', 640, 130);
+  link(s2, 0, l2, 0); link(l2, 0, g, 0); link(g, 0, s2, 0);
+  __advance(50); sim(); __advance(50); sim();
+  ok(l1.p > .5, 'la première ampoule est allumée par la pile');
+  ok(s2.ecl > .1, 'le panneau voit cette ampoule : ' + Math.round(s2.ecl * 100) + ' %');
+  ok(s2.emf > .5, 'et il produit une tension : ' + fmtVolt(s2.emf));
+  ok(l2.p > 0 && l2.p < l1.p, 'la seconde ampoule s’allume, plus faiblement : c’est le rendement');
+  // éloigné, il ne voit plus rien
+  s2.x = 3000; __advance(50); sim();
+  ok(s2.ecl < .05, 'éloigné, il ne voit plus l’ampoule');
+});
+
+T('T217 la thermopile : un écart de température devient une tension', () => {
+  board();
+  const sb = mk('SEEBECK', 0, 0), r = mk('RESIS', 400, 0), m = mk('MASSE', 700, 0);
+  sb.opt.tc = 20; sb.opt.tf = 20; sb.opt.n = 60; r.opt.r = 20;
+  __advance(50); sim();
+  near(sb.emf, 0, 1e-3, 'les deux faces à la même température : rien');
+  sb.opt.tc = 220; __advance(50); sim();
+  near(sb.dt, 200, .5, '200 °C d’écart');
+  near(sb.emf, 200 * 60 * 40e-6, .01, 'soit environ un demi-volt (40 µV par degré et par jonction)');
+  // plus de jonctions, plus de tension
+  sb.opt.n = 120; __advance(50); sim();
+  near(sb.emf, 200 * 120 * 40e-6, .01, 'deux fois plus de jonctions, deux fois plus de tension');
+  // branchée sur un vrai four, elle suit sa température
+  board();
+  const h = mk('SWITCH', 0, 0); h.state = 1;
+  const f = mk('FOUR', 200, 0), sb2 = mk('SEEBECK', 600, 0);
+  sb2.opt.tf = 20; sb2.opt.n = 100;
+  link(h, 0, f, 0); link(f, 0, sb2, 1);
+  chauffe(60);
+  ok(f.temp > 20, 'le four a chauffé');
+  ok(sb2.tc > 40, 'la thermopile lit sa température : ' + Math.round(sb2.tc) + ' °C');
+  ok(sb2.emf > .05, 'et elle produit : ' + fmtVolt(sb2.emf));
+});
+
+T('T218 les onglets ne débordent plus, dans aucun atelier', () => {
+  ['elec','proc','phys'].forEach(d => {
+    setAppMode(d);
+    modeTabs().forEach(t => ok(t.items.length <= 11,
+      'atelier ' + d + ' · « ' + t.name + ' » : ' + t.items.length));
+  });
+  setAppMode('elec');
+  // un composant rangé à la main ne se retrouve pas EN PLUS dans l’onglet de sa famille
+  const inTab = TOOL_TABS.find(t => t.key === 'in');
+  ok(!inTab.items.includes('ESTOP'), 'l’arrêt d’urgence reste au pupitre, pas dans les entrées');
+  const outTab = TOOL_TABS.find(t => t.key === 'out');
+  ok(!outTab.items.includes('JAUGE'), 'la jauge reste en supervision');
+  const act = TOOL_TABS.find(t => t.key === 'act');
+  ok(!act.items.includes('FOUR'), 'le four est passé dans « Procédés »');
+  // …mais un onglet qui EMPRUNTE ne prive personne
+  const wire = TOOL_TABS.find(t => t.key === 'wire');
+  ok(wire.items.includes('TUNNEL') && wire.items.includes('RAIL8'),
+     'le rail et le tunnel de signal restent dans le câblage des deux autres ateliers');
+  const wirep = TOOL_TABS.find(t => t.key === 'wirep');
+  ok(wirep.items.includes('TUNNEL'), 'tout en étant empruntés par l’atelier ⚡');
   board();
 });
 

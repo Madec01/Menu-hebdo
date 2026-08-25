@@ -5,13 +5,13 @@ dans `CLAUDE.md`.
 
 ## Où en est le projet
 
-- **v6.18**, branche `claude/architecte-logique-v5-vntfkp`, **216 tests verts**
+- **v6.19**, branche `claude/architecte-logique-v5-vntfkp`, **221 tests verts**
   (`npm test`).
 - `logicgates.html` : ~12 500 lignes, un seul `<script>`, aucune dépendance.
-- Copies figées dans `versions/` (v5.1 → v6.18), avec leur tableau dans
+- Copies figées dans `versions/` (v5.1 → v6.19), avec leur tableau dans
   `versions/README.md`.
-- Catalogue : **158 leçons en 31 chapitres** — 63 à table de vérité (dont 8
-  boîtes noires), 85 libres, et 10 à **condition de réussite** (chapitre 31).
+- Catalogue : **166 leçons en 32 chapitres** — 63 à table de vérité (dont 8
+  boîtes noires), 85 libres, et 18 à **condition de réussite** (chapitres 31 et 32).
 
 ## Ce qui vient d'être fait
 
@@ -23,6 +23,18 @@ dans `CLAUDE.md`.
 Ce qu'on peut faire : la boucle pile → interrupteur → ampoule → masse → pile.
 Deux ampoules en parallèle et la pile s'affaisse, visiblement. On ouvre la
 boucle et tout s'éteint.
+
+**⚡ Lot 5 : produire autrement, et rejoindre le Process** (v6.19). Phase 2
+terminée. `CHAUD` (la chaudière — elle n'avait JAMAIS été écrite, la feuille de
+route la promettait depuis le début), `TURBINE` à vapeur avec régulateur,
+`SOLAIRE` (source de COURANT, qui voit les ampoules posées à côté de lui),
+`SEEBECK` (thermopile). Chapitre 32, huit leçons.
+
+**Six onglets débordaient de l'écran**, dans les trois ateliers (`calc` et
+`act` en avaient seize). Dégonflés : deux onglets de plus (« Données & bus »,
+« Procédés ») et une règle nouvelle — un composant rangé À LA MAIN dans un
+onglet n'est plus rangé une seconde fois par sa famille. Un onglet marqué
+`emprunt:true` fait exception (il emprunte sans priver l'atelier d'origine).
 
 **v6.18 — l'atelier ⚡ passe à quatre onglets** : Le continu (8), Mesure (3),
 Produire (3), Câblage (7). Une seule rangée de quinze tuiles débordait de
@@ -134,6 +146,17 @@ plan ; sommaire devenu carte du cours.
   `clickComp` dans le `pointerup` : c'est lui qui bascule les interrupteurs, et
   T56 le vérifie. Maj ou Ctrl + clic ne fait QUE (dé)sélectionner, sans
   actionner. Maj + glisser passe par `dupliquerPourGlisser`.
+- **Un montage de référence doit être JOUABLE, pas seulement bien câblé.** T207
+  place la démo de chaque leçon ⚡, puis **joue le montage** (promène les
+  aimants dans les bobines, tourne les manivelles, laisse le temps passer) et
+  exige que la condition de réussite soit remplie. C'est ce test qui a révélé
+  que `spawnGroup` REFUSE de coller un interrupteur dans une leçon (les entrées
+  sont fournies par l'énoncé) : un montage de référence ne peut donc pas en
+  contenir. D'où la chauffe à la main de la chaudière.
+- **La turbine a un régulateur**, comme les vraies : sous charge elle ouvre la
+  vapeur pour tenir sa vitesse. Tant que la chaudière suit, la vitesse ne bouge
+  presque pas — c'est la consommation qui monte. Quand la chaudière ne suit
+  plus, tout s'écroule d'un coup. C'est la leçon m163.
 - **Les sources qui dépendent du temps préparent leur tension dans `avant(c)`**,
   appelé une fois par image en tête de `solveElec` — pas dans `branche`, qui
   doit rester pure (elle est rejouée à chaque tour de la limitation de courant).
@@ -263,11 +286,7 @@ leçon sans table de vérité est gagnée dès qu'on clique sur « Vérifier »
 (`logicgates.html`, gestionnaire de `btn-verify`, la ligne `if (!m.tt.length)`).
 Prévoir un champ `m.check(components, wires)`.
 
-**Phase 2 — produire.** Lot 5 : turbine reliée au four et à la chaudière,
-panneau solaire, thermocouple, et le chapitre 32 du cours (dont une leçon
-« fabrique de l'alternatif à la main » avec l'aimant, et une leçon « tiens
-l'ampoule allumée trois secondes » qui s'appuie sur le compteur `c.tenu` de la
-dynamo, déjà en place).
+**Phase 2 — produire : TERMINÉE.**
 
 **Phase 3 — l'alternatif.** Lot 6 : condensateur et bobine d'inductance
 (c'est là qu'il faudra des **sous-pas de temps** : une image de 16 ms est

@@ -13,6 +13,13 @@ toutes les explications doivent être en français simple, sans jargon.
   déjà localisée, fais-la directement, sans sous-agent.
 - Le sous-agent explore et rend une carte (emplacements + explication
   simple + risques). C'est la session principale qui édite.
+- **Économiser les sous-agents.** Choisir le modèle et l'effort adaptés à la
+  tâche : une simple recherche « où est telle fonction » ne demande pas le
+  modèle le plus fort. Réserver les gros modèles aux cartographies qui
+  demandent du jugement (analyser un moteur, peser des options, prévoir des
+  risques). Grouper les questions dans une seule mission plutôt que d'en
+  lancer plusieurs, et ne relancer un agent que si la carte rendue est
+  vraiment insuffisante.
 
 ## Avant de coder
 
