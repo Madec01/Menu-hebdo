@@ -1003,7 +1003,12 @@ class Pin {
   dir(){
     const c = this.comp;
     let dx = this.isOutput ? 1 : -1, dy = 0;
-    if (c.pinPos && c.pinPos(this) && c.type === 'MATRIX'){
+    // Un composant qui place ses broches lui-même dit aussi par où le câble
+    // doit en sortir : sans quoi un rail posé sous son voisin verrait le fil
+    // partir sur le côté avant de faire le tour.
+    const d = REG[c.type];
+    if (d && d.pinDir){ const v = d.pinDir(c, this); dx = v.x; dy = v.y; }
+    else if (c.pinPos && c.pinPos(this) && c.type === 'MATRIX'){
       if (this.index >= 8){ dx = 0; dy = 1; } else { dx = -1; dy = 0; }
     }
     if (c.mir) dx = -dx;
@@ -3576,6 +3581,12 @@ function connectWire(outPin, inPin){
     AudioSys.error();
     return;
   }
+  // Un composant peut refuser un raccordement pour une raison qui lui est
+  // propre — un rail déjà alimenté, par exemple.
+  const rIn = REG[inPin.comp.type], rOut = REG[outPin.comp.type];
+  const non = (rIn && rIn.refuse && rIn.refuse(inPin.comp, inPin)) ||
+              (rOut && rOut.refuse && rOut.refuse(outPin.comp, outPin));
+  if (non){ toast('⛔ ' + non, 'error', 5200); AudioSys.error(); return; }
   // Les rebouclages sur soi-même sont permis : Q̄→D d'une bascule = diviseur de fréquence,
   // sortie d'une porte vers sa propre entrée = rétroaction (le moteur à passes la gère).
   wires = wires.filter(w => w.inPin !== inPin);
@@ -3650,11 +3661,14 @@ function pinCache(p){
   const d = REG[p.comp.type];
   return !!(d && d.pinHidden && d.pinHidden(p.comp, p));
 }
-function pickPin(wx, wy){
+/* `veut` dit ce qu'on cherche : 'in' pour y aboutir, 'out' pour en partir.
+   Sur un rail, les deux broches sont au même endroit — sans cette préférence,
+   on ne pourrait jamais raccorder une arrivée. */
+function pickPin(wx, wy, veut){
   for (let i = components.length - 1; i >= 0; i--){
     const c = components[i];
-    for (const p of c.outPins) if (!pinCache(p) && p.isHit(wx, wy)) return p;
-    for (const p of c.inPins)  if (!pinCache(p) && p.isHit(wx, wy)) return p;
+    const listes = veut === 'in' ? [c.inPins, c.outPins] : [c.outPins, c.inPins];
+    for (const l of listes) for (const p of l) if (!pinCache(p) && p.isHit(wx, wy)) return p;
   }
   return null;
 }
@@ -3696,6 +3710,8 @@ canvas.addEventListener('pointerdown', e => {
     wiring = pin;
     return;
   }
+  const gz = gripAt(mouseW.x, mouseW.y);       // poignée de coin d'un cadre
+  if (gz){ pushUndo(); gripStart(gz, mouseW.x, mouseW.y); return; }
   const wpHit = pickWaypoint(mouseW.x, mouseW.y);
   if (wpHit){ draggedWp = wpHit; return; }
   const comp = pickComp(mouseW.x, mouseW.y);
@@ -3749,6 +3765,7 @@ canvas.addEventListener('pointermove', e => {
   const dist = Math.hypot(mouseS.x - downScreen.x, mouseS.y - downScreen.y);
   if (dist > 5){ moved = true; clearTimeout(touchHoldT); }
 
+  if (zoneDrag){ gripMove(mouseW.x, mouseW.y); return; }
   if (draggedWp){
     let nx = mouseW.x, ny = mouseW.y;
     if (snapOn){ nx = Math.round(nx/16)*16; ny = Math.round(ny/16)*16; }
@@ -3792,6 +3809,7 @@ canvas.addEventListener('pointermove', e => {
     (h => h ? h.wire : null)(pickWireAt(mouseW.x, mouseW.y, 9)) : null;
   const surGlissiere = hoveredComp && !hoveredComp.locked &&
         paramHit(hoveredComp, mouseW.x, mouseW.y);
+  if (gripAt(mouseW.x, mouseW.y)){ canvas.style.cursor = 'nwse-resize'; updateTip(); return; }
   canvas.style.cursor = hoveredPin ? 'crosshair' :
     (surGlissiere ? 'ew-resize' : (hoveredComp ? 'grab' : (hoveredWire ? 'pointer' : 'default')));
   updateTip();
@@ -3805,7 +3823,7 @@ canvas.addEventListener('pointerup', e => {
   if (paramDrag){ paramDragEnd(); dragged = null; pressComp = null; panning = false; return; }
 
   if (wiring){
-    const pin = pickPin(mouseW.x, mouseW.y);
+    const pin = pickPin(mouseW.x, mouseW.y, wiring.isOutput ? 'in' : 'out');
     if (pin && pin !== wiring){
       if (wiring.isOutput && !pin.isOutput) connectWire(wiring, pin);
       else if (!wiring.isOutput && pin.isOutput) connectWire(pin, wiring);
@@ -3841,6 +3859,7 @@ canvas.addEventListener('pointerup', e => {
     }
     else markDirty();
   }
+  if (zoneDrag){ zoneDrag = null; markDirty(); }
   if (draggedWp){ draggedWp = null; markDirty(); }
   dragged = null; pressComp = null; panning = false; longPressed = false;
   document.getElementById('trash-zone').classList.remove('active','hot');
@@ -7487,64 +7506,76 @@ defComp('SERVO', {
 let TUN_NOW = {}, TUN_PREV = {};
 function tunnelSwap(){ TUN_PREV = TUN_NOW; TUN_NOW = {}; }
 /* ==================== RAIL DE DISTRIBUTION ====================
-   Une barre où TOUTES les bornes sont le même point électrique. On y amène
-   le signal une fois, et chaque consommateur s'y raccorde par un moignon.
-   C'est le répartiteur d'une armoire : personne ne tire quinze fils depuis
-   la même borne d'alimentation.
-   Chaque borne a une arrivée (au-dessus de la barre) et un départ (au-dessous),
-   comme un vrai bornier vu de face — on peut donc aussi bien alimenter le rail
-   par n'importe quelle borne que s'en servir pour collecter. */
+   Une barre où TOUTES les bornes sont le même point électrique. On y amène le
+   signal UNE fois — deux arrivées sur un même point, ce serait un court-circuit
+   — et chaque consommateur s'y raccorde par un moignon.
+
+   Chaque borne offre deux points de raccordement, un au-dessus et un au-dessous
+   de la barre, et chacun accepte aussi bien une arrivée qu'un départ : on se
+   branche du côté d'où l'on vient, sans jamais faire le tour. */
 const RAIL_MIN = 2, RAIL_MAX = 16, RAIL_PAS = 34;
 function railN(c){ return Math.max(RAIL_MIN, Math.min(RAIL_MAX, (optOf(c, 'n') | 0) || 8)); }
 function railW(n){ return 26 + n * RAIL_PAS; }
+/* Les broches vont par rangées : 0…15 au-dessus de la barre, 16…31 au-dessous */
+function railIdx(i){ return { t: i % RAIL_MAX, haut: i < RAIL_MAX }; }
+/* Le fil qui alimente le rail, s'il y en a un */
+function railSource(c){ return wires.find(w => w.inPin.comp === c) || null; }
 function defRail(id, n){
   return defComp(id, {
     name:'RAIL DE DISTRIBUTION · ' + n + ' BORNES', short:'RAIL·' + n,
     guideTitle:'RAIL DE DISTRIBUTION',
     family:'wire', color:'#ffc23d', glyph:'▤', iconSize:13,
     w:railW(n), h:82,
-    ins:  Array.from({ length:RAIL_MAX }, (_, k) => ({ n:String(k + 1), bus:true })),
-    outs: Array.from({ length:RAIL_MAX }, (_, k) => ({ n:String(k + 1), bus:true })),
+    ins:  Array.from({ length:RAIL_MAX * 2 }, (_, k) =>
+      ({ n:String(railIdx(k).t + 1) + (railIdx(k).haut ? '▲' : '▼'), bus:true })),
+    outs: Array.from({ length:RAIL_MAX * 2 }, (_, k) =>
+      ({ n:String(railIdx(k).t + 1) + (railIdx(k).haut ? '▲' : '▼'), bus:true })),
     opts:[
       { k:'n', label:'Nombre de bornes', min:RAIL_MIN, max:RAIL_MAX, step:1, def:n, int:true,
-        hint:'La longueur du rail. Les bornes en trop se rangent au bout ; elles restent raccordables.' },
+        hint:'La longueur du rail. Trois longueurs sont posées d’avance dans la palette ; ici tu la règles au chiffre près.' },
       { k:'nom', label:'Repère du rail', type:'text', max:10, def:'',
         hint:'Ce que le rail distribue : ALIM, MASSE, HORLOGE, ARRÊT U.… Il s’affiche sur la barre.' }
     ],
-    main:'n',
+    /* Pas de glissière : elle se poserait pile sur la rangée de bornes du bas.
+       La longueur se règle au double-clic. */
+    noDrag:() => true,
     onOpt(c, k){ if (k === 'n') c.w = railW(railN(c)); },
     restore(c){ c.w = railW(railN(c)); },
-    /* Les bornes au-delà de la longueur réglée n'existent pas : ni dessin, ni clic */
-    pinHidden(comp, pin){ return pin.index >= railN(comp); },
-    /* Arrivées au-dessus de la barre, départs au-dessous : un bornier vu de face */
+    /* Une borne au-delà de la longueur réglée n'existe pas */
+    pinHidden(comp, pin){ return railIdx(pin.index).t >= railN(comp); },
+    /* Deux rangées, l'une au-dessus de la barre, l'autre au-dessous */
     pinPos(comp, pin){
-      const nb = railN(comp);
-      const k = pin.index;
-      if (k >= nb)                              // bornes au-delà de la longueur réglée
-        return { x: comp.x + comp.w - 8, y: comp.y + (pin.isOutput ? comp.h - 6 : 6) };
-      const x = comp.x + 22 + k * RAIL_PAS;
-      return { x, y: pin.isOutput ? comp.y + comp.h : comp.y };
+      const { t, haut } = railIdx(pin.index);
+      return { x: comp.x + 22 + t * RAIL_PAS, y: haut ? comp.y : comp.y + comp.h };
+    },
+    /* …et les câbles arrivent donc par le haut ou par le bas, jamais de côté */
+    pinDir(comp, pin){ return railIdx(pin.index).haut ? { x:0, y:-1 } : { x:0, y:1 }; },
+    /* Une seule arrivée : deux sources sur le même point, c'est un court-circuit */
+    refuse(comp, pin){
+      if (pin.isOutput) return null;
+      return railSource(comp)
+        ? 'Ce rail est déjà alimenté : toutes ses bornes sont le même point, ' +
+          'une seconde arrivée serait un court-circuit. Débranche l’autre d’abord.'
+        : null;
     },
     eval(c){
       const nb = railN(c);
-      // toutes les bornes sont le même nœud : la valeur du rail est celle qui
-      // arrive, quelle que soit la borne empruntée
+      // Toutes les bornes sont le même nœud : peu importe par où le signal
+      // entre, il ressort par toutes les autres — en haut comme en bas.
       let v = 0;
-      for (let k = 0; k < nb; k++) v = Math.max(v, ana(c.inPins[k]));
+      c.inPins.forEach((p, k) => { if (railIdx(k).t < nb) v = Math.max(v, ana(p)); });
       c.val = v;
-      c.outPins.forEach((p, k) => p.state = k < nb ? v : 0);
+      c.outPins.forEach((p, k) => p.state = railIdx(k).t < nb ? v : 0);
     },
     body(c, x, col, on, hov, t){
       const nb = railN(c), y = c.y + c.h / 2;
       const x0 = c.x + 10, x1 = c.x + c.w - 10;
       const actif = (c.val || 0) > 0;
-      // la barre
       x.beginPath(); x.roundRect(x0, y - 7, x1 - x0, 14, 7);
       x.fillStyle = actif ? c.hexA(col, .3) : 'rgba(255,255,255,.06)';
       if (actif){ x.shadowBlur = 12; x.shadowColor = col; }
       x.fill(); x.shadowBlur = 0;
       x.lineWidth = 1.3; x.strokeStyle = actif ? col : 'rgba(255,255,255,.25)'; x.stroke();
-      // les bornes : une vis, et les moignons vers le haut et vers le bas
       for (let k = 0; k < nb; k++){
         const bx = c.x + 22 + k * RAIL_PAS;
         x.beginPath(); x.moveTo(bx, c.y + 2); x.lineTo(bx, c.y + c.h - 2);
@@ -7559,7 +7590,6 @@ function defRail(id, n){
         x.fillStyle = PAL.dim;
         x.fillText(String(k + 1), bx, y - 14);
       }
-      // le repère, s'il y en a un
       const nom = String(optOf(c, 'nom') || '').trim();
       if (nom){
         x.font = "700 9px 'Chakra Petch', sans-serif";
@@ -7569,18 +7599,18 @@ function defRail(id, n){
       }
     },
     tip(c){
-      const nb = railN(c);
-      const arrivees = wires.filter(w => w.inPin.comp === c).length;
-      const departs  = wires.filter(w => w.outPin.comp === c).length;
+      const nb = railN(c), src = railSource(c);
+      const departs = wires.filter(w => w.outPin.comp === c).length;
       const nom = String(optOf(c, 'nom') || '').trim();
       return [(nom ? 'Rail « ' + nom + ' » — ' : 'Rail de ') + nb + ' bornes',
               'Valeur distribuée : ' + (c.val > 1 ? fmtRaw(c.val) : (c.val ? '1' : '0')),
-              arrivees + ' arrivée(s) · ' + departs + ' départ(s)',
-              'Toutes les bornes sont le même point : ce qui arrive sur l’une repart par toutes'];
+              src ? 'Alimenté par ' + FR_NAME[src.outPin.comp.type] : '⚠ Aucune arrivée : le rail ne distribue rien',
+              departs + ' départ(s) — au-dessus comme au-dessous, c’est le même point',
+              'Double-clic : longueur et repère'];
     },
     guide: n !== 8 ? null : { also:['RAIL4','RAIL12'],
-      txt:'Une barre où <b>toutes les bornes sont le même point</b>. On y amène le signal une fois — sur n’importe quelle borne, par le dessus — et chaque consommateur s’y raccorde par le dessous, avec un moignon de deux centimètres. Vingt fils qui convergeaient vers la même sortie deviennent vingt petits traits bien rangés.<br><br>Trois longueurs sont posées d’avance dans la palette (4, 8 et 12 bornes) et le <b>nombre de bornes se règle librement</b> de 2 à 16, à la glissière ou dans l’inspecteur. Donne-lui un repère — <code>ALIM</code>, <code>MASSE</code>, <code>HORLOGE</code>, <code>ARRÊT U.</code> — il s’affiche sur la barre et le schéma se lit tout seul.',
-      ex:'Pose un VRAI·1, un rail de 8 bornes marqué « ALIM », et branche dessus l’autorisation de six blocs différents. Compare avec la même chose en fils directs : c’est le jour et la nuit.',
+      txt:'Une barre où <b>toutes les bornes sont le même point</b>. On y amène le signal une fois et chaque consommateur s’y raccorde par un moignon de deux centimètres : vingt fils qui convergeaient vers la même sortie deviennent vingt petits traits bien rangés.<br><br>Chaque borne offre <b>deux points de raccordement</b>, un au-dessus de la barre et un au-dessous, et chacun accepte aussi bien une arrivée qu’un départ. On se branche du côté d’où l’on vient : le consommateur est au-dessus, on prend la borne du haut ; il est en dessous, on prend celle du bas. Aucun fil ne fait le tour.<br><br>Une seule règle, et elle est physique : <b>une seule arrivée</b>. Toutes les bornes étant le même point, deux sources dessus, c’est un court-circuit — l’appli le refuse.<br><br>Trois longueurs sont posées d’avance dans la palette (4, 8 et 12 bornes) et le <b>nombre de bornes se règle librement</b> de 2 à 16 au double-clic. Donne-lui un repère — <code>ALIM</code>, <code>MASSE</code>, <code>HORLOGE</code>, <code>ARRÊT U.</code> — il s’affiche sur la barre et le schéma se lit tout seul.',
+      ex:'Pose un VRAI·1, un rail de 8 bornes marqué « ALIM », et branche dessus l’autorisation de six blocs différents — certains au-dessus, d’autres au-dessous. Compare avec la même chose en fils directs : c’est le jour et la nuit.',
       real:'C’est le <b>répartiteur</b> de toute armoire électrique. Personne ne visse quinze fils sous la même borne d’un disjoncteur : on pose un peigne ou un bornier, et chaque départ prend sa place. La règle est autant mécanique que logique — une borne accepte un fil, deux au maximum.' }
   });
 }
@@ -7632,7 +7662,11 @@ function encadrerSelection(){
 }
 defComp('ZONE', {
   name:'CADRE DE COMMENTAIRE', short:'CADRE', family:'wire', color:'#8fa6c8',
-  glyph:'▭', w:320, h:220, ins:[], outs:[], main:'larg',
+  glyph:'▭', w:320, h:220, ins:[], outs:[],
+  /* Pas de glissière : elle serait hors d'atteinte, le cadre ne se prenant
+     que par sa barre de titre. On le redimensionne par sa poignée de coin. */
+  noDrag:() => true,
+  grip(c){ return { x:c.x + c.w - 22, y:c.y + c.h - 22, w:22, h:22 }; },
   opts:[
     { k:'titre', label:'Titre du cadre', type:'text', max:24, def:'Zone',
       hint:'Ce que fait ce bloc de circuit : « Boucle de température », « Sécurités », « Comptage »…' },
@@ -7671,11 +7705,20 @@ defComp('ZONE', {
     x.font = "600 8px 'IBM Plex Mono', monospace"; x.textAlign = 'right';
     x.fillStyle = base + '.5)';
     x.fillText(n + (n > 1 ? ' blocs' : ' bloc'), c.x + c.w - 12, c.y + ZONE_TITRE / 2 + .5);
+    // poignée de coin : trois traits en biais, comme partout ailleurs
+    const gx = c.x + c.w - 6, gy = c.y + c.h - 6;
+    x.lineWidth = 1.6;
+    x.strokeStyle = base + (zoneDrag && zoneDrag.z === c ? '.95)' : (hov ? '.7)' : '.4)'));
+    for (let i = 0; i < 3; i++){
+      const d = 5 + i * 5;
+      x.beginPath(); x.moveTo(gx - d, gy); x.lineTo(gx, gy - d); x.stroke();
+    }
   },
   tip:c => ['Cadre « ' + (optOf(c, 'titre') || 'Zone') + ' » — ' + zoneContenu(c).length + ' composant(s)',
             'Prends-le par sa barre de titre : il emporte tout ce qu’il contient',
-            'Double-clic : titre, taille et couleur'],
-  guide:{ txt:'Un rectangle titré qu’on pose autour d’un groupe de composants. Il ne calcule rien, ne se câble pas et ne compte pas dans le budget de portes : il <b>range</b>. Prends-le par sa <b>barre de titre</b> et il emporte tout ce qu’il contient ; clique n’importe où ailleurs et tu attrapes normalement les composants qui sont dessous.<br><br>La façon rapide de l’obtenir : sélectionne les composants concernés et clique <code>▭ Encadrer</code> dans le bandeau de sélection — le cadre se dessine exactement autour d’eux.',
+            'Tire la poignée du coin bas-droit pour l’agrandir',
+            'Double-clic : titre, couleur et taille au pixel près'],
+  guide:{ txt:'Un rectangle titré qu’on pose autour d’un groupe de composants. Il ne calcule rien, ne se câble pas et ne compte pas dans le budget de portes : il <b>range</b>. Prends-le par sa <b>barre de titre</b> et il emporte tout ce qu’il contient ; clique n’importe où ailleurs et tu attrapes normalement les composants qui sont dessous.<br><br>La façon rapide de l’obtenir : sélectionne les composants concernés et clique <code>▭ Encadrer</code> dans le bandeau de sélection — le cadre se dessine exactement autour d’eux. Ensuite, tire la <b>poignée du coin bas-droit</b> pour l’ajuster.',
     ex:'Encadre ta boucle de régulation en ambre et ta chaîne de sécurité en rose : six mois plus tard, tu retrouveras ton propre montage en dix secondes.',
     real:'Sur un schéma d’armoire, chaque folio porte un cartouche et chaque fonction un repère. Ce n’est pas de la décoration : c’est ce qui permet à quelqu’un d’autre — ou à toi dans un an — de comprendre l’installation sans la refaire.' }
 });
@@ -9948,7 +9991,7 @@ function buildGuide(){
     'et le thermostat te demande une consigne <b>entre 0 et 250 °C</b>. Rien de branché ? Le réglage s’exprime ' +
     'en <b>% de l’échelle</b> en attendant. Glissière, inspecteur et infobulle affichent tous la même valeur.<br><br>' +
     '<b>⚡ Poser un composant déjà relié.</b> Tire un fil depuis une broche et <b>lâche-le dans le vide</b> : au lieu de perdre le geste, l’appli propose ce qui saurait recevoir ce signal — et celui que tu choisis arrive <b>posé et câblé</b>. Il se pose toujours du bon côté, à droite si le fil sort, à gauche s’il cherche une source : le câble reste court et ne repart jamais en arrière. Les natures sont respectées, un raccord fluide n’appelle que de la tuyauterie.<br><br>' +
-    '<b>▭ Les cadres.</b> Sélectionne un groupe de composants et clique <code>▭</code> dans le bandeau : un cadre titré se dessine autour. Prends-le par sa <b>barre de titre</b> et il emporte tout ce qu’il contient ; clique ailleurs dedans et tu attrapes normalement les composants. Six couleurs, un titre — « Boucle de température », « Sécurités » — et le plan raconte enfin ce qu’il fait.<br><br>' +
+    '<b>▭ Les cadres.</b> Sélectionne un groupe de composants et clique <code>▭</code> dans le bandeau : un cadre titré se dessine autour. Prends-le par sa <b>barre de titre</b> et il emporte tout ce qu’il contient ; clique ailleurs dedans et tu attrapes normalement les composants. Tire la <b>poignée du coin bas-droit</b> pour l’ajuster. Six couleurs, un titre — « Boucle de température », « Sécurités » — et le plan raconte enfin ce qu’il fait.<br><br>' +
     '<b>🧲 Les guides d’alignement.</b> Pendant que tu déplaces un bloc, les bords et les centres des voisins l’attirent, et la ligne jaune qui apparaît dit sur quoi tu t’alignes. Un plan aligné se lit deux fois plus vite.<br><br>' +
     '<b>🖱 Le clic droit</b> ouvre le menu du composant survolé — réglages, rotation, miroir, duplication, panne, suppression — avec le raccourci clavier à côté de chaque ligne. Sur le fond, il donne annuler/refaire, le rangement des câbles et le recadrage.<br><br>' +
     '<b>🔎 Ctrl+F</b> cherche parmi les composants <b>posés</b> — par nom ou par étiquette — et la vue se rend sur celui que tu choisis. C’est le pendant de la recherche 🔍 de la palette : l’une cherche ce qu’on peut poser, l’autre ce qu’on a posé.<br><br>' +
@@ -11178,6 +11221,31 @@ function render(t){
   updateStats();
   requestAnimationFrame(render);
 }
+/* Redimensionnement d'un cadre par sa poignée de coin */
+let zoneDrag = null;
+function gripAt(wx, wy){
+  for (let i = components.length - 1; i >= 0; i--){
+    const c = components[i], d = REG[c.type];
+    if (!d || !d.grip) continue;
+    const g = d.grip(c);
+    if (wx >= g.x - 4 && wx <= g.x + g.w + 4 && wy >= g.y - 4 && wy <= g.y + g.h + 4) return c;
+  }
+  return null;
+}
+function gripStart(c, wx, wy){
+  zoneDrag = { z:c, x0:wx, y0:wy, w0:c.w, h0:c.h };
+  return true;
+}
+function gripMove(wx, wy){
+  if (!zoneDrag) return;
+  const z = zoneDrag.z;
+  const w = Math.max(140, Math.round((zoneDrag.w0 + wx - zoneDrag.x0) / 16) * 16);
+  const h = Math.max(100, Math.round((zoneDrag.h0 + wy - zoneDrag.y0) / 16) * 16);
+  z.opt.larg = z.w = w;
+  z.opt.haut = z.h = h;
+  markDirty();
+}
+
 /* ==================== GUIDES D'ALIGNEMENT ====================
    Pendant qu'on déplace un bloc, on cherche les voisins dont un bord ou le
    centre tombe presque au même endroit : on s'y colle, et on trace la ligne

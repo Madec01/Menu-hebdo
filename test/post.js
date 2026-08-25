@@ -3545,30 +3545,59 @@ T('T167 les poignées posent un itinéraire à la main, au bon endroit', () => {
   setWireMode(mode0);
 });
 
-T('T168 le rail de distribution : toutes les bornes sont le même point', () => {
+T('T168 le rail de distribution : un seul point, deux rangées, une arrivée', () => {
   board();
-  const r = mk('RAIL8', 300, 200);
+  const r = mk('RAIL8', 300, 300);
   eq(railN(r), 8, 'huit bornes par défaut');
   const src = mk('HIGH', 0, 0);
-  const l1 = mk('LED', 600, 0), l2 = mk('LED', 600, 150), l3 = mk('LED', 600, 300);
-  // une seule arrivée, trois départs pris sur des bornes différentes
-  wires.push(new Wire(src.outPins[0], r.inPins[0]));
-  wires.push(new Wire(r.outPins[3], l1.inPins[0]));
-  wires.push(new Wire(r.outPins[5], l2.inPins[0]));
-  wires.push(new Wire(r.outPins[7], l3.inPins[0]));
+  // l'arrivée se fait par une borne quelconque — ici celle du bas, au milieu
+  const bas = RAIL_MAX + 4;
+  wires.push(new Wire(src.outPins[0], r.inPins[bas]));
+  // et les départs se prennent partout : en haut, en bas, à gauche, à droite
+  const cibles = [0, 7, RAIL_MAX + 1, RAIL_MAX + 6].map((k, i) => {
+    const l = mk('LED', 800, i * 140);
+    wires.push(new Wire(r.outPins[k], l.inPins[0]));
+    return l;
+  });
   recalcFan(); sim(); sim();
-  eq(l1.inPins[0].state, 1, 'la borne 4 distribue');
-  eq(l2.inPins[0].state, 1, 'la borne 6 aussi');
-  eq(l3.inPins[0].state, 1, 'et la borne 8');
-  // une valeur analogique passe sans être ramenée à 1
+  cibles.forEach((l, i) => eq(l.inPins[0].state, 1,
+    'la borne ' + [0, 7, RAIL_MAX + 1, RAIL_MAX + 6][i] + ' distribue aussi'));
+  eq(r.val, 1, 'le rail porte la valeur reçue');
+
+  // --- une seconde arrivée est refusée : ce serait un court-circuit
+  const autre = mk('SWITCH', 0, 400);
+  const n0 = wires.length;
+  connectWire(autre.outPins[0], r.inPins[2]);
+  eq(wires.length, n0, 'la seconde arrivée est refusée');
+  ok(REG.RAIL8.refuse(r, r.inPins[2]), 'et le composant dit pourquoi');
+  eq(REG.RAIL8.refuse(r, r.outPins[2]), null, 'mais un départ de plus reste permis');
+  connectWire(r.outPins[3], mk('LED', 800, 700).inPins[0]);
+  eq(wires.length, n0 + 1, 'et il s’ajoute');
+  // débranchée, l'arrivée redevient possible
+  wires = wires.filter(w => w.inPin.comp !== r);
+  eq(REG.RAIL8.refuse(r, r.inPins[2]), null, 'rail libéré : on peut réalimenter');
+
+  // --- les câbles arrivent par le haut ou par le bas, jamais de côté
+  const dHaut = r.inPins[3].dir(), dBas = r.outPins[RAIL_MAX + 3].dir();
+  eq(dHaut.x, 0, 'la rangée du haut sort verticalement');
+  eq(dHaut.y, -1, 'vers le haut');
+  eq(dBas.x, 0, 'celle du bas aussi');
+  eq(dBas.y, 1, 'vers le bas');
+  // les deux rangées sont bien de part et d'autre de la barre
+  ok(r.inPins[3].ly < r.y + 1, 'rangée du haut sur le bord supérieur');
+  ok(r.outPins[RAIL_MAX + 3].ly > r.y + r.h - 1, 'rangée du bas sur le bord inférieur');
+  // et une borne accepte arrivée ET départ au même endroit
+  near(r.inPins[3].lx, r.outPins[3].lx, 0.01, 'arrivée et départ sont au même point');
+  near(r.inPins[3].ly, r.outPins[3].ly, 0.01, 'exactement');
+
+  // --- une valeur analogique passe sans être ramenée à 1
   board();
-  const r2 = mk('RAIL8', 300, 200), pot = mk('POT', 0, 0), j = mk('JAUGE', 600, 0);
+  const r2 = mk('RAIL8', 300, 200), pot = mk('POT', 0, 0), j = mk('JAUGE', 700, 0);
   applyInspector(pot, fld('o_val', 40));
   wires.push(new Wire(pot.outPins[0], r2.inPins[2]));
-  wires.push(new Wire(r2.outPins[6], j.inPins[0]));
+  wires.push(new Wire(r2.outPins[RAIL_MAX + 6], j.inPins[0]));
   recalcFan(); sim(); sim();
-  ok(j.raw > 20, 'le rail transporte la mesure telle quelle (' + j.raw.toFixed(1) + ')');
-  near(j.raw, pot.outPins[0].state, 0.01, 'sans rien perdre en route');
+  near(j.raw, pot.outPins[0].state, 0.01, 'le rail transporte la mesure telle quelle');
 
   // --- la longueur se règle, et le boîtier suit
   const w0 = r2.w;
@@ -3577,13 +3606,16 @@ T('T168 le rail de distribution : toutes les bornes sont le même point', () => 
   ok(r2.w > w0, 'la barre s’allonge');
   applyInspector(r2, fld('o_n', 2));
   eq(railN(r2), 2, 'deux bornes au minimum');
-  ok(r2.w < w0, 'et se raccourcit');
   applyInspector(r2, fld('o_n', 99));
   eq(railN(r2), RAIL_MAX, 'bornée à seize');
-  // les bornes au-delà de la longueur ne distribuent plus
   applyInspector(r2, fld('o_n', 4));
   sim(); sim();
   eq(r2.outPins[6].state, 0, 'la borne 7 d’un rail de 4 ne sort rien');
+  ok(REG.RAIL8.pinHidden(r2, r2.outPins[6]), 'et elle n’est ni dessinée ni cliquable');
+  ok(!REG.RAIL8.pinHidden(r2, r2.outPins[RAIL_MAX + 2]), 'la borne 3 du bas existe toujours');
+
+  // --- pas de glissière : elle se poserait sur la rangée de bornes
+  eq(primaryParam(r2), null, 'le rail n’a pas de glissière');
 
   // --- les trois longueurs de la palette et le repère
   ['RAIL4', 'RAIL8', 'RAIL12'].forEach((id, i) => {
@@ -3591,16 +3623,33 @@ T('T168 le rail de distribution : toutes les bornes sont le même point', () => 
     eq(railN(c), [4, 8, 12][i], id + ' : bonne longueur par défaut');
     ok(TOOL_TABS.some(t => t.items.includes(id)), id + ' : présent dans la palette');
   });
-  const nomme = mk('RAIL4', 900, 0);
+  const nomme = mk('RAIL4', 1100, 0);
   applyInspector(nomme, Object.assign(fld('o_nom', 'ALIM'), { tagName:'INPUT' }));
   eq(optOf(nomme, 'nom'), 'ALIM', 'le repère est retenu');
   ok(REG.RAIL4.tip(nomme).some(l => /ALIM/.test(l)), 'et rappelé dans l’infobulle');
+  ok(REG.RAIL4.tip(nomme).some(l => /Aucune arrivée/.test(l)), 'un rail non alimenté le dit');
 
   // --- l'onglet Câblage existe dans les deux ateliers
   const tab = TOOL_TABS.find(t => t.key === 'wire');
   ok(!!tab, 'onglet Câblage');
   ok(tab.items.includes('TUNNEL'), 'le tunnel l’a rejoint');
   ok(tab.mode.includes('elec') && tab.mode.includes('proc'), 'disponible des deux côtés');
+});
+
+T('T168b lâcher un fil sur une borne de rail vise bien l’arrivée', () => {
+  board();
+  const r = mk('RAIL8', 300, 300), src = mk('HIGH', 0, 0);
+  // la broche d'arrivée et celle de départ sont au même point : c'est le sens
+  // demandé qui départage
+  const x = r.inPins[2].x, y = r.inPins[2].y;
+  const pIn  = pickPin(x, y, 'in'),  pOut = pickPin(x, y, 'out');
+  ok(pIn && !pIn.isOutput, 'on peut viser l’arrivée');
+  ok(pOut && pOut.isOutput, 'et le départ');
+  eq(pIn.comp, r, 'sur le bon composant');
+  connectWire(src.outPins[0], pIn);
+  eq(wires.length, 1, 'le raccordement se fait');
+  sim(); sim();
+  eq(r.val, 1, 'et le rail distribue');
 });
 
 T('T169 le plan miniature ne s’affiche que quand il sert, et navigue', () => {
@@ -3722,6 +3771,20 @@ T('T172 le cadre de commentaire range le plan et emporte son contenu', () => {
   eq(pickComp(a.x + 10, a.y + 10), a, 'un composant sous le cadre reste attrapable');
   // il ne compte pas comme une porte
   eq(gateCost('ZONE') || 0, 0, 'il ne coûte aucune porte');
+  // --- la poignée de coin redimensionne, la glissière a disparu
+  eq(primaryParam(z), null, 'pas de glissière : elle serait hors d’atteinte');
+  eq(gripAt(z.x + z.w - 10, z.y + z.h - 10), z, 'la poignée du coin bas-droit répond');
+  eq(gripAt(z.x + 10, z.y + 10), null, 'et pas le reste du cadre');
+  const w0 = z.w, h0 = z.h;
+  gripStart(z, z.x + z.w - 10, z.y + z.h - 10);
+  gripMove(z.x + z.w - 10 + 200, z.y + z.h - 10 + 160);
+  ok(z.w > w0 + 150, 'le cadre s’agrandit (' + w0 + ' → ' + z.w + ')');
+  ok(z.h > h0 + 100, 'en hauteur aussi');
+  eq(z.opt.larg, z.w, 'et la taille est bien celle du réglage');
+  gripMove(z.x - 5000, z.y - 5000);
+  ok(z.w >= 140 && z.h >= 100, 'il ne peut pas devenir minuscule');
+  zoneDrag = null;
+
   // la taille et le titre voyagent avec le montage
   applyInspector(z, Object.assign(fld('o_titre', 'Boucle de température'), { tagName:'INPUT' }));
   const data = serializeGroup([z]);
