@@ -3249,8 +3249,12 @@ T('T158 les montages de référence des missions sont cohérents', () => {
         bad.push(m.id + ' : ' + a.type + '#' + w[1] + '(' + op.kind + ') → ' +
                  b.type + '#' + w[3] + '(' + ip.kind + ')');
     });
-    // deux câbles ne doivent pas viser la même entrée
-    const cibles = (lay.wires || []).map(w => w[2] + ':' + w[3]);
+    // deux câbles ne doivent pas viser la même entrée — sauf une borne de
+    // PUISSANCE, qui est une borne à vis et en accepte autant qu'on veut
+    const cibles = (lay.wires || []).filter(w => {
+      const b = r.made[w[2]], ip = b && b.inPins[w[3]];
+      return ip && ip.kind !== 'pui';
+    }).map(w => w[2] + ':' + w[3]);
     const dbl = cibles.filter((x, i) => cibles.indexOf(x) !== i);
     if (dbl.length) bad.push(m.id + ' : entrée alimentée deux fois (' + [...new Set(dbl)].join(', ') + ')');
     // et le montage doit tourner sans exploser
@@ -4706,6 +4710,135 @@ T('T204 rails et tunnels de puissance ne se mélangent pas avec ceux du signal',
   link(tp2, 0, l, 0); link(l, 0, m, 0); link(m, 0, g, 0);
   sim();
   ok(l.p > .2, 'entre tunnels de puissance de même nom, en revanche, ça passe');
+});
+
+
+console.log('\n— ⚡ Lot 3 : le chapitre du continu —');
+
+/* Pose le montage de référence d'une leçon et le simule */
+function poseDemo(id){
+  const idx = missions.findIndex(m => m.id === id);
+  loadMission(idx);
+  delete progress.done[id];
+  const lay = missionDemo(missions[idx]);
+  const r = spawnGroup(lay, 0, 0, false);
+  sim();
+  return { idx, m:missions[idx], made:r.made };
+}
+
+T('T205 le chapitre 31 : dix leçons, à la fin, dans l’atelier ⚡', () => {
+  const ch = chapitres().find(c => /Chapitre 31/.test(c.nom || c.ch || c.name || ''));
+  const lec = missions.filter(m => /Chapitre 31/.test(m.ch));
+  eq(lec.length, 10, 'dix leçons');
+  ok(ch, 'le chapitre apparaît dans la carte du cours');
+  // consécutives et à la fin du catalogue
+  const prem = missions.findIndex(m => /Chapitre 31/.test(m.ch));
+  eq(prem + lec.length, missions.length, 'elles sont à la toute fin du catalogue');
+  lec.forEach((m, i) => {
+    eq(missions[prem + i].id, m.id, 'consécutives');
+    eq(m.dom, 'phys', m.id + ' : ouvre l’atelier Énergie');
+    eq(m.tt.length, 0, m.id + ' : pas de table de vérité');
+    ok(typeof m.check === 'function', m.id + ' : a une vraie condition de réussite');
+    ok(m.sol.demo, m.id + ' : a un montage de référence');
+  });
+  // et charger une leçon bascule vraiment d’atelier
+  setAppMode('elec');
+  loadMission(prem);
+  eq(appMode, 'phys', 'la leçon emmène dans son atelier');
+  loadMission(-1); setAppMode('elec');
+});
+
+T('T206 la condition de réussite regarde le circuit, pas le clic', () => {
+  // montage incomplet : refusé
+  const idx = missions.findIndex(m => m.id === 'm149');
+  loadMission(idx);
+  delete progress.done['m149'];
+  const p = mk('PILE', 0, 0), l = mk('LAMPE', 300, 0), g = mk('MASSE', 600, 0);
+  link(p, 0, l, 0); link(l, 0, g, 0);            // il manque le retour au −
+  sim();
+  __fire('btn-verify', 'click');
+  ok(!progress.done['m149'], 'boucle ouverte : refusé, malgré le clic');
+  ok(typeof missions[idx].check() === 'string', 'et la leçon dit ce qui manque');
+  // on referme la boucle : accepté
+  link(g, 0, p, 0);
+  sim();
+  eq(missions[idx].check(), true, 'boucle fermée : la condition est remplie');
+  __fire('btn-verify', 'click');
+  ok(progress.done['m149'], 'mission validée');
+  loadMission(-1);
+});
+
+T('T207 chaque leçon du chapitre est réussie par son propre montage', () => {
+  const rates = [];
+  missions.filter(m => /Chapitre 31/.test(m.ch)).forEach(m => {
+    const d = poseDemo(m.id);
+    for (let k = 0; k < 3; k++){ __advance(60); sim(); }
+    const r = m.check(components, wires);
+    if (r !== true) rates.push(m.id + ' « ' + m.title +' » → ' + r);
+  });
+  loadMission(-1);
+  ok(!rates.length, 'montages de référence qui ne passent pas leur propre test —\n      ' +
+     rates.join('\n      '));
+});
+
+T('T208 le fusible fond, coupe, et se remplace', () => {
+  board();
+  const g = mk('GENE', 0, 0), f = mk('FUSIBLE', 300, 0), l = mk('LAMPE', 600, 0), m = mk('MASSE', 900, 0);
+  g.opt.u = 6; g.opt.ri = .05; g.opt.ilim = 5; f.opt.cal = 2;
+  link(g, 0, f, 0); link(f, 0, l, 0); link(l, 0, m, 0); link(m, 0, g, 0);
+  sim();
+  eq(f.grille, 0, 'calibre large : il tient');
+  ok(l.p > .5, 'et l’ampoule éclaire');
+  const passe = Math.abs(f.i);
+  // un calibre sous le courant réel : il fond
+  f.opt.cal = passe / 2;
+  sim();
+  eq(f.grille, 1, 'calibre trop petit : il fond');
+  sim();
+  near(l.i, 0, 1e-3, 'et il COUPE — plus rien ne circule');
+  near(l.p, 0, 1e-3, 'l’ampoule est éteinte');
+  // on le remplace sans rien corriger : il refond
+  clickComp(f, f.x + f.w / 2, f.y + 40);
+  eq(f.grille, 0, 'le clic le remplace');
+  sim();
+  eq(f.grille, 1, 'mais la cause est toujours là : il refond');
+  // on corrige, puis on remplace
+  f.opt.cal = passe * 1.5;
+  clickComp(f, f.x + f.w / 2, f.y + 40);
+  sim();
+  eq(f.grille, 0, 'calibre corrigé : il tient');
+  ok(l.p > .5, 'et la lumière revient');
+});
+
+T('T209 les montages d’exemple ⚡ font vraiment ce qu’ils annoncent', () => {
+  const noms = EXAMPLES.map(e => e.name);
+  ['⚡ La boucle qui s’allume', '⚡ Banc de mesure', '⚡ Variateur de lumière',
+   '⚡ Deux barres et un fusible'].forEach(n =>
+    ok(noms.includes(n), 'l’exemple « ' + n + ' » est au catalogue'));
+  // la boucle s'allume
+  board();
+  loadExample(noms.indexOf('⚡ La boucle qui s’allume'));
+  sim();
+  ok(components.find(c => c.type === 'LAMPE').p > .5, 'la boucle éclaire');
+  eq(components.find(c => c.type === 'INTERP').state, 1, 'et l’interrupteur est bien retrouvé fermé');
+  // le banc mesure
+  board();
+  loadExample(noms.indexOf('⚡ Banc de mesure'));
+  for (let k = 0; k < 3; k++){ __advance(60); sim(); }
+  const v = components.find(c => c.type === 'VOLT'), a = components.find(c => c.type === 'AMP');
+  const o = components.find(c => c.type === 'OSCILLO');
+  near(v.u, 9, .2, 'le voltmètre lit la tension du générateur');
+  near(a.i, 9 / 47, .01, 'l’ampèremètre lit le courant de la loi d’Ohm');
+  ok(o.buf.length >= 2, 'et l’oscilloscope trace');
+  // les deux barres alimentent les trois ampoules
+  board();
+  loadExample(noms.indexOf('⚡ Deux barres et un fusible'));
+  sim();
+  const ls = components.filter(c => c.type === 'LAMPE');
+  eq(ls.length, 3, 'trois ampoules');
+  ok(ls.every(l => l.p > .3), 'toutes alimentées par les barres');
+  eq(components.find(c => c.type === 'FUSIBLE').grille, 0, 'et le fusible tient');
+  board();
 });
 
 /* ===================== bilan ===================== */

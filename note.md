@@ -5,13 +5,13 @@ dans `CLAUDE.md`.
 
 ## Où en est le projet
 
-- **v6.15**, branche `claude/architecte-logique-v5-vntfkp`, **206 tests verts**
+- **v6.16**, branche `claude/architecte-logique-v5-vntfkp`, **211 tests verts**
   (`npm test`).
 - `logicgates.html` : ~12 500 lignes, un seul `<script>`, aucune dépendance.
-- Copies figées dans `versions/` (v5.1 → v6.15), avec leur tableau dans
+- Copies figées dans `versions/` (v5.1 → v6.16), avec leur tableau dans
   `versions/README.md`.
-- Catalogue : **148 leçons en 30 chapitres** — 63 à table de vérité (dont 8
-  boîtes noires) et 85 libres.
+- Catalogue : **158 leçons en 31 chapitres** — 63 à table de vérité (dont 8
+  boîtes noires), 85 libres, et 10 à **condition de réussite** (chapitre 31).
 
 ## Ce qui vient d'être fait
 
@@ -23,6 +23,13 @@ dans `CLAUDE.md`.
 Ce qu'on peut faire : la boucle pile → interrupteur → ampoule → masse → pile.
 Deux ampoules en parallèle et la pile s'affaisse, visiblement. On ouvre la
 boucle et tout s'éteint.
+
+**⚡ Lot 3 : le chapitre du continu** (v6.16). Le **chapitre 31 « Le courant
+continu »**, dix leçons à la fin du catalogue, chacune avec son montage de
+référence et sa **vraie condition de réussite** — c'est le premier chapitre où
+« Vérifier » regarde le circuit au lieu de croire le joueur sur parole. Quatre
+**montages d'exemple ⚡** dans le menu 📦 (la boucle, le banc de mesure, le
+variateur, les deux barres et un fusible).
 
 **v6.15 — le câblage de l'atelier ⚡, et le fusible.** L'onglet Câblage de
 l'atelier énergie est maintenant le sien (`wirep`) : les barres et le tunnel de
@@ -36,14 +43,16 @@ message de refus **nomme le jumeau à prendre**.
 Nouveau composant : le **FUSIBLE** (calibre réglable, fond au-delà, se remplace
 au clic).
 
-**Lot 3 mis en pause par l'auteur.** Les deux mécanismes qu'il demandait sont
-déjà en place et inertes tant qu'aucune leçon ne s'en sert :
+Les deux mécanismes du chapitre :
 - `m.check(components, wires)` — la troisième façon de gagner, pour les leçons
-  sans table de vérité. Rend `true`, ou la phrase qui dit ce qui manque.
+  sans table de vérité. Rend `true`, ou **la phrase qui dit ce qui manque** —
+  c'est elle que le joueur lit, donc elle doit être utile, pas décorative.
   Vocabulaire d'appui : `ckTous`, `ckUn`, `ckAllumees`, `ckSources`,
   `ckDebite`, `ckBoucle`, juste avant `const missions`.
 - `m.dom` — l'atelier de la leçon ; `loadMission` y bascule tout seul.
-Reste à écrire : les dix leçons du chapitre 31, et les montages d'exemple.
+**T207 est le garde-fou du chapitre** : il pose le montage de référence de
+chaque leçon et exige qu'il passe sa propre condition. Toute nouvelle leçon à
+`check` doit y survivre.
 
 **v6.14 — confort et câblage.** Rail et tunnel de puissance (`RAILP4`,
 `RAILP8`, `TUNP`). Le **clic simple sélectionne** (et actionne toujours le
@@ -203,12 +212,11 @@ plan ; sommaire devenu carte du cours.
   recherche qu'on oublie ? la barre qui mange l'écran ? Une refonte à l'aveugle
   coûterait cher pour rien.
 
-## Ce qui reste : ⚡ Énergie & ondes, lots 2 à 10
+## Ce qui reste : ⚡ Énergie & ondes, lots 4 à 10
 
 Découpage validé avec l'auteur. Un lot, on livre, il teste, il valide.
 
-**Phase 1 — le continu.** Lot 3 : le chapitre 31 du cours (les leçons, les
-tuiles, le tuteur, les « pourquoi »).
+**Phase 1 — le continu : TERMINÉE.**
 → le lot 3 devra ajouter **une vraie condition de réussite** : aujourd'hui une
 leçon sans table de vérité est gagnée dès qu'on clique sur « Vérifier »
 (`logicgates.html`, gestionnaire de `btn-verify`, la ligne `if (!m.tt.length)`).
