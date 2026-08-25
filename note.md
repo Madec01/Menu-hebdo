@@ -5,10 +5,10 @@ dans `CLAUDE.md`.
 
 ## Où en est le projet
 
-- **v6.17**, branche `claude/architecte-logique-v5-vntfkp`, **216 tests verts**
+- **v6.18**, branche `claude/architecte-logique-v5-vntfkp`, **216 tests verts**
   (`npm test`).
 - `logicgates.html` : ~12 500 lignes, un seul `<script>`, aucune dépendance.
-- Copies figées dans `versions/` (v5.1 → v6.17), avec leur tableau dans
+- Copies figées dans `versions/` (v5.1 → v6.18), avec leur tableau dans
   `versions/README.md`.
 - Catalogue : **158 leçons en 31 chapitres** — 63 à table de vérité (dont 8
   boîtes noires), 85 libres, et 10 à **condition de réussite** (chapitre 31).
@@ -23,6 +23,11 @@ dans `CLAUDE.md`.
 Ce qu'on peut faire : la boucle pile → interrupteur → ampoule → masse → pile.
 Deux ampoules en parallèle et la pile s'affaisse, visiblement. On ouvre la
 boucle et tout s'éteint.
+
+**v6.18 — l'atelier ⚡ passe à quatre onglets** : Le continu (8), Mesure (3),
+Produire (3), Câblage (7). Une seule rangée de quinze tuiles débordait de
+l'écran, et l'auteur ne retrouvait plus l'aimant. Trois familles nouvelles
+(`mesu`, `prod`, `wirp`) avec chacune sa section de guide.
 
 **⚡ Lot 4 : produire du courant** (v6.17). `AIMANT` (se promène à la souris,
 aucune borne — il agit par sa position), `BOBINE` (loi de Faraday : la tension
@@ -236,8 +241,13 @@ plan ; sommaire devenu carte du cours.
   repli (`buildToolbar`), une rangée d'onglets (`modeTabs` / `TOOL_TABS`), une
   barre de favoris qui se compose seule (`favPins` / `favFreq`), et les tuiles
   de composants avec cadenas de progression (`toolState` / `updateToolbar`).
-  Le catalogue compte maintenant ~85 composants pour 3 ateliers et 13 onglets —
+  Le catalogue compte maintenant ~90 composants pour 3 ateliers et 16 onglets —
   c'est probablement là que le bât blesse.
+  **Piège vérifié en v6.18** : `.tool-row` a `overflow-x:auto` mais
+  `scrollbar-width:none`. Une rangée trop longue défile donc en silence, sans
+  autre indice qu'un dégradé discret au bord (`.more-right`). Un composant au-delà
+  du bord devient introuvable. T149 refuse maintenant plus de 10 tuiles par
+  onglet — mais l'affordance de défilement reste à revoir dans la refonte.
   **Avant de coder, demander à l'auteur ce qui le gêne précisément** : trop de
   clics pour changer d'onglet ? les favoris qui bougent tout seuls ? la
   recherche qu'on oublie ? la barre qui mange l'écran ? Une refonte à l'aveugle

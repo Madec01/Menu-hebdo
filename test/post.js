@@ -2864,7 +2864,12 @@ T('T149 trois ateliers : la palette se recompose, les favoris ne bougent pas', (
   ok(phys && !phys.bientot, 'l’atelier Énergie & ondes n’est plus « bientôt »');
   setAppMode('phys');
   eq(appMode, 'phys', 'et il s’ouvre');
-  deq(cles(), ['ener','wirep'], 'énergie : le continu et son propre câblage');
+  deq(cles(), ['ener','mesu','prod','wirep'], 'énergie : quatre onglets, aucun surchargé');
+  // aucune rangée ne doit déborder : au-delà d'une dizaine de tuiles, le
+  // composant du bout devient introuvable (il faut deviner qu'on peut faire
+  // défiler la rangée).
+  modeTabs().forEach(t => ok(t.items.length <= 10,
+    'onglet « ' + t.name + ' » : ' + t.items.length + ' tuiles, c’est trop'));
   const cab = TOOL_TABS.find(t => t.key === 'wirep');
   ok(cab.items.indexOf('RAILP8') < cab.items.indexOf('RAIL8'),
      'les rails de puissance passent AVANT ceux de signal');
@@ -4617,8 +4622,9 @@ T('T200 l’oscilloscope suit le temps, pas les images', () => {
 
 T('T201 les sept composants du lot 2 sont rangés et câblables', () => {
   const onglet = TOOL_TABS.find(t => t.key === 'ener');
+  const tous = TOOL_TABS.reduce((a, t) => a.concat(t.items), []);
   ['RESIS','POTP','VOLT','AMP','GENE','OSCILLO'].forEach(t =>
-    ok(onglet.items.includes(t), t + ' est dans l’onglet du continu'));
+    ok(tous.includes(t), t + ' est dans la barre d’outils'));
   // l’ancien potentiomètre de mesure n’a pas été écrasé
   eq(REG.POT.family, 'sense', 'le potentiomètre de mesure du Process est intact');
   eq(REG.POTP.family, 'ener', 'celui de puissance est un autre composant');
@@ -5001,7 +5007,8 @@ T('T212b l’oscilloscope montre aussi le NÉGATIF', () => {
 
 T('T213 aimant, bobine et dynamo sont complets et rangés', () => {
   const onglet = TOOL_TABS.find(t => t.key === 'ener');
-  ['AIMANT','BOBINE','DYNAMO'].forEach(t => ok(onglet.items.includes(t), t + ' est dans l’onglet'));
+  const tous2 = TOOL_TABS.reduce((a, t) => a.concat(t.items), []);
+  ['AIMANT','BOBINE','DYNAMO'].forEach(t => ok(tous2.includes(t), t + ' est dans la barre d’outils'));
   // l'aimant n'a aucune borne : il agit par sa position
   board();
   const a = mk('AIMANT', 0, 0);
