@@ -196,6 +196,12 @@ plan ; sommaire devenu carte du cours.
   `ZONE` capte le clic (`hit`, `noDrag`, ordre de dessin : les cadres passent
   derrière, mais le test de survol les voit peut-être en premier).
 
+- **Le cartouche du tuteur recouvre le schéma sur sa dernière page.** Vu en
+  v6.16 sur la leçon m152 : à la page du « pourquoi », plus aucune cible n'est
+  désignée, et `placeLecon()` n'a donc plus rien à éviter — il se pose au
+  milieu, sur les composants. Pas bloquant (on le déplace à la main). Piste :
+  à défaut de cible, éviter l'encombrement de TOUS les composants.
+
 ## Chantiers demandés, hors feuille de route
 
 - **Refondre la barre du bas.** L'auteur la trouve « peu ergonomique à
