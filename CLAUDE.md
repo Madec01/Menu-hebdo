@@ -21,6 +21,10 @@ toutes les explications doivent être en français simple, sans jargon.
 
 # Feuille de route
 
+Cette section est **temporaire** : c'est un pense-bête, pas de la
+documentation. Effacer chaque ligne dès que le travail correspondant est
+fait, et **supprimer la section entière** quand tout est terminé.
+
 ## Refonte de l'affichage (en cours)
 
 - **Lot 1** — supprimer la colonne de droite `#mission-panel`. L'énoncé monte
