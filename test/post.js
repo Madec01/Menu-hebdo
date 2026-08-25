@@ -2753,7 +2753,8 @@ T('T58 le guide documente les nouveautés v5 (inspecteur, analyseur, bus…)', (
 
 T('T60 le guide documente les ateliers, les unités, les seuils et la tuyauterie', () => {
   const html = __el('guide-body').innerHTML;
-  [['Deux ateliers', 'les deux modes de palette'],
+  [['Trois ateliers', 'les trois ateliers'],
+   ['Les favoris', 'la barre de favoris'],
    ['unités réelles', 'les réglages en unité physique'],
    ['% de l’échelle', 'le repli en pourcentage'],
    ['seuil haut', 'le seuil haut des capteurs'],
@@ -2841,26 +2842,77 @@ T('T148 les réglages se donnent dans l’unité de la mesure branchée', () => 
   eq(optOf(four, 'alerte'), phys2raw(200, { min:0, max:250 }), 'stocké en brut');
 });
 
-T('T149 deux ateliers : la palette se filtre en électronique ou en process', () => {
-  const noms = () => modeTabs().map(t => t.key);
-  setAppMode('tout');
-  ok(noms().includes('gate') && noms().includes('act'), 'mode Tout : toute la palette');
+T('T149 trois ateliers : la palette se recompose, les favoris ne bougent pas', () => {
+  const cles = () => modeTabs().map(t => t.key);
   setAppMode('elec');
-  ok(noms().includes('gate') && noms().includes('calc'), 'électronique : portes et calcul');
-  ok(!noms().includes('act') && !noms().includes('reg'),
-     'électronique : ni actionneurs ni régulation');
-  ok(noms().includes('sense') && noms().includes('in'), 'les entrées et capteurs restent partout');
+  deq(cles(), ['in','gate','mem','calc','out','wire'], 'électronique : six onglets');
   setAppMode('proc');
-  ok(noms().includes('act') && noms().includes('reg'), 'process : actionneurs et régulation');
-  ok(!noms().includes('gate'), 'process : pas de portes dans la palette');
+  deq(cles(), ['pupi','sense','act','reg','time','sup','wire'], 'process : sept onglets');
+  ok(!cles().includes('gate'), 'pas de portes côté process');
+  ok(!cles().includes('calc'), 'ni de calcul');
   eq(localStorage.getItem('al2_mode'), 'proc', 'le choix est mémorisé');
-  // la recherche reste universelle : rien n'est jamais hors d'atteinte
-  ok(searchTypes('nand').includes('NAND'), 'la recherche traverse les deux ateliers');
-  ok(searchTypes('pompe').includes('PUMP'), 'et retrouve aussi le procédé');
-  // l'onglet courant est ramené dans le domaine du mode
-  toolbarTab = 99; buildToolbar();
-  ok(toolbarTab < modeTabs().length, 'onglet ramené dans le mode');
-  setAppMode('tout');
+  // le troisième atelier est annoncé mais pas encore ouvert
+  const phys = MODES.find(m => m.k === 'phys');
+  ok(phys && phys.bientot, 'l’atelier Énergie & ondes est annoncé');
+  setAppMode('phys');
+  eq(appMode, 'proc', 'et il ne s’ouvre pas encore');
+  // il n’y a plus de mode « Tout »
+  ok(!MODES.some(m => m.k === 'tout'), 'le mode Tout a disparu');
+
+  // --- le pupitre et la supervision sont des vues taillées pour le process
+  const pupi = TOOL_TABS.find(t => t.key === 'pupi');
+  ok(pupi.items.includes('BUTTON') && pupi.items.includes('ESTOP'), 'le pupitre a ses boutons');
+  ok(!pupi.items.includes('NOISE') && !pupi.items.includes('SEQ'),
+     'mais ni bruit ni séquenceur : ils n’ont rien à faire sur un pupitre');
+  const sup = TOOL_TABS.find(t => t.key === 'sup');
+  ok(sup.items.includes('ECRAN') && sup.items.includes('COURBE'), 'la supervision a l’écran et l’enregistreur');
+  ok(!sup.items.includes('MATRIX') && !sup.items.includes('SEGMENT'),
+     'mais ni matrice 8×8 ni afficheur 7 segments');
+
+  // --- chaque atelier retient l’onglet où on l’a laissé
+  setAppMode('elec'); toolbarTab = 3; tabParDom.elec = 3;
+  setAppMode('proc'); toolbarTab = 5; 
+  setAppMode('elec');
+  eq(toolbarTab, 3, 'retour à l’onglet quitté côté électronique');
+  setAppMode('proc');
+  eq(toolbarTab, 5, 'et côté process');
+
+  // --- la recherche traverse tout, sans doublon
+  ok(searchTypes('nand').includes('NAND'), 'la recherche traverse les ateliers');
+  ok(searchTypes('pompe').includes('PUMP'), 'et retrouve le procédé');
+  const bt = searchTypes('bouton');
+  eq(bt.length, new Set(bt).size, 'un composant présent dans deux onglets n’apparaît qu’une fois');
+  setAppMode('elec');
+});
+
+T('T149b la barre de favoris est indépendante des ateliers', () => {
+  const pins0 = favPins.slice(), freq0 = Object.assign({}, favFreq);
+  favPins = ['AND','LED']; favFreq = {};
+  setAppMode('elec');
+  const a = favList();
+  setAppMode('proc');
+  deq(favList(), a, 'les favoris ne changent pas d’un atelier à l’autre');
+  ok(a.includes('AND') && a.includes('LED'), 'les épingles y sont');
+  // épingler et retirer
+  favEpingle('PUMP');
+  ok(favPins.includes('PUMP'), 'un clic droit épingle');
+  ok(favList().includes('PUMP'), 'et ça se voit dans la barre');
+  favEpingle('PUMP');
+  ok(!favPins.includes('PUMP'), 'un second clic droit retire');
+  // les plus employés complètent automatiquement
+  favPins = ['AND'];
+  favFreq = { FOUR:9, CUVE:5, TUYAU:1 };
+  const l = favList();
+  eq(l[0], 'AND', 'les épingles passent devant');
+  ok(l.includes('FOUR') && l.includes('CUVE'), 'les habitués complètent');
+  ok(!l.includes('TUYAU'), 'un composant posé une seule fois ne compte pas encore');
+  ok(l.indexOf('FOUR') < l.indexOf('CUVE'), 'du plus employé au moins employé');
+  ok(l.length <= FAV_MAX, 'jamais plus de ' + FAV_MAX + ' tuiles');
+  // poser un composant le compte
+  const n0 = favFreq.NOT | 0;
+  favNote('NOT');
+  eq(favFreq.NOT, n0 + 1, 'poser un composant le compte');
+  favPins = pins0; favFreq = freq0; favSave();
 });
 
 T('T150 les exemples hydrauliques tournent vraiment', () => {
@@ -3633,7 +3685,7 @@ T('T168 le rail de distribution : un seul point, deux rangées, une arrivée', (
   const tab = TOOL_TABS.find(t => t.key === 'wire');
   ok(!!tab, 'onglet Câblage');
   ok(tab.items.includes('TUNNEL'), 'le tunnel l’a rejoint');
-  ok(tab.mode.includes('elec') && tab.mode.includes('proc'), 'disponible des deux côtés');
+  ok(tab.dom.includes('elec') && tab.dom.includes('proc'), 'disponible des deux côtés');
 });
 
 T('T168b lâcher un fil sur une borne de rail vise bien l’arrivée', () => {

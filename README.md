@@ -5,11 +5,14 @@ Jeu d'apprentissage de la logique numérique et de l'automatisme : des portes
 guidées, de « allume une ampoule » au processeur 1 bit, puis du thermostat au
 feu tricolore programmé, au circuit hydraulique et au diagnostic de pannes.
 
-L'appli tient deux ateliers dans le même plan de travail : **⚡ Électronique**
-(le signal et la logique) et **🏭 Process** (l'installation : capteurs,
-régulation, actionneurs, tuyauterie). Le sélecteur en tête de la barre d'outils
-filtre la palette — sans rien verrouiller : un montage peut mélanger les deux et
-la recherche traverse toujours l'ensemble du catalogue.
+L'appli tient trois ateliers dans le même plan de travail : **⚡ Électronique**
+(le signal et la logique), **🏭 Process** (l'installation : pupitre, capteurs,
+actionneurs, régulation, supervision) et bientôt **🔌 Énergie & ondes**. Chacun
+a ses propres onglets et retient celui où on l'a laissé ; sa couleur se retrouve
+sur l'onglet actif. Le choix ne filtre que la palette, sans rien verrouiller :
+la recherche, la **barre de favoris** et le menu d'ajout rapide traversent
+toujours tout le catalogue. Les favoris se composent seuls — les épingles qu'on
+pose au clic droit, puis les composants qu'on emploie le plus.
 
 `logicgates.html` est un **fichier HTML autonome** : aucune dépendance, aucun
 serveur, aucun réseau. Ouvre-le dans un navigateur, c'est tout.
@@ -145,7 +148,7 @@ concatène entre `test/pre.js` (stubs DOM / Canvas / Audio / localStorage, plus
 une horloge `Date.now` pilotable) et `test/post.js` (les tests), puis exécute le
 tout dans un contexte `vm`. Aucun navigateur, aucune dépendance npm.
 
-172 tests couvrent le moteur, le séquentiel, les blocs numériques, l'analogique
+174 tests couvrent le moteur, le séquentiel, les blocs numériques, l'analogique
 et la régulation (dont une boucle fermée four + thermostat), l'édition,
 l'orientation, les tunnels, les puces, l'interface, le balisage et le guide.
 Deux tests valident automatiquement **tout** nouveau composant du registre
@@ -168,7 +171,10 @@ d'outils, inspecteur, analyseur, guide et sérialisation compris.
 | `al2_chips` | puces créées par le joueur |
 | `al2_saves` | montages nommés |
 | `al2_sandbox` | bac à sable courant (auto-sauvegardé) |
-| `al2_mode` | atelier courant (électronique / process / tout) |
+| `al2_mode` | atelier courant (électronique / process) |
+| `al2_tabs` | dernier onglet visité dans chaque atelier |
+| `al2_fav`, `al2_freq` | favoris épinglés et compteur d'usage |
+| `al2_barre` | barre d'outils repliée ou non |
 | `al2_wire` | mode de tracé des câbles |
 | `al2_mute`, `al2_snap`, `al2_labels` | préférences |
 
