@@ -163,7 +163,7 @@ concatène entre `test/pre.js` (stubs DOM / Canvas / Audio / localStorage, plus
 une horloge `Date.now` pilotable) et `test/post.js` (les tests), puis exécute le
 tout dans un contexte `vm`. Aucun navigateur, aucune dépendance npm.
 
-174 tests couvrent le moteur, le séquentiel, les blocs numériques, l'analogique
+180 tests couvrent le moteur, le séquentiel, les blocs numériques, l'analogique
 et la régulation (dont une boucle fermée four + thermostat), l'édition,
 l'orientation, les tunnels, les puces, l'interface, le balisage et le guide.
 Deux tests valident automatiquement **tout** nouveau composant du registre
@@ -182,7 +182,7 @@ d'outils, inspecteur, analyseur, guide et sérialisation compris.
 
 | Clé `localStorage` | Contenu |
 | --- | --- |
-| `al2_progress` | missions réussies et meilleurs scores (v3) |
+| `al2_progress` | missions réussies, meilleurs scores et dernière page de leçon consultée (v3) |
 | `al2_chips` | puces créées par le joueur |
 | `al2_saves` | montages nommés |
 | `al2_sandbox` | bac à sable courant (auto-sauvegardé) |
