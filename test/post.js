@@ -3973,9 +3973,8 @@ T('T177 la victoire enchaîne sur le « pourquoi », sur le schéma', () => {
   loadMission(-1);
 });
 
-T('T178 le sommaire : chapitres repliables, état, recherche et reprise', () => {
+T('T178 la carte du cours : une tuile par chapitre, ses leçons en pastilles', () => {
   loadMission(-1);
-  somOuverts = new Set();
   somFiltre = '';
   renderSommaire();
   const list = __el('som-list');
@@ -3983,34 +3982,49 @@ T('T178 le sommaire : chapitres repliables, état, recherche et reprise', () => 
   ok(chs.length >= 20, 'les 30 chapitres sont reconstitués (' + chs.length + ')');
   eq(chs.reduce((a, c) => a + c.lecons.length, 0), missions.length,
      'et toutes les leçons y sont, une seule fois');
-  eq(list.children.length, chs.length, 'tout replié : une ligne par chapitre');
-  ok(/▸/.test(list.children[0].innerHTML), 'chapitre replié : chevron fermé');
-  // déplier
-  somToggle(chs[0].nom);
-  ok(list.children.length > chs.length, 'déplier montre les leçons du chapitre');
-  ok(/▾/.test(list.children[0].innerHTML), 'et le chevron s’ouvre');
-  // cliquer une leçon la charge
-  const ligne = list.children.find(c => /som-l/.test(c.className));
-  ok(ligne, 'il y a bien des lignes de leçon');
-  ligne.dispatch('click');
-  eq(currentIdx, 0, 'cliquer une leçon la charge');
+  eq(list.children.length, chs.length, 'une tuile par chapitre, tout visible d’un coup');
+  const t0 = list.children[0];
+  ok(/som-tuile/.test(t0.className), 'ce sont bien des tuiles');
+  // l'anneau porte le numéro du chapitre et la part réussie
+  const tete = t0.children.find(c => /som-th/.test(c.className));
+  ok(tete, 'la tuile a son en-tête');
+  ok(/som-anneau/.test(tete.innerHTML), 'avec son anneau de progression');
+  ok(/<text[^>]*>1<\/text>/.test(tete.innerHTML), 'le numéro du chapitre au centre');
+  ok(/\d+ \/ \d+ réussies/.test(tete.innerHTML), 'et le compte des leçons réussies');
+  eq(numChapitre('Chapitre 12 · Mémoire'), '12', 'le numéro se lit dans le nom');
+  eq(nomChapitre('Chapitre 12 · Mémoire'), 'Mémoire', 'et le nom sans son numéro');
+  // les pastilles : une par leçon, cliquables, numérotées
+  const past = t0.children.find(c => /som-pastilles/.test(c.className));
+  ok(past, 'la tuile a ses pastilles');
+  eq(past.children.length, chs[0].lecons.length, 'une pastille par leçon du chapitre');
+  eq(past.children[0].textContent, '1', 'numérotée par le rang de la leçon');
+  past.children[1].dispatch('click');
+  eq(currentIdx, 1, 'cliquer une pastille charge la leçon');
   ok(!__el('sommaire-modal').classList.contains('show'), 'et referme le sommaire');
-  // recherche
+  // l'état d'une leçon se lit dans la classe de sa pastille
+  const m0 = missions[0];
+  delete progress.done[m0.id];
+  eq(classeEtat(m0), '', 'leçon jamais réussie : pastille neutre');
+  progress.done[m0.id] = true; progress.best[m0.id] = 999;
+  eq(classeEtat(m0), 'ok', 'leçon réussie : pastille verte');
+  progress.best[m0.id] = m0.par;
+  eq(classeEtat(m0), m0.par > 0 ? 'star' : 'ok', 'objectif atteint : pastille dorée');
+  renderSommaire();
+  ok(/som-p (ok|star)/.test(list.children[0].children[1].children[0].className),
+     'et la pastille rendue porte bien cet état');
+  // recherche : on repasse à des titres, pas des pastilles
   somFiltrer('multiplexeur');
   const trouve = list.children.filter(c => /som-l/.test(c.className));
   ok(trouve.length >= 1, 'la recherche trouve des leçons (' + trouve.length + ')');
   ok(trouve.length < missions.length, 'et elle filtre vraiment');
+  ok(/som-t/.test(trouve[0].innerHTML), 'avec le titre de la leçon');
+  ok(!list.children.some(c => /som-tuile/.test(c.className)), 'plus de tuiles pendant la recherche');
+  trouve[0].dispatch('click');
+  ok(currentIdx >= 0, 'un résultat se charge au clic');
   somFiltrer('zzzznexistepas');
   ok(list.children.some(c => /som-vide/.test(c.className)), 'sinon elle le dit');
   somFiltrer('');
-  // état de chaque leçon
-  const m0 = missions[0];
-  delete progress.done[m0.id];
-  eq(lessonEtat(m0), '·', 'leçon jamais réussie');
-  progress.done[m0.id] = true; progress.best[m0.id] = 999;
-  eq(lessonEtat(m0), '✓', 'leçon réussie');
-  progress.best[m0.id] = m0.par;
-  eq(lessonEtat(m0), m0.par > 0 ? '⭐' : '✓', 'leçon réussie au nombre de portes visé');
+  ok(list.children.every(c => /som-tuile/.test(c.className)), 'et les tuiles reviennent');
   // reprendre
   missions.forEach(m => { progress.done[m.id] = true; });
   eq(somReprendre(), 0, 'tout réussi : on repart du début');
@@ -4022,9 +4036,9 @@ T('T178 le sommaire : chapitres repliables, état, recherche et reprise', () => 
   ok(__el('sommaire-modal').classList.contains('show'), 'le bouton ouvre le sommaire');
   __fire('btn-close-sommaire', 'click');
   ok(!__el('sommaire-modal').classList.contains('show'), 'et le referme');
-  somOuverts = null;
   loadMission(-1);
 });
+
 
 T('T179 le fil d’Ariane situe la leçon dans son chapitre', () => {
   loadMission(-1);

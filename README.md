@@ -71,11 +71,15 @@ l'explication si on la demande.
 recouvrir le schéma, et la leçon enchaîne aussitôt sur le **« pourquoi ça
 marche »**, page par page, sur le circuit que l'on vient de construire.
 
-**Le sommaire.** En tête du bandeau, un fil d'Ariane situe la leçon
+**La carte du cours.** En tête du bandeau, un fil d'Ariane situe la leçon
 (*chapitre, leçon n / total*) ; ses flèches passent à la voisine, et un clic
-ouvre le sommaire : 30 chapitres repliables, l'état de chaque leçon (`·` à
-faire, `✓` réussie, `⭐` au nombre de portes visé), une recherche par mot-clé et
-un bouton **Reprendre** qui saute à la première leçon non réussie.
+ouvre la carte du cours : **30 tuiles de chapitre**, chacune avec son **anneau
+de progression** (le numéro au centre, la part réussie tout autour, doré quand
+le chapitre est bouclé) et ses leçons en **pastilles numérotées** — grise à
+faire, verte réussie, dorée au nombre de portes visé, cerclée de cyan pour la
+leçon en cours. Tout le parcours tient sur un écran. Une recherche par mot-clé
+bascule la vue en liste de titres, et le bouton **Reprendre** saute à la
+première leçon non réussie.
 
 **Des schémas tout prêts.** Le menu 📦 propose 28 montages chargeables, dont quatorze
 procédés complets : station de pompage, four régulé en tout ou rien / proportionnel

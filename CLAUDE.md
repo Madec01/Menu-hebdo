@@ -25,13 +25,7 @@ Cette section est **temporaire** : c'est un pense-bête, pas de la
 documentation. Effacer chaque ligne dès que le travail correspondant est
 fait, et **supprimer la section entière** quand tout est terminé.
 
-## Refonte de l'affichage (en cours)
-
-- **Lot 3** — le sommaire devient **la carte du cours** : 30 tuiles de
-  chapitre avec anneau de progression, leçons en pastilles numérotées
-  (grise à faire, verte réussie, dorée objectif atteint), bouton Reprendre.
-
-## Puis LA grosse modification : le domaine ⚡ Énergie & ondes
+## LA grosse modification : le domaine ⚡ Énergie & ondes
 
 Le bouton existe déjà dans la barre du bas, grisé, marqué « bientôt ».
 Quatre phases, dans cet ordre :
