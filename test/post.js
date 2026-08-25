@@ -656,12 +656,16 @@ T('T41 chaque mission se charge (E/S verrouillées, table affichée)', () => {
   loadMission(-1);
 });
 
-T('T42 chaque solution s’affiche sans erreur', () => {
+T('T42 « donne-moi la solution » répond sur les 148 leçons', () => {
   missions.forEach((m, i) => {
     loadMission(i);
     __fire('btn-solution', 'click');
-    const h = __el('solution-text').innerHTML;
-    ok(h.length > 40, m.id + ' : texte de solution rendu');
+    ok(!__el('tutor-box').classList.contains('hidden'), m.id + ' : la leçon s’ouvre');
+    const h = __el('tutor-txt').innerHTML;
+    ok(h.length > 20, m.id + ' : la page a du texte (' + h.length + ')');
+    // il doit toujours rester de quoi lire : au moins une page
+    ok(/\d+ \/ \d+/.test(__el('tutor-dots').textContent), m.id + ' : pagination affichée');
+    closeTutor();
   });
   loadMission(-1);
 });
@@ -3866,6 +3870,183 @@ T('T173 trouver un composant sur le plan et s’y rendre', () => {
   near(centre.y, four.y + four.bh / 2, 2, 'en X comme en Y');
   ok(selection.has(four), 'et il est sélectionné pour qu’on le repère');
   cam.z = 1; cam.x = 0; cam.y = 0; selection.clear();
+});
+
+T('T174 la leçon se lit page par page, en avant comme en arrière', () => {
+  const idx = missions.findIndex(m => m.id === 'm7');
+  loadMission(idx);
+  __fire('btn-tutor', 'click');
+  ok(tutor, 'la leçon est ouverte');
+  const n = tutor.sol.steps.length + 1;          // + la page « terminé »
+  eq(tutor.step, 0, 'on démarre à la première page');
+  eq(__el('tutor-dots').textContent, '1 / ' + n, 'le compteur affiche la page');
+  ok(__el('tutor-prev').disabled, 'pas de page avant la première');
+  ok(!__el('tutor-skip').disabled, 'mais on peut avancer');
+  __fire('tutor-skip', 'click');
+  eq(tutor.step, 1, 'la flèche avance d’une page');
+  ok(/ÉTAPE 2/.test(__el('tutor-step').textContent), 'et le titre suit');
+  ok(!__el('tutor-prev').disabled, 'on peut désormais reculer');
+  __fire('tutor-prev', 'click');
+  eq(tutor.step, 0, 'la flèche arrière revient d’une page');
+  // on ne dépasse jamais les bornes
+  for (let k = 0; k < n + 5; k++) __fire('tutor-skip', 'click');
+  eq(tutor.step, n - 1, 'la dernière page est un mur');
+  ok(__el('tutor-skip').disabled, 'et la flèche avant s’éteint');
+  for (let k = 0; k < n + 5; k++) __fire('tutor-prev', 'click');
+  eq(tutor.step, 0, 'la première page aussi');
+  closeTutor();
+  eq(tutor, null, 'et la leçon se referme');
+});
+
+T('T175 chaque page éclaire la partie du schéma dont elle parle', () => {
+  const idx = missions.findIndex(m => m.id === 'm7');
+  loadMission(idx);
+  __fire('btn-tutor', 'click');
+  __fire('tutor-all', 'click');                  // le montage est posé
+  eq(Object.keys(tutor.ghosts).length, 0, 'plus un seul fantôme');
+  tutor.step = 0; renderTutor();
+  ok(lessonFocus && lessonFocus.size, 'la première étape désigne des composants');
+  const av = lessonFocus.size;
+  ok([...lessonFocus].every(c => components.includes(c)),
+     'et ce sont bien des composants du plan');
+  // les noms écrits en capitales dans le texte sont reconnus
+  const et = components.find(c => c.type === 'AND');
+  if (et) ok(lessonRefs('Pose une porte <b>ET</b> au milieu').includes(et),
+             '« ET » désigne la porte ET posée');
+  ok(!lessonRefs('rien de reconnaissable ici').length,
+     'un texte sans nom de composant ne désigne rien');
+  ok(lessonRefs('').length === 0, 'et un texte vide non plus');
+  drawScene(0);                                   // le halo se dessine sans erreur
+  ok(av > 0, 'la mise en valeur survit au rendu');
+  closeTutor();
+  eq(lessonFocus, null, 'fermer la leçon éteint la mise en valeur');
+});
+
+T('T176 la dernière page consultée est retenue leçon par leçon', () => {
+  const idx = missions.findIndex(m => m.id === 'm7');
+  const id = missions[idx].id;
+  delete (progress.step || {})[id];
+  loadMission(idx);
+  __fire('btn-tutor', 'click');
+  __fire('tutor-skip', 'click');
+  __fire('tutor-skip', 'click');
+  eq(tutor.step, 2, 'on est page 3');
+  ok(progress.step && progress.step[id], 'la position est mémorisée');
+  eq(progress.step[id].n, 2, 'à la bonne page');
+  loadMission(idx);                               // on quitte et on revient
+  eq(tutor, null, 'changer de leçon referme le panneau');
+  __fire('btn-tutor', 'click');
+  eq(tutor.step, 2, 'la leçon reprend là où on l’avait laissée');
+  // jamais sur la page « terminé » : il doit rester quelque chose à faire
+  progress.step[id] = { m:'etapes', n: tutor.sol.steps.length };
+  closeTutor(); __fire('btn-tutor', 'click');
+  eq(tutor.step, 0, 'une position en fin de leçon repart du début');
+  closeTutor();
+  delete progress.step[id];
+});
+
+T('T177 la victoire enchaîne sur le « pourquoi », sur le schéma', () => {
+  const idx = missions.findIndex(m => m.id === 'm2');   // ET
+  loadMission(idx);
+  const sol = buildSolution(missions[idx]);
+  applySolution(sol, -1, {});
+  __el('win-banner').classList.add('hidden');
+  __fire('btn-verify', 'click');
+  ok(!__el('win-banner').classList.contains('hidden'),
+     'un bandeau, pas une modale : le schéma reste visible');
+  eq(lessonMode, 'pourquoi', 'la leçon bascule sur l’explication');
+  ok(tutor && tutor.pages.length, 'et elle a des pages à dérouler');
+  ok(/POURQUOI 1 \/ /.test(__el('tutor-step').textContent), 'numérotées');
+  const h = __el('tutor-txt').innerHTML;
+  ok(h.length > 30, 'la première page a du contenu');
+  __fire('tutor-skip', 'click');
+  ok(__el('tutor-txt').innerHTML !== h, 'la page suivante est différente');
+  ok(__el('tutor-place').classList.contains('hidden'), 'plus rien à poser');
+  __fire('btn-stay', 'click');
+  ok(__el('win-banner').classList.contains('hidden'), '« rester ici » range le bandeau');
+  // le découpage du « pourquoi » ne perd pas de texte
+  missions.slice(0, 40).forEach(m => {
+    const pg = whyPages(m);
+    ok(pg.length >= 1, m.id + ' : au moins une page de pourquoi');
+  });
+  closeTutor();
+  loadMission(-1);
+});
+
+T('T178 le sommaire : chapitres repliables, état, recherche et reprise', () => {
+  loadMission(-1);
+  somOuverts = new Set();
+  somFiltre = '';
+  renderSommaire();
+  const list = __el('som-list');
+  const chs = chapitres();
+  ok(chs.length >= 20, 'les 30 chapitres sont reconstitués (' + chs.length + ')');
+  eq(chs.reduce((a, c) => a + c.lecons.length, 0), missions.length,
+     'et toutes les leçons y sont, une seule fois');
+  eq(list.children.length, chs.length, 'tout replié : une ligne par chapitre');
+  ok(/▸/.test(list.children[0].innerHTML), 'chapitre replié : chevron fermé');
+  // déplier
+  somToggle(chs[0].nom);
+  ok(list.children.length > chs.length, 'déplier montre les leçons du chapitre');
+  ok(/▾/.test(list.children[0].innerHTML), 'et le chevron s’ouvre');
+  // cliquer une leçon la charge
+  const ligne = list.children.find(c => /som-l/.test(c.className));
+  ok(ligne, 'il y a bien des lignes de leçon');
+  ligne.dispatch('click');
+  eq(currentIdx, 0, 'cliquer une leçon la charge');
+  ok(!__el('sommaire-modal').classList.contains('show'), 'et referme le sommaire');
+  // recherche
+  somFiltrer('multiplexeur');
+  const trouve = list.children.filter(c => /som-l/.test(c.className));
+  ok(trouve.length >= 1, 'la recherche trouve des leçons (' + trouve.length + ')');
+  ok(trouve.length < missions.length, 'et elle filtre vraiment');
+  somFiltrer('zzzznexistepas');
+  ok(list.children.some(c => /som-vide/.test(c.className)), 'sinon elle le dit');
+  somFiltrer('');
+  // état de chaque leçon
+  const m0 = missions[0];
+  delete progress.done[m0.id];
+  eq(lessonEtat(m0), '·', 'leçon jamais réussie');
+  progress.done[m0.id] = true; progress.best[m0.id] = 999;
+  eq(lessonEtat(m0), '✓', 'leçon réussie');
+  progress.best[m0.id] = m0.par;
+  eq(lessonEtat(m0), m0.par > 0 ? '⭐' : '✓', 'leçon réussie au nombre de portes visé');
+  // reprendre
+  missions.forEach(m => { progress.done[m.id] = true; });
+  eq(somReprendre(), 0, 'tout réussi : on repart du début');
+  delete progress.done[missions[12].id];
+  eq(somReprendre(), 12, 'sinon on reprend à la première leçon non réussie');
+  missions.forEach(m => { delete progress.done[m.id]; delete progress.best[m.id]; });
+  eq(somReprendre(), 0, 'rien de fait : la première leçon');
+  __fire('btn-sommaire', 'click');
+  ok(__el('sommaire-modal').classList.contains('show'), 'le bouton ouvre le sommaire');
+  __fire('btn-close-sommaire', 'click');
+  ok(!__el('sommaire-modal').classList.contains('show'), 'et le referme');
+  somOuverts = null;
+  loadMission(-1);
+});
+
+T('T179 le fil d’Ariane situe la leçon dans son chapitre', () => {
+  loadMission(-1);
+  eq(__el('mission-chapter').textContent, 'Mode libre', 'en sandbox : mode libre');
+  ok(__el('mis-prev').disabled, 'et pas de leçon précédente');
+  const idx = missions.findIndex((m, i) => i > 0 && m.ch === missions[i - 1].ch);
+  loadMission(idx);
+  const p = missionPos(idx);
+  const num = (missions[idx].ch.match(/^Chapitre\s+(\d+)/i) || [, ''])[1];
+  eq(__el('mission-chapter').textContent,
+     missions[idx].ch.replace(/^Chapitre\s+\d+\s*·\s*/i, ''), 'le nom du chapitre est affiché');
+  eq(__el('mission-pos').textContent, 'chap. ' + num + ' · leçon ' + p.n + ' / ' + p.total,
+     'et le numéro de chapitre avec le rang de la leçon');
+  ok(p.n >= 2 && p.total >= p.n, 'le rang est cohérent');
+  ok(!__el('mis-prev').disabled && !__el('mis-next').disabled, 'les deux flèches servent');
+  __fire('mis-next', 'click');
+  eq(currentIdx, idx + 1, 'la flèche avance d’une leçon');
+  __fire('mis-prev', 'click');
+  eq(currentIdx, idx, 'et l’autre recule');
+  loadMission(missions.length - 1);
+  ok(__el('mis-next').disabled, 'pas de leçon après la dernière');
+  loadMission(-1);
 });
 
 /* ===================== bilan ===================== */

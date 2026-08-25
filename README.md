@@ -37,15 +37,30 @@ d'outils :
 | Sorties | ampoule (**sept couleurs de voyant normalisées**), afficheurs (hex, décimal, octet), LED RVB, matrice 8×8, oscilloscope, sonde, buzzer, note, jauge, **écran de mesure 4 voies** et **enregistreur de courbes** |
 | Actionneurs & procédés | relais, moteur (vitesse + tachymètre), vérin (position + fins de course), électrovanne et pompe proportionnelles, sirène, pas-à-pas, servo, feu, barrière — et les procédés qui réagissent vraiment : **four**, **cuve**, **réservoir d'air comprimé**, **convoyeur**, plus la fluidique (**tuyau** qui bride le débit, **té** de répartition) |
 
-**Le tuteur.** Pendant une mission, le panneau indique en direct combien de
-lignes de la table sont justes et laquelle cloche. Le bouton « Guide-moi sur le
-schéma » explique la marche à suivre **sur le plan de travail**, étape par
-étape, et pose les composants en fantômes au fur et à mesure. Sur une mission à
-table de vérité il calcule la solution lui-même (implicants premiers,
-couverture, conversion en base NAND ou NOR si la mission l'impose) ; sur une
-mission libre — les quatre cinquièmes du catalogue — il déroule les étapes
-écrites et pose le montage de référence quand la mission en fournit un (61 en
-ont un aujourd'hui). Désactivé sur les missions boîte noire.
+**La leçon sur le schéma.** Pendant une mission, le panneau indique en direct
+combien de lignes de la table sont justes et laquelle cloche. Le bouton « La
+leçon sur le schéma » déroule la marche à suivre **sur le plan de travail**,
+**page par page** et au rythme du lecteur : les flèches `‹` et `›` avancent et
+reculent, et **chaque page éclaire la partie du schéma dont elle parle** — ce
+qu'elle nomme s'entoure d'un halo, le reste s'estompe. « Montre-moi » pose
+l'étape en fantômes, « Tout poser » pose tout, et « Je sèche : donne-moi la
+solution » fait le montage. **La page où l'on s'est arrêté est retenue leçon par
+leçon.** Sur une mission à table de vérité la solution est calculée (implicants
+premiers, couverture, conversion en base NAND ou NOR si la mission l'impose) ;
+sur une mission libre — les quatre cinquièmes du catalogue — ce sont les étapes
+écrites, avec le montage de référence quand la mission en fournit un (63 en ont
+un aujourd'hui). Sur une boîte noire, la leçon refuse de guider mais livre
+l'explication si on la demande.
+
+**La victoire n'interrompt plus.** Un bandeau annonce le résultat sans
+recouvrir le schéma, et la leçon enchaîne aussitôt sur le **« pourquoi ça
+marche »**, page par page, sur le circuit que l'on vient de construire.
+
+**Le sommaire.** En tête du panneau, un fil d'Ariane situe la leçon
+(*chapitre, leçon n / total*) ; ses flèches passent à la voisine, et un clic
+ouvre le sommaire : 30 chapitres repliables, l'état de chaque leçon (`·` à
+faire, `✓` réussie, `⭐` au nombre de portes visé), une recherche par mot-clé et
+un bouton **Reprendre** qui saute à la première leçon non réussie.
 
 **Des schémas tout prêts.** Le menu 📦 propose 28 montages chargeables, dont quatorze
 procédés complets : station de pompage, four régulé en tout ou rien / proportionnel

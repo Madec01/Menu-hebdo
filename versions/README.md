@@ -15,6 +15,7 @@ version en cours, il suffit d'en recopier une par-dessus `logicgates.html`.
 | `logicgates-v6.4.html` | v6.4 : tracé des câbles en angles droits, écartement des couloirs, trois modes de tracé |
 | `logicgates-v6.5.html` | v6.5 : rail de distribution, cadres titrés, pose d'un composant déjà relié, guides d'alignement, menu contextuel, plan miniature, recherche sur le plan |
 | `logicgates-v6.6.html` | v6.6 : barre d'outils refondue — trois ateliers, onglets redistribués, barre de favoris, repli |
+| `logicgates-v6.7.html` | v6.7 : la leçon sur le schéma (pages, halo, reprise), bandeau de victoire, sommaire des leçons |
 
 Les copies antérieures ne connaissent évidemment pas les tests des versions
 suivantes : on vérifie seulement qu'elles démarrent.
@@ -27,5 +28,6 @@ node test/run.js versions/logicgates-v6.2.html --smoke
 node test/run.js versions/logicgates-v6.3.html --smoke
 node test/run.js versions/logicgates-v6.4.html --smoke
 node test/run.js versions/logicgates-v6.5.html --smoke
-node test/run.js versions/logicgates-v6.6.html            # suite complète
+node test/run.js versions/logicgates-v6.6.html --smoke
+node test/run.js versions/logicgates-v6.7.html            # suite complète
 ```
