@@ -2769,6 +2769,8 @@ T('T60 le guide documente les ateliers, les unités, les seuils et la tuyauterie
    ['divergence ET', 'les divergences ET'],
    ['tracé des câbles', 'le tracé des câbles'],
    ['angles arrondis', 'les angles arrondis'],
+   ['plan miniature', 'le plan miniature'],
+   ['rail de distribution', 'le rail de distribution'],
    ['BRIDÉ', 'le bridage d’un tuyau trop étroit']]
     .forEach(([txt, what]) => ok(html.includes(txt), 'le guide parle de ' + what));
   ok(/TUYAU/.test(__el('guide-body').innerHTML), 'et présente le tuyau lui-même');
@@ -3595,6 +3597,29 @@ T('T168 le rail de distribution : toutes les bornes sont le même point', () => 
   ok(!!tab, 'onglet Câblage');
   ok(tab.items.includes('TUNNEL'), 'le tunnel l’a rejoint');
   ok(tab.mode.includes('elec') && tab.mode.includes('proc'), 'disponible des deux côtés');
+});
+
+T('T169 le plan miniature ne s’affiche que quand il sert, et navigue', () => {
+  board();
+  eq(miniGeo(), null, 'plan vide : pas de miniature');
+  mk('AND', 0, 0);
+  cam.z = 1; cam.x = 0; cam.y = 0;
+  eq(miniGeo(), null, 'un montage qui tient à l’écran : inutile');
+  // un montage plus large que la vue
+  for (let i = 0; i < 12; i++) mk('AND', i * 400, i * 260);
+  const g = miniGeo();
+  ok(!!g, 'montage débordant : la miniature apparaît');
+  ok(g.w > 80 && g.h > 60, 'de taille lisible');
+  ok(g.k > 0 && g.k < 1, 'à l’échelle réduite (' + g.k.toFixed(3) + ')');
+  // un clic dans la miniature recentre la vue sur le point visé
+  const cible = components[6];
+  const sx = g.ox + (cible.x + cible.bw / 2) * g.k, sy = g.oy + (cible.y + cible.bh / 2) * g.k;
+  ok(miniClick(sx, sy), 'le clic est pris par la miniature');
+  const centre = s2w(W / 2, H / 2);
+  near(centre.x, cible.x + cible.bw / 2, 2, 'la vue se centre sur le point cliqué');
+  near(centre.y, cible.y + cible.bh / 2, 2, 'en X comme en Y');
+  ok(!miniClick(W - 20, 20), 'un clic ailleurs ne la concerne pas');
+  cam.z = 1; cam.x = 0; cam.y = 0;
 });
 
 /* ===================== bilan ===================== */
