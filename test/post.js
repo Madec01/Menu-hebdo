@@ -835,7 +835,11 @@ T('T66 registre : chaque composant déclaré est complet et publié', () => {
     ok(GATE_STYLE[id] && GATE_STYLE[id].c, id + ' : couleur');
     ok(d.w >= 40 && d.h >= 40, id + ' : dimensions plausibles');
     ok(Array.isArray(d.ins) && Array.isArray(d.outs), id + ' : pins déclarés');
-    ok(d.guide && d.guide.txt && d.guide.txt.length > 40, id + ' : entrée de guide rédigée');
+    // une variante peut renvoyer à l'entrée de guide d'une autre (rails 4/8/12)
+    const couvert = d.guide || Object.keys(REG).some(o =>
+      REG[o].guide && (REG[o].guide.also || []).includes(id));
+    ok(couvert, id + ' : couvert par une entrée de guide');
+    if (d.guide) ok(d.guide.txt && d.guide.txt.length > 40, id + ' : entrée de guide rédigée');
     ok(TOOL_TABS.some(t => t.items.includes(id)), id + ' : présent dans la barre d’outils');
     (d.opts || []).forEach(o => {
       ok(o.k && o.label, id + ' : réglage nommé');
@@ -3533,6 +3537,64 @@ T('T167 les poignées posent un itinéraire à la main, au bon endroit', () => {
   eq(w.wp.length, 2, 'deux poignées');
   deq(w.wp.map(p => p.x), [320, 480], 'insérée après la première, pas avant');
   setWireMode(mode0);
+});
+
+T('T168 le rail de distribution : toutes les bornes sont le même point', () => {
+  board();
+  const r = mk('RAIL8', 300, 200);
+  eq(railN(r), 8, 'huit bornes par défaut');
+  const src = mk('HIGH', 0, 0);
+  const l1 = mk('LED', 600, 0), l2 = mk('LED', 600, 150), l3 = mk('LED', 600, 300);
+  // une seule arrivée, trois départs pris sur des bornes différentes
+  wires.push(new Wire(src.outPins[0], r.inPins[0]));
+  wires.push(new Wire(r.outPins[3], l1.inPins[0]));
+  wires.push(new Wire(r.outPins[5], l2.inPins[0]));
+  wires.push(new Wire(r.outPins[7], l3.inPins[0]));
+  recalcFan(); sim(); sim();
+  eq(l1.inPins[0].state, 1, 'la borne 4 distribue');
+  eq(l2.inPins[0].state, 1, 'la borne 6 aussi');
+  eq(l3.inPins[0].state, 1, 'et la borne 8');
+  // une valeur analogique passe sans être ramenée à 1
+  board();
+  const r2 = mk('RAIL8', 300, 200), pot = mk('POT', 0, 0), j = mk('JAUGE', 600, 0);
+  applyInspector(pot, fld('o_val', 40));
+  wires.push(new Wire(pot.outPins[0], r2.inPins[2]));
+  wires.push(new Wire(r2.outPins[6], j.inPins[0]));
+  recalcFan(); sim(); sim();
+  ok(j.raw > 20, 'le rail transporte la mesure telle quelle (' + j.raw.toFixed(1) + ')');
+  near(j.raw, pot.outPins[0].state, 0.01, 'sans rien perdre en route');
+
+  // --- la longueur se règle, et le boîtier suit
+  const w0 = r2.w;
+  applyInspector(r2, fld('o_n', 16));
+  eq(railN(r2), 16, 'seize bornes');
+  ok(r2.w > w0, 'la barre s’allonge');
+  applyInspector(r2, fld('o_n', 2));
+  eq(railN(r2), 2, 'deux bornes au minimum');
+  ok(r2.w < w0, 'et se raccourcit');
+  applyInspector(r2, fld('o_n', 99));
+  eq(railN(r2), RAIL_MAX, 'bornée à seize');
+  // les bornes au-delà de la longueur ne distribuent plus
+  applyInspector(r2, fld('o_n', 4));
+  sim(); sim();
+  eq(r2.outPins[6].state, 0, 'la borne 7 d’un rail de 4 ne sort rien');
+
+  // --- les trois longueurs de la palette et le repère
+  ['RAIL4', 'RAIL8', 'RAIL12'].forEach((id, i) => {
+    const c = mk(id, 0, 400 + i * 120);
+    eq(railN(c), [4, 8, 12][i], id + ' : bonne longueur par défaut');
+    ok(TOOL_TABS.some(t => t.items.includes(id)), id + ' : présent dans la palette');
+  });
+  const nomme = mk('RAIL4', 900, 0);
+  applyInspector(nomme, Object.assign(fld('o_nom', 'ALIM'), { tagName:'INPUT' }));
+  eq(optOf(nomme, 'nom'), 'ALIM', 'le repère est retenu');
+  ok(REG.RAIL4.tip(nomme).some(l => /ALIM/.test(l)), 'et rappelé dans l’infobulle');
+
+  // --- l'onglet Câblage existe dans les deux ateliers
+  const tab = TOOL_TABS.find(t => t.key === 'wire');
+  ok(!!tab, 'onglet Câblage');
+  ok(tab.items.includes('TUNNEL'), 'le tunnel l’a rejoint');
+  ok(tab.mode.includes('elec') && tab.mode.includes('proc'), 'disponible des deux côtés');
 });
 
 /* ===================== bilan ===================== */

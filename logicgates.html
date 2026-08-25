@@ -1915,8 +1915,10 @@ class Component {
       c.fillStyle = 'rgba(255,194,61,.75)';
       c.fillText('🔒', this.x - 2, this.y - 12);
     }
-    this.inPins.forEach(p => p.draw(c));
-    this.outPins.forEach(p => p.draw(c));
+    const RD = REG[this.type];
+    const cache = RD && RD.pinHidden;
+    this.inPins.forEach(p => { if (!cache || !RD.pinHidden(this, p)) p.draw(c); });
+    this.outPins.forEach(p => { if (!cache || !RD.pinHidden(this, p)) p.draw(c); });
   }
 
   bodyFill(c, col, on, hov, pathFn){
@@ -3560,11 +3562,16 @@ function simulate(passes){
 }
 
 /* ---------- Interactions (Pointer Events) ---------- */
+/* Une broche masquée (rail plus court que son maximum) n'est pas cliquable */
+function pinCache(p){
+  const d = REG[p.comp.type];
+  return !!(d && d.pinHidden && d.pinHidden(p.comp, p));
+}
 function pickPin(wx, wy){
   for (let i = components.length - 1; i >= 0; i--){
     const c = components[i];
-    for (const p of c.outPins) if (p.isHit(wx, wy)) return p;
-    for (const p of c.inPins)  if (p.isHit(wx, wy)) return p;
+    for (const p of c.outPins) if (!pinCache(p) && p.isHit(wx, wy)) return p;
+    for (const p of c.inPins)  if (!pinCache(p) && p.isHit(wx, wy)) return p;
   }
   return null;
 }
@@ -5865,6 +5872,7 @@ const TABS = [
   { key:'mem',   name:'Mémoire',  fams:['mem'], chips:true, mode:['elec'], items:['DELAY','DFF'] },
   { key:'calc',  name:'Calcul & bus', fams:['calc'], mode:['elec'],
     items:['MUX','ADD','SUB','COMP','DEMUX','CNT4','ROM','GROUP','UNGROUP'] },
+  { key:'wire',  name:'Câblage', fams:['wire'], mode:['elec','proc'], items:[] },
   { key:'time',  name:'Temps & automatisme', fams:['time'], mode:['elec','proc'], items:[] },
   { key:'reg',   name:'Régulation', fams:['reg'], mode:['proc'], items:[] },
   { key:'out',   name:'Sorties', fams:['out'], mode:['elec','proc'],
@@ -5891,7 +5899,7 @@ function setAppMode(k){
 function modeTabs(){
   return TOOL_TABS.filter(t => appMode === 'tout' || !t.mode || t.mode.includes(appMode));
 }
-const FAM_LOGIC = ['gate','mem','calc','time','reg'];   // comptent comme logique (missions, puces)
+const FAM_LOGIC = ['gate','mem','calc','time','reg','wire'];   // comptent comme logique (missions, puces)
 
 /* Publie tout le registre dans les tables du moteur */
 function registerComponents(){
@@ -6000,6 +6008,9 @@ const FAM_SECTIONS = [
       '<b>Deux règles valent pour tous.</b> D\u2019abord la <b>commande</b> : une entrée à <code>1</code> (un simple interrupteur) veut dire pleine puissance, tandis qu\u2019une <code>valeur</code> de 2 à 255 venue d\u2019un PWM, d\u2019un CNA ou d\u2019un régulateur dose l\u2019effort. Le même actionneur se pilote donc en tout ou rien ou en analogique, sans rien changer au câblage.<br>' +
       'Ensuite la <b>mesure</b> : chacun renvoie ce qu\u2019il fait vraiment — vitesse et tours d\u2019un moteur, position d\u2019un vérin ou d\u2019un servo, débit d\u2019une vanne ou d\u2019une pompe, niveau et pression d\u2019une cuve, angle d\u2019une barrière. C\u2019est ce retour qui permet de fermer la boucle et de passer de « je commande » à « je vérifie ».' },
   { key:'out', t:'Les sorties — voir et entendre (suite)', p:'D\u2019autres façons de lire ce que raconte le circuit.' },
+  { key:'wire', t:'Le câblage — répartir un signal sans noyer le plan',
+    p:'Deux objets pour éviter les plats de spaghettis. Le <b>tunnel</b> est un nœud nommé : deux tunnels portant le même nom sont reliés sans le moindre fil, ce qui évite au signal de traverser tout l\u2019écran. Le <b>rail de distribution</b>, lui, est une barre où <b>toutes les bornes sont le même point</b> : on y amène le signal une fois, et chaque consommateur s\u2019y raccorde par un moignon de deux centimètres.<br><br>' +
+      'C\u2019est exactement ce qu\u2019on fait dans une armoire : personne ne tire quinze fils depuis la même borne d\u2019alimentation, on pose un <b>répartiteur</b> et chacun s\u2019y branche. Les signaux qui méritent un rail sont toujours les mêmes : l\u2019alimentation, la masse, l\u2019horloge, l\u2019arrêt d\u2019urgence, l\u2019autorisation de marche — tout ce dont <i>tout le monde</i> a besoin.' },
   { key:'flu', ids:['TUYAU','TE'], t:'La tuyauterie — raccorder un procédé à l’autre',
     p:'Un <b>raccord fluide</b> ne se câble pas comme un fil électrique : ses bornes sont <b>carrées</b>, et l\u2019appli refuse de relier un tuyau à une borne électrique — ou l\u2019inverse. C\u2019est volontaire : dans une installation, la matière et le signal ne circulent pas dans les mêmes conduites.<br><br>' +
       '<b>Ce qui circule dedans, c\u2019est un débit.</b> La pompe pousse, la vanne dose, le tuyau limite selon son diamètre, le té réunit ou répartit, la cuve reçoit — et refuse d\u2019avaler quoi que ce soit une fois pleine. Chaque élément dit à son amont ce qu\u2019il peut accepter : c\u2019est ce dialogue qui rend l\u2019écoulement réaliste. Un tuyau trop étroit affiche <code>BRIDÉ</code> : la pompe a beau tourner à fond, la section commande.<br><br>' +
@@ -7359,8 +7370,110 @@ defComp('SERVO', {
    simulation à la suivante. */
 let TUN_NOW = {}, TUN_PREV = {};
 function tunnelSwap(){ TUN_PREV = TUN_NOW; TUN_NOW = {}; }
+/* ==================== RAIL DE DISTRIBUTION ====================
+   Une barre où TOUTES les bornes sont le même point électrique. On y amène
+   le signal une fois, et chaque consommateur s'y raccorde par un moignon.
+   C'est le répartiteur d'une armoire : personne ne tire quinze fils depuis
+   la même borne d'alimentation.
+   Chaque borne a une arrivée (au-dessus de la barre) et un départ (au-dessous),
+   comme un vrai bornier vu de face — on peut donc aussi bien alimenter le rail
+   par n'importe quelle borne que s'en servir pour collecter. */
+const RAIL_MIN = 2, RAIL_MAX = 16, RAIL_PAS = 34;
+function railN(c){ return Math.max(RAIL_MIN, Math.min(RAIL_MAX, (optOf(c, 'n') | 0) || 8)); }
+function railW(n){ return 26 + n * RAIL_PAS; }
+function defRail(id, n){
+  return defComp(id, {
+    name:'RAIL DE DISTRIBUTION · ' + n + ' BORNES', short:'RAIL·' + n,
+    guideTitle:'RAIL DE DISTRIBUTION',
+    family:'wire', color:'#ffc23d', glyph:'▤', iconSize:13,
+    w:railW(n), h:82,
+    ins:  Array.from({ length:RAIL_MAX }, (_, k) => ({ n:String(k + 1), bus:true })),
+    outs: Array.from({ length:RAIL_MAX }, (_, k) => ({ n:String(k + 1), bus:true })),
+    opts:[
+      { k:'n', label:'Nombre de bornes', min:RAIL_MIN, max:RAIL_MAX, step:1, def:n, int:true,
+        hint:'La longueur du rail. Les bornes en trop se rangent au bout ; elles restent raccordables.' },
+      { k:'nom', label:'Repère du rail', type:'text', max:10, def:'',
+        hint:'Ce que le rail distribue : ALIM, MASSE, HORLOGE, ARRÊT U.… Il s’affiche sur la barre.' }
+    ],
+    main:'n',
+    onOpt(c, k){ if (k === 'n') c.w = railW(railN(c)); },
+    restore(c){ c.w = railW(railN(c)); },
+    /* Les bornes au-delà de la longueur réglée n'existent pas : ni dessin, ni clic */
+    pinHidden(comp, pin){ return pin.index >= railN(comp); },
+    /* Arrivées au-dessus de la barre, départs au-dessous : un bornier vu de face */
+    pinPos(comp, pin){
+      const nb = railN(comp);
+      const k = pin.index;
+      if (k >= nb)                              // bornes au-delà de la longueur réglée
+        return { x: comp.x + comp.w - 8, y: comp.y + (pin.isOutput ? comp.h - 6 : 6) };
+      const x = comp.x + 22 + k * RAIL_PAS;
+      return { x, y: pin.isOutput ? comp.y + comp.h : comp.y };
+    },
+    eval(c){
+      const nb = railN(c);
+      // toutes les bornes sont le même nœud : la valeur du rail est celle qui
+      // arrive, quelle que soit la borne empruntée
+      let v = 0;
+      for (let k = 0; k < nb; k++) v = Math.max(v, ana(c.inPins[k]));
+      c.val = v;
+      c.outPins.forEach((p, k) => p.state = k < nb ? v : 0);
+    },
+    body(c, x, col, on, hov, t){
+      const nb = railN(c), y = c.y + c.h / 2;
+      const x0 = c.x + 10, x1 = c.x + c.w - 10;
+      const actif = (c.val || 0) > 0;
+      // la barre
+      x.beginPath(); x.roundRect(x0, y - 7, x1 - x0, 14, 7);
+      x.fillStyle = actif ? c.hexA(col, .3) : 'rgba(255,255,255,.06)';
+      if (actif){ x.shadowBlur = 12; x.shadowColor = col; }
+      x.fill(); x.shadowBlur = 0;
+      x.lineWidth = 1.3; x.strokeStyle = actif ? col : 'rgba(255,255,255,.25)'; x.stroke();
+      // les bornes : une vis, et les moignons vers le haut et vers le bas
+      for (let k = 0; k < nb; k++){
+        const bx = c.x + 22 + k * RAIL_PAS;
+        x.beginPath(); x.moveTo(bx, c.y + 2); x.lineTo(bx, c.y + c.h - 2);
+        x.lineWidth = 1; x.strokeStyle = 'rgba(255,255,255,.13)'; x.stroke();
+        x.beginPath(); x.arc(bx, y, 4.6, 0, 7);
+        x.fillStyle = actif ? c.hexA(col, .85) : 'rgba(255,255,255,.16)'; x.fill();
+        x.lineWidth = 1; x.strokeStyle = 'rgba(6,10,20,.8)'; x.stroke();
+        x.beginPath(); x.moveTo(bx - 2.6, y - 2.6); x.lineTo(bx + 2.6, y + 2.6);   // la fente de vis
+        x.lineWidth = 1.1; x.strokeStyle = 'rgba(6,10,20,.7)'; x.stroke();
+        x.font = "600 7px 'IBM Plex Mono', monospace";
+        x.textAlign = 'center'; x.textBaseline = 'middle';
+        x.fillStyle = PAL.dim;
+        x.fillText(String(k + 1), bx, y - 14);
+      }
+      // le repère, s'il y en a un
+      const nom = String(optOf(c, 'nom') || '').trim();
+      if (nom){
+        x.font = "700 9px 'Chakra Petch', sans-serif";
+        x.textAlign = 'left'; x.textBaseline = 'middle';
+        x.fillStyle = actif ? col : PAL.dim;
+        x.fillText(fitText(x, nom, 90, '700', 9, "'Chakra Petch', sans-serif", 6), c.x + 12, y + 17);
+      }
+    },
+    tip(c){
+      const nb = railN(c);
+      const arrivees = wires.filter(w => w.inPin.comp === c).length;
+      const departs  = wires.filter(w => w.outPin.comp === c).length;
+      const nom = String(optOf(c, 'nom') || '').trim();
+      return [(nom ? 'Rail « ' + nom + ' » — ' : 'Rail de ') + nb + ' bornes',
+              'Valeur distribuée : ' + (c.val > 1 ? fmtRaw(c.val) : (c.val ? '1' : '0')),
+              arrivees + ' arrivée(s) · ' + departs + ' départ(s)',
+              'Toutes les bornes sont le même point : ce qui arrive sur l’une repart par toutes'];
+    },
+    guide: n !== 8 ? null : { also:['RAIL4','RAIL12'],
+      txt:'Une barre où <b>toutes les bornes sont le même point</b>. On y amène le signal une fois — sur n’importe quelle borne, par le dessus — et chaque consommateur s’y raccorde par le dessous, avec un moignon de deux centimètres. Vingt fils qui convergeaient vers la même sortie deviennent vingt petits traits bien rangés.<br><br>Trois longueurs sont posées d’avance dans la palette (4, 8 et 12 bornes) et le <b>nombre de bornes se règle librement</b> de 2 à 16, à la glissière ou dans l’inspecteur. Donne-lui un repère — <code>ALIM</code>, <code>MASSE</code>, <code>HORLOGE</code>, <code>ARRÊT U.</code> — il s’affiche sur la barre et le schéma se lit tout seul.',
+      ex:'Pose un VRAI·1, un rail de 8 bornes marqué « ALIM », et branche dessus l’autorisation de six blocs différents. Compare avec la même chose en fils directs : c’est le jour et la nuit.',
+      real:'C’est le <b>répartiteur</b> de toute armoire électrique. Personne ne visse quinze fils sous la même borne d’un disjoncteur : on pose un peigne ou un bornier, et chaque départ prend sa place. La règle est autant mécanique que logique — une borne accepte un fil, deux au maximum.' }
+  });
+}
+defRail('RAIL4', 4);
+defRail('RAIL8', 8);
+defRail('RAIL12', 12);
+
 defComp('TUNNEL', {
-  name:'TUNNEL (NŒUD NOMMÉ)', short:'TUNNEL', family:'calc', color:'#38e1ff', glyph:'⇢',
+  name:'TUNNEL (NŒUD NOMMÉ)', short:'TUNNEL', family:'wire', color:'#38e1ff', glyph:'⇢',
   w:112, h:74, ins:[{ n:'E', bus:true }], outs:[{ n:'S', bus:true }],
   opts:[{ k:'nom', label:'Nom du nœud', type:'text', max:8, def:'A',
     hint:'Tous les tunnels portant ce nom sont reliés entre eux, sans câble.' }],
@@ -8149,22 +8262,26 @@ function drawRegistryBody(comp, c, col, hov, t, d){
   const cx = comp.x + comp.w / 2, cy = comp.y + comp.h / 2;
   comp.bodyFill(c, col, on, hov, () => c.roundRect(comp.x, comp.y, comp.w, comp.h, 10));
 
-  // Noms de pins, allumés quand le signal passe
-  c.font = "600 7px 'IBM Plex Mono', monospace"; c.textBaseline = 'middle';
-  c.textAlign = 'left';
-  comp.inPins.forEach((p, i) => {
-    const n = d.ins[i] && d.ins[i].n;
-    if (!n) return;
-    c.fillStyle = p.state ? PAL.pinOn : PAL.dim;
-    c.fillText(n, comp.x + 6, p.y);
-  });
-  c.textAlign = 'right';
-  comp.outPins.forEach((p, i) => {
-    const n = d.outs[i] && d.outs[i].n;
-    if (!n) return;
-    c.fillStyle = p.state ? PAL.pinOn : PAL.dim;
-    c.fillText(n, comp.x + comp.w - 6, p.y);
-  });
+  // Noms de pins, allumés quand le signal passe. Un composant qui place ses
+  // broches lui-même (rail, matrice) les étiquette aussi lui-même : les poser
+  // au bord gauche et au bord droit n'aurait aucun sens.
+  if (!d.pinPos){
+    c.font = "600 7px 'IBM Plex Mono', monospace"; c.textBaseline = 'middle';
+    c.textAlign = 'left';
+    comp.inPins.forEach((p, i) => {
+      const n = d.ins[i] && d.ins[i].n;
+      if (!n) return;
+      c.fillStyle = p.state ? PAL.pinOn : PAL.dim;
+      c.fillText(n, comp.x + 6, p.y);
+    });
+    c.textAlign = 'right';
+    comp.outPins.forEach((p, i) => {
+      const n = d.outs[i] && d.outs[i].n;
+      if (!n) return;
+      c.fillStyle = p.state ? PAL.pinOn : PAL.dim;
+      c.fillText(n, comp.x + comp.w - 6, p.y);
+    });
+  }
 
   if (d.body){ d.body(comp, c, col, on, hov, t); return; }
 
@@ -9795,7 +9912,8 @@ function buildGuide(){
         ? fs.ids.includes(id)
         : REG[id].family === fs.key && !FAM_SECTIONS.some(o => o.ids && o.ids.includes(id))))
       .map(id => { const d = REG[id];
-        return [id, d.guideTitle || d.name, d.guide.txt, d.guide.ex || null, d.guide.real || null, [id]]; });
+        return [id, d.guideTitle || d.name, d.guide.txt, d.guide.ex || null, d.guide.real || null,
+                [id, ...(d.guide.also || [])]]; });
     if (items.length) SECTIONS.push({ t: fs.t, p: fs.p, items });
   });
   document.getElementById('guide-body').innerHTML = SECTIONS.map(sec =>
