@@ -4841,6 +4841,189 @@ T('T209 les montages d’exemple ⚡ font vraiment ce qu’ils annoncent', () =>
   board();
 });
 
+
+console.log('\n— ⚡ Lot 4 : produire du courant —');
+
+/* Un banc d'induction : bobine + charge + masse, et un aimant loin devant */
+function bancInduction(){
+  board();
+  const b = mk('BOBINE', 400, 100), a = mk('AIMANT', -600, 128),
+        r = mk('RESIS', 760, 100), m = mk('MASSE', 1000, 100);
+  r.opt.r = 100;
+  link(b, 0, r, 0); link(r, 0, m, 0); link(m, 0, b, 0);
+  __advance(50); sim(); __advance(50); sim();      // au repos, flux mémorisé
+  return { b, a, r, m, cx: b.x + b.bw / 2 };
+}
+/* Amène le CENTRE de l'aimant à l'abscisse x en ms millisecondes, et rend la
+   tension produite. (Se tromper de repère fausse tout : c.x est le bord gauche.) */
+function passe(t, x, ms){
+  t.a.x = x - t.a.bw / 2; __advance(ms); sim();
+  return t.b.emf;
+}
+
+T('T210 l’induction : ce n’est pas le champ qui produit, c’est sa variation', () => {
+  const t = bancInduction();
+  near(t.b.emf, 0, 1e-6, 'aimant immobile et loin : rien');
+  // on l’approche : une tension apparaît
+  const e1 = passe(t, t.cx - 120, 60);
+  ok(Math.abs(e1) > .3, 'aimant en mouvement : une tension apparaît (' + e1.toFixed(2) + ' V)');
+  // deux fois plus vite : deux fois plus fort
+  const t2 = bancInduction();
+  const lent = Math.abs(passe(t2, t2.cx - 120, 120));
+  const t3 = bancInduction();
+  const vite = Math.abs(passe(t3, t3.cx - 120, 60));
+  ok(vite > lent * 1.7, 'deux fois plus vite, environ deux fois plus fort (' +
+     lent.toFixed(2) + ' → ' + vite.toFixed(2) + ' V)');
+  // s’éloigner produit le signe opposé
+  const t4 = bancInduction();
+  const vers = passe(t4, t4.cx - 100, 60);
+  const loin = passe(t4, t4.cx - 400, 60);
+  ok(vers * loin < 0, 'aller puis repartir : la tension change de signe');
+  // pile au centre, en plein champ maximal : ZÉRO
+  const t5 = bancInduction();
+  passe(t5, t5.cx - 30, 60);
+  const centre = passe(t5, t5.cx + 30, 60);     // symétrique autour du centre
+  ok(Math.abs(centre) < Math.abs(vers) * .2,
+     'traversée symétrique du centre : la tension s’annule (' + centre.toFixed(3) + ' V)');
+  // et s’arrêter suffit à tout éteindre
+  const t6 = bancInduction();
+  passe(t6, t6.cx - 60, 60);
+  const arret = passe(t6, t6.cx - 60, 60);      // il ne bouge plus
+  near(arret, 0, 1e-6, 'immobile au cœur de la bobine : rien du tout');
+});
+
+T('T211 l’induction alimente vraiment un circuit', () => {
+  const t = bancInduction();
+  passe(t, t.cx - 120, 60);
+  ok(Math.abs(t.r.i) > .002, 'un courant traverse la résistance : ' + fmtAmp(t.r.i));
+  near(Math.abs(t.b.i), Math.abs(t.r.i), .001, 'la bobine débite ce que la charge consomme');
+  // plus de spires, plus de tension
+  const t2 = bancInduction();
+  t2.b.opt.n = 400;
+  const fort = Math.abs(passe(t2, t2.cx - 120, 60));
+  const t3 = bancInduction();
+  t3.b.opt.n = 100;
+  const faible = Math.abs(passe(t3, t3.cx - 120, 60));
+  ok(fort > faible * 3, 'quatre fois plus de spires, bien plus de tension');
+  // retourner l’aimant inverse le signe
+  const t4 = bancInduction();
+  const n = passe(t4, t4.cx - 120, 60);
+  const t5 = bancInduction();
+  t5.a.opt.sens = 'S';
+  __advance(50); sim();
+  const sud = passe(t5, t5.cx - 120, 60);
+  ok(n * sud < 0, 'pôle retourné : tension inversée');
+});
+
+T('T212 la dynamo : ce que tu produis, tu le paies en effort', () => {
+  /* Un geste régulier et RÉALISTE : la main tourne à une vitesse que la
+     manivelle peut suivre. Un geste plus rapide qu'elle ne l'emmène nulle part. */
+  const tourne = (d, pas, ms, vitesse) => {
+    const cx = d.x + d.bw / 2, cy = d.y + 112;
+    for (let k = 0; k < pas; k++){
+      const a = k * (vitesse == null ? .12 : vitesse);
+      manivelleVers(d, cx + Math.cos(a) * 50, cy + Math.sin(a) * 50);
+      __advance(ms); sim();
+    }
+  };
+  const banc = (charges, ke, rb) => {
+    board();
+    const d = mk('DYNAMO', 0, 0), m = mk('MASSE', 900, 0);
+    d.opt.ke = ke == null ? 9 : ke; d.opt.rb = rb == null ? 2 : rb;
+    link(m, 0, d, 0);
+    const ls = [];
+    for (let k = 0; k < charges; k++){
+      const l = mk('LAMPE', 500, k * 200);
+      link(d, 0, l, 0); link(l, 0, m, 0);
+      ls.push(l);
+    }
+    return { d, ls };
+  };
+  // à vide : elle tourne, elle produit une tension, mais aucune puissance
+  const v = banc(0);
+  tourne(v.d, 90, 30);
+  ok(Math.abs(v.d.vit) > 1, 'la manivelle tourne : ' + v.d.vit.toFixed(2) + ' rad/s');
+  ok(Math.abs(v.d.emf) > .5, 'et produit une tension : ' + fmtVolt(v.d.emf));
+  near(v.d.pelec, 0, 1e-3, 'à vide, aucune électricité produite');
+  const effortVide = v.d.pmeca, retardVide = Math.abs(v.d.retard);
+  // une ampoule : le MÊME geste demande plus d'effort, et la manivelle traîne
+  const un = banc(1);
+  tourne(un.d, 90, 30);
+  ok(un.d.pelec > .05, 'elle alimente l’ampoule : ' + fmtWatt(un.d.pelec));
+  ok(un.ls[0].p > .02, 'et l’ampoule éclaire');
+  ok(un.d.pmeca > effortVide * 2,
+     'le même geste coûte bien plus d’effort (' + fmtWatt(effortVide) + ' → ' + fmtWatt(un.d.pmeca) + ')');
+  ok(Math.abs(un.d.retard) > retardVide * 2,
+     'et la manivelle traîne davantage derrière la main (' +
+     Math.round(retardVide * 57) + '° → ' + Math.round(Math.abs(un.d.retard) * 57) + '°)');
+  // trois ampoules : ça devient franchement dur
+  const trois = banc(3);
+  tourne(trois.d, 90, 30);
+  ok(trois.d.pmeca > un.d.pmeca * 1.5,
+     'trois ampoules, bien plus dur encore (' + fmtWatt(trois.d.pmeca) + ')');
+  ok(Math.abs(trois.d.retard) > Math.abs(un.d.retard),
+     'et elle traîne encore plus');
+  // l'énergie ne se crée pas : l'effort couvre toujours ce qui est produit
+  [un, trois].forEach(b => ok(b.d.pmeca >= b.d.pelec * .95,
+    'l’effort fourni couvre l’électricité produite (' + fmtWatt(b.d.pmeca) +
+    ' pour ' + fmtWatt(b.d.pelec) + ')'));
+  // on lâche : elle s'arrête, et tout s'éteint
+  manivelleLache(trois.d);
+  for (let k = 0; k < 200; k++){ __advance(40); sim(); }
+  near(trois.d.vit, 0, .12, 'lâchée, elle finit par s’arrêter');
+  near(trois.d.pelec, 0, 1e-3, 'et ne produit plus rien');
+  // le compteur « tenir N secondes »
+  const t = banc(1, 12, 1);
+  tourne(t.d, 80, 40);
+  ok(t.d.tenu > 1, 'elle a tenu plus d’une seconde : ' + t.d.tenu.toFixed(2) + ' s');
+  manivelleLache(t.d);
+  for (let k = 0; k < 200; k++){ __advance(40); sim(); }
+  near(t.d.tenu, 0, .01, 'et le compteur repart à zéro dès qu’elle ne produit plus');
+});
+
+T('T212b l’oscilloscope montre aussi le NÉGATIF', () => {
+  const t = bancInduction();
+  const o = mk('OSCILLO', 300, 600);
+  link(t.b, 0, o, 0);
+  o.opt.win = 6; o.buf = []; o.tps = 0;
+  // un aller-retour : la tension doit passer des deux côtés de zéro
+  for (const x of [t.cx - 260, t.cx - 120, t.cx + 60, t.cx + 240,
+                   t.cx + 60, t.cx - 120, t.cx - 260]){
+    passe(t, x, 60);
+  }
+  const hauts = o.buf.filter(q => q.a > .3).length;
+  const bas   = o.buf.filter(q => q.a < -.3).length;
+  ok(hauts > 0, 'la trace monte au-dessus de zéro (' + hauts + ' points)');
+  ok(bas > 0, 'et descend en dessous (' + bas + ' points) — sinon la moitié de ' +
+     'l’alternatif serait invisible');
+  drawScene(0);                       // le tracé signé ne doit pas lever d’exception
+});
+
+T('T213 aimant, bobine et dynamo sont complets et rangés', () => {
+  const onglet = TOOL_TABS.find(t => t.key === 'ener');
+  ['AIMANT','BOBINE','DYNAMO'].forEach(t => ok(onglet.items.includes(t), t + ' est dans l’onglet'));
+  // l'aimant n'a aucune borne : il agit par sa position
+  board();
+  const a = mk('AIMANT', 0, 0);
+  eq(a.inputs, 0, 'l’aimant n’a pas d’entrée');
+  eq(a.outputs, 0, 'ni de sortie');
+  ok(REG.AIMANT.libre, 'et il se promène sans s’aimanter à la grille');
+  // la bobine et la dynamo sont des sources de puissance
+  const b = mk('BOBINE', 300, 0), d = mk('DYNAMO', 600, 0);
+  eq(b.outPins[0].kind, 'pui', 'la bobine sort de la puissance');
+  eq(d.outPins[0].kind, 'pui', 'la dynamo aussi');
+  // la manivelle s'attrape en son centre, pas sur les bords
+  ok(REG.DYNAMO.manipHit(d, d.x + d.bw / 2, d.y + 112), 'le centre de la manivelle s’attrape');
+  ok(!REG.DYNAMO.manipHit(d, d.x + 4, d.y + 4), 'mais pas le coin du boîtier');
+  // l'angle de la manivelle survit à une sauvegarde
+  d.ang = 1.23;
+  const data = serializeGroup([d]);
+  board();
+  spawnGroup(data, 0, 0, false);
+  near(components[0].ang, 1.23, .02, 'la position de la manivelle est retrouvée');
+  board();
+});
+
 /* ===================== bilan ===================== */
 console.log('\n' + (__fail ? '✗' : '✓') + ' ' + __pass + ' test(s) réussi(s), ' +
             __fail + ' échec(s)' + (__fail ? ' : ' + __failures.join(', ') : '') + '\n');

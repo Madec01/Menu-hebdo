@@ -5,10 +5,10 @@ dans `CLAUDE.md`.
 
 ## Où en est le projet
 
-- **v6.16**, branche `claude/architecte-logique-v5-vntfkp`, **211 tests verts**
+- **v6.17**, branche `claude/architecte-logique-v5-vntfkp`, **216 tests verts**
   (`npm test`).
 - `logicgates.html` : ~12 500 lignes, un seul `<script>`, aucune dépendance.
-- Copies figées dans `versions/` (v5.1 → v6.16), avec leur tableau dans
+- Copies figées dans `versions/` (v5.1 → v6.17), avec leur tableau dans
   `versions/README.md`.
 - Catalogue : **158 leçons en 31 chapitres** — 63 à table de vérité (dont 8
   boîtes noires), 85 libres, et 10 à **condition de réussite** (chapitre 31).
@@ -23,6 +23,14 @@ dans `CLAUDE.md`.
 Ce qu'on peut faire : la boucle pile → interrupteur → ampoule → masse → pile.
 Deux ampoules en parallèle et la pile s'affaisse, visiblement. On ouvre la
 boucle et tout s'éteint.
+
+**⚡ Lot 4 : produire du courant** (v6.17). `AIMANT` (se promène à la souris,
+aucune borne — il agit par sa position), `BOBINE` (loi de Faraday : la tension
+suit la VITESSE à laquelle le champ change ; immobile au centre = zéro), et
+`DYNAMO` à manivelle qu'on tourne à la souris, dont l'effort et le retard sur
+la main augmentent avec la charge. Deux jauges côte à côte : effort fourni et
+électricité produite. L'oscilloscope montre enfin le NÉGATIF (il écrêtait) —
+sans quoi la moitié de l'alternatif était invisible.
 
 **⚡ Lot 3 : le chapitre du continu** (v6.16). Le **chapitre 31 « Le courant
 continu »**, dix leçons à la fin du catalogue, chacune avec son montage de
@@ -121,6 +129,23 @@ plan ; sommaire devenu carte du cours.
   `clickComp` dans le `pointerup` : c'est lui qui bascule les interrupteurs, et
   T56 le vérifie. Maj ou Ctrl + clic ne fait QUE (dé)sélectionner, sans
   actionner. Maj + glisser passe par `dupliquerPourGlisser`.
+- **Les sources qui dépendent du temps préparent leur tension dans `avant(c)`**,
+  appelé une fois par image en tête de `solveElec` — pas dans `branche`, qui
+  doit rester pure (elle est rejouée à chaque tour de la limitation de courant).
+  C'est là que sert `simDt`.
+- **`manipHit` / `manipMove` / `manipEnd`** : une pièce qui se MANŒUVRE à la
+  souris (la manivelle) au lieu de se régler. Le boîtier se déplace toujours
+  par ses bords. `libre:true` sur un composant le dispense de la grille et des
+  guides d'alignement — indispensable pour l'aimant, dont le geste EST la
+  physique.
+- **La main TIENT la manivelle tant que le bouton est enfoncé.** Trois pièges
+  successivement rencontrés, tous les trois corrigés : (1) un ressort sans
+  amortisseur fait osciller le volant jusqu'à se faire doubler d'un tour ;
+  (2) la souris n'envoie pas un événement par image, donc la vitesse de la main
+  doit être LISSÉE, sinon l'amortisseur freine une image sur deux ; (3) l'effort
+  affiché doit être l'énergie réellement absorbée (électricité + frottements),
+  pas « couple de la main × vitesse », sinon les à-coups du poignet le font
+  osciller et les deux jauges ne se ressemblent plus.
 - **Un composant peut déclarer PLUSIEURS branches.** `branche(c)` rend soit un
   objet, soit un tableau. Le potentiomètre en a deux, de part et d'autre de son
   curseur — c'est ce qui en fait un vrai diviseur. Les branches au-delà de la
@@ -228,9 +253,11 @@ leçon sans table de vérité est gagnée dès qu'on clique sur « Vérifier »
 (`logicgates.html`, gestionnaire de `btn-verify`, la ligne `if (!m.tt.length)`).
 Prévoir un champ `m.check(components, wires)`.
 
-**Phase 2 — produire.** Lot 4 : aimant + bobine à la souris, dynamo à
-manivelle. Lot 5 : turbine reliée au four et à la chaudière, panneau solaire,
-thermocouple, chapitre.
+**Phase 2 — produire.** Lot 5 : turbine reliée au four et à la chaudière,
+panneau solaire, thermocouple, et le chapitre 32 du cours (dont une leçon
+« fabrique de l'alternatif à la main » avec l'aimant, et une leçon « tiens
+l'ampoule allumée trois secondes » qui s'appuie sur le compteur `c.tenu` de la
+dynamo, déjà en place).
 
 **Phase 3 — l'alternatif.** Lot 6 : condensateur et bobine (c'est là que
 `simDt` sert, avec des sous-pas de temps). Lot 7 : source alternative,
