@@ -37,7 +37,13 @@ d'outils :
 | Sorties | ampoule (**sept couleurs de voyant normalisées**), afficheurs (hex, décimal, octet), LED RVB, matrice 8×8, oscilloscope, sonde, buzzer, note, jauge, **écran de mesure 4 voies** et **enregistreur de courbes** |
 | Actionneurs & procédés | relais, moteur (vitesse + tachymètre), vérin (position + fins de course), électrovanne et pompe proportionnelles, sirène, pas-à-pas, servo, feu, barrière — et les procédés qui réagissent vraiment : **four**, **cuve**, **réservoir d'air comprimé**, **convoyeur**, plus la fluidique (**tuyau** qui bride le débit, **té** de répartition) |
 
-**La leçon sur le schéma.** Pendant une mission, le panneau indique en direct
+**L'écran est au circuit.** Il n'y a plus de colonne latérale : l'énoncé est un
+bandeau fin en haut (repliable d'un clic), la table de vérité et les compteurs
+un petit bloc repliable en bas à droite, les boutons d'action une colonne
+étroite, et **la leçon une carte large posée au-dessus du plan**. Le milieu de
+l'écran appartient au schéma.
+
+**La leçon sur le schéma.** Pendant une mission, le bandeau indique en direct
 combien de lignes de la table sont justes et laquelle cloche. Le bouton « La
 leçon sur le schéma » déroule la marche à suivre **sur le plan de travail**,
 **page par page** et au rythme du lecteur : les flèches `‹` et `›` avancent et
@@ -56,7 +62,7 @@ l'explication si on la demande.
 recouvrir le schéma, et la leçon enchaîne aussitôt sur le **« pourquoi ça
 marche »**, page par page, sur le circuit que l'on vient de construire.
 
-**Le sommaire.** En tête du panneau, un fil d'Ariane situe la leçon
+**Le sommaire.** En tête du bandeau, un fil d'Ariane situe la leçon
 (*chapitre, leçon n / total*) ; ses flèches passent à la voisine, et un clic
 ouvre le sommaire : 30 chapitres repliables, l'état de chaque leçon (`·` à
 faire, `✓` réussie, `⭐` au nombre de portes visé), une recherche par mot-clé et
@@ -163,7 +169,7 @@ concatène entre `test/pre.js` (stubs DOM / Canvas / Audio / localStorage, plus
 une horloge `Date.now` pilotable) et `test/post.js` (les tests), puis exécute le
 tout dans un contexte `vm`. Aucun navigateur, aucune dépendance npm.
 
-180 tests couvrent le moteur, le séquentiel, les blocs numériques, l'analogique
+183 tests couvrent le moteur, le séquentiel, les blocs numériques, l'analogique
 et la régulation (dont une boucle fermée four + thermostat), l'édition,
 l'orientation, les tunnels, les puces, l'interface, le balisage et le guide.
 Deux tests valident automatiquement **tout** nouveau composant du registre

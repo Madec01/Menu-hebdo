@@ -4049,6 +4049,65 @@ T('T179 le fil d’Ariane situe la leçon dans son chapitre', () => {
   loadMission(-1);
 });
 
+T('T180 la colonne de droite a bien disparu, sans rien perdre', () => {
+  // ce qui doit avoir disparu du balisage
+  ['mission-panel', 'panel-tab', 'mission-scroll'].forEach(id => {
+    ok(!__HTML.includes('id="' + id + '"'), id + ' n’est plus dans le balisage');
+    ok(!__HTML.includes("getElementById('" + id + "')"), id + ' n’est plus appelé');
+  });
+  // les quatre blocs qui la remplacent
+  ['enonce', 'enonce-corps', 'enonce-tab', 'infos', 'infos-corps', 'infos-tab',
+   'actions', 'tutor-box'].forEach(id =>
+    ok(__HTML.includes('id="' + id + '"'), id + ' existe'));
+  // et rien de son contenu n’a été perdu en route
+  ['mission-chapter', 'mission-pos', 'mission-title', 'mission-desc', 'mission-badges',
+   'truth-wrap', 'truth-table', 'live-box', 'stats-row', 'stat-gates', 'stat-wires',
+   'stat-zoom', 'btn-tutor', 'btn-start', 'btn-verify', 'btn-solution', 'btn-reset',
+   'mis-prev', 'mis-next', 'btn-sommaire'].forEach(id =>
+    ok(__HTML.includes('id="' + id + '"'), id + ' a survécu au déménagement'));
+  // les blocs flottants ne doivent plus dépendre de la colonne
+  ok(/#enonce\{position:fixed/.test(__HTML), 'l’énoncé est un bandeau flottant');
+  ok(/#infos\{position:fixed/.test(__HTML), 'la table est un bloc flottant');
+  ok(/#actions\{position:fixed/.test(__HTML), 'les boutons flottent');
+  ok(/#tutor-box\{position:fixed/.test(__HTML), 'la leçon est posée au-dessus du plan');
+});
+
+T('T181 l’énoncé et la table se replient chacun de leur côté', () => {
+  loadMission(missions.findIndex(m => m.id === 'm7'));
+  const en = __el('enonce'), inf = __el('infos');
+  en.classList.remove('replie'); inf.classList.remove('replie');
+  __fire('enonce-tab', 'click');
+  ok(en.classList.contains('replie'), 'l’énoncé se replie');
+  ok(!inf.classList.contains('replie'), 'sans entraîner la table');
+  __fire('infos-tab', 'click');
+  ok(inf.classList.contains('replie'), 'la table se replie de son côté');
+  __fire('enonce-tab', 'click');
+  ok(!en.classList.contains('replie'), 'et l’énoncé se déplie');
+  __fire('infos-tab', 'click');
+  ok(!inf.classList.contains('replie'), 'la table aussi');
+  loadMission(-1);
+});
+
+T('T182 le bandeau de victoire ne laisse pas dépasser l’énoncé', () => {
+  const idx = missions.findIndex(m => m.id === 'm2');
+  loadMission(idx);
+  const en = __el('enonce');
+  ok(!en.classList.contains('masque'), 'au départ l’énoncé est visible');
+  applySolution(buildSolution(missions[idx]), -1, {});
+  __fire('btn-verify', 'click');
+  ok(!__el('win-banner').classList.contains('hidden'), 'le bandeau s’affiche');
+  ok(en.classList.contains('masque'), 'et l’énoncé s’efface sous lui');
+  __fire('btn-stay', 'click');
+  ok(!en.classList.contains('masque'), 'le ranger rend l’énoncé');
+  // changer de leçon doit aussi tout remettre d’aplomb
+  en.classList.add('masque');
+  loadMission(idx);
+  ok(!en.classList.contains('masque'), 'charger une leçon rend l’énoncé');
+  ok(__el('win-banner').classList.contains('hidden'), 'et range le bandeau');
+  closeTutor();
+  loadMission(-1);
+});
+
 /* ===================== bilan ===================== */
 console.log('\n' + (__fail ? '✗' : '✓') + ' ' + __pass + ' test(s) réussi(s), ' +
             __fail + ' échec(s)' + (__fail ? ' : ' + __failures.join(', ') : '') + '\n');
