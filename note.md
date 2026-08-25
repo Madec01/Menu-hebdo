@@ -131,6 +131,14 @@ plan ; sommaire devenu carte du cours.
    famille exige une entrée dans `FAM_SECTIONS`, sinon son guide n'est jamais
    rendu et T57 tombe.
 
+## Défauts connus, à corriger plus tard
+
+- **Dans un cadre de commentaire (la « zone »), on ne peut pas tirer de câble
+  entre deux composants.** Signalé par l'auteur. Le cadre doit intercepter le
+  geste de câblage — regarder le `pointerdown` du canvas et la façon dont
+  `ZONE` capte le clic (`hit`, `noDrag`, ordre de dessin : les cadres passent
+  derrière, mais le test de survol les voit peut-être en premier).
+
 ## Ce qui reste : ⚡ Énergie & ondes, lots 2 à 10
 
 Découpage validé avec l'auteur. Un lot, on livre, il teste, il valide.

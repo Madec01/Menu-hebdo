@@ -25,6 +25,16 @@ toutes les explications doivent être en français simple, sans jargon.
 dit où en est le projet, ce qui vient d'être fait, et les pièges du fichier
 principal.
 
+**Au début de chaque session**, après l'avoir lu, faire à l'auteur un point
+court et en français simple :
+
+1. les **bugs identifiés** et pas encore corrigés,
+2. les **modifications qui restent à faire**, dans l'ordre prévu,
+3. où on en était exactement.
+
+Ce point s'appuie sur `note.md` — donc `note.md` doit toujours contenir de quoi
+l'écrire : une section « Défauts connus » et une section « Ce qui reste ».
+
 - Le mettre à jour **dès qu'un morceau de travail est terminé** (et pas
   seulement quand l'auteur annonce un « clear » : un clear efface la mémoire
   sans prévenir).

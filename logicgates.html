@@ -4000,7 +4000,27 @@ function solveElec(){
     if (a != null && b != null) unir(a, b);
   });
 
-  /* 3. Toutes les bornes d'une masse sont le même point — et toutes les
+  /* 3a. Deux façons de relier des bornes SANS fil :
+        - `commun` : toutes les bornes du composant sont le même point (un rail
+          de distribution est une barre, pas une suite de bornes séparées) ;
+        - `noeudNom` : le composant donne un nom, et tous ceux qui portent le
+          même nom ne font qu'un seul point (les tunnels). */
+  const nomme = new Map();
+  list.forEach(c => {
+    const d = REG[c.type];
+    if (!d.commun && !d.noeudNom) return;
+    let base = -1;
+    elecBornes(c).forEach(p => {
+      const i = num.get(p); if (i == null) return;
+      if (base < 0) base = i; else unir(base, i);
+    });
+    if (d.noeudNom && base >= 0){
+      const k = d.noeudNom(c);
+      if (k){ if (nomme.has(k)) unir(nomme.get(k), base); else nomme.set(k, base); }
+    }
+  });
+
+  /* 3b. Toutes les bornes d'une masse sont le même point — et toutes les
         masses du plan sont LA MÊME masse, comme le châssis d'une voiture. */
   let sol = -1;
   list.forEach(c => {
@@ -9638,6 +9658,111 @@ defComp('OSCILLO', {
     ex:'Générateur → ampèremètre → résistance → masse. Sonde V1 sur la sortie du générateur, MES sur l’ampèremètre. Fais glisser la tension de haut en bas : les deux courbes montent et descendent <b>ensemble et proportionnellement</b>. C’est la loi d’Ohm, vue en mouvement.',
     real:'C’est l’instrument fétiche de l’électronicien : quand un montage déraille, on ne devine pas, on regarde. Et c’est lui qui rendra visibles la charge d’un condensateur et l’alternatif, aux étapes suivantes.' }
 });
+
+/* ============ DISTRIBUER LA PUISSANCE SANS PLAT DE SPAGHETTIS ============
+   Les mêmes deux objets que côté logique — la barre et le nœud nommé — mais
+   avec des bornes de puissance. Ils ne « transportent » rien : leurs bornes
+   sont littéralement le MÊME point électrique, et c'est le solveur qui le sait. */
+function defRailP(id, n){
+  return defComp(id, {
+    name:'RAIL DE PUISSANCE · ' + n + ' BORNES', short:'RAIL ⚡·' + n,
+    guideTitle:'RAIL DE PUISSANCE',
+    family:'ener', color:PUI_COL, glyph:'▤', iconSize:13,
+    w:railW(n), h:82,
+    ins:  Array.from({ length:RAIL_MAX * 2 }, (_, k) =>
+      ({ n:String(railIdx(k).t + 1) + (railIdx(k).haut ? '▲' : '▼'), pui:true })),
+    outs: Array.from({ length:RAIL_MAX * 2 }, (_, k) =>
+      ({ n:String(railIdx(k).t + 1) + (railIdx(k).haut ? '▲' : '▼'), pui:true })),
+    opts:[
+      { k:'n', label:'Nombre de bornes', min:RAIL_MIN, max:RAIL_MAX, step:1, def:n, int:true,
+        hint:'La longueur de la barre.' },
+      { k:'nom', label:'Repère du rail', type:'text', max:10, def:'',
+        hint:'Ce que la barre distribue : + 12 V, MASSE, RETOUR…' }
+    ],
+    noDrag:() => true,
+    onOpt(c, k){ if (k === 'n') c.w = railW(railN(c)); },
+    restore(c){ c.w = railW(railN(c)); },
+    pinHidden(comp, pin){ return railIdx(pin.index).t >= railN(comp); },
+    pinPos(comp, pin){
+      const { t, haut } = railIdx(pin.index);
+      return { x: comp.x + 22 + t * RAIL_PAS, y: haut ? comp.y : comp.y + comp.h };
+    },
+    pinDir(comp, pin){ return railIdx(pin.index).haut ? { x:0, y:-1 } : { x:0, y:1 }; },
+    elec:true, commun:true,
+    init(c){ c.u = 0; c.i = 0; c.p = 0; },
+    /* Aucune branche : une barre ne résiste pas, elle EST le point. */
+    eval(c){ c.val = c.outPins[0] ? (c.outPins[0].state || 0) : 0; },
+    tip:c => ['Toute la barre est un seul point : ' + fmtVolt(c.val || 0),
+              'On y amène l’alimentation une fois, chacun s’y raccorde par un moignon',
+              'Contrairement au rail logique, plusieurs arrivées sont permises : ce sont des sources en parallèle'],
+    body(c, x, col, on, hov, t){
+      const nb = railN(c), y = c.y + c.h / 2;
+      const x0 = c.x + 10, x1 = c.x + c.w - 10;
+      const u = Math.abs(c.val || 0), actif = u > .05;
+      x.beginPath(); x.roundRect(x0, y - 7, x1 - x0, 14, 7);
+      x.fillStyle = actif ? c.hexA(col, .3) : 'rgba(255,255,255,.06)';
+      if (actif){ x.shadowBlur = 12; x.shadowColor = col; }
+      x.fill(); x.shadowBlur = 0;
+      x.lineWidth = 1.3; x.strokeStyle = actif ? col : 'rgba(255,255,255,.25)'; x.stroke();
+      for (let k = 0; k < nb; k++){
+        const bx = c.x + 22 + k * RAIL_PAS;
+        x.beginPath(); x.moveTo(bx, c.y + 2); x.lineTo(bx, c.y + c.h - 2);
+        x.lineWidth = 1.6; x.strokeStyle = actif ? c.hexA(col, .55) : 'rgba(255,255,255,.14)';
+        x.stroke();
+      }
+      x.font = "700 11px 'Chakra Petch', sans-serif";
+      x.textAlign = 'center'; x.textBaseline = 'middle';
+      x.fillStyle = actif ? col : PAL.dim;
+      const rep = String(optOf(c, 'nom') || '').trim();
+      x.fillText((rep ? rep + ' · ' : '') + fmtVolt(c.val || 0), (x0 + x1) / 2, y);
+    },
+    guide:{ txt:'La <b>barre d’alimentation</b> : toutes ses bornes sont un seul et même point électrique. On y amène le courant <b>une fois</b>, et chaque consommateur s’y raccorde par un moignon de deux centimètres, au-dessus ou au-dessous. C’est exactement ce qu’on fait dans une armoire électrique : personne ne tire quinze fils depuis la même borne d’alimentation.<br><br>Différence avec le rail logique : ici <b>plusieurs arrivées sont permises</b>. Deux sources branchées sur la même barre, ce n’est pas une faute, ce sont deux générateurs en parallèle — et le solveur calcule ce que chacun débite.',
+      ex:'Un rail pour le <code>+</code> et un autre pour la masse, l’un au-dessus de l’autre : tes ampoules se posent entre les deux et le schéma devient lisible d’un coup. C’est un vrai plan d’installation.',
+      real:'Dans un tableau électrique, les barres de cuivre s’appellent des <b>jeux de barres</b>. Dans une voiture, le rôle de la barre de masse est tenu par la carrosserie entière.',
+      also:['RAILP4','RAILP8'] }
+  });
+}
+defRailP('RAILP4', 4);
+defRailP('RAILP8', 8);
+defComp('TUNP', {
+  name:'TUNNEL DE PUISSANCE', short:'TUNNEL ⚡', family:'ener', color:PUI_COL, glyph:'⇢',
+  icon:'<svg viewBox="0 0 32 24" ' + 'fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"' + '><path d="M3 12h9M20 12h9"/><path d="M12 7l5 5-5 5M20 7l-5 5 5 5"/></svg>',
+  w:116, h:80,
+  ins:[{ n:'E', pui:true }], outs:[{ n:'S', pui:true }],
+  opts:[{ k:'nom', label:'Nom du point', type:'text', max:8, def:'+',
+    hint:'Tous les tunnels de puissance portant ce nom sont le même point électrique, sans câble.' }],
+  elec:true, commun:true, pinPos:enerPinPos,
+  noeudNom:c => 'P' + String(optOf(c, 'nom') || '+').toUpperCase(),
+  init(c){ c.u = 0; c.i = 0; c.p = 0; },
+  tip:c => ['Point « ' + String(optOf(c, 'nom') || '+').toUpperCase() + ' » — ' +
+              fmtVolt(c.inPins[0].state || 0),
+            'Relié sans fil à tous les tunnels de puissance de même nom',
+            'Ce n’est pas un fil : c’est littéralement le même point du circuit'],
+  body(c, x, col, on, hov, t){
+    enerLabels(c, x, REG.TUNP);
+    const cx = c.x + c.w / 2, cy = c.y + ENER_Y;
+    const u = Math.abs(c.inPins[0].state || 0), actif = u > .05;
+    x.lineWidth = 2; x.strokeStyle = 'rgba(200,190,230,.35)';
+    x.beginPath(); x.moveTo(c.x + 10, cy); x.lineTo(cx - 16, cy);
+    x.moveTo(cx + 16, cy); x.lineTo(c.x + c.w - 10, cy); x.stroke();
+    x.lineWidth = 2.6; x.lineCap = 'round';
+    x.strokeStyle = actif ? col : 'rgba(200,190,230,.5)';
+    if (actif){ x.shadowBlur = 10; x.shadowColor = col; }
+    x.beginPath();
+    x.moveTo(cx - 16, cy - 7); x.lineTo(cx - 9, cy); x.lineTo(cx - 16, cy + 7);
+    x.moveTo(cx + 16, cy - 7); x.lineTo(cx + 9, cy); x.lineTo(cx + 16, cy + 7);
+    x.stroke(); x.shadowBlur = 0;
+    x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.font = "700 14px 'Chakra Petch', sans-serif";
+    x.fillStyle = actif ? col : 'rgba(200,190,230,.55)';
+    x.fillText(String(optOf(c, 'nom') || '+').toUpperCase(), cx, c.y + c.h - 26);
+    x.font = "600 8px 'IBM Plex Mono', monospace"; x.fillStyle = PAL.dim;
+    x.fillText(fmtVolt(u), cx, c.y + c.h - 12);
+  },
+  guide:{ txt:'Un <b>point nommé</b>, pour la puissance : tous les tunnels portant le même nom ne sont pas « reliés », ils <b>sont</b> le même point du circuit. Deux tunnels <code>+12V</code> aux deux bouts du plan, et l’alimentation traverse sans qu’un seul câble ne barre le schéma. Pratique dès que le montage grandit.<br><br>Attention : ce n’est pas un fil magique à sens unique. C’est un nœud. Ce qui vaut d’un côté vaut de l’autre, dans les deux sens.',
+    ex:'Un tunnel <code>+</code> à la sortie du générateur, un autre à côté de chaque consommateur, et un tunnel <code>M</code> pour les retours : ton plan n’a plus un seul long câble.',
+    real:'Les schématiciens appellent ça un <i>net label</i>. Sur un schéma professionnel, l’alimentation et la masse ne sont presque jamais tracées en fil : elles sont nommées.' }
+});
 /* @@COMPOSANTS@@ */
 registerComponents();
 
@@ -12098,8 +12223,8 @@ const QUICK_SUGG = {
   log:   ['NOT','AND','OR','XOR','LED','DFF','TON','SRMEM','RAIL8','TUNNEL'],
   src:   ['SWITCH','BUTTON','HIGH','CLOCK','POT','TEMPC','RAIL8','TUNNEL'],
   srcflu:['PUMP','VALVE','CUVE','TE'],
-  pui:   ['LAMPE','RESIS','AMP','VOLT','OSCILLO','INTERP','POTP','MASSE'],
-  srcpui:['GENE','PILE','INTERP','RESIS','POTP','MASSE']
+  pui:   ['LAMPE','RESIS','AMP','VOLT','OSCILLO','INTERP','POTP','RAILP8','TUNP','MASSE'],
+  srcpui:['GENE','PILE','INTERP','RESIS','POTP','RAILP8','TUNP','MASSE']
 };
 /* La broche cherche-t-elle une entrée (fil sortant) ou une sortie (fil entrant) ? */
 function quickWants(pin){ return pin.isOutput ? 'in' : 'out'; }

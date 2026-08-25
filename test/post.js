@@ -4627,6 +4627,79 @@ T('T201 les sept composants du lot 2 sont rangés et câblables', () => {
   eq(wires.length, 0, 'mais pas sur une borne de puissance');
 });
 
+
+T('T202 le rail de puissance : une barre, un seul point', () => {
+  board();
+  const g = mk('GENE', 0, 0), r = mk('RAILP8', 300, 0), m = mk('MASSE', 300, 400);
+  g.opt.u = 12; g.opt.ri = .01; g.opt.ilim = 5;
+  const l1 = mk('LAMPE', 600, 0), l2 = mk('LAMPE', 600, 200), l3 = mk('LAMPE', 600, 400);
+  link(g, 0, r, 0);                     // on alimente la barre UNE fois
+  [l1, l2, l3].forEach((l, k) => { link(r, k + 1, l, 0); link(l, 0, m, 0); });
+  link(m, 0, g, 0);
+  sim();
+  near(r.outPins[0].state, 12, .1, 'toute la barre est à 12 V');
+  near(r.outPins[5].state, 12, .1, 'y compris une borne où rien n’est branché');
+  near(r.inPins[3].state, 12, .1, 'dessus comme dessous');
+  ok(l1.p > .5 && l2.p > .5 && l3.p > .5, 'les trois ampoules sont alimentées');
+  near(l1.p, l2.p, .01, 'et toutes pareil');
+  near(Math.abs(g.i), l1.i + l2.i + l3.i, .01, 'le générateur fournit la somme');
+  // une barre sans alimentation reste à zéro
+  const r2 = mk('RAILP4', 900, 600);
+  sim();
+  near(r2.outPins[0].state, 0, 1e-3, 'une barre non alimentée reste à 0 V');
+});
+
+T('T203 le tunnel de puissance : deux tunnels de même nom sont le même point', () => {
+  board();
+  const g = mk('GENE', 0, 0), m = mk('MASSE', 0, 500);
+  g.opt.u = 9; g.opt.ri = .01; g.opt.ilim = 5;
+  const t1 = mk('TUNP', 250, 0), t2 = mk('TUNP', 700, 200);
+  const r = mk('RESIS', 950, 200);
+  t1.opt.nom = '+'; t2.opt.nom = '+'; r.opt.r = 90;
+  link(g, 0, t1, 0);                    // l’alimentation entre dans le premier
+  link(t2, 0, r, 0);                    // et ressort du second, sans aucun fil entre eux
+  link(r, 0, m, 0); link(m, 0, g, 0);
+  sim();
+  near(t2.outPins[0].state, 9, .1, 'le second tunnel est à la tension du premier');
+  near(r.u, 9, .1, 'la résistance est bien alimentée');
+  near(r.i, 9 / 90, .003, 'et le courant est celui de la loi d’Ohm');
+  // un nom différent coupe la liaison
+  t2.opt.nom = 'X'; sim();
+  near(r.i, 0, 1e-3, 'nom différent : plus rien ne passe');
+  t2.opt.nom = '+'; sim();
+  near(r.i, 9 / 90, .003, 'et ça repart quand les noms se retrouvent');
+  // trois tunnels de même nom : toujours un seul point
+  const t3 = mk('TUNP', 700, 600); t3.opt.nom = '+';
+  const l = mk('LAMPE', 950, 600);
+  link(t3, 0, l, 0); link(l, 0, m, 0);
+  sim();
+  near(t3.outPins[0].state, Math.abs(g.u), .15, 'le troisième aussi');
+  ok(l.p > .5, 'et l’ampoule qu’il alimente éclaire');
+});
+
+T('T204 rails et tunnels de puissance ne se mélangent pas avec ceux du signal', () => {
+  board();
+  const rp = mk('RAILP8', 0, 0), rl = mk('RAIL8', 0, 300);
+  eq(rp.outPins[0].kind, 'pui', 'le rail de puissance a des bornes de puissance');
+  eq(rl.outPins[0].kind, 'log', 'le rail de signal garde les siennes');
+  wires = [];
+  connectWire(rp.outPins[0], rl.inPins[0]);
+  eq(wires.length, 0, 'on ne relie pas l’un à l’autre');
+  const tp = mk('TUNP', 400, 0), tl = mk('TUNNEL', 400, 300);
+  tp.opt.nom = 'A'; tl.opt.nom = 'A';
+  const l = mk('LAMPE', 800, 0), g = mk('GENE', 800, 300), m = mk('MASSE', 800, 600);
+  g.opt.u = 6; g.opt.ri = .01;
+  link(g, 0, tp, 0);
+  connectWire(tl.outPins[0], l.inPins[0]);        // le vrai contrôle de câblage
+  eq(wires.filter(w => w.inPin.comp === l).length, 0,
+     'un tunnel de signal ne peut pas alimenter une ampoule de puissance');
+  // et les deux familles de tunnels ne partagent pas leurs noms
+  const tp2 = mk('TUNP', 400, 600); tp2.opt.nom = 'A';
+  link(tp2, 0, l, 0); link(l, 0, m, 0); link(m, 0, g, 0);
+  sim();
+  ok(l.p > .2, 'entre tunnels de puissance de même nom, en revanche, ça passe');
+});
+
 /* ===================== bilan ===================== */
 console.log('\n' + (__fail ? '✗' : '✓') + ' ' + __pass + ' test(s) réussi(s), ' +
             __fail + ' échec(s)' + (__fail ? ' : ' + __failures.join(', ') : '') + '\n');
