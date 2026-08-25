@@ -7,7 +7,8 @@ feu tricolore programmé, au circuit hydraulique et au diagnostic de pannes.
 
 L'appli tient trois ateliers dans le même plan de travail : **⚡ Électronique**
 (le signal et la logique), **🏭 Process** (l'installation : pupitre, capteurs,
-actionneurs, régulation, supervision) et bientôt **🔌 Énergie & ondes**. Chacun
+actionneurs, régulation, supervision) et **🔌 Énergie & ondes** (le courant :
+tension, intensité, puissance, résolus d'un seul coup par un solveur nodal). Chacun
 a ses propres onglets et retient celui où on l'a laissé ; sa couleur se retrouve
 sur l'onglet actif. Le choix ne filtre que la palette, sans rien verrouiller :
 la recherche, la **barre de favoris** et le menu d'ajout rapide traversent
@@ -182,7 +183,7 @@ concatène entre `test/pre.js` (stubs DOM / Canvas / Audio / localStorage, plus
 une horloge `Date.now` pilotable) et `test/post.js` (les tests), puis exécute le
 tout dans un contexte `vm`. Aucun navigateur, aucune dépendance npm.
 
-186 tests couvrent le moteur, le séquentiel, les blocs numériques, l'analogique
+194 tests couvrent le moteur, le séquentiel, les blocs numériques, l'analogique
 et la régulation (dont une boucle fermée four + thermostat), l'édition,
 l'orientation, les tunnels, les puces, l'interface, le balisage et le guide.
 Deux tests valident automatiquement **tout** nouveau composant du registre

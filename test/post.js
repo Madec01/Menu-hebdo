@@ -2855,11 +2855,15 @@ T('T149 trois ateliers : la palette se recompose, les favoris ne bougent pas', (
   ok(!cles().includes('gate'), 'pas de portes côté process');
   ok(!cles().includes('calc'), 'ni de calcul');
   eq(localStorage.getItem('al2_mode'), 'proc', 'le choix est mémorisé');
-  // le troisième atelier est annoncé mais pas encore ouvert
+  // le troisième atelier est ouvert : il a ses propres onglets
   const phys = MODES.find(m => m.k === 'phys');
-  ok(phys && phys.bientot, 'l’atelier Énergie & ondes est annoncé');
+  ok(phys && !phys.bientot, 'l’atelier Énergie & ondes n’est plus « bientôt »');
   setAppMode('phys');
-  eq(appMode, 'proc', 'et il ne s’ouvre pas encore');
+  eq(appMode, 'phys', 'et il s’ouvre');
+  deq(cles(), ['ener','wire'], 'énergie : le continu et le câblage');
+  ok(!cles().includes('gate') && !cles().includes('sense'),
+     'ni portes logiques ni capteurs de process côté énergie');
+  setAppMode('proc');
   // il n’y a plus de mode « Tout »
   ok(!MODES.some(m => m.k === 'tout'), 'le mode Tout a disparu');
 
@@ -4200,6 +4204,177 @@ T('T185 le halo épouse l’encombrement réel, rotation comprise', () => {
   const r2 = bboxEcran([c]);
   near(r2.w, h0 * 2, .5, 'le zoom double la largeur à l’écran');
   cam.z = 1;
+});
+
+
+console.log('\n— ⚡ Énergie & ondes : le continu —');
+
+/* Petit atelier : une boucle pile → interrupteur → ampoule → masse → pile */
+function boucle(opt){
+  board();
+  const p = mk('PILE', 0, 0), k = mk('INTERP', 200, 0),
+        l = mk('LAMPE', 400, 0), g = mk('MASSE', 600, 0);
+  if (opt && opt.e != null)  p.opt.e  = opt.e;
+  if (opt && opt.ri != null) p.opt.ri = opt.ri;
+  link(p, 0, k, 0);           // + → A de l'interrupteur
+  link(k, 0, l, 0);           // B → A de l'ampoule
+  link(l, 0, g, 0);           // B → retour R1 de la masse
+  link(g, 0, p, 0);           // masse → − de la pile : la boucle est fermée
+  k.state = 1;
+  return { p, k, l, g };
+}
+
+T('T186 le troisième type de liaison : hexagonal, et il ne se mélange pas', () => {
+  board();
+  const p = mk('PILE', 0, 0), l = mk('LAMPE', 200, 0);
+  const sw = mk('SWITCH', 0, 300), led = mk('LED', 200, 300);
+  const tuy = mk('TUYAU', 0, 600);
+  eq(p.outPins[0].kind, 'pui', 'le + de la pile est une borne de puissance');
+  eq(p.inPins[0].kind, 'pui', 'le − aussi');
+  eq(led.inPins[0].kind, 'log', 'le voyant reste un port logique');
+  eq(tuy.inPins[0].kind, 'flu', 'le tuyau reste un raccord fluide');
+  // les trois natures refusent de se marier
+  connectWire(p.outPins[0], led.inPins[0]);
+  eq(wires.length, 0, 'puissance → logique : refusé');
+  connectWire(sw.outPins[0], l.inPins[0]);
+  eq(wires.length, 0, 'logique → puissance : refusé');
+  connectWire(tuy.outPins[0], l.inPins[0]);
+  eq(wires.length, 0, 'fluide → puissance : refusé');
+  connectWire(p.outPins[0], l.inPins[0]);
+  eq(wires.length, 1, 'puissance → puissance : accepté');
+  // une borne à vis accepte plusieurs fils, une entrée logique non
+  const l2 = mk('LAMPE', 400, 0), g = mk('MASSE', 600, 0);
+  connectWire(l.outPins[0], g.inPins[0]);
+  connectWire(l2.outPins[0], g.inPins[0]);
+  eq(wires.filter(w => w.inPin === g.inPins[0]).length, 2,
+     'deux retours sur la même borne de masse');
+  connectWire(l.outPins[0], g.inPins[0]);
+  eq(wires.filter(w => w.inPin === g.inPins[0]).length, 2, 'mais pas deux fois le même fil');
+});
+
+T('T187 la boucle : fermée ça s’allume, ouverte il ne se passe rien', () => {
+  const b = boucle();
+  sim();
+  ok(b.l.i > 0.2, 'le courant traverse l’ampoule : ' + b.l.i);
+  ok(b.l.u > 3, 'et elle reçoit sa tension : ' + b.l.u);
+  ok(b.l.p > 0.8, 'elle éclaire : ' + b.l.p + ' W');
+  // on ouvre l'interrupteur : plus rien, nulle part
+  b.k.state = 0; sim();
+  near(b.l.i, 0, 1e-3, 'plus de courant');
+  near(b.l.p, 0, 1e-3, 'plus de lumière');
+  near(b.p.i, 0, 1e-3, 'la pile ne débite plus');
+  // à vide, la pile affiche bien sa tension à vide
+  near(Math.abs(b.p.u), 4.5, .05, 'et elle retrouve ses 4,5 V à vide');
+});
+
+T('T188 sans retour à la masse, un circuit n’est pas un circuit', () => {
+  const b = boucle();
+  sim();
+  ok(b.l.p > 0.8, 'au départ elle éclaire');
+  // on coupe le seul fil qui ramène le courant au − de la pile
+  wires = wires.filter(w => !(w.outPin.comp === b.g && w.inPin.comp === b.p));
+  sim();
+  near(b.l.i, 0, 1e-3, 'la boucle est rompue : plus rien ne circule');
+  near(b.l.p, 0, 1e-3, 'et l’ampoule s’éteint');
+  // sans aucune masse sur le plan, rien ne se calcule non plus
+  board();
+  const p = mk('PILE', 0, 0), l = mk('LAMPE', 200, 0);
+  link(p, 0, l, 0); link(l, 0, p, 0);
+  sim();
+  ok(!elecMasse, 'aucune masse posée');
+  near(l.i, 0, 1e-3, 'donc aucun courant, même en boucle fermée');
+});
+
+T('T189 la loi d’Ohm se constate : U = R × I, et la puissance suit', () => {
+  const b = boucle({ e:4.5, ri:0.01 });   // pile quasi parfaite : le calcul est lisible
+  sim();
+  const R = 4.5 * 4.5 / 1.4;              // résistance déduite du nominal de l’ampoule
+  near(b.l.u / b.l.i, R, R * .02, 'la tension divisée par le courant redonne la résistance');
+  near(b.l.i, 4.5 / R, .02, 'et le courant vaut U ÷ R');
+  near(b.l.p, b.l.u * b.l.i, .01, 'la puissance est bien le produit des deux');
+  // le courant est le même partout dans une boucle sans dérivation
+  near(Math.abs(b.p.i), b.l.i, .01, 'la pile débite exactement ce que l’ampoule consomme');
+});
+
+T('T190 la pile faiblit quand on tire dessus, et ça se voit', () => {
+  const b = boucle({ e:4.5, ri:1 });
+  sim();
+  const seule = Math.abs(b.p.u), eclatSeule = b.l.p;
+  ok(seule < 4.5, 'en charge, la tension aux bornes est déjà sous les 4,5 V : ' + seule);
+  ok(seule > 3.5, 'mais elle tient : ' + seule);
+  // une deuxième ampoule en parallèle : deux fois plus de courant demandé
+  const l2 = mk('LAMPE', 400, 200);
+  link(b.k, 0, l2, 0);
+  link(l2, 0, b.g, 1);
+  sim();
+  const deux = Math.abs(b.p.u);
+  ok(deux < seule - .1, 'avec deux ampoules la pile s’affaisse : ' + deux + ' < ' + seule);
+  ok(b.l.p < eclatSeule - .05, 'et la première éclaire moins qu’avant');
+  near(b.l.p, l2.p, .02, 'les deux ampoules éclairent pareil : elles ont la même tension');
+  ok(Math.abs(b.p.i) > 1.9 * b.l.i - .05, 'la pile débite la somme des deux courants');
+});
+
+T('T191 en série on partage la tension, en parallèle on partage le courant', () => {
+  // deux ampoules en série sur une pile quasi parfaite
+  board();
+  const p = mk('PILE', 0, 0), a = mk('LAMPE', 200, 0), b2 = mk('LAMPE', 400, 0), g = mk('MASSE', 600, 0);
+  p.opt.ri = 0.01;
+  link(p, 0, a, 0); link(a, 0, b2, 0); link(b2, 0, g, 0); link(g, 0, p, 0);
+  sim();
+  near(a.u, b2.u, .02, 'deux ampoules identiques en série se partagent la tension');
+  near(a.u + b2.u, 4.5, .05, 'et la somme des chutes vaut la tension de la pile');
+  near(a.i, b2.i, .01, 'le courant est le même dans les deux');
+  const serie = a.p;
+  // les mêmes en parallèle
+  board();
+  const p2 = mk('PILE', 0, 0), c1 = mk('LAMPE', 200, 0), c2 = mk('LAMPE', 200, 200), g2 = mk('MASSE', 600, 0);
+  p2.opt.ri = 0.01;
+  link(p2, 0, c1, 0); link(p2, 0, c2, 0);
+  link(c1, 0, g2, 0); link(c2, 0, g2, 1); link(g2, 0, p2, 0);
+  sim();
+  near(c1.u, 4.5, .05, 'en parallèle, chacune reçoit la tension entière');
+  ok(c1.p > serie * 3, 'donc elles éclairent bien plus fort qu’en série');
+  near(Math.abs(p2.i), c1.i + c2.i, .02, 'et la pile fournit la somme des deux courants');
+});
+
+T('T192 le solveur ne coûte rien quand aucun circuit électrique n’est posé', () => {
+  board();
+  const s1 = mk('SWITCH', 0, 0), a = mk('AND', 200, 0), led = mk('LED', 400, 0);
+  link(s1, 0, a, 0); link(s1, 0, a, 1); link(a, 0, led, 0);
+  s1.state = 1; sim();
+  ok(!elecOn, 'le solveur se sait inutile');
+  eq(led.inPins[0].state, 1, 'et la logique fonctionne comme avant');
+  // les deux domaines cohabitent sur le même plan sans se gêner
+  const b = boucle();
+  const s2 = mk('SWITCH', 0, 400), l2 = mk('LED', 200, 400);
+  link(s2, 0, l2, 0); s2.state = 1;
+  sim();
+  ok(elecOn, 'avec de la puissance sur le plan, le solveur travaille');
+  eq(l2.inPins[0].state, 1, 'la logique marche toujours à côté');
+  ok(b.l.p > 0.8, 'et l’ampoule éclaire toujours');
+});
+
+T('T193 l’atelier ⚡ est complet : composants, guide, sauvegarde', () => {
+  // les quatre composants sont bien rangés dans l'onglet du continu
+  const onglet = TOOL_TABS.find(t => t.key === 'ener');
+  ok(onglet, 'l’onglet du continu existe');
+  ['PILE','INTERP','LAMPE','MASSE'].forEach(t =>
+    ok(onglet.items.includes(t), t + ' est dans l’onglet'));
+  // l'état d'un interrupteur de puissance survit à une sauvegarde
+  const b = boucle();
+  sim();
+  const data = serializeGroup(components);
+  board();
+  spawnGroup(data, 0, 0, false);
+  const k = components.find(c => c.type === 'INTERP');
+  const l = components.find(c => c.type === 'LAMPE');
+  eq(k.state, 1, 'l’interrupteur est retrouvé fermé');
+  sim();
+  ok(l.p > 0.8, 'et le circuit rechargé éclaire toujours');
+  // le menu de câblage rapide propose bien de la puissance, pas de la logique
+  const sugg = quickTypes(components.find(c => c.type === 'PILE').outPins[0]);
+  ok(sugg.includes('LAMPE') || sugg.includes('INTERP'), 'suggestions de puissance');
+  ok(!sugg.includes('AND'), 'et pas de porte logique au bout d’un fil de puissance');
 });
 
 /* ===================== bilan ===================== */

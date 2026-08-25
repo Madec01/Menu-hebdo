@@ -5,50 +5,63 @@ dans `CLAUDE.md`.
 
 ## Où en est le projet
 
-- **v6.10**, branche `claude/architecte-logique-v5-vntfkp`, **186 tests verts**
+- **v6.11**, branche `claude/architecte-logique-v5-vntfkp`, **194 tests verts**
   (`npm test`).
-- `logicgates.html` : ~11 900 lignes, un seul `<script>`, aucune dépendance.
-- Copies figées dans `versions/` (v5.1 → v6.10), avec leur tableau dans
+- `logicgates.html` : ~12 500 lignes, un seul `<script>`, aucune dépendance.
+- Copies figées dans `versions/` (v5.1 → v6.11), avec leur tableau dans
   `versions/README.md`.
+- Catalogue : **148 leçons en 30 chapitres** — 63 à table de vérité (dont 8
+  boîtes noires) et 85 libres.
 
 ## Ce qui vient d'être fait
 
-**La refonte de l'affichage est terminée** (trois lots, v6.8 → v6.10) :
+**⚡ Énergie & ondes, lot 1 sur 10 : le socle du continu** (v6.11). L'atelier
+🔌 n'est plus grisé. Il contient quatre composants — `PILE`, `INTERP`
+(interrupteur de puissance), `LAMPE` (ampoule à filament), `MASSE` — et un
+**vrai solveur nodal** qui résout tout le circuit d'un coup.
 
-- **v6.8** — la colonne de droite `#mission-panel` a disparu. À la place :
-  `#enonce` (bandeau haut, repliable, avec le fil d'Ariane et le diagnostic en
-  direct), `#infos` (table de vérité + compteurs, bas-droite, repliable),
-  `#actions` (colonne de boutons, 236 px, haut-droite).
-- **v6.9** — `#tutor-box` est devenu un **cartouche posé sur le plan** : il se
-  place tout seul à côté des composants dont la page parle, relié par un trait
-  dessiné sur le canvas, et se laisse déplacer à la main.
-- **v6.10** — le sommaire est devenu **la carte du cours** : 30 tuiles de
-  chapitre, anneau de progression, leçons en pastilles numérotées.
+Ce qu'on peut faire : la boucle pile → interrupteur → ampoule → masse → pile.
+Deux ampoules en parallèle et la pile s'affaisse, visiblement. On débranche le
+retour à la masse et tout s'éteint.
 
-Avant ça (v6.7) : la leçon page par page avec halo sur le schéma, mémoire de la
-dernière page consultée, bandeau de victoire qui enchaîne sur le « pourquoi ».
+Avant ça (v6.8 → v6.10) : la refonte de l'affichage en trois lots — bandeau
+`#enonce`, `#infos` repliable, `#actions` ; cartouche de leçon posé sur le
+plan ; sommaire devenu carte du cours.
 
 ## Décisions qui expliquent le code
 
-- **Une seule source d'étapes par leçon.** `buildSolution` (solveur, 52
-  missions à table de vérité) ou `buildFreeSolution` (88 missions libres, à
-  partir des `sol.steps` écrites). L'ancienne modale montrait `m.sol.steps`
-  pendant que le tuteur montrait les étapes du solveur : les deux textes
-  divergeaient. Il n'y a plus qu'une surface.
-- **Le « pourquoi » est découpé à l'exécution.** `m.sol.why` est une seule
-  chaîne sans séparateur dans le catalogue ; `whyPages()` la coupe par phrases,
-  deux par page. Ne pas transformer les 148 `why` en tableaux : T40 en dépend.
-- **Le cartouche ne recouvre jamais sa cible.** C'est une règle, pas un malus :
-  `placeLecon()` garde à part le meilleur emplacement à recouvrement nul et ne
-  se rabat sur « le moins pire » que s'il n'en existe aucun.
-- **Le placement se calcule en pixels écran**, jamais en monde : la carte garde
-  une taille fixe pour rester lisible à tous les zooms.
+- **Le solveur tourne AVANT les passes, une seule fois.** `solveElec()` est
+  appelé en tête de `simulate()`, pas dans la boucle des 5 passes. Les
+  composants de puissance ne calculent donc rien dans leur `eval()` : ils
+  *déclarent* leur branche (`branche(c)` → `{a, b, r, e}`) et lisent ensuite
+  `c.u`, `c.i`, `c.p` que le solveur a posés. Deux conséquences : le résultat
+  ne dépend pas de l'ordre des composants, et les mesures qui en découlent
+  n'ont aucun retard.
+- **Toute source a une résistance interne** — sans exception. C'est ce qui
+  permet de remplacer chaque générateur par un courant en parallèle d'une
+  conductance : le système ne contient alors que des conductances, sans le
+  moindre cas particulier. Une pile parfaite (`ri = 0`) casserait le calcul ;
+  `ri` est borné à 0,05 Ω minimum.
+- **Une borne de puissance accepte plusieurs fils.** La règle « une entrée,
+  une seule arrivée » ne vaut plus pour le `kind === 'pui'` : c'est une borne
+  à vis, tout ce qui s'y raccorde n'est qu'un seul point électrique. C'est ce
+  qui rend le rail de masse utilisable.
+- **Les bornes de puissance ne sont pas remises à zéro entre les passes**
+  (ligne du `forEach` de `simulate`), sinon les tensions posées par le solveur
+  seraient effacées avant d'être lues.
+- **`simDt`, une horloge unique pour tout le circuit.** Créée mais pas encore
+  utilisée : elle servira aux composants à mémoire (phase 3). Les composants
+  existants gardent chacun leur `c.lastT` — ne pas les convertir sans raison.
+- **Sans masse, rien ne se calcule.** C'est voulu : un circuit est une boucle.
+  `elecMasse` dit si une masse est posée, `elecOn` si le solveur a du travail
+  (il sort immédiatement quand aucun composant de puissance n'est sur le plan
+  — coût nul pour tous les circuits existants).
 
 ## Pièges du fichier (durement acquis)
 
 1. **Le harnais de test ne voit pas un élément manquant.** `test/pre.js`
    fabrique n'importe quel `getElementById` à la demande. Supprimer un élément
-   du HTML **sans** supprimer les `getElementById` correspondants donne 186
+   du HTML **sans** supprimer les `getElementById` correspondants donne des
    tests verts et une **page blanche dans le navigateur**. Seul T62 (contrôle
    textuel) alerte. → **Toute modification d'affichage se vérifie dans
    Chromium**, jamais seulement par les tests.
@@ -59,15 +72,40 @@ dernière page consultée, bandeau de victoire qui enchaîne sur le « pourquoi 
 3. **Les scripts de correction Python doivent enchaîner leurs remplacements**
    (vérifier l'ancre juste avant de l'appliquer), sinon un remplacement qui
    dépend du précédent échoue. Et vérifier `grep -c` = 1 sur chaque ancre.
+   Attention aux apostrophes typographiques `’` : le fichier en contient des
+   vraies, pas des `’`.
 4. `bw`/`bh` sont des **getters** qui tiennent compte de la rotation ; `w`/`h`
    sont les valeurs brutes. Pour tout rectangle, c'est `bw`/`bh`.
 5. Trois ids sont **dupliqués** dans le HTML (`quick-head`, `quick-title`,
    `quick-hint`, dans `#find` et `#quick`). Bug latent, ne pas s'en inspirer.
 6. Toujours `rm -rf node_modules package-lock.json` avant de committer
    (Playwright n'est installé que le temps des captures).
+7. **Les nouvelles leçons s'ajoutent à la FIN du tableau `missions`.** T178,
+   T179 et T48 supposent que la première leçon du cours est celle d'aujourd'hui.
+8. Un composant ajouté au registre doit être **complet** (nom, nom court,
+   famille, icône, couleur, w/h ≥ 40, entrée de guide de plus de 40 signes,
+   présence dans un onglet) : T66 et T57 le vérifient tout seuls. Une nouvelle
+   famille exige une entrée dans `FAM_SECTIONS`, sinon son guide n'est jamais
+   rendu et T57 tombe.
 
-## Ce qui reste
+## Ce qui reste : ⚡ Énergie & ondes, lots 2 à 10
 
-Uniquement **⚡ Énergie & ondes**, détaillé dans la feuille de route de
-`CLAUDE.md`. Le bouton existe déjà dans la barre du bas, grisé, marqué
-« bientôt » (`MODES`, clé `phys`).
+Découpage validé avec l'auteur. Un lot, on livre, il teste, il valide.
+
+**Phase 1 — le continu.** Lot 2 : résistance, potentiomètre, voltmètre,
+ampèremètre, court-circuit signalé. Lot 3 : le chapitre 31 du cours.
+→ le lot 3 devra ajouter **une vraie condition de réussite** : aujourd'hui une
+leçon sans table de vérité est gagnée dès qu'on clique sur « Vérifier »
+(`logicgates.html`, gestionnaire de `btn-verify`, la ligne `if (!m.tt.length)`).
+Prévoir un champ `m.check(components, wires)`.
+
+**Phase 2 — produire.** Lot 4 : aimant + bobine à la souris, dynamo à
+manivelle. Lot 5 : turbine reliée au four et à la chaudière, panneau solaire,
+thermocouple, chapitre.
+
+**Phase 3 — l'alternatif.** Lot 6 : condensateur et bobine (c'est là que
+`simDt` sert, avec des sous-pas de temps). Lot 7 : source alternative,
+résonance, pont redresseur, chapitre.
+
+**Phase 4 — l'éther.** Lot 8 : la distance et les obstacles. Lot 9 : accord
+LC, AM et FM. Lot 10 : Morse, numérique, le son, chapitre final.
