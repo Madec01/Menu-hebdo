@@ -187,6 +187,22 @@ plan ; sommaire devenu carte du cours.
   `ZONE` capte le clic (`hit`, `noDrag`, ordre de dessin : les cadres passent
   derrière, mais le test de survol les voit peut-être en premier).
 
+## Chantiers demandés, hors feuille de route
+
+- **Refondre la barre du bas.** L'auteur la trouve « peu ergonomique à
+  l'usage », même après la refonte de la v6.6. À reprendre en entier, pas à
+  rafistoler.
+  Ce qu'elle contient aujourd'hui : trois boutons d'atelier + recherche +
+  repli (`buildToolbar`), une rangée d'onglets (`modeTabs` / `TOOL_TABS`), une
+  barre de favoris qui se compose seule (`favPins` / `favFreq`), et les tuiles
+  de composants avec cadenas de progression (`toolState` / `updateToolbar`).
+  Le catalogue compte maintenant ~85 composants pour 3 ateliers et 13 onglets —
+  c'est probablement là que le bât blesse.
+  **Avant de coder, demander à l'auteur ce qui le gêne précisément** : trop de
+  clics pour changer d'onglet ? les favoris qui bougent tout seuls ? la
+  recherche qu'on oublie ? la barre qui mange l'écran ? Une refonte à l'aveugle
+  coûterait cher pour rien.
+
 ## Ce qui reste : ⚡ Énergie & ondes, lots 2 à 10
 
 Découpage validé avec l'auteur. Un lot, on livre, il teste, il valide.
