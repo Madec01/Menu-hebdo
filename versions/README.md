@@ -20,6 +20,7 @@ version en cours, il suffit d'en recopier une par-dessus `logicgates.html`.
 | `logicgates-v6.9.html` | v6.9 : le cartouche de leçon posé sur le plan — placement automatique, trait vers la cible, déplaçable |
 | `logicgates-v6.10.html` | v6.10 : la carte du cours — 30 tuiles de chapitre, anneaux de progression, leçons en pastilles |
 | `logicgates-v6.11.html` | v6.11 : ⚡ Énergie & ondes, phase 1 — solveur nodal du continu, troisième type de liaison (bornes hexagonales), pile à résistance interne, ampoule, interrupteur de puissance, rail de masse |
+| `logicgates-v6.13.html` | v6.13 : ⚡ lot 2 — résistance à anneaux, potentiomètre de puissance, voltmètre, ampèremètre, générateur de tension réglable avec limitation de courant, oscilloscope ⚡ à base de temps réelle, court-circuit signalé |
 | `logicgates-v6.12.html` | v6.12 : lot 1 corrigé — câbles droits (l'écartement ne se cumule plus), bornes de puissance toutes à la même hauteur, éclat du filament en puissance^2,2 avec couleur de température, la masse n'est plus obligatoire pour que le courant circule |
 
 Les copies antérieures ne connaissent évidemment pas les tests des versions
@@ -39,5 +40,6 @@ node test/run.js versions/logicgates-v6.8.html --smoke
 node test/run.js versions/logicgates-v6.9.html --smoke
 node test/run.js versions/logicgates-v6.10.html --smoke
 node test/run.js versions/logicgates-v6.11.html --smoke
-node test/run.js versions/logicgates-v6.12.html           # suite complète
+node test/run.js versions/logicgates-v6.12.html --smoke
+node test/run.js versions/logicgates-v6.13.html           # suite complète
 ```

@@ -5,10 +5,10 @@ dans `CLAUDE.md`.
 
 ## Où en est le projet
 
-- **v6.12**, branche `claude/architecte-logique-v5-vntfkp`, **195 tests verts**
+- **v6.13**, branche `claude/architecte-logique-v5-vntfkp`, **203 tests verts**
   (`npm test`).
 - `logicgates.html` : ~12 500 lignes, un seul `<script>`, aucune dépendance.
-- Copies figées dans `versions/` (v5.1 → v6.12), avec leur tableau dans
+- Copies figées dans `versions/` (v5.1 → v6.13), avec leur tableau dans
   `versions/README.md`.
 - Catalogue : **148 leçons en 30 chapitres** — 63 à table de vérité (dont 8
   boîtes noires) et 85 libres.
@@ -23,6 +23,12 @@ dans `CLAUDE.md`.
 Ce qu'on peut faire : la boucle pile → interrupteur → ampoule → masse → pile.
 Deux ampoules en parallèle et la pile s'affaisse, visiblement. On ouvre la
 boucle et tout s'éteint.
+
+**⚡ Lot 2 : mesurer, régler, regarder** (v6.13). Sept composants :
+`RESIS` (anneaux de couleur), `POTP` (potentiomètre à trois bornes, un vrai
+diviseur), `VOLT`, `AMP`, `GENE` (alimentation réglable à la souris avec
+limitation de courant), `OSCILLO` (deux sondes de tension + une entrée de
+mesure, base de temps réelle), et le court-circuit signalé.
 
 **v6.12 — les trois défauts trouvés par l'auteur en essayant le lot 1**, tous
 corrigés : les câbles qui serpentaient (trois causes, dont un vieux bug
@@ -58,6 +64,19 @@ plan ; sommaire devenu carte du cours.
 - **`simDt`, une horloge unique pour tout le circuit.** Créée mais pas encore
   utilisée : elle servira aux composants à mémoire (phase 3). Les composants
   existants gardent chacun leur `c.lastT` — ne pas les convertir sans raison.
+- **Un composant peut déclarer PLUSIEURS branches.** `branche(c)` rend soit un
+  objet, soit un tableau. Le potentiomètre en a deux, de part et d'autre de son
+  curseur — c'est ce qui en fait un vrai diviseur. Les branches au-delà de la
+  première rangent leur résultat dans `c.brs[k]`, pas dans `c.u`/`c.i`.
+- **La limitation de courant force à itérer.** Une source qui limite n'est pas
+  linéaire : on résout, on regarde qui a franchi sa limite, on la remplace par
+  une source de courant et on recommence (6 tours maximum). `br.mode` dit dans
+  quel régime elle est, `c.limite` le publie pour l'affichage. Le relâchement
+  se fait quand la tension demandée redescend sous la consigne.
+- **`POT` était déjà pris** par le potentiomètre de mesure du Process
+  (`defSensor('POT')`). Le nouveau s'appelle `POTP`. Vérifier les collisions
+  d'identifiants avant d'écrire un `defComp` : l'écrasement est silencieux et
+  fait tomber une dizaine de tests d'un coup, très loin de la cause.
 - **La masse n'est PAS nécessaire.** Erreur du premier jet, corrigée en v6.12 :
   le solveur refusait de calculer sans masse, et une masse abandonnée dans un
   coin suffisait à réveiller le circuit. Désormais chaque circuit indépendant
@@ -116,15 +135,8 @@ plan ; sommaire devenu carte du cours.
 
 Découpage validé avec l'auteur. Un lot, on livre, il teste, il valide.
 
-**Phase 1 — le continu.** Lot 2 (demandé complet, en une seule livraison) :
-résistance, potentiomètre, voltmètre, ampèremètre, **générateur de tension**
-réglable à la souris avec limitation de courant, **oscilloscope ⚡** (deux
-sondes de tension + une entrée de mesure, base de temps réelle appuyée sur
-`simDt`), et le court-circuit signalé.
-→ la limitation de courant n'est pas linéaire : il faudra résoudre, vérifier si
-la limite est franchie, et refaire le calcul avec la source bridée. C'est le
-seul ajout d'architecture du lot 2.
-Lot 3 : le chapitre 31 du cours.
+**Phase 1 — le continu.** Lot 3 : le chapitre 31 du cours (les leçons, les
+tuiles, le tuteur, les « pourquoi »).
 → le lot 3 devra ajouter **une vraie condition de réussite** : aujourd'hui une
 leçon sans table de vérité est gagnée dès qu'on clique sur « Vérifier »
 (`logicgates.html`, gestionnaire de `btn-verify`, la ligne `if (!m.tt.length)`).

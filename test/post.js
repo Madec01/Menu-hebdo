@@ -4427,6 +4427,206 @@ T('T193 l’atelier ⚡ est complet : composants, guide, sauvegarde', () => {
   ok(!sugg.includes('AND'), 'et pas de porte logique au bout d’un fil de puissance');
 });
 
+
+console.log('\n— ⚡ Lot 2 : mesurer, régler, regarder —');
+
+/* Un banc : générateur → ampèremètre → ce qu'on veut → masse → générateur */
+function banc(u, ilim){
+  board();
+  const g = mk('GENE', 0, 0), a = mk('AMP', 200, 0), m = mk('MASSE', 800, 0);
+  g.opt.u = u == null ? 6 : u;
+  g.opt.ri = 0.01;
+  g.opt.ilim = ilim == null ? 5 : ilim;
+  link(g, 0, a, 0);
+  link(m, 0, g, 0);
+  return { g, a, m };
+}
+
+T('T194 la loi d’Ohm, mesurée par les instruments', () => {
+  const b = banc(6);
+  const r = mk('RESIS', 450, 0); r.opt.r = 47;
+  const v = mk('VOLT', 450, 250);
+  link(b.a, 0, r, 0);
+  link(r, 0, b.m, 0);
+  link(b.a, 0, v, 0);            // le voltmètre EN TRAVERS de la résistance
+  link(r, 0, v, 1);
+  sim();
+  near(v.u, 6, .05, 'le voltmètre lit la tension aux bornes');
+  near(b.a.i, 6 / 47, .002, 'l’ampèremètre lit 128 mA');
+  near(v.u / b.a.i, 47, 1, 'U ÷ I redonne bien la résistance');
+  // on double la tension : le courant double
+  b.g.opt.u = 12; sim();
+  near(b.a.i, 12 / 47, .002, 'tension doublée, courant doublé');
+  // on divise la résistance par deux : il double encore
+  r.opt.r = 23.5; sim();
+  near(b.a.i, 12 / 23.5, .004, 'résistance divisée par deux, courant doublé');
+  // les mesures sortent aussi sur un bus, à l'échelle
+  ok(v.outPins[0].state > 0 && v.outPins[0].state <= 255, 'le voltmètre publie sa mesure');
+  ok(b.a.outPins[1].state > 0, 'l’ampèremètre aussi');
+});
+
+T('T195 en série les tensions s’ajoutent, en parallèle les courants', () => {
+  // deux résistances égales en série : chacune prend la moitié
+  const b = banc(12);
+  const r1 = mk('RESIS', 400, 0), r2 = mk('RESIS', 600, 0);
+  r1.opt.r = 100; r2.opt.r = 100;
+  link(b.a, 0, r1, 0); link(r1, 0, r2, 0); link(r2, 0, b.m, 0);
+  sim();
+  near(r1.u, 6, .05, 'la première prend la moitié');
+  near(r2.u, 6, .05, 'la seconde aussi');
+  near(r1.u + r2.u, 12, .05, 'et les deux chutes font la tension totale');
+  near(r1.i, r2.i, .001, 'le courant est le même dans les deux');
+  near(r1.i, 12 / 200, .002, 'soit U ÷ (R1+R2)');
+  // les mêmes en parallèle
+  board();
+  const g = mk('GENE', 0, 0), a = mk('AMP', 200, 0), m = mk('MASSE', 800, 0);
+  g.opt.u = 12; g.opt.ri = .01; g.opt.ilim = 5;
+  const p1 = mk('RESIS', 400, 0), p2 = mk('RESIS', 400, 200);
+  p1.opt.r = 100; p2.opt.r = 100;
+  link(g, 0, a, 0); link(a, 0, p1, 0); link(a, 0, p2, 0);
+  link(p1, 0, m, 0); link(p2, 0, m, 0); link(m, 0, g, 0);
+  sim();
+  near(p1.u, 12, .05, 'en parallèle chacune reçoit toute la tension');
+  near(a.i, p1.i + p2.i, .002, 'et le courant total est la somme des deux');
+  near(a.i, 2 * 12 / 100, .005, 'soit deux fois plus qu’avec une seule');
+});
+
+T('T196 le potentiomètre partage la tension selon son curseur', () => {
+  const b = banc(10);
+  const p = mk('POTP', 400, 0), r = mk('RESIS', 650, 0);
+  p.opt.rt = 100; p.opt.pos = 30;
+  r.opt.r = 100000;                     // charge très faible : diviseur à vide
+  link(b.a, 0, p, 0);                   // A du potentiomètre
+  link(p, 1, b.m, 0);                   // B à la masse
+  link(p, 0, r, 0);                     // curseur vers la charge
+  link(r, 0, b.m, 0);
+  sim();
+  near(p.outPins[0].state, 3, .1, 'curseur à 30 % → 30 % de la tension');
+  p.opt.pos = 75; sim();
+  near(p.outPins[0].state, 7.5, .1, 'curseur à 75 % → 7,5 V');
+  p.opt.pos = 0; sim();
+  near(p.outPins[0].state, 0, .1, 'curseur en bas → 0 V');
+  p.opt.pos = 100; sim();
+  near(p.outPins[0].state, 10, .1, 'curseur en haut → toute la tension');
+  // la résistance totale ne change pas, elle : le courant reste le même
+  const i0 = Math.abs(b.g.i);
+  p.opt.pos = 50; sim();
+  near(Math.abs(b.g.i), i0, .01, 'la résistance totale ne dépend pas du curseur');
+});
+
+T('T197 le générateur limite son courant au lieu de subir un court-circuit', () => {
+  const b = banc(6, 0.5);
+  const r = mk('RESIS', 450, 0); r.opt.r = 1;    // presque un court-circuit
+  link(b.a, 0, r, 0); link(r, 0, b.m, 0);
+  sim();
+  eq(b.g.limite, 1, 'elle passe en limitation');
+  near(Math.abs(b.g.i), 0.5, .02, 'et tient exactement sa limite');
+  ok(Math.abs(b.g.u) < 1, 'elle a lâché la tension : ' + Math.abs(b.g.u) + ' V');
+  // on relâche la demande : elle reprend sa tension
+  r.opt.r = 100; sim();
+  eq(b.g.limite, 0, 'de retour en mode tension');
+  near(Math.abs(b.g.u), 6, .05, 'elle tient de nouveau sa consigne');
+  near(Math.abs(b.g.i), 6 / 100, .003, 'et le courant redevient celui de la charge');
+  // la limite se règle
+  b.g.opt.ilim = 0.02; sim();
+  eq(b.g.limite, 1, 'une limite plus basse la fait basculer à nouveau');
+  near(Math.abs(b.g.i), 0.02, .002, 'au nouveau seuil');
+});
+
+T('T198 le court-circuit est signalé, franc ou non', () => {
+  // une pile qui débite dans presque rien : sa tension s’effondre
+  board();
+  const p = mk('PILE', 0, 0), r = mk('RESIS', 300, 0), m = mk('MASSE', 600, 0);
+  p.opt.e = 4.5; p.opt.ri = 1; r.opt.r = 0.1;
+  link(p, 0, r, 0); link(r, 0, m, 0); link(m, 0, p, 0);
+  sim();
+  eq(p.court, 1, 'la pile signale le court-circuit');
+  ok(Math.abs(p.u) < 4.5 * .25, 'sa tension est effondrée : ' + Math.abs(p.u) + ' V');
+  ok(Math.abs(p.i) > 4, 'et elle débite énormément : ' + Math.abs(p.i) + ' A');
+  // un court-circuit FRANC : le + et le − sur le même point
+  board();
+  const p2 = mk('PILE', 0, 0), m2 = mk('MASSE', 400, 0);
+  link(p2, 0, m2, 0); link(m2, 0, p2, 0);
+  sim();
+  eq(p2.court, 1, 'les deux bornes sur le même point : signalé aussi');
+  // et un montage sain ne crie pas au loup
+  board();
+  const p3 = mk('PILE', 0, 0), l = mk('LAMPE', 300, 0), m3 = mk('MASSE', 600, 0);
+  link(p3, 0, l, 0); link(l, 0, m3, 0); link(m3, 0, p3, 0);
+  sim();
+  eq(p3.court || 0, 0, 'une ampoule normale n’est pas un court-circuit');
+});
+
+T('T199 les instruments ne perturbent pas ce qu’ils mesurent', () => {
+  // sans ampèremètre
+  board();
+  const g = mk('GENE', 0, 0), r = mk('RESIS', 400, 0), m = mk('MASSE', 700, 0);
+  g.opt.u = 6; g.opt.ri = .01; g.opt.ilim = 5; r.opt.r = 47;
+  link(g, 0, r, 0); link(r, 0, m, 0); link(m, 0, g, 0);
+  sim();
+  const sans = r.i;
+  // avec l'ampèremètre inséré, et un voltmètre en travers
+  const b = banc(6);
+  const r2 = mk('RESIS', 450, 0); r2.opt.r = 47;
+  const v = mk('VOLT', 450, 250);
+  link(b.a, 0, r2, 0); link(r2, 0, b.m, 0);
+  link(b.a, 0, v, 0); link(r2, 0, v, 1);
+  sim();
+  near(r2.i, sans, sans * .002, 'les instruments changent le courant de moins de 0,2 %');
+  ok(Math.abs(v.i) < 1e-4, 'le voltmètre ne prélève presque rien : ' + v.i + ' A');
+  ok(Math.abs(b.a.u) < 1e-3, 'l’ampèremètre ne fait presque aucune chute : ' + b.a.u + ' V');
+});
+
+T('T200 l’oscilloscope suit le temps, pas les images', () => {
+  const b = banc(6);
+  const r = mk('RESIS', 450, 0); r.opt.r = 47;
+  const o = mk('OSCILLO', 450, 300);
+  link(b.a, 0, r, 0); link(r, 0, b.m, 0);
+  link(b.a, 0, o, 0);              // sonde V1 sur la résistance
+  link(b.a, 1, o, 2);              // la mesure de l’ampèremètre sur l’entrée MES
+  o.opt.win = 5;
+  o.buf = []; o.tps = 0;
+  for (let k = 0; k < 6; k++){ __advance(100); sim(); }
+  ok(o.buf.length >= 5, 'il a échantillonné : ' + o.buf.length + ' points');
+  near(o.tps, 0.5, .12, 'et le temps compté est une vraie durée (0,5 s)');
+  near(o.buf[o.buf.length - 1].a, 6, .05, 'la sonde V1 lit la tension du circuit');
+  ok(o.mes != null && Math.abs(o.mes - 6 / 47) < .01,
+     'l’entrée de mesure rend le courant en ampères : ' + o.mes);
+  // la fenêtre glisse : les vieux points sortent
+  o.opt.win = 1;
+  for (let k = 0; k < 12; k++){ __advance(100); sim(); }
+  const t1 = o.tps;
+  ok(o.buf.every(p => p.t >= t1 - 1.3), 'rien de plus vieux que la fenêtre ne reste');
+  // en vérification de mission, il ne doit rien enregistrer
+  const n0 = o.buf.length;
+  simulating = true; __advance(100); sim(); simulating = false;
+  eq(o.buf.length, n0, 'la vérification d’une mission ne pollue pas la trace');
+});
+
+T('T201 les sept composants du lot 2 sont rangés et câblables', () => {
+  const onglet = TOOL_TABS.find(t => t.key === 'ener');
+  ['RESIS','POTP','VOLT','AMP','GENE','OSCILLO'].forEach(t =>
+    ok(onglet.items.includes(t), t + ' est dans l’onglet du continu'));
+  // l’ancien potentiomètre de mesure n’a pas été écrasé
+  eq(REG.POT.family, 'sense', 'le potentiomètre de mesure du Process est intact');
+  eq(REG.POTP.family, 'ener', 'celui de puissance est un autre composant');
+  // le menu de câblage rapide propose de la puissance au bout d’un fil de puissance
+  board();
+  const g = mk('GENE', 0, 0);
+  const sugg = quickTypes(g.outPins[0]);
+  ok(sugg.includes('RESIS') || sugg.includes('AMP'), 'suggestions de puissance');
+  ok(!sugg.includes('AND'), 'pas de porte logique');
+  // et les bornes de mesure restent logiques, donc incompatibles
+  const a = mk('AMP', 300, 0), led = mk('LED', 600, 0);
+  eq(a.outPins[1].kind, 'log', 'la sortie MES est un port de signal');
+  wires = [];
+  connectWire(a.outPins[1], led.inPins[0]);
+  eq(wires.length, 1, 'elle se branche sur un composant logique');
+  wires = [];
+  connectWire(a.outPins[1], mk('RESIS', 900, 0).inPins[0]);
+  eq(wires.length, 0, 'mais pas sur une borne de puissance');
+});
+
 /* ===================== bilan ===================== */
 console.log('\n' + (__fail ? '✗' : '✓') + ' ' + __pass + ' test(s) réussi(s), ' +
             __fail + ' échec(s)' + (__fail ? ' : ' + __failures.join(', ') : '') + '\n');
