@@ -49,6 +49,10 @@ function mk(type, x, y){
   return c;
 }
 function link(a, ai, b, bi){
+  // Un indice de borne qui n'existe pas fabriquait un fil à moitié vide, sans
+  // rien dire, et l'erreur ressortait beaucoup plus loin.
+  if (!a.outPins[ai || 0]) fail('link : ' + a.type + ' n’a pas de sortie ' + (ai || 0));
+  if (!b.inPins[bi || 0])  fail('link : ' + b.type + ' n’a pas d’entrée ' + (bi || 0));
   const w = new Wire(a.outPins[ai || 0], b.inPins[bi || 0]);
   wires.push(w); recalcFan();
   return w;
@@ -4359,7 +4363,7 @@ T('T191 en série on partage la tension, en parallèle on partage le courant', (
   const p2 = mk('PILE', 0, 0), c1 = mk('LAMPE', 200, 0), c2 = mk('LAMPE', 200, 200), g2 = mk('MASSE', 600, 0);
   p2.opt.ri = 0.01;
   link(p2, 0, c1, 0); link(p2, 0, c2, 0);
-  link(c1, 0, g2, 0); link(c2, 0, g2, 1); link(g2, 0, p2, 0);
+  link(c1, 0, g2, 0); link(c2, 0, g2, 0); link(g2, 0, p2, 0);   // même borne : c'est une barre
   sim();
   near(c1.u, 4.5, .05, 'en parallèle, chacune reçoit la tension entière');
   ok(c1.p > serie * 3, 'donc elles éclairent bien plus fort qu’en série');

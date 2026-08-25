@@ -5,10 +5,10 @@ dans `CLAUDE.md`.
 
 ## Où en est le projet
 
-- **v6.13**, branche `claude/architecte-logique-v5-vntfkp`, **203 tests verts**
+- **v6.14**, branche `claude/architecte-logique-v5-vntfkp`, **206 tests verts**
   (`npm test`).
 - `logicgates.html` : ~12 500 lignes, un seul `<script>`, aucune dépendance.
-- Copies figées dans `versions/` (v5.1 → v6.13), avec leur tableau dans
+- Copies figées dans `versions/` (v5.1 → v6.14), avec leur tableau dans
   `versions/README.md`.
 - Catalogue : **148 leçons en 30 chapitres** — 63 à table de vérité (dont 8
   boîtes noires) et 85 libres.
@@ -23,6 +23,11 @@ dans `CLAUDE.md`.
 Ce qu'on peut faire : la boucle pile → interrupteur → ampoule → masse → pile.
 Deux ampoules en parallèle et la pile s'affaisse, visiblement. On ouvre la
 boucle et tout s'éteint.
+
+**v6.14 — confort et câblage.** Rail et tunnel de puissance (`RAILP4`,
+`RAILP8`, `TUNP`). Le **clic simple sélectionne** (et actionne toujours le
+composant), **Maj + glisser duplique**, **Ctrl+X** coupe. Le tracé des câbles
+corrigé sur trois points de plus (voir « Décisions »).
 
 **⚡ Lot 2 : mesurer, régler, regarder** (v6.13). Sept composants :
 `RESIS` (anneaux de couleur), `POTP` (potentiomètre à trois bornes, un vrai
@@ -64,6 +69,28 @@ plan ; sommaire devenu carte du cours.
 - **`simDt`, une horloge unique pour tout le circuit.** Créée mais pas encore
   utilisée : elle servira aux composants à mémoire (phase 3). Les composants
   existants gardent chacun leur `c.lastT` — ne pas les convertir sans raison.
+- **Trois causes de plus au « les câbles font n'importe quoi »**, corrigées en
+  v6.14 :
+  1. `recalcFan` ne classait les fils que par borne de DÉPART. Deux fils qui
+     rejoignent le même côté d'un composant (les deux entrées d'un voltmètre)
+     prenaient la même colonne d'approche et la même hauteur de contournement.
+     Il y a maintenant un `fanIn`, rang d'ARRIVÉE, qui allonge l'amorce
+     d'arrivée et écarte la ligne de contournement. Ne jamais l'appliquer dans
+     le cas `enFace`, sinon un montage droit se remet à décrocher (T192b).
+  2. `spreadRoutes` regroupait par CASE FIXE de 11 px : deux fils distants de
+     3 px pouvaient tomber de part et d'autre d'une frontière et n'être jamais
+     écartés. C'est maintenant un regroupement par voisinage. `WIRE_ECART` est
+     passé de 7 à 11 px — il faut dépasser le halo de 8 px d'un câble de
+     puissance.
+  3. `bypassY` ne regardait que les DEUX boîtiers reliés : un composant posé
+     entre les deux était invisible et le fil lui passait dessous. Elle survole
+     maintenant tout ce qui se trouve sur le passage. Conséquence : le cache
+     des tracés dépend de la position des autres composants — d'où `compSig()`,
+     une signature grossière du plan recalculée une fois par image.
+- **Le clic simple sélectionne ET actionne.** Ne jamais supprimer l'appel à
+  `clickComp` dans le `pointerup` : c'est lui qui bascule les interrupteurs, et
+  T56 le vérifie. Maj ou Ctrl + clic ne fait QUE (dé)sélectionner, sans
+  actionner. Maj + glisser passe par `dupliquerPourGlisser`.
 - **Un composant peut déclarer PLUSIEURS branches.** `branche(c)` rend soit un
   objet, soit un tableau. Le potentiomètre en a deux, de part et d'autre de son
   curseur — c'est ce qui en fait un vrai diviseur. Les branches au-delà de la
