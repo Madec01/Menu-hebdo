@@ -690,6 +690,9 @@ table.tt tr.tt-fail td:first-child::before{content:'✗ ';color:var(--red)}
   <button class="icon-btn" id="btn-wire" title="Tracé des câbles">
     <span id="btn-wire-ico" style="font-size:15px;font-family:'IBM Plex Mono',monospace">⌐</span>
   </button>
+  <button class="icon-btn" id="btn-slow" title="Ralenti">
+    <span id="btn-slow-ico" style="font-size:12px;font-weight:700;font-family:'IBM Plex Mono',monospace">×1</span>
+  </button>
   <button class="icon-btn" id="btn-route" title="Ranger les câbles : contourne automatiquement les boîtiers (remplace les poignées existantes)">
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 4V2M15 10V8M11 6H9M21 6h-2M17.5 3.5l1-1M17.5 8.5l1 1M12.5 8.5l-1-1"/><path d="m14 7-10.5 10.5a1.5 1.5 0 0 0 0 2.1l.9.9a1.5 1.5 0 0 0 2.1 0L17 10z" fill="currentColor" stroke="none"/></svg>
   </button>
@@ -1911,6 +1914,37 @@ function autoRoute(){
   return detours;
 }
 
+/* ---------- L'horloge du simulateur ---------- */
+/* Deux temps cohabitent dans l'appli, et les confondre est une source de bugs
+   sans fin :
+   - le temps d'AFFICHAGE (le `t` de render) fait clignoter, défiler, animer.
+     Il suit la vraie montre, toujours.
+   - le temps de SIMULATION, ci-dessous, fait vieillir le circuit. C'est lui
+     que le ralenti étire, pour qu'on puisse regarder une sinusoïde de 50 Hz.
+   `simNow` n'est PAS plafonné : les temporisations comparent des échéances, et
+   un plafond leur ferait rater un saut dans le temps. `simDt`, lui, est
+   plafonné : il sert à intégrer, et un pas énorme ferait diverger le calcul. */
+const SLOW_MODES = [
+  [1,   '×1',   'Temps réel',   'Le circuit vit à la vitesse du monde.'],
+  [10,  '×10',  'Ralenti ×10',  'Dix fois plus lent : on suit une sinusoïde de quelques hertz à l’œil.'],
+  [100, '×100', 'Ralenti ×100', 'Cent fois plus lent : même le secteur à 50 Hz devient regardable.']
+];
+let ralenti = 1;                       // 1, 10 ou 100
+try { const r = +localStorage.getItem('al2_ralenti');
+      if (SLOW_MODES.some(x => x[0] === r)) ralenti = r; } catch(e){}
+function setRalenti(k){
+  if (!SLOW_MODES.some(x => x[0] === k)) return;
+  ralenti = k;
+  try { localStorage.setItem('al2_ralenti', String(k)); } catch(e){}
+}
+function cycleRalenti(){
+  const i = SLOW_MODES.findIndex(x => x[0] === ralenti);
+  const m = SLOW_MODES[(i + 1) % SLOW_MODES.length];
+  setRalenti(m[0]);
+  return m;
+}
+let simNow = Date.now();               // horloge du circuit, en millisecondes
+
 class Component {
   constructor(x, y, type){
     this.id = uid++;
@@ -1942,8 +1976,8 @@ class Component {
       case 'AND3': case 'OR3': this.io(3,1,96,78); break;
       case 'KEY':    this.io(0,1,64,58); this.key = 'A'; break;
       case 'SEQ':    this.io(0,1,124,64); this.bits = [1,0,1,0,1,1,0,0];
-                     this.pos = 0; this.lastT = Date.now(); break;
-      case 'NOISE':  this.io(0,1,66,54); this.lastT = Date.now(); break;
+                     this.pos = 0; this.lastT = simNow; break;
+      case 'NOISE':  this.io(0,1,66,54); this.lastT = simNow; break;
       case 'DFF':    this.io(2,2,92,72); this.q = 0; this.prevClk = null;
                      this.pendD = 0; this.pendClk = 0; this.justLatched = 0; break;
       case 'DELAY':  this.io(1,1,84,52); this.q = 0; this.pendIn = 0; break;
@@ -2040,7 +2074,7 @@ class Component {
       // prevClk===null : première frame de vie -> on adopte le niveau d'horloge SANS front
       // (comme un vrai circuit : une horloge déjà haute à la mise sous tension n'est pas un front)
       if (this.prevClk !== null && this.pendClk && !this.prevClk){
-        this.q = this.pendD; this.justLatched = Date.now();
+        this.q = this.pendD; this.justLatched = simNow;
       }
       this.prevClk = this.pendClk;
     }
@@ -2056,7 +2090,7 @@ class Component {
     else if (this.type === 'CNT4'){
       if (this.pendRst){ this.cval = 0; }
       else if (this.prevClk !== null && this.pendClk && !this.prevClk){
-        this.cval = (this.cval + 1) & 15; this.justLatched = Date.now();
+        this.cval = (this.cval + 1) & 15; this.justLatched = simNow;
       }
       this.prevClk = this.pendClk;
     }
@@ -2066,7 +2100,7 @@ class Component {
       if (Math.abs(target - this.ang) < .002) this.ang = target;
     }
     else if (this.type === 'PROBE'){
-      const now = Date.now();
+      const now = simNow;
       if (this.pendIn && !this.prevIn) this.edges.push(now);
       this.prevIn = this.pendIn;
       while (this.edges.length && now - this.edges[0] > 2000) this.edges.shift();
@@ -2166,7 +2200,7 @@ class Component {
       return;
     }
     if (this.type === 'MATRIX'){
-      const now = Date.now();
+      const now = simNow;
       for (let i = 0; i < 8; i++){
         if (!this.inPins[i].state) continue;
         for (let j = 0; j < 8; j++)
@@ -2196,7 +2230,7 @@ class Component {
       case 'CLOCK':{
         const f = this.opt.freq || 1000 / CLOCK_SPEEDS[this.clockIdx];
         const p = 1000 / f, duty = (this.opt.duty || 50) / 100;
-        out = ((Date.now() % p) / p) < duty ? 1 : 0; break;
+        out = ((simNow % p) / p) < duty ? 1 : 0; break;
       }
       case 'NOT':  out = v[0] ? 0 : 1; break;
       case 'AND':  out = (v[0] && v[1]) ? 1 : 0; break;
@@ -2209,12 +2243,12 @@ class Component {
       case 'OR3':  out = (v[0] || v[1] || v[2]) ? 1 : 0; break;
       case 'KEY':  out = keysDown.has(this.key) ? 1 : 0; break;
       case 'SEQ':{
-        const p = this.opt.hz ? 1000 / this.opt.hz : SEQ_SPEEDS[this.clockIdx], now = Date.now();
+        const p = this.opt.hz ? 1000 / this.opt.hz : SEQ_SPEEDS[this.clockIdx], now = simNow;
         if (now - this.lastT >= p){ this.pos = (this.pos + 1) % this.bits.length; this.lastT = now; }
         out = this.bits[this.pos % this.bits.length]; break;
       }
       case 'NOISE':{
-        const p = this.opt.freq ? 1000 / this.opt.freq : CLOCK_SPEEDS[this.clockIdx] / 2, now = Date.now();
+        const p = this.opt.freq ? 1000 / this.opt.freq : CLOCK_SPEEDS[this.clockIdx] / 2, now = simNow;
         if (now - this.lastT >= p){
           this.state = Math.random() < ((this.opt.prob ?? 50) / 100) ? 1 : 0; this.lastT = now;
         }
@@ -2510,7 +2544,7 @@ class Component {
     else if (type === 'CLOCK'){
       // Onde carrée
       const perEff = this.opt.freq ? 1000 / this.opt.freq : CLOCK_SPEEDS[this.clockIdx];
-      const ph = (Date.now() % perEff) / perEff;
+      const ph = (simNow % perEff) / perEff;
       c.strokeStyle = on ? PAL.pinOn : this.hexA(col, .7); c.lineWidth = 1.8;
       if (on){ c.shadowBlur = 6; c.shadowColor = PAL.pinOn; }
       c.beginPath();
@@ -2752,7 +2786,7 @@ class Component {
         c.font = "700 20px 'Chakra Petch', sans-serif";
         c.fillStyle = col; c.shadowBlur = 10; c.shadowColor = col;
         c.fillText(String(this.cval), cx, cy + 8); c.shadowBlur = 0;
-        const dt2 = Date.now() - (this.justLatched || 0);
+        const dt2 = simNow - (this.justLatched || 0);
         if (dt2 < 200){
           c.globalAlpha = 1 - dt2 / 200;
           c.strokeStyle = col; c.lineWidth = 2; c.beginPath();
@@ -2772,7 +2806,7 @@ class Component {
         c.beginPath(); c.moveTo(this.x, py - 5); c.lineTo(this.x + 8, py); c.lineTo(this.x, py + 5);
         c.strokeStyle = this.hexA(col, .8); c.lineWidth = 1.4; c.stroke();
         // Flash à l'échantillonnage
-        const dt = Date.now() - this.justLatched;
+        const dt = simNow - this.justLatched;
         if (dt < 260){
           c.globalAlpha = 1 - dt / 260;
           c.strokeStyle = col; c.lineWidth = 2.5; c.shadowBlur = 16; c.shadowColor = col;
@@ -2805,7 +2839,7 @@ class Component {
       c.fillText(this.chipCost + (this.chipCost > 1 ? ' PORTES' : ' PORTE'), cx, cy + 13);
     }
     else if (type === 'MATRIX'){
-      const gx = this.x + 26, gy = this.y + 12, cell = 17, now = Date.now();
+      const gx = this.x + 26, gy = this.y + 12, cell = 17, now = simNow;
       c.beginPath(); c.roundRect(gx - 4, gy - 4, cell * 8 + 8, cell * 8 + 8, 6);
       c.fillStyle = 'rgba(3,6,12,.85)'; c.fill();
       c.lineWidth = 1; c.strokeStyle = 'rgba(61,255,158,.2)'; c.stroke();
@@ -4290,8 +4324,11 @@ function fmtWatt(p){
 let simT = 0, simDt = 0;
 function simulate(passes){
   const maintenant = Date.now();
-  simDt = simT ? Math.min(200, maintenant - simT) : 0;
+  // le temps écoulé pour de vrai, puis le même temps vu par le circuit
+  const brut = simT ? maintenant - simT : 0;
   simT = maintenant;
+  simNow += brut / ralenti;            // sans plafond : c'est une date
+  simDt = Math.min(200, brut / ralenti);   // plafonné : c'est un pas d'intégration
   solveElec();                        // le continu se résout d'un coup, avant tout le reste
   for (let p = 0; p < passes; p++){
     components.forEach(c => {
@@ -7422,14 +7459,14 @@ defComp('TON', {
   init(c){ c.since = 0; c.q = 0; },
   eval(c){ c.pendIn = c.inPins[0].state ? 1 : 0; c.outPins[0].state = c.q; },
   commit(c){
-    const now = Date.now(), ms = optOf(c, 'sec') * 1000;
+    const now = simNow, ms = optOf(c, 'sec') * 1000;
     if (!c.pendIn){ c.since = 0; c.q = 0; return; }
     if (!c.since) c.since = now;
     c.q = (now - c.since >= ms) ? 1 : 0;
   },
   value:c => optOf(c, 'sec') + ' s',
   sub:c => c.q ? 'écoulé' : (c.since ? 'décompte…' : 'au repos'),
-  bar:c => c.q ? 1 : (c.since ? Math.min(1, (Date.now() - c.since) / (optOf(c, 'sec') * 1000)) : 0),
+  bar:c => c.q ? 1 : (c.since ? Math.min(1, (simNow - c.since) / (optOf(c, 'sec') * 1000)) : 0),
   tip:c => ['Retard à l’enclenchement : ' + optOf(c, 'sec') + ' s'],
   expr:(c, i, A) => 'après(' + A(0) + ')',
   guide:{ txt:'La temporisation des automates : quand l’entrée passe à 1, la sortie attend <code>T secondes</code> avant de la suivre. Si l’entrée retombe avant la fin, tout est annulé et le décompte repart de zéro.',
@@ -7444,13 +7481,13 @@ defComp('TOF', {
   init(c){ c.since = 0; c.q = 0; },
   eval(c){ c.pendIn = c.inPins[0].state ? 1 : 0; c.outPins[0].state = c.q; },
   commit(c){
-    const now = Date.now(), ms = optOf(c, 'sec') * 1000;
+    const now = simNow, ms = optOf(c, 'sec') * 1000;
     if (c.pendIn){ c.q = 1; c.since = 0; return; }
     if (c.q){ if (!c.since) c.since = now; if (now - c.since >= ms){ c.q = 0; c.since = 0; } }
   },
   value:c => optOf(c, 'sec') + ' s',
   sub:c => c.since ? 'extinction…' : (c.q ? 'maintenu' : 'au repos'),
-  bar:c => c.since ? 1 - Math.min(1, (Date.now() - c.since) / (optOf(c, 'sec') * 1000)) : (c.q ? 1 : 0),
+  bar:c => c.since ? 1 - Math.min(1, (simNow - c.since) / (optOf(c, 'sec') * 1000)) : (c.q ? 1 : 0),
   expr:(c, i, A) => 'maintien(' + A(0) + ')',
   guide:{ txt:'L’inverse du TON : la sortie s’allume <code>immédiatement</code> avec l’entrée, mais met T secondes à s’éteindre quand l’entrée retombe. C’est la minuterie d’escalier.',
     ex:'Bouton poussoir → TOF (5 s) → lampe : une pression brève éclaire cinq secondes.',
@@ -7464,14 +7501,14 @@ defComp('PULSE', {
   init(c){ c.prevIn = null; c.start = 0; c.q = 0; },
   eval(c){ c.pendIn = c.inPins[0].state ? 1 : 0; c.outPins[0].state = c.q; },
   commit(c){
-    const now = Date.now(), ms = optOf(c, 'sec') * 1000;
+    const now = simNow, ms = optOf(c, 'sec') * 1000;
     if (c.prevIn !== null && c.pendIn && !c.prevIn && !c.q){ c.q = 1; c.start = now; }
     if (c.q && now - c.start >= ms) c.q = 0;
     c.prevIn = c.pendIn;
   },
   value:c => optOf(c, 'sec') + ' s',
   sub:c => c.q ? 'impulsion' : 'prêt',
-  bar:c => c.q ? 1 - Math.min(1, (Date.now() - c.start) / (optOf(c, 'sec') * 1000)) : 0,
+  bar:c => c.q ? 1 - Math.min(1, (simNow - c.start) / (optOf(c, 'sec') * 1000)) : 0,
   expr:(c, i, A) => 'impulsion(' + A(0) + ')',
   guide:{ txt:'Un <code>monostable</code> : au front montant de l’entrée, la sortie part à 1 pendant une durée fixe, puis retombe toute seule — même si on garde le doigt appuyé. Appuyer plus longtemps ne change rien.',
     ex:'Bouton → IMPULSION (2 s) → moteur de portail : chaque appui donne exactement deux secondes de mouvement.',
@@ -7489,10 +7526,10 @@ defComp('EDGE', {
     if (c.prevIn === null){ c.prevIn = c.pendIn; return; }
     c.up = (c.pendIn && !c.prevIn) ? 1 : 0;
     c.dn = (!c.pendIn && c.prevIn) ? 1 : 0;
-    if (c.up || c.dn) c.flash = Date.now();
+    if (c.up || c.dn) c.flash = simNow;
     c.prevIn = c.pendIn;
   },
-  value:c => (Date.now() - (c.flash || 0) < 220) ? '⚡' : '—',
+  value:c => (simNow - (c.flash || 0) < 220) ? '⚡' : '—',
   sub:() => '↑ et ↓',
   expr:(c, i, A) => (i === 0 ? 'front↑(' : 'front↓(') + A(0) + ')',
   guide:{ txt:'Deux sorties qui émettent une <code>impulsion très brève</code> : l’une quand l’entrée passe de 0 à 1 (front montant ↑), l’autre quand elle retombe (front descendant ↓). Tu l’as construit à la main avec un RETARD et un XOR — le voici en boîte.',
@@ -7550,7 +7587,7 @@ defComp('WDOG', {
   init(c){ c.prevIn = null; c.last = 0; c.alarm = 0; },
   eval(c){ c.pendIn = c.inPins[0].state ? 1 : 0; c.outPins[0].state = c.alarm; },
   commit(c){
-    const now = Date.now();
+    const now = simNow;
     if (!c.last) c.last = now;
     if (c.prevIn !== null && c.pendIn && !c.prevIn){ c.last = now; c.alarm = 0; }
     if (now - c.last >= optOf(c, 'sec') * 1000) c.alarm = 1;
@@ -7558,7 +7595,7 @@ defComp('WDOG', {
   },
   value:c => c.alarm ? 'ALERTE' : 'veille',
   sub:c => 'seuil ' + optOf(c, 'sec') + ' s',
-  bar:c => c.last ? Math.min(1, (Date.now() - c.last) / (optOf(c, 'sec') * 1000)) : 0,
+  bar:c => c.last ? Math.min(1, (simNow - c.last) / (optOf(c, 'sec') * 1000)) : 0,
   guide:{ txt:'Il surveille qu’un signal <code>continue de bouger</code>. Chaque front remet son sablier à zéro ; si plus rien ne vient pendant le délai, il lève une alarme. Un système figé est souvent plus dangereux qu’un système à l’arrêt.',
     ex:'Capteur de rotation d’un tapis → chien de garde (2 s) → sirène : le tapis bloqué déclenche l’alerte, même si rien n’a « échoué » explicitement.',
     real:'Tous les calculateurs embarqués en ont un : si le programme se bloque, le chien de garde ne reçoit plus sa caresse et redémarre la machine. Voitures, satellites, box internet.' }
@@ -7695,7 +7732,7 @@ defComp('REGB', {
   },
   commit(c){
     if (c.pendRst) c.val = 0;
-    else if (c.prevClk !== null && c.pendClk && !c.prevClk){ c.val = c.pendD & 255; c.justLatched = Date.now(); }
+    else if (c.prevClk !== null && c.pendClk && !c.prevClk){ c.val = c.pendD & 255; c.justLatched = simNow; }
     c.prevClk = c.pendClk;
   },
   value:c => String(c.val),
@@ -7747,7 +7784,7 @@ defComp('RAM16', {
   },
   commit(c){
     if (c.prevClk !== null && c.pendClk && !c.prevClk && c.pendW){
-      c.cells[c.adr] = c.pendD; c.justLatched = Date.now();
+      c.cells[c.adr] = c.pendD; c.justLatched = simNow;
     }
     c.prevClk = c.pendClk;
   },
@@ -7851,8 +7888,8 @@ defComp('IMPBTN', {
   name:'BOUTON À IMPULSION', short:'IMPUL.', family:'in', color:'#38e1ff',
   glyph:'⏻', w:82, h:76, ins:[], outs:[{n:'S'}],
   init(c){ c.until = 0; },
-  eval(c){ c.outPins[0].state = (Date.now() < c.until) ? 1 : 0; },
-  click(c){ c.until = Date.now() + 320; },
+  eval(c){ c.outPins[0].state = (simNow < c.until) ? 1 : 0; },
+  click(c){ c.until = simNow + 320; },
   tip:() => ['Chaque clic envoie une impulsion de 0,3 s'],
   body(c, x, col, on, hov, t){
     const cx = c.x + c.w / 2, cy = c.y + c.h / 2 - 2;
@@ -7915,7 +7952,7 @@ defComp('MOTOR', {
     c.outPins[1].state = c.tr;                       // une impulsion par tour : tachymètre
   },
   commit(c){
-    const now = Date.now(), dt = c.lastT ? Math.min(200, now - c.lastT) : 0;
+    const now = simNow, dt = c.lastT ? Math.min(200, now - c.lastT) : 0;
     c.lastT = now;
     // montée en vitesse du premier ordre : la charge mécanique a de l'inertie
     c.vit += (c.cmd - c.vit) * Math.min(1, dt / (optOf(c, 'inert') * 1000));
@@ -7975,7 +8012,7 @@ defComp('JACK', {
     c.outPins[2].state = c.pos * ANA_MAX;              // position mesurée
   },
   commit(c){
-    const now = Date.now(), dt = c.lastT ? Math.min(200, now - c.lastT) : 0;
+    const now = simNow, dt = c.lastT ? Math.min(200, now - c.lastT) : 0;
     c.lastT = now;
     const plein = dt / (optOf(c, 'sec') * 1000);
     if (c.pOut && !c.pIn) c.pos = Math.min(1, c.pos + plein * c.pOut / ANA_MAX);
@@ -8068,7 +8105,7 @@ defComp('PUMP', {
     c.outPins[1].state = c.deb;
   },
   commit(c){
-    const now = Date.now(), dt = c.lastT ? Math.min(200, now - c.lastT) : 0;
+    const now = simNow, dt = c.lastT ? Math.min(200, now - c.lastT) : 0;
     c.lastT = now;
     c.deb += ((c.cible == null ? c.cmd : c.cible) - c.deb) * Math.min(1, dt / 600);   // le débit s'établit progressivement
     if (c.deb < .5) c.deb = 0;
@@ -8139,7 +8176,7 @@ defComp('STEPPER', {
   commit(c){
     if (c.prevClk !== null && c.pendClk && !c.prevClk){
       c.step = (c.step + (c.rev ? 15 : 1)) & 15;
-      c.flash = Date.now();
+      c.flash = simNow;
     }
     c.prevClk = c.pendClk;
   },
@@ -8377,7 +8414,7 @@ defComp('PWM', {
     const duty = ana(c.inPins[0]) / ANA_MAX;
     c.duty = duty;
     const p = 1000 / optOf(c, 'hz');
-    c.outPins[0].state = (en && duty > 0 && ((Date.now() % p) / p) < duty) ? 1 : 0;
+    c.outPins[0].state = (en && duty > 0 && ((simNow % p) / p) < duty) ? 1 : 0;
   },
   value:c => Math.round((c.duty || 0) * 100) + ' %',
   sub:c => optOf(c, 'hz') + ' Hz',
@@ -8482,7 +8519,7 @@ defComp('RAMPE', {
   init(c){ c.val = 0; c.lastT = 0; },
   eval(c){ c.cible = ana(c.inPins[0]); c.outPins[0].state = c.val; },
   commit(c){
-    const now = Date.now(), dt = c.lastT ? Math.min(200, now - c.lastT) : 0;
+    const now = simNow, dt = c.lastT ? Math.min(200, now - c.lastT) : 0;
     c.lastT = now;
     const step = optOf(c, 'vit') * dt / 1000;
     if (c.val < c.cible) c.val = Math.min(c.cible, c.val + step);
@@ -8545,7 +8582,7 @@ defComp('FOUR', {
     c.outPins[1].state = c.temp >= optOf(c, 'alerte') ? 1 : 0;
   },
   commit(c){
-    const now = Date.now(), dt = c.lastT ? Math.min(200, now - c.lastT) : 0;
+    const now = simNow, dt = c.lastT ? Math.min(200, now - c.lastT) : 0;
     c.lastT = now;
     const tau = optOf(c, 'inert') * 1000;
     c.temp += (c.pwr - c.temp) * Math.min(1, dt / tau);   // premier ordre
@@ -8591,7 +8628,7 @@ defComp('CUVE', {
     c.outPins[4].state = c.sortie;
   },
   commit(c){
-    const now = Date.now(), dt = c.lastT ? Math.min(200, now - c.lastT) : 0;
+    const now = simNow, dt = c.lastT ? Math.min(200, now - c.lastT) : 0;
     c.lastT = now;
     const d = optOf(c, 'debit') * dt / 1000;
     if (c.fill && !c.drain) c.niv = Math.min(100, c.niv + d * c.fill / ANA_MAX);
@@ -8688,7 +8725,7 @@ defComp('SERVO', {
     c.outPins[0].state = (c.ang || 0) / Math.PI * ANA_MAX;              // position atteinte
   },
   commit(c){
-    const now = Date.now(), dt = c.lastT ? Math.min(200, now - c.lastT) : 0;
+    const now = simNow, dt = c.lastT ? Math.min(200, now - c.lastT) : 0;
     c.lastT = now;
     const step = dt / 1000 * 3.2;                       // vitesse de rotation limitée
     const d = (c.cible || 0) - c.ang;
@@ -8987,7 +9024,7 @@ defComp('FSM', {
       const combo = c.pendA * 2 + c.pendB;
       const row = (c.opt.tr && c.opt.tr[c.st]) || [0,0,0,0];
       c.st = Math.max(0, Math.min(3, row[combo] | 0));
-      c.justLatched = Date.now();
+      c.justLatched = simNow;
     }
     c.prevClk = c.pendClk;
   },
@@ -9045,7 +9082,7 @@ defComp('AIR', {
     c.outPins[3].state = c.tirage;
   },
   commit(c){
-    const now = Date.now(), dt = c.lastT ? Math.min(200, now - c.lastT) : 0;
+    const now = simNow, dt = c.lastT ? Math.min(200, now - c.lastT) : 0;
     c.lastT = now;
     const s = dt / 1000;
     c.bar += optOf(c, 'debit') * s * (c.comp / ANA_MAX);
@@ -9104,7 +9141,7 @@ defComp('CONV', {
     c.outPins[1].state = c.piece;
   },
   commit(c){
-    const now = Date.now(), dt = c.lastT ? Math.min(200, now - c.lastT) : 0;
+    const now = simNow, dt = c.lastT ? Math.min(200, now - c.lastT) : 0;
     c.lastT = now;
     c.vit += (c.cmd - c.vit) * Math.min(1, dt / 500);
     if (c.vit < .5) c.vit = 0;
@@ -9162,7 +9199,7 @@ defComp('COURBE', {
   init(c){ c.buf1 = []; c.buf2 = []; c.lastS = 0; },
   eval(c){ c.v1 = ana(c.inPins[0]); c.v2 = ana(c.inPins[1]); },
   commit(c){
-    const now = Date.now();
+    const now = simNow;
     const pas = optOf(c, 'duree') * 1000 / 180;      // 180 points sur la fenêtre
     if (now - c.lastS < pas) return;
     c.lastS = now;
@@ -9503,7 +9540,7 @@ function grAddTrans(c, de, a, r, t){
 function grDelTrans(c, k){ grModel(c).tr.splice(k, 1); }
 /* Remise à l'état initial */
 function grReset(c){
-  const g = grModel(c), now = Date.now();
+  const g = grModel(c), now = simNow;
   c.act = g.st.map(e => e.ini ? 1 : 0);
   if (!c.act.some(Boolean)) c.act[0] = 1;
   c.tAct = c.act.map(() => now);
@@ -9528,7 +9565,7 @@ defComp('GRAFCET', {
   save:c => ({ act: c.act ? c.act.slice() : undefined }),
   restore(c, s){
     grModel(c);
-    if (s && Array.isArray(s.act)) { c.act = s.act.slice(); c.tAct = c.act.map(() => Date.now()); c.lastScan = 0; }
+    if (s && Array.isArray(s.act)) { c.act = s.act.slice(); c.tAct = c.act.map(() => simNow); c.lastScan = 0; }
     else grReset(c);
     c.opt.scan = grScan(c);
   },
@@ -9538,7 +9575,7 @@ defComp('GRAFCET', {
     c.outPins.forEach((p, i) => p.state = (i < n && c.act[i]) ? 1 : 0);
   },
   commit(c){
-    const g = grModel(c), now = Date.now();
+    const g = grModel(c), now = simNow;
     if (!c.act || c.act.length !== g.st.length) grReset(c);
     // INIT : retour forcé à la situation initiale, sur front montant
     const ini = c.inPins[4].state ? 1 : 0;
@@ -9572,7 +9609,7 @@ defComp('GRAFCET', {
     const sx = cols > 1 ? lw / (cols - 1 + .8) : 0, sy = rows > 1 ? lh / (rows - 1 + .5) : 0;
     const px = e => c.x + pad + (cols > 1 ? (e.x - bb.x0) * sx + sx * .4 : lw / 2);
     const py = e => top + (rows > 1 ? (e.y - bb.y0) * sy + sy * .25 : lh / 2);
-    const flash = c.franchi && Date.now() - c.franchi < 220;
+    const flash = c.franchi && simNow - c.franchi < 220;
     // liaisons
     x.lineWidth = 1.1; x.strokeStyle = 'rgba(255,255,255,.2)';
     g.tr.forEach(tr => {
@@ -9655,7 +9692,7 @@ defComp('PID', {
     c.outPins[0].state = c.cmd;
   },
   commit(c){
-    const now = Date.now();
+    const now = simNow;
     const dt = c.lastT ? Math.min(0.2, (now - c.lastT) / 1000) : 0;
     c.lastT = now;
     if (c.raz){ c.integ = 0; c.prevErr = null; c.cmd = 0; return; }
@@ -13069,6 +13106,26 @@ document.getElementById('btn-wire').addEventListener('click', () => {
   toast(m[1] + ' Tracé « ' + m[2] + ' » — ' + m[3], 'info', 3800);
 });
 syncWireBtn();
+
+/* Le ralenti étire le temps du CIRCUIT, jamais celui de l'affichage : les
+   animations et les clignotements gardent leur vitesse, sinon l'appli
+   donnerait l'impression d'avoir planté. */
+function syncSlowBtn(){
+  const m = SLOW_MODES.find(x => x[0] === ralenti) || SLOW_MODES[0];
+  const b = document.getElementById('btn-slow');
+  const i = document.getElementById('btn-slow-ico');
+  if (i) i.textContent = m[1];
+  if (b){
+    b.title = m[2] + ' — ' + m[3];
+    b.classList.toggle('on', ralenti !== 1);
+  }
+}
+document.getElementById('btn-slow').addEventListener('click', () => {
+  const m = cycleRalenti();
+  syncSlowBtn(); AudioSys.click();
+  toast('⏱ ' + m[2] + ' — ' + m[3], 'info', 3600);
+});
+syncSlowBtn();
 document.getElementById('btn-route').addEventListener('click', () => {
   AudioSys.click();
   if (!wires.length){ toast('🪄 Aucun câble à ranger.', 'info', 2200); return; }

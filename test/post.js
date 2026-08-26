@@ -5224,6 +5224,63 @@ T('T218 les onglets ne débordent plus, dans aucun atelier', () => {
   board();
 });
 
+T('T219 l’horloge du simulateur, et le ralenti', () => {
+  board();
+  eq(ralenti, 1, 'au départ le circuit vit à la vitesse du monde');
+  // le facteur ne prend que trois valeurs
+  setRalenti(10);  eq(ralenti, 10, '×10 est accepté');
+  setRalenti(7);   eq(ralenti, 10, 'une valeur inconnue est refusée');
+  setRalenti(1);
+  eq(cycleRalenti()[0], 10,  'le bouton passe de ×1 à ×10');
+  eq(cycleRalenti()[0], 100, 'puis à ×100');
+  eq(cycleRalenti()[0], 1,   'puis revient à ×1');
+  // à ×1, l’horloge du circuit suit exactement la vraie montre
+  mk('CLOCK', 100, 100);
+  sim();
+  let a = simNow; __advance(100); sim();
+  near(simNow - a, 100, .5, '×1 : 100 ms réelles font 100 ms de circuit');
+  // et elle n’est PAS plafonnée : une temporisation compare des échéances,
+  // un plafond lui ferait rater un saut dans le temps
+  a = simNow; __advance(1000); sim();
+  near(simNow - a, 1000, .5, 'un grand saut passe en entier (pas de plafond)');
+  // le pas d’intégration, lui, reste plafonné
+  a = simNow; __advance(5000); sim();
+  near(simNow - a, 5000, .5, 'l’horloge avance de tout le saut');
+  ok(simDt <= 200.001, 'mais le pas d’intégration reste borné à 200 ms (' + simDt + ')');
+  // au ralenti, le circuit vieillit moins vite
+  setRalenti(10);
+  a = simNow; __advance(1000); sim();
+  near(simNow - a, 100, .5, '×10 : 1000 ms réelles ne font que 100 ms de circuit');
+  setRalenti(100);
+  a = simNow; __advance(1000); sim();
+  near(simNow - a, 10, .5, '×100 : dix fois moins encore');
+  // une temporisation suit bien le ralenti
+  setRalenti(1);
+  board();
+  const b = mk('SWITCH', 0, 0), ton = mk('TON', 300, 0);
+  link(b, 0, ton, 0);
+  applyInspector(ton, fld('o_sec', 1));
+  b.state = 1; sim();
+  __advance(600); sim();
+  eq(ton.q, 0, 'à 0,6 s la temporisation n’a pas encore lâché');
+  __advance(600); sim();
+  eq(ton.q, 1, 'à 1,2 s elle a lâché');
+  // la même, au ralenti : il faut dix fois plus de temps réel
+  board();
+  setRalenti(10);
+  const b2 = mk('SWITCH', 0, 0), t2 = mk('TON', 300, 0);
+  link(b2, 0, t2, 0);
+  applyInspector(t2, fld('o_sec', 1));
+  b2.state = 1; sim();
+  __advance(1200); sim();
+  eq(t2.q, 0, '×10 : 1,2 s réelles ne suffisent plus');
+  __advance(11000); sim();
+  eq(t2.q, 1, 'il en faut douze — le ralenti ralentit TOUT');
+  setRalenti(1);
+  try { localStorage.removeItem('al2_ralenti'); } catch(e){}
+  board();
+});
+
 /* ===================== bilan ===================== */
 console.log('\n' + (__fail ? '✗' : '✓') + ' ' + __pass + ' test(s) réussi(s), ' +
             __fail + ' échec(s)' + (__fail ? ' : ' + __failures.join(', ') : '') + '\n');
