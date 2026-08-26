@@ -1,4 +1,4 @@
-# Architecte Logique
+# NodeFlow
 
 Jeu d'apprentissage de la logique numérique et de l'automatisme : des portes
 élémentaires jusqu'aux capteurs, aux régulateurs et aux automates. 148 missions
