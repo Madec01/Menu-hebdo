@@ -4744,7 +4744,8 @@ T('T205 les chapitres ⚡ : à la fin du cours, et dans leur atelier', () => {
   eq(missions.filter(m => /Chapitre 32/.test(m.ch)).length, 8, 'huit au chapitre 32');
   eq(missions.filter(m => /Chapitre 33/.test(m.ch)).length, 8, 'huit au chapitre 33');
   eq(missions.filter(m => /Chapitre 34/.test(m.ch)).length, 4, 'quatre au chapitre 34');
-  eq(lec.length, 30, 'trente leçons dans l’atelier ⚡ en tout');
+  eq(missions.filter(m => /Chapitre 35/.test(m.ch)).length, 4, 'quatre au chapitre 35');
+  eq(lec.length, 34, 'trente-quatre leçons dans l’atelier ⚡ en tout');
   // toutes à la fin du catalogue, et groupées
   const prem = missions.findIndex(m => m.dom === 'phys');
   eq(prem + lec.length, missions.length, 'elles occupent la fin du catalogue');
@@ -4757,10 +4758,9 @@ T('T205 les chapitres ⚡ : à la fin du cours, et dans leur atelier', () => {
   });
   // les chapitres apparaissent dans la carte du cours, l’un après l’autre
   const noms = chapitres().map(c => c.ch || c.nom || c.name || '');
-  ok(/Chapitre 31/.test(noms[noms.length - 4]), 'le chapitre 31 vient en premier des quatre');
-  ok(/Chapitre 32/.test(noms[noms.length - 3]), 'puis le chapitre 32');
-  ok(/Chapitre 33/.test(noms[noms.length - 2]), 'puis le chapitre 33');
-  ok(/Chapitre 34/.test(noms[noms.length - 1]), 'et le chapitre 34 ferme le cours');
+  ['31','32','33','34','35'].forEach((n, i) =>
+    ok(new RegExp('Chapitre ' + n).test(noms[noms.length - 5 + i]),
+       'le chapitre ' + n + ' est à sa place dans la carte du cours'));
   // et charger une leçon bascule dans l’atelier ⚡
   setAppMode('elec');
   loadMission(prem);
@@ -5691,7 +5691,7 @@ T('T233 un mur sur le trajet coupe, un mur à côté ne fait rien', () => {
 
   const A = posteRadio(0, 600);
   const libre = A.r._uant;
-  ok(A.r.outPins[2].state === 1, 'sans obstacle, la liaison tient');
+  ok(A.r.outPins[3].state === 1, 'sans obstacle, la liaison tient');
   // un mur POSÉ À CÔTÉ ne change rien
   const cote = mk('MUR', 1400, 300);
   cote.opt.mat = 'metal'; cote.opt.larg = 288; cote.opt.haut = 64;
@@ -5704,7 +5704,7 @@ T('T233 un mur sur le trajet coupe, un mur à côté ne fait rien', () => {
   sim(); sim();
   eq(A.r._murs, 1, 'en travers, il compte');
   ok(A.r._uant < libre * .1, 'et il coupe pour de bon (' + fmtVolt(libre) + ' → ' + fmtVolt(A.r._uant) + ')');
-  eq(A.r.outPins[2].state, 0, 'la liaison est perdue');
+  eq(A.r.outPins[3].state, 0, 'la liaison est perdue');
   // les quatre matières, dans l’ordre
   const lus = ONDE_MATS.map(m => { cote.opt.mat = m[0]; sim(); sim(); return A.r._uant; });
   for (let i = 1; i < lus.length; i++)
@@ -5730,12 +5730,12 @@ T('T234 le récepteur est une vraie source, et un seuil qui décide', () => {
   sim(); sim();
   ok(Math.abs(A.r.u) > .05, 'ses bornes ⚡ portent bien une tension (' + fmtVolt(A.r.u) + ')');
   // la sortie MES parle en volts, la sortie SEU décide
-  const mes = raw2phys(A.r.outPins[1].state, { min:0, max:5 });
+  const mes = raw2phys(A.r.outPins[2].state, { min:0, max:5 });
   near(mes, Math.min(5, A.r._uant), .05, 'la sortie MES dit la même chose, en volts');
-  eq(A.r.outPins[2].state, 1, 'au-dessus du seuil, SEU est à 1');
+  eq(A.r.outPins[3].state, 1, 'au-dessus du seuil, SEU est à 1');
   A.r.opt.seuil = 4.9;
   sim(); sim();
-  eq(A.r.outPins[2].state, 0, 'seuil relevé : SEU retombe à 0');
+  eq(A.r.outPins[3].state, 0, 'seuil relevé : SEU retombe à 0');
   eq(A.r._hs, 1, 'et il retient qu’il a été hors de portée');
 });
 
@@ -5754,7 +5754,7 @@ T('T235 les trois pièces de la radio sont complètes et rangées', () => {
   // l’échelle du plan est dite quelque part, sinon « la distance » ne veut rien dire
   eq(ONDE_PXM, 50, '50 pixels valent un mètre');
   eq(fmtMetre(.4), '40 cm', 'les petites distances se disent en centimètres');
-  eq(fmtMetre(3.25), '3,3 m', 'et les autres en mètres');
+  eq(fmtMetre(3.25), '3.3 m', 'et les autres en mètres');
   // le mur se redimensionne par sa poignée, comme un cadre
   board();
   const m = mk('MUR', 0, 0);
@@ -5851,6 +5851,143 @@ T('T239 les animations se coupent, le texte se copie, les couleurs se lisent', (
   // « Sandbox libre » ne détruit rien : il ne doit plus porter l’habit du rouge
   ok(/id="som-sandbox"/.test(__HTML), 'le bouton existe');
   ok(!/btn-ghost" id="som-sandbox"/.test(__HTML), 'et il n’est plus peint en rouge');
+});
+
+console.log('\n— 📻 Lot 9 : l’accord et la modulation —');
+
+/* Un émetteur alimenté, et un récepteur posé où l'on veut. */
+function station(opts){
+  const o = opts || {};
+  board();
+  const g = mk('GENE', 0, 0), e = mk('EMET', 320, 0), m = mk('MASSE', 700, 0);
+  g.opt.u = 12; g.opt.ri = .1; g.opt.ilim = 3;
+  e.opt.pw = o.pw || 1; e.opt.un = 12; e.opt.freq = o.freq || 98;
+  if (o.mod) e.opt.mod = o.mod;
+  if (o.exc) e.opt.exc = o.exc;
+  link(g, 0, e, 0); link(e, 0, m, 0); link(m, 0, g, 0);
+  const r = mk('RECEP', 320, o.dy != null ? o.dy : 500);
+  r.opt.accord = o.accord || o.freq || 98; r.opt.bp = o.bp || 200; r.opt.seuil = o.seuil || .3;
+  sim(); sim();
+  return { g, e, m, r };
+}
+
+T('T240 l’accord : la cloche, le choix d’une station, la bande passante', () => {
+  // la courbe de réponse, seule : 1 au centre, la moitié au bord de la bande
+  near(ondeAccord(0, 200), 1, 1e-9, 'au centre, tout passe');
+  near(ondeAccord(100, 200), .5, .01, 'au bord de la bande passante, la moitié');
+  ok(ondeAccord(400, 200) < .01, 'à deux bandes passantes, il ne reste presque rien');
+  ok(ondeAccord(-100, 200) === ondeAccord(100, 200), 'et la cloche est symétrique');
+
+  // accordé, puis désaccordé du même montage
+  const A = station({ freq:98, accord:98 });
+  const juste = A.r._uant;
+  ok(juste > .3 && A.r._sel > .99, 'accordé, il reçoit tout (' + fmtVolt(juste) + ')');
+  A.r.opt.accord = 98.4;                       // 400 kHz plus loin
+  sim(); sim();
+  ok(A.r._uant < juste * .1,
+     'désaccordé de 400 kHz, il ne reste presque rien (' + fmtVolt(A.r._uant) + ')');
+  near(A.r._ecart, -400, 1, 'et il sait de combien il est à côté');
+
+  // deux stations : celle qu'on écoute, et celle qu'on ignore
+  const B = station({ freq:98, accord:98 });
+  const e2 = mk('EMET', 320, 260);
+  e2.opt.pw = 1; e2.opt.un = 12; e2.opt.freq = 106;
+  link(B.g, 0, e2, 0); link(e2, 0, B.m, 0);
+  sim(); sim();
+  ok(e2._ray > .5, 'le second émetteur rayonne aussi');
+  ok(B.r._src === B.e, 'mais c’est le premier qu’on entend');
+  ok(B.r._pur > .99, 'et le second ne se mêle pas à la conversation (' +
+     Math.round(B.r._pur * 1000) / 10 + ' %)');
+  // on tourne le bouton : c’est l’autre, maintenant
+  B.r.opt.accord = 106;
+  sim(); sim();
+  ok(B.r._src === e2, 'un tour de bouton, et on écoute l’autre station');
+
+  // la bande passante : trop large, on prend le voisin avec
+  const C = station({ freq:98, accord:98, bp:200 });
+  const v = mk('EMET', 320, 260);
+  v.opt.pw = 1; v.opt.un = 12; v.opt.freq = 98.4;
+  link(C.g, 0, v, 0); link(v, 0, C.m, 0);
+  sim(); sim();
+  ok(C.r._pur > .95, 'à 200 kHz de bande passante, le voisin est écarté');
+  C.r.opt.bp = 4000;
+  sim(); sim();
+  ok(C.r._pur < .9, 'à 4 000 kHz, il entre par-dessus (' + Math.round((1 - C.r._pur) * 100) + ' % du voisin)');
+});
+
+T('T241 AM et FM : ce qui entre ressort, et le bruit ne les touche pas pareil', () => {
+  // AM : la porteuse grossit et maigrit
+  const A = station({ freq:98, mod:'am', dy:300 });
+  const p = mk('POT', -300, 300);
+  link(p, 0, A.e, 1);
+  const pose = v => { applyInspector(p, fld('o_val', v)); sim(); sim(); };
+  pose(80);
+  near(A.e._mx, .8, .02, 'l’émetteur lit bien ce qu’on lui donne');
+  near(A.r._dem, .8, .12, 'et ça ressort à l’autre bout, sans aucun fil');
+  pose(20);
+  near(A.r._dem, .2, .12, 'on change la valeur, elle suit');
+  ok(A.e._amp < 1, 'en AM, l’amplitude de la porteuse a bien varié');
+
+  // FM : la fréquence bouge, l’amplitude non
+  const B = station({ freq:98, mod:'fm', exc:75, dy:300 });
+  const q = mk('POT', -300, 300);
+  link(q, 0, B.e, 1);
+  const poseB = v => { applyInspector(q, fld('o_val', v)); sim(); sim(); };
+  poseB(100);
+  near(B.e._fem, 98.075, .002, 'au maximum, la fréquence monte de 75 kHz');
+  eq(B.e._amp, 1, 'et l’amplitude ne bouge pas d’un poil — c’est toute la FM');
+  poseB(0);
+  near(B.e._fem, 97.925, .002, 'au minimum, elle descend d’autant');
+  poseB(50);
+  near(B.r._dem, .5, .05, 'le récepteur retrouve la valeur envoyée');
+
+  /* Le bruit. À la même distance et à la même puissance, l’AM tremble et la
+     FM ne bronche pas : c’est la seule raison pour laquelle la FM existe. */
+  const C = station({ freq:98, mod:'am', pw:.2, dy:420, seuil:.05 });
+  ok(C.r._grese > .1, 'l’AM grésille à cette distance (' + Math.round(C.r._grese * 100) + ' %)');
+  let mini = 9, maxi = -9;
+  for (let k = 0; k < 40; k++){ sim(); mini = Math.min(mini, C.r._dem); maxi = Math.max(maxi, C.r._dem); }
+  ok(maxi - mini > .05, 'et la valeur reçue tremble d’une image à l’autre (' +
+     Math.round((maxi - mini) * 100) + ' points)');
+  // la FM au MÊME endroit, avec la MÊME puissance
+  const D = station({ freq:98, mod:'fm', pw:.2, dy:420, seuil:.05 });
+  near(D.r._uant, C.r._uant / C.e._amp, .05, 'même distance, même puissance');
+  eq(D.r._grese, 0, 'la FM, elle, est parfaitement propre au même endroit');
+  let fmini = 9, fmaxi = -9;
+  for (let k = 0; k < 40; k++){ sim(); fmini = Math.min(fmini, D.r._dem); fmaxi = Math.max(fmaxi, D.r._dem); }
+  near(fmaxi - fmini, 0, 1e-9, 'pas le moindre tremblement');
+  // …jusqu’au décrochage, qui est brutal
+  D.r.y += 900;
+  sim(); sim();
+  eq(D.r._grese, 1, 'plus loin, elle ne se dégrade pas : elle DÉCROCHE d’un coup');
+  eq(D.r._fmko, 1, 'et elle retient qu’elle a décroché');
+});
+
+T('T242 les repères : les unités, la formule du circuit accordé, la mire', () => {
+  eq(fmtMHz(98), '98.0 MHz', 'une fréquence se lit en MHz');
+  eq(fmtMHz(.54), '540 kHz', 'et les grandes ondes en kHz');
+  eq(fmtMHz(2400), '2.4 GHz', 'et le wifi en GHz');
+  eq(fmtKHz(200), '200 kHz', 'un écart d’accord se lit en kHz');
+  eq(fmtKHz(4000), '4.0 MHz', 'sauf quand il devient grand');
+  /* Le condensateur équivalent : f = 1/(2π√(LC)) avec L = 1 µH. C'est la
+     formule du chapitre 33, et le chiffre qu'affiche le récepteur. */
+  const C = ondeCapa(98);
+  const f = 1 / (2 * Math.PI * Math.sqrt(1e-6 * C));
+  near(f / 1e6, 98, .01, 'la formule retombe bien sur la fréquence de départ');
+  ok(C > 1e-12 && C < 1e-11, 'et ça fait quelques picofarads, comme en vrai (' + fmtFarad(C) + ')');
+  eq(fmtFarad(2.6e-12), '2.6 pF', 'le picofarad s’affiche');
+
+  // la mire : rien de branché, mais l’émetteur envoie quand même quelque chose
+  const A = station({ freq:98, mod:'am', dy:300 });
+  eq(A.e._mx, null, 'rien n’est branché sur MOD');
+  ok(A.e._xeff != null, 'et pourtant il module : c’est la mire d’essai');
+  ok(A.r._dem != null, 'le récepteur la reçoit');
+  // …et une porteuse nue, elle, ne dit rien
+  A.e.opt.mod = 'aucune';
+  sim(); sim();
+  eq(A.e._xeff, null, 'porteuse nue : rien à transmettre');
+  eq(A.r._dem, null, 'et rien à démoduler');
+  ok(A.r._uant > .3, 'mais elle arrive quand même — une porteuse, ça se mesure');
 });
 
 /* ===================== bilan ===================== */

@@ -5,15 +5,52 @@ dans `CLAUDE.md`.
 
 ## Où en est le projet
 
-- **v6.25**, branche `claude/architecte-logique-v5-vntfkp`, **242 tests verts**
+- **v6.26**, branche `claude/architecte-logique-v5-vntfkp`, **245 tests verts**
   (`npm test`).
-- `logicgates.html` : ~13 300 lignes, un seul `<script>`, aucune dépendance.
-- Copies figées dans `versions/` (v5.1 → v6.25), avec leur tableau dans
+- `logicgates.html` : ~13 800 lignes, un seul `<script>`, aucune dépendance.
+- Copies figées dans `versions/` (v5.1 → v6.26), avec leur tableau dans
   `versions/README.md`.
-- Catalogue : **178 leçons en 34 chapitres** — 63 à table de vérité (dont 8
+- Catalogue : **182 leçons en 35 chapitres** — 63 à table de vérité (dont 8
   boîtes noires), 85 libres, et 30 à **condition de réussite** (chapitres 31 à 34).
 
 ## Ce qui vient d'être fait
+
+**📻 Lot 9 : l'accord et la modulation** (v6.26).
+
+**LA DÉCISION DE FOND, prise avec l'auteur** : on ne simule PAS la porteuse, on
+simule ce que la LIAISON fait au signal. Une porteuse de 100 MHz, c'est cent
+millions d'allers-retours par seconde — deux millions de fois plus de points
+que le moteur n'en calcule. En revanche l'accord, le désaccord, le brouillage,
+l'atténuation et le bruit se modélisent exactement, et ce sont eux qu'on veut
+comprendre. C'est ce que l'auteur appelait « simuler la simulation d'onde ».
+
+- **L'accord** : `ondeAccord(df, bp) = 1/(1 + |2·df/bp|⁴)`. Cloche à flancs
+  raides — 1 au centre, la moitié au bord de la bande passante, presque rien
+  au-delà. L'exposant 4 (et pas 2) parce qu'un vrai poste a plusieurs étages :
+  avec un exposant 2, deux stations à 200 kHz d'écart se brouillaient encore.
+- **`ondeCapa(f)`** : le condensateur qu'il faudrait avec une bobine de 1 µH,
+  par f = 1/(2π√(LC)). C'est la formule du chapitre 33 appliquée telle quelle,
+  et elle donne quelques picofarads — les vraies valeurs. C'est ce qui relie
+  le bouton d'accord au circuit LC déjà appris.
+- **La modulation**, sur l'entrée `MOD` de l'émetteur : AM fait varier `_amp`
+  (jamais jusqu'à zéro, `ONDE_AMMIN = .2`), FM fait varier `_fem` de
+  ±excursion (75 kHz par défaut, la vraie valeur de la radio FM).
+- **Le bruit, et c'est le cœur pédagogique du lot** : `snr = _uant/ONDE_UBRUIT`.
+  En AM le bruit s'ajoute à l'amplitude donc au signal — grésillement
+  progressif. En FM il ne touche pas la fréquence — signal parfait jusqu'au
+  seuil (`ONDE_FMSEUIL = 4`), puis **décrochage brutal**. C'est l'effet de
+  seuil, il est réel, et c'est ce qu'on vit en voiture.
+- **Calibrage** : `ONDE_UBRUIT = .05` V, choisi pour que le grésillement
+  devienne sensible au moment même où le seuil de réception est atteint.
+- **La mire.** `POT` est dans `INPUT_TYPES`, donc `spawnGroup` le REFUSE dans
+  une démo de mission (règle voulue : l'élève pose ses propres entrées). Un
+  émetteur modulé sans rien sur MOD envoie donc une **mire d'essai** —
+  `_xeff = (sin(simNow/900)+1)/2`. Les démos passent leur propre test, et
+  c'est en plus une vraie commodité.
+- **Chapitre 35 « Choisir sa station »**, m179 → m182.
+- Au passage : les nouveaux formateurs (`fmtMetre`, `fmtMHz`, `fmtKHz`)
+  écrivaient « 98,0 MHz » avec une virgule alors que tout le fichier écrit
+  « 6.0 V » avec un point. Aligné sur le point.
 
 **🧰 Réparations de l'overlay** (v6.25). Onze défauts, tous **reproduits dans
 Chromium avant correction** — deux audits UI/UX indépendants, recoupés.
@@ -555,8 +592,10 @@ fichier lui-même.)*
      c'est un lot à lui seul, pas une ligne de la vague 2.
   6. **Le chronogramme fait double emploi** avec l'OSCILLOSCOPE, qui trace déjà
      les signaux. À garder en dernier, ou à abandonner.
-  7. **Question à poser avant la vague 4** : l'auteur utilise-t-il vraiment
-     l'appli sur téléphone ? Si non, la vraie UX mobile coûte cher pour rien.
+  7. **Réponse de l'auteur : NON, pas de téléphone** — « pas tout de suite, on
+     verra plus tard ». La vraie UX mobile sort donc de la vague 4.
+     Il a aussi confirmé : « on fera une refonte quoi qu'il arrive des menus,
+     je n'aime pas ».
   8. **L'historique de versions est bon marché** (`localStorage` est déjà là) et
      rassure beaucoup : je le remonterais en vague 1.
   9. **Le croquis de barre du bas sous-estime le catalogue réel** : 97
@@ -600,14 +639,9 @@ Prévoir un champ `m.check(components, wires)`.
 menu 📦 (les quatre existants ne couvrent que le continu).
 
 **Phase 4 — l'éther.** Lot 8 (distance et obstacles) : **FAIT**, v6.24.
-Lot 9 : accord LC, AM et FM. Lot 10 : Morse, numérique, le son, chapitre final.
-→ **La question FM est en attente** : « plutôt que de simuler l'onde on simule
-la simulation d'onde ». Interprétation proposée à l'auteur et non encore
-tranchée : modéliser la LIAISON (fréquence d'émission contre accord du
-récepteur, distance, obstacles) au lieu d'intégrer la porteuse. Une porteuse à
-100 MHz demanderait deux millions de fois plus de points que ce que le moteur
-peut calculer — le lot 8 est bâti dans cet esprit et ne contient donc aucune
-fréquence : un émetteur émet, un récepteur reçoit, point.
+Lot 9 (accord, bande passante, AM/FM, bruit) : **FAIT**, v6.26 — la question
+« simuler la simulation d'onde » est tranchée, voir plus haut.
+Lot 10 : Morse, numérique, le son, chapitre final.
 → **Un audit UI/UX complet de l'overlay a été demandé** pendant le lot 8
 (hiérarchie visuelle, ergonomie, accessibilité/responsive, technique). Son
 rapport alimentera la refonte de l'overlay prévue après la phase 4.

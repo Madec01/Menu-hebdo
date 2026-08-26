@@ -136,6 +136,22 @@ n'est pas qu'un afficheur : c'est une source, quelques millivolts avec la
 résistance de son antenne en série — assez pour un oscilloscope, pas pour une
 ampoule.
 
+**Choisir sa station.** Chaque émetteur a une **fréquence**, chaque récepteur
+un **bouton d'accord** et une **bande passante**. Accordé au bon endroit tout
+passe, à côté presque rien — et c'est ce « presque rien » qui permet à des
+milliers de stations de partager le même air. Derrière ce bouton, il y a le
+circuit accordé du chapitre 33 : l'infobulle dit quel condensateur il faudrait
+avec une bobine de 1 µH, calculé avec la vraie formule.
+
+**AM et FM.** Une porteuse nue ne dit rien. En **AM** c'est sa force qui suit le
+signal, en **FM** sa fréquence — et l'amplitude ne bouge pas d'un poil. Le
+bruit d'une liaison s'ajoutant à l'amplitude, l'AM le reçoit en plein et
+grésille de plus en plus loin ; la FM l'ignore, jusqu'au moment où elle
+**décroche d'un coup**. C'est l'effet de seuil, et il est reproduit. Une
+porteuse de 100 MHz ne se calcule pas point par point — deux millions de fois
+trop de travail : on simule ce que la liaison fait au signal, avec les vraies
+formules.
+
 **Les pannes.** Une installation qui marche n'apprend rien : ce qu'on apprend,
 c'est à trouver *pourquoi* elle ne marche plus. Tout composant accepte une
 panne — hors service, mesure figée, dérive, organe bloqué — et rien ne se voit
