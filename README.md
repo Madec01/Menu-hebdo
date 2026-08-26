@@ -176,6 +176,14 @@ superposer. Un fil qui revient en arrière contourne les boîtiers. Trois modes
 au choix (`⌐` angles droits, `∿` courbes, `／` direct), et le double-clic sur
 un câble pose une poignée à glisser pour reprendre la main.
 
+Quand un boîtier barre le passage, le fil **cherche le couloir libre le plus
+proche** — y compris *entre* deux obstacles, ce qu'il ne savait pas faire : il
+grimpait au-dessus de tout le plan pour éviter deux pièces entre lesquelles il
+y avait toute la place voulue. Et le chemin le plus court est désormais
+**vérifié** avant d'être pris : un fil ne traverse plus une pièce posée entre
+ses deux bornes. Mesuré sur les 722 câbles des montages livrés : les traversées
+passent de 61 à 10, et le pire détour de 282 à 114 pixels.
+
 **Câbler vite, ranger le plan.** Tirer un fil et le **lâcher dans le vide**
 propose les composants qui savent recevoir ce signal, et celui qu'on choisit
 arrive posé *et* câblé — du bon côté, donc sans fil qui repart en arrière. Les
@@ -205,7 +213,7 @@ concatène entre `test/pre.js` (stubs DOM / Canvas / Audio / localStorage, plus
 une horloge `Date.now` pilotable) et `test/post.js` (les tests), puis exécute le
 tout dans un contexte `vm`. Aucun navigateur, aucune dépendance npm.
 
-226 tests couvrent le moteur, le séquentiel, les blocs numériques, l'analogique
+228 tests couvrent le moteur, le séquentiel, les blocs numériques, l'analogique
 et la régulation (dont une boucle fermée four + thermostat), l'édition,
 l'orientation, les tunnels, les puces, l'interface, le balisage et le guide.
 Deux tests valident automatiquement **tout** nouveau composant du registre

@@ -5,15 +5,31 @@ dans `CLAUDE.md`.
 
 ## Où en est le projet
 
-- **v6.20**, branche `claude/architecte-logique-v5-vntfkp`, **226 tests verts**
+- **v6.21**, branche `claude/architecte-logique-v5-vntfkp`, **228 tests verts**
   (`npm test`).
 - `logicgates.html` : ~12 800 lignes, un seul `<script>`, aucune dépendance.
-- Copies figées dans `versions/` (v5.1 → v6.20), avec leur tableau dans
+- Copies figées dans `versions/` (v5.1 → v6.21), avec leur tableau dans
   `versions/README.md`.
 - Catalogue : **166 leçons en 32 chapitres** — 63 à table de vérité (dont 8
   boîtes noires), 85 libres, et 18 à **condition de réussite** (chapitres 31 et 32).
 
 ## Ce qui vient d'être fait
+
+**Le tracé des câbles, deux défauts de fond** (v6.21). Mesuré sur les 722
+câbles de tous les montages livrés : **traversées 61 → 10**, **pire détour
+282 → 114 px**.
+
+1. `bypassY` n'avait que deux choix : au-dessus de TOUT, ou en dessous de
+   TOUT. Il ne savait pas se faufiler ENTRE deux obstacles — un fil dont les
+   deux bornes étaient à la même hauteur grimpait de 186 px et survolait
+   l'écran entier pour éviter deux ampoules entre lesquelles il y avait toute
+   la place. Il cherche maintenant le **couloir libre le plus proche**
+   (`bouchons()` fusionne les bandes occupées ; `bypassY` prend le meilleur
+   couloir). Et il **serre sa marge** (26 → 16 → 10 px) plutôt que de renoncer
+   quand tous les couloirs sont trop étroits.
+2. Le chemin vers l'AVANT ne regardait rien : un fil traversait tranquillement
+   un boîtier posé entre ses deux bornes dès qu'elles étaient à la même
+   hauteur. `barreH` / `barreV` le vérifient désormais avant de tracer.
 
 **⚡ Lot 6 : l'alternatif** (v6.20). Phase 3 entamée. Trois morceaux :
 
@@ -268,6 +284,21 @@ fichier lui-même.)*
    rendu et T57 tombe.
 
 ## Défauts connus, à corriger plus tard
+
+- **Il reste 10 câbles qui traversent un boîtier** (sur 722) et 339 avec un
+  demi-tour, dont la plupart sont légitimes (une cible derrière soi impose un
+  contournement). Les cas restants viennent des approches VERTICALES (broches
+  en haut ou en bas d'un boîtier), que `barreH`/`barreV` ne couvrent pas
+  encore. Script de mesure : `mesure.js` dans le bac à sable de la session —
+  à réécrire si besoin, il compare deux versions du fichier.
+- **`spreadRoutes` écarte dès que deux câbles se frôlent en un point.** Un
+  écartement qui ne tiendrait compte que des recouvrements sur la LONGUEUR
+  serait moins bavard. Non fait, c'était le troisième point du lot câbles.
+- **Le routage A\* proposé pour le bouton « Ranger les câbles »** : bonne idée,
+  mais il faudrait une carte d'occupation (router séquentiellement en
+  pénalisant les cases déjà prises), sinon tous les fils prennent le même
+  chemin optimal et se superposent. `bypassY` ne doit PAS être touché : elle
+  sert au tracé vivant, pas au bouton.
 
 - **Dans un cadre de commentaire (la « zone »), on ne peut pas tirer de câble
   entre deux composants.** Signalé par l'auteur. Le cadre doit intercepter le

@@ -5395,6 +5395,65 @@ T('T223 les trois nouveaux sont complets et rangés, sans faire déborder', () =
   eq(elecSous, 0, 'un circuit continu ordinaire ne coûte pas un sous-pas');
 });
 
+T('T224 le contournement se faufile au lieu de survoler tout le plan', () => {
+  board();
+  // deux pièces à relier, à la même hauteur, la cible DERRIÈRE : il faut
+  // contourner. Un obstacle au-dessus, un autre en dessous — et entre les
+  // deux, toute la place voulue.
+  const g = mk('MASSE', 900, 140), pl = mk('PILE', 0, 140);
+  const haut = mk('LAMPE', 450, -60), bas = mk('LAMPE', 450, 380);
+  link(g, 0, pl, 0);
+  sim();
+  const w = wires[0];
+  const A = { x:w.outPin.x, y:w.outPin.y }, B = { x:w.inPin.x, y:w.inPin.y };
+  near(A.y, B.y, 2, 'les deux bornes sont bien à la même hauteur');
+  const y = bypassY(w.outPin.comp, w.inPin.comp, A, B, 0, 0);
+  ok(y > haut.y + haut.bh, 'il passe SOUS l’obstacle du haut, au lieu de le survoler');
+  ok(y < bas.y, 'et AU-DESSUS de celui du bas : il se faufile entre les deux');
+  // le détour reste raisonnable : c’est tout l’objet de la correction
+  ok(Math.abs(y - A.y) < 220, 'le détour reste court (' + Math.round(Math.abs(y - A.y)) + ' px)');
+  // et les bouchons sont bien fusionnés, marge comprise
+  const bo = bouchons(w.outPin.comp, w.inPin.comp, A, B, 26);
+  ok(bo.length >= 2, 'les obstacles laissent au moins un couloir (' + bo.length + ' bouchons)');
+  for (let i = 1; i < bo.length; i++)
+    ok(bo[i][0] > bo[i-1][1], 'les bouchons sont fusionnés et ordonnés');
+});
+
+T('T225 un câble ne traverse plus un boîtier posé sur son chemin', () => {
+  board();
+  const p = mk('PILE', 0, 0), ob = mk('RESIS', 420, 0), l = mk('LAMPE', 840, 0);
+  link(p, 0, l, 0);                       // on saute par-dessus la résistance
+  sim();
+  const pts = wires[0].route();
+  let traverse = false;
+  for (let i = 1; i < pts.length; i++){
+    const x0 = Math.min(pts[i-1].x, pts[i].x), x1 = Math.max(pts[i-1].x, pts[i].x);
+    const y0 = Math.min(pts[i-1].y, pts[i].y), y1 = Math.max(pts[i-1].y, pts[i].y);
+    if (x1 > ob.x + 2 && x0 < ob.x + ob.bw - 2 &&
+        y1 > ob.y + 2 && y0 < ob.y + ob.bh - 2) traverse = true;
+  }
+  ok(!traverse, 'le fil contourne la résistance au lieu de la couper');
+  // les deux détecteurs de collision disent vrai
+  ok(barreH(ob.x - 60, ob.x + ob.bw + 60, ob.y + ob.bh / 2, null, null),
+     'barreH voit un boîtier sur une horizontale qui le coupe');
+  ok(!barreH(ob.x - 60, ob.x + ob.bw + 60, ob.y - 40, null, null),
+     'et ne le voit pas quand la ligne passe au-dessus');
+  ok(barreV(ob.x + ob.bw / 2, ob.y - 60, ob.y + ob.bh + 60, null, null),
+     'barreV le voit sur une verticale qui le coupe');
+  ok(!barreV(ob.x - 40, ob.y - 60, ob.y + ob.bh + 60, null, null),
+     'et pas quand elle passe à côté');
+  // la pièce reliée n’est jamais un obstacle pour son propre fil
+  ok(!barreH(ob.x - 60, ob.x + ob.bw + 60, ob.y + ob.bh / 2, ob, null),
+     'un boîtier relié ne se barre pas le passage à lui-même');
+  // deux bornes en face et rien entre elles : le fil reste DROIT
+  board();
+  const a2 = mk('PILE', 0, 0), b2 = mk('LAMPE', 700, 0);
+  link(a2, 0, b2, 0);
+  sim();
+  const ys = [...new Set(wires[0].route().map(q => Math.round(q.y)))];
+  eq(ys.length, 1, 'sans obstacle, le fil ne fait aucun détour');
+});
+
 /* ===================== bilan ===================== */
 console.log('\n' + (__fail ? '✗' : '✓') + ' ' + __pass + ' test(s) réussi(s), ' +
             __fail + ' échec(s)' + (__fail ? ' : ' + __failures.join(', ') : '') + '\n');
