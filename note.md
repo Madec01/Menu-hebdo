@@ -503,6 +503,108 @@ fichier lui-même.)*
   milieu, sur les composants. Pas bloquant (on le déplace à la main). Piste :
   à défaut de cible, éviter l'encombrement de TOUS les composants.
 
+## L'AUDIT DU MOTEUR — vérifié, chiffré, et en grande partie à NE PAS suivre
+
+Deux visions techniques (ChatGPT, Gemini) ont été recoupées et **vérifiées ligne
+par ligne, avec des mesures**. Le résultat principal : l'essentiel de ce qu'elles
+proposent résout des problèmes que cette application n'a pas.
+
+**Les chiffres de référence, à ressortir avant tout chantier de performance :**
+- les 129 montages livrés font en moyenne **5,3 composants / 6,1 fils** (le plus
+  gros : 12 / 15) ;
+- profondeur logique des 58 solutions : médiane **3 étages**, maximum 8 ;
+- le moteur ENTIER coûte **0,285 ms sur les 16,7 ms d'une image** (1,7 %) à
+  30 composants / 40 fils, et 0,73 ms sur un pire cas de 200 composants ;
+- **la plus grosse matrice électrique de tout le catalogue fait 3 × 3.**
+
+### Ce qui est vraiment cassé (mesuré, par gravité)
+
+1. **`liveCheck` fait sauter des images.** Toutes les 700 ms, `liveTick`
+   (`:13753`) rejoue toute la table de vérité **même si rien n'a changé** :
+   mesuré **20,2 ms** sur 29 composants / 49 fils, contre 0,06 ms pour une
+   image temps réel. C'est de loin la dépense la plus lourde du fichier — plus
+   que tous les autres points d'optimisation réunis. Correction : un compteur
+   `logicVersion` invalidé sur connexion / suppression / ajout / réglage / **et
+   basculement d'interrupteur** (sinon le retour en direct décroche du joueur).
+2. **L'anneau d'inverseurs bat à la fréquence de l'ÉCRAN.** Mesuré avec
+   `simulate(5)` : 3, 5 et 9 inverseurs donnent tous `10101010…`, une bascule
+   par image. Or un anneau de 9 portes est trois fois plus lent qu'un anneau de
+   3. C'est la seule fausseté du moteur logique qui se voie.
+3. **Une entrée oubliée est indiscernable d'un zéro** (`:4925`,
+   `pin.state = 0`). Le piège le plus coûteux en temps pour un élève.
+4. **Le sens du courant dessiné sur les fils de puissance est arbitraire**
+   (`:1782`, `this.inPin.comp.i`). Pire depuis `relierBornes` (v6.23) : « inPin »
+   n'est plus que le bout cliqué en second. Faux dès qu'il y a une dérivation.
+   → Correction saine : animation symétrique dont seule la VITESSE dépend de
+   l'intensité. Ne PAS tenter les courants de branche : le solveur raisonne par
+   nœuds, il ne les connaît pas.
+5. ~~**Un mur faisait dévier les câbles**~~ — **CORRIGÉ v6.27** (`DECOR`).
+6. **Aucune accessibilité clavier ni lecteur d'écran** — 0 `aria-label`,
+   0 `tabindex`, 0 `role`. Chantier à part.
+7. **Zones de clic minuscules au zoom reculé** : broche 13 unités MONDE
+   (`:1285`) = 4,6 px à zoom 0,35 ; fil 9 (`:1997`) ; poignée au double-clic 10
+   (`:5222`). Et `ALIGN_SEUIL = 7` en monde (`:16462`), sans hystérésis, sans
+   `Alt` (0 occurrence dans le fichier).
+
+### Trois défauts qu'AUCUNE des deux visions n'avait vus
+
+- **`compSig` ignore la taille** (`:1449` — seulement `x`, `y`, `id`) :
+  redimensionner un cadre ou un mur ne réveille pas le cache des tracés.
+- **Une bascule RS en portes est jugée « combinatoire »** : `boardCombinatoire()`
+  (`:13697`) teste une LISTE DE TYPES (`SEQ_MARKERS`), pas la présence d'un
+  cycle. Vérifié : deux NOR rebouclés → `true`. La vérification en continu la
+  traite donc comme une table de vérité figée.
+- **`elecTrop` échoue en silence** (`:4746`) : au-delà de 160 nœuds plus rien
+  n'est résolu et aucun message n'est affiché.
+- Bonus : **un tunnel coûte une passe entière de retard** (`:10068`,
+  `c.val = TUN_PREV[n]`).
+
+### Ce qui est VRAI mais sans aucune conséquence à cette échelle
+
+À ne pas entreprendre, et à ressortir si la question revient :
+tri topologique + Tarjan à la place des 5 passes (33 ms de stabilisation sur le
+circuit le PLUS profond du catalogue — invisible) · index amont/aval pour la
+vitesse (0,05 ms/image) · `spreadRoutes` (0,089 ms, et **le cache de tracé existe
+déjà**, `:1561`) · `compSig` (**0,0008 ms**) · hachage spatial pour le survol
+(0,144 ms) · séparation compilation/résolution du solveur (noyée dans 0,06 ms) ·
+solveur creux ou Gauss-Seidel (**matrices 3 × 3**) · pré-calcul des ondes ·
+couches Canvas multiples (gain non démontré — mesurer le DESSIN dans Chromium
+d'abord, c'est le seul poste non chiffré).
+
+### Ce qui est faux ou déjà fait dans les deux visions
+
+- « le retour de mission dit où, pas pourquoi » → **déjà fait** (`:13746`,
+  `:13678`) ;
+- « ajouter un mode suivre le signal » → **à moitié fait** (`focusSet` +
+  `neighbourhood(comp, 3)`, `:16090`) ;
+- « `openQuick` s'ouvre à tort » → **déjà protégé** par `moved` (`:5155`) ;
+- « 3 px au zoom mini » → 4,6 px, le zoom s'arrête à 0,35 (`:1197`) ;
+- Gemini : « une seule passe hors éléments séquentiels » → **casserait**
+  l'anneau d'inverseurs et la bascule RS en portes. ChatGPT avait vu le piège.
+
+### Le plan retenu, en trois lots (à faire APRÈS le lot 10)
+
+**Lot A — ce qui se voit tout de suite** (effort moyen, risque faible) :
+`logicVersion` · ~~murs~~ fait · `compSig` avec la taille · tolérances de clic en
+pixels écran · magnétisme avec hystérésis 8/12 px et `Alt` · **câble vert/ambre/
+rouge pendant le geste** (`canConnect`) + avertissement au survol d'une entrée
+occupée · losange fantôme là où le double-clic posera une poignée · message
+quand `elecTrop`.
+**Lot B — dire la vérité sur les signaux** (effort gros, risque moyen) : index
+amont/aval (comme OUTIL, pas comme optimisation) · `pin.status`
+`valid/floating/conflict` (exceptions : broches masquées de rail, bornes de
+puissance, entrées optionnelles) · conflits de tunnels · sens du courant ·
+détection de cycle réelle dans `boardCombinatoire` (passer les 63 leçons à
+table de vérité au crible d'abord) · cône causal · « suivre le signal » au clic
+droit.
+**Lot C — le temps du circuit** (effort moyen, risque ÉLEVÉ sur un point) :
+pause sur `visibilitychange` (**ne PAS plafonner `simNow`** : décision
+documentée, et `post.js:5257` l'exige) · transport ⏸ ⏭ ▶ · **délai de porte
+simulé** — une passe par tranche de temps de circuit plutôt que 5 par image,
+pour que l'anneau de 5 batte plus lentement que celui de 3. Ce dernier point
+touche TOUT (bascules, GRAFCET, procédés, tunnels, 246 tests) : à livrer seul,
+avec T207 comme garde-fou.
+
 ## Chantiers demandés, hors feuille de route
 
 - **Refonte complète de l'overlay, APRÈS la phase 4.** Demandé explicitement.

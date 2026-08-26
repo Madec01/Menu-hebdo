@@ -1452,13 +1452,18 @@ function compSig(){
 }
 /* Ligne de contournement : au-dessus ou au-dessous des boîtiers rencontrés,
    selon le côté qui rallonge le moins le trajet. */
+/* Le DÉCOR n'est pas un obstacle pour un câble. Un cadre de commentaire
+   entoure, il ne barre pas ; un mur arrête les ondes, pas les fils — un
+   câble mesuré ici passait de 592 à 892 px, avec deux coudes en plus, pour
+   contourner un mur qui n'aurait jamais dû le concerner. */
+const DECOR = new Set(['ZONE', 'MUR']);
 /* Un segment est-il barré par un boîtier ? Les deux pièces reliées ne
-   comptent pas (le fil sort forcément de l'une et entre dans l'autre), ni les
-   cadres de commentaire, qui ne sont pas des obstacles. */
+   comptent pas (le fil sort forcément de l'une et entre dans l'autre), ni le
+   décor. */
 function barreH(x0, x1, y, ca, cb){
   const a = Math.min(x0, x1), b = Math.max(x0, x1);
   for (const c of components){
-    if (c === ca || c === cb || c.type === 'ZONE') continue;
+    if (c === ca || c === cb || DECOR.has(c.type)) continue;
     if (c.x + c.bw < a || c.x > b) continue;
     if (y > c.y && y < c.y + c.bh) return true;
   }
@@ -1467,7 +1472,7 @@ function barreH(x0, x1, y, ca, cb){
 function barreV(x, y0, y1, ca, cb){
   const a = Math.min(y0, y1), b = Math.max(y0, y1);
   for (const c of components){
-    if (c === ca || c === cb || c.type === 'ZONE') continue;
+    if (c === ca || c === cb || DECOR.has(c.type)) continue;
     if (c.y + c.bh < a || c.y > b) continue;
     if (x > c.x && x < c.x + c.bw) return true;
   }
@@ -1484,7 +1489,7 @@ function bouchons(ca, cb, A, B, marge){
   if (ca) ajoute(ca);
   if (cb) ajoute(cb);
   for (const c of components){
-    if (c === ca || c === cb || c.type === 'ZONE') continue;
+    if (c === ca || c === cb || DECOR.has(c.type)) continue;
     if (c.x + c.bw < gx0 || c.x > gx1) continue;
     ajoute(c);
   }

@@ -5990,6 +5990,35 @@ T('T242 les repères : les unités, la formule du circuit accordé, la mire', ()
   ok(A.r._uant > .3, 'mais elle arrive quand même — une porteuse, ça se mesure');
 });
 
+T('T243 le décor n’est pas un obstacle pour les câbles', () => {
+  /* Un cadre de commentaire entoure, un mur arrête les ondes — ni l'un ni
+     l'autre ne doit faire dévier un fil. Le mur avait été oublié : mesuré,
+     un câble droit de 592 px passait à 892 px avec deux coudes en plus. */
+  const trace = obstacle => {
+    board();
+    const a = mk('PILE', 0, 300), b = mk('INTERP', 700, 300);
+    if (obstacle){
+      // posé pile en travers : la ligne du fil passe à ENER_Y sous le haut du boîtier
+      const o = mk(obstacle, 300, 300);
+      if (obstacle === 'MUR'){ o.opt.larg = 96; o.opt.haut = 288; REG.MUR.restore(o); }
+    }
+    const w = link(a, 0, b, 0);
+    sim(); drawScene(0); spreadRoutes();
+    let L = 0; const P = w._rp;
+    for (let i = 1; i < P.length; i++) L += Math.abs(P[i].x - P[i-1].x) + Math.abs(P[i].y - P[i-1].y);
+    return { L:Math.round(L), n:P.length };
+  };
+  const seul = trace(null);
+  eq(trace('ZONE').L, seul.L, 'un cadre ne fait pas dévier le câble');
+  const mur = trace('MUR');
+  eq(mur.L, seul.L, 'un mur non plus (' + mur.L + ' px contre ' + seul.L + ')');
+  eq(mur.n, seul.n, 'et il ne fabrique pas de coudes en plus');
+  // un vrai boîtier, lui, doit toujours être contourné
+  const boite = trace('RESIS');
+  ok(boite.L > seul.L, 'mais un composant posé en travers, oui (' + boite.L + ' px)');
+  ok(DECOR.has('ZONE') && DECOR.has('MUR') && !DECOR.has('RESIS'), 'la liste du décor est juste');
+});
+
 /* ===================== bilan ===================== */
 console.log('\n' + (__fail ? '✗' : '✓') + ' ' + __pass + ' test(s) réussi(s), ' +
             __fail + ' échec(s)' + (__fail ? ' : ' + __failures.join(', ') : '') + '\n');
