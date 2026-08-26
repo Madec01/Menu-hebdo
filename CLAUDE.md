@@ -101,8 +101,10 @@ Quatre phases, dans cet ordre :
 2. ~~**Produire**~~ — **faite** (aimant, bobine d'induction, dynamo à
    manivelle, chaudière, turbine, panneau solaire, thermopile), avec son
    chapitre 32.
-3. **L'alternatif** — condensateur et bobine, pas de temps plus fin,
-   générateur alternatif, ralenti global, résonance, pont redresseur.
-4. **L'éther** — la radio : la position sur le plan compte vraiment, accord
-   LC, modulations AM / FM / Morse / numérique, obstacles. Et le son, qui est
-   le même moteur tourné beaucoup plus lentement.
+3. ~~**L'alternatif**~~ — **faite** (condensateur, bobine, pas de temps plus
+   fin, générateur alternatif, ralenti global, résonance, diode, pont
+   redresseur), avec son chapitre 33.
+4. **L'éther** — la radio. Lot 8 ~~distance et obstacles~~ **fait**
+   (chapitre 34). Lot 9 ~~accord, bande passante, AM/FM, bruit~~ **fait**
+   (chapitre 35). **Reste le lot 10** : Morse, numérique, le son — qui est le
+   même moteur tourné beaucoup plus lentement — et le chapitre final.
