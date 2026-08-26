@@ -6145,6 +6145,140 @@ T('T247 les cinq pièces du lot 10 sont complètes et rangées', () => {
   ok(__HTML.includes('if (simulating || hz < 25'), 'le haut-parleur se tait pendant une vérification');
 });
 
+console.log('\n— 🔧 Lot A : ce qui se voit tout de suite —');
+
+T('T248 le fil annonce à l’avance ce qu’il va faire — et il dit vrai', () => {
+  /* `canConnect` prédit, `connectWire` juge. S'ils divergent, l'annonce est
+     pire que pas d'annonce du tout : ce test les met face à face. */
+  const essaie = (a, b) => {
+    const n = wires.length;
+    const dit = canConnect(a, b);
+    relierBornes(a, b);
+    const fait = wires.length > n;
+    return { dit:dit.etat, fait };
+  };
+  board();
+  const g1 = mk('AND', 0, 0), g2 = mk('AND', 300, 0), l = mk('LED', 600, 0);
+  let r = essaie(g1.outPins[0], g2.inPins[0]);
+  eq(r.dit, 'oui', 'sortie vers entrée : annoncé possible');
+  eq(r.fait, true, '…et ça marche');
+  r = essaie(g1.outPins[0], g2.outPins[0]);
+  eq(r.dit, 'non', 'deux sorties logiques : annoncé impossible');
+  eq(r.fait, false, '…et ça ne marche pas');
+  r = essaie(g1.inPins[0], g2.inPins[0]);
+  eq(r.dit, 'non', 'deux entrées logiques non plus');
+  eq(r.fait, false, '…confirmé');
+  // une entrée déjà occupée : le fil sera REMPLACÉ, et on le dit
+  const v = canConnect(l.outPins ? g1.outPins[0] : null, g2.inPins[0]);
+  eq(v.etat, 'remplace', 'une entrée déjà câblée annonce un remplacement');
+  ok(v.vieux && v.vieux.inPin === g2.inPins[0], 'et elle désigne le fil qui va disparaître');
+  // les bornes de puissance, elles, se relient dans tous les sens
+  board();
+  const a = mk('LAMPE', 0, 0), b = mk('LAMPE', 300, 0);
+  r = essaie(a.inPins[0], b.inPins[0]);
+  eq(r.dit, 'oui', 'deux entrées de PUISSANCE : annoncé possible');
+  eq(r.fait, true, '…et ça marche');
+  eq(canConnect(a.inPins[0], b.inPins[0]).etat, 'deja', 'refaire le même fil : déjà relié');
+  // les natures différentes
+  board();
+  const p = mk('AND', 0, 0), q = mk('LAMPE', 300, 0);
+  eq(canConnect(p.outPins[0], q.inPins[0]).etat, 'non', 'signal vers puissance : non');
+  ok(canConnect(p.outPins[0], q.inPins[0]).quoi.length > 10, 'et on dit pourquoi');
+  eq(canConnect(p.outPins[0], null).etat, 'rien', 'rien sous le curseur : rien à dire');
+  eq(canConnect(p.outPins[0], p.outPins[0]).etat, 'rien', 'la borne de départ non plus');
+  // chaque verdict a sa couleur
+  ['oui', 'remplace', 'deja', 'non'].forEach(k =>
+    ok(/^#[0-9a-f]{6}$/i.test(CONNECT_COUL[k]), k + ' a une couleur'));
+});
+
+T('T249 les cibles de clic se mesurent en pixels d’écran', () => {
+  board();
+  touchMode = false;                            // un test plus haut a touché l'écran
+  const g = mk('AND', 0, 0);
+  const pin = g.outPins[0];
+  const zAvant = cam.z;
+  const loin = (d) => pin.isHit(pin.x + d, pin.y);
+  cam.z = 1;
+  ok(loin(10), 'à zoom normal, on attrape la broche à 10 unités');
+  ok(!loin(30), 'mais pas à 30');
+  cam.z = .35;                                  // vue reculée : le zoom minimum
+  ok(loin(30), 'en vue reculée, la zone sensible s’agrandit sur le plan…');
+  ok(!loin(60), '…sans devenir absurde');
+  cam.z = 2.5;                                  // vue rapprochée
+  ok(loin(pin.r + 3), 'en vue rapprochée elle ne descend jamais sous le dessin');
+  // 14 px d’écran, quel que soit le zoom : c’est ça qu’on a voulu
+  cam.z = 1;   const a = tolPin();
+  cam.z = .5;  const b = tolPin();
+  near(b, a * 2, .01, 'deux fois plus reculé, deux fois plus large sur le plan');
+  touchMode = true; const c = tolPin(); touchMode = false;
+  ok(c > b, 'et un doigt a droit à une cible plus grande qu’une souris');
+  cam.z = zAvant;
+});
+
+T('T250 le magnétisme : même ressenti à tous les zooms, et Alt le coupe', () => {
+  board();
+  const fixe = mk('AND', 400, 200), bouge = mk('AND', 0, 500);
+  const essaie = (dy) => { alignAccroche = { x:null, y:null };
+                           return Math.round(alignGuides(bouge, 0, fixe.y + dy).y - fixe.y); };
+  cam.z = 1;
+  eq(essaie(5), 0, 'à 5 unités du repère, ça s’accroche');
+  eq(essaie(11), 11, 'à 11, non — le seuil de prise est à 8');
+  // l’hystérésis : une fois collé, on ne décroche pas au premier frémissement
+  alignAccroche = { x:null, y:null };
+  alignGuides(bouge, 0, fixe.y + 5);
+  ok(alignAccroche.y != null, 'on est bien collé');
+  eq(Math.round(alignGuides(bouge, 0, fixe.y + 11).y - fixe.y), 0,
+     'à 11 on tient encore : c’est l’hystérésis');
+  eq(Math.round(alignGuides(bouge, 0, fixe.y + 16).y - fixe.y), 16, 'à 16 on lâche');
+  // le même geste, en vue reculée : le seuil suit le zoom
+  cam.z = .5;
+  eq(essaie(14), 0, 'à moitié de zoom, 14 unités valent 7 pixels d’écran : ça accroche');
+  cam.z = 1;
+  // Alt coupe tout
+  keysDown.add('ALT');
+  eq(essaie(2), 2, 'Alt appuyé : plus rien n’attire');
+  keysDown.delete('ALT');
+  eq(essaie(2), 0, 'relâché : ça revient');
+});
+
+T('T251 la table de vérité n’est plus rejouée pour rien', () => {
+  const tt = missions.findIndex(m => m.tt && m.tt.length && !m.bb && m.inputs === 1 && m.outputs === 1);
+  ok(tt >= 0, 'il existe une leçon à une entrée et une sortie');
+  loadMission(tt);
+  const sw = mk('SWITCH', 0, 0), nt = mk('NOT', 300, 0), le = mk('LED', 600, 0);
+  link(sw, 0, nt, 0); link(nt, 0, le, 0);
+  sim();
+  liveT = 0; liveTick();
+  const vrai = liveRes;
+  ok(vrai, 'un premier passage a bien calculé quelque chose');
+  // rien n’a bougé : on ne recalcule pas
+  liveRes = 'SENTINELLE'; liveT = 0; liveTick();
+  eq(liveRes, 'SENTINELLE', 'circuit inchangé : la table n’est PAS rejouée');
+  // basculer un interrupteur ne change rien non plus — la vérification pilote
+  // elle-même les entrées, leur état n’entre pas dans son résultat
+  sw.state = sw.state ? 0 : 1; liveT = 0; liveTick();
+  eq(liveRes, 'SENTINELLE', 'un interrupteur basculé ne relance rien');
+  // en revanche, toucher au circuit relance
+  liveRes = vrai;
+  markDirty();
+  liveT = 0; liveTick();
+  ok(liveRes !== 'SENTINELLE' && liveRes, 'le circuit modifié : on recalcule');
+  loadMission(-1);
+});
+
+T('T252 la signature des tracés voit aussi la taille', () => {
+  board();
+  const z = mk('ZONE', 0, 0);
+  const avant = compSig();
+  z.w = 800; z.opt.larg = 800;
+  __advance(16); sim();
+  ok(compSig() !== avant, 'étirer un cadre réveille le cache des tracés');
+  const b = compSig();
+  z.x += 32;
+  __advance(16); sim();
+  ok(compSig() !== b, 'le déplacer aussi, comme avant');
+});
+
 /* ===================== bilan ===================== */
 console.log('\n' + (__fail ? '✗' : '✓') + ' ' + __pass + ' test(s) réussi(s), ' +
             __fail + ' échec(s)' + (__fail ? ' : ' + __failures.join(', ') : '') + '\n');

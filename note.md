@@ -5,15 +5,49 @@ dans `CLAUDE.md`.
 
 ## Où en est le projet
 
-- **v6.28**, branche `claude/architecte-logique-v5-vntfkp`, **250 tests verts**
+- **v6.29**, branche `claude/architecte-logique-v5-vntfkp`, **255 tests verts**
   (`npm test`).
 - `logicgates.html` : ~14 400 lignes, un seul `<script>`, aucune dépendance.
-- Copies figées dans `versions/` (v5.1 → v6.28), avec leur tableau dans
+- Copies figées dans `versions/` (v5.1 → v6.29), avec leur tableau dans
   `versions/README.md`.
 - Catalogue : **188 leçons en 36 chapitres** — 63 à table de vérité (dont 8
   boîtes noires), 85 libres, et 30 à **condition de réussite** (chapitres 31 à 34).
 
 ## Ce qui vient d'être fait
+
+**🔧 Lot A de l'audit : ce qui se voit tout de suite** (v6.29). Les huit points
+sont faits.
+
+1. **La vérification en continu ne rejoue plus la table pour rien.** Compteur
+   `logicVersion`, incrémenté dans `markDirty()` — le seul point de passage de
+   toute modification du plan (56 appels). Filet de sécurité : on compare aussi
+   les nombres de composants et de fils, au cas où un chemin oublierait
+   `markDirty`. **Basculer un interrupteur n'invalide PAS**, et c'est voulu :
+   `liveCheck` sauvegarde les entrées, pilote la table lui-même, puis les
+   restaure — leur état n'entre pas dans son résultat.
+2. **`compSig` voit la taille** (`bw`/`bh`) : étirer un cadre ou un mur réveille
+   enfin le cache des tracés.
+3. **Les cibles de clic se mesurent en PIXELS D'ÉCRAN** : `tolPin()` = 14 px
+   (24 au doigt), `tolFil()` = 11 px (18). Toujours `Math.max` avec le dessin,
+   sinon la zone deviendrait plus petite que la broche en vue rapprochée.
+   `touchMode` suit `e.pointerType`, remis à jour au `pointermove` aussi —
+   sinon un effleurement sur un portable tactile laissait les cibles larges
+   pour le reste de la séance. Vérifié : 14 px d'écran à tous les zooms.
+4. **Le magnétisme aussi**, avec une **hystérésis** : `ALIGN_PRISE = 8`,
+   `ALIGN_LACHE = 13` pixels d'écran. `alignAccroche` mémorise à quoi on est
+   collé et se remet à zéro à chaque nouveau geste. **`Alt` coupe tout.**
+5. **Le câble annonce sa couleur AVANT qu'on lâche.** `canConnect(from, to)`
+   rend `{ etat:'oui'|'remplace'|'deja'|'non'|'rien' }` : vert, ambre, rouge,
+   plus un anneau de la même couleur sur la borne visée. Et le fil qui va être
+   remplacé s'efface d'avance (38 % d'opacité).
+   **T248 met le prédicteur et le juge face à face** : si `canConnect` et
+   `connectWire` divergeaient un jour, l'annonce serait pire que rien.
+6. **Un losange fantôme** sur le fil survolé, là où le double-clic posera une
+   poignée. Sans lui, on double-cliquait à l'aveugle — et surtout on ignorait
+   qu'on pouvait le faire.
+7. **`elecTrop` ne renonce plus en silence** : un message une seule fois, avec
+   le nombre de points et la limite.
+8. ~~Les murs~~ — fait en v6.27.
 
 **📮 Lot 10 : transmettre quelque chose** (v6.28). **LA FEUILLE DE ROUTE ⚡ EST
 TERMINÉE** — la section correspondante de `CLAUDE.md` a été supprimée, comme
@@ -630,12 +664,7 @@ d'abord, c'est le seul poste non chiffré).
 
 ### Le plan retenu, en trois lots (à faire APRÈS le lot 10)
 
-**Lot A — ce qui se voit tout de suite** (effort moyen, risque faible) :
-`logicVersion` · ~~murs~~ fait · `compSig` avec la taille · tolérances de clic en
-pixels écran · magnétisme avec hystérésis 8/12 px et `Alt` · **câble vert/ambre/
-rouge pendant le geste** (`canConnect`) + avertissement au survol d'une entrée
-occupée · losange fantôme là où le double-clic posera une poignée · message
-quand `elecTrop`.
+**Lot A — ce qui se voit tout de suite : FAIT, v6.29.**
 **Lot B — dire la vérité sur les signaux** (effort gros, risque moyen) : index
 amont/aval (comme OUTIL, pas comme optimisation) · `pin.status`
 `valid/floating/conflict` (exceptions : broches masquées de rail, bornes de
