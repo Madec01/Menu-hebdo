@@ -476,6 +476,94 @@ fichier lui-même.)*
   **Avant de coder, demander à l'auteur ce qui le gêne précisément** — la même
   erreur que pour la barre du bas serait de refondre à l'aveugle.
 
+- **VISION D'ENSEMBLE POUR LA REFONTE DE L'OVERLAY** (donnée par l'auteur,
+  à garder telle quelle jusqu'à la refonte). Direction : une interface de
+  logiciel métier moderne — très peu de commandes toujours visibles, les
+  fonctions avancées au bon endroit et au bon moment, le plan de travail
+  clairement principal.
+
+  **En-tête épuré** : `⚡ ARCHITECTE LOGIQUE · Chap.12 · XOR   ↶ ↷ 🔍 💾 ⋯`.
+  Tout le reste passe dans le menu `⋯`, rangé en cinq sections : AFFICHAGE
+  (grille, noms, mini-plan, focus, recentrer) · SIMULATION (lecture, pause,
+  un pas, vitesse) · CIRCUIT (analyser, organiser, ranger les câbles) ·
+  FICHIER (montages, exemples, PNG, importer) · AIDE (guide, raccourcis,
+  tutoriel).
+
+  **Ctrl+K, centre de commande** : composants, leçons, commandes, montages,
+  exemples, outils, aide — une seule entrée qui évite d'ajouter un bouton à
+  chaque nouveauté.
+
+  **Barre du bas à deux niveaux maximum** : un sélecteur d'atelier compact
+  (`⚡ Électronique ▾`) puis les catégories, avec « ★ Rapide » en page
+  d'accueil (favoris épinglés + derniers utilisés + les plus fréquents).
+
+  **Panneau de mission compact** : titre, une phrase, l'objectif, `[Vérifier]`.
+  Le reste (table de vérité, contraintes, indice, solution) se déplie.
+
+  **Écran de performance après réussite** : étoiles, portes utilisées contre
+  optimal, objectifs secondaires, `[Comparer avec l'idéal]`.
+
+  **Comparaison avec la solution sur le plan** : solution en fantômes, vert =
+  équivalent, ambre = inutile, cyan = manquant, plus un panneau qui explique.
+
+  **Diagnostic cliquable** : entrée inutilisée, branche isolée, simplification
+  possible — un clic centre la caméra et surligne.
+
+  **Le reste** : isoler le chemin d'un signal, mode focus plein écran,
+  alignement et espacement façon Figma, `🪄 Organiser le circuit` (auto-layout
+  entrées → logique → mémoire → sorties), inspecteur latéral à sections
+  repliables, clic droit court et contextuel, mini-plan seulement quand utile,
+  panneau de transport de simulation (⏮ ⏸ ⏭ ×1), chronogramme optionnel,
+  vraie UX mobile (feuille du bas, appui long, pincement), historique de
+  versions dans « Mes montages », onboarding interactif, astuces contextuelles.
+
+  Quatre vagues proposées : 1) dépolluer · 2) fluidifier · 3) renforcer le
+  pédagogique · 4) fonctions avancées.
+
+  **CE QUI EXISTE DÉJÀ — vérifié dans le code, à ne pas redévelopper :**
+  mini-plan (`drawMini`, `miniClick`), guides d'alignement (`alignGuides`),
+  mise en évidence du voisinage au survol (`focusSet`, dès 10 composants),
+  favoris + fréquence d'usage (`favPins`, `favFreq`), recherche dans tout le
+  catalogue (barre du bas), analyseur (`#analyze-modal`), « Ranger les câbles »
+  (`btn-route` → `autoRoute`, aussi au clic droit), système d'étoiles au nombre
+  de portes (`m.par` + `progress.best`), ralenti ×1/×10/×100, export PNG,
+  montages, exemples, guide, menu contextuel (`#ctxmenu`), et la solution
+  posée en direct sur le schéma.
+  **N'existe pas** : Ctrl+K, le menu `⋯`, pause / un pas, l'auto-layout des
+  composants, l'écran de performance, le diagnostic cliquable, l'inspecteur
+  latéral, l'historique de versions, l'onboarding, le chronogramme global.
+
+  **MON AVIS FRANC, à relire avant de coder :**
+  1. **L'en-tête est le bon premier chantier** : 11 boutons + logo + pastille,
+     c'est exactement ce que les deux audits ont mesuré comme débordant. Passer
+     à cinq commandes règle l'encombrement ET la surcharge d'un seul geste.
+  2. **Attention à `⋯`** : cinq sections × cinq entrées = vingt-cinq lignes
+     dans un menu déroulant, c'est-à-dire le même problème déplacé. Le critère
+     de ce qui reste visible doit être la FRÉQUENCE d'usage, pas le rangement :
+     dans cette appli, « ralenti » et « ranger les câbles » servent en
+     permanence, autant qu'annuler/refaire.
+  3. **Ctrl+K est un geste d'expert** — l'auteur ne code pas, et ses lecteurs
+     encore moins. Excellent comme accélérateur, dangereux comme rangement :
+     règle à tenir, **rien ne doit exister UNIQUEMENT dans Ctrl+K**.
+  4. **L'écran de performance : garder ce qui se mesure.** Portes utilisées
+     contre optimal (objectif, déjà là) et « aucun câble croisé » (mesurable,
+     le compteur de traversées existe depuis le lot câbles). En revanche
+     « lisibilité : bonne » est un jugement esthétique de la machine : difficile
+     à rendre juste, et une note fausse enseigne le contraire de ce qu'on veut.
+  5. **`🪄 Organiser le circuit` est le morceau le plus lourd de la liste**
+     (placement en couches + réduction des croisements). Il vaut le coup, mais
+     c'est un lot à lui seul, pas une ligne de la vague 2.
+  6. **Le chronogramme fait double emploi** avec l'OSCILLOSCOPE, qui trace déjà
+     les signaux. À garder en dernier, ou à abandonner.
+  7. **Question à poser avant la vague 4** : l'auteur utilise-t-il vraiment
+     l'appli sur téléphone ? Si non, la vraie UX mobile coûte cher pour rien.
+  8. **L'historique de versions est bon marché** (`localStorage` est déjà là) et
+     rassure beaucoup : je le remonterais en vague 1.
+  9. **Le croquis de barre du bas sous-estime le catalogue réel** : 97
+     composants, 20 onglets, dont 7 pour l'atelier Électronique, 8 pour Process
+     et 6 pour ⚡. « Deux niveaux maximum » reste juste, mais il faudra vérifier
+     que neuf catégories tiennent vraiment sur une ligne.
+
 - **Refondre la barre du bas.** L'auteur la trouve « peu ergonomique à
   l'usage », même après la refonte de la v6.6. À reprendre en entier, pas à
   rafistoler.
