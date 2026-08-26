@@ -801,9 +801,8 @@ avec T207 comme garde-fou.
 
 ## LA PROPOSITION D'OVERLAY — maquette faite, en attente de validation
 
-Maquette cliquable « La grille nue » :
-https://claude.ai/code/artifact/ccb01f10-c79b-4ab0-8bb7-9dd58819f9da
-(source : `scratchpad/grille-nue.html`, cinq états : panneau rangé, panneau
+Maquette cliquable « La grille nue » : **`maquettes/la-grille-nue.html`**,
+fichier autonome à ouvrir dans un navigateur (cinq états : panneau rangé, panneau
 ouvert, menu ouvert, mode leçon, et « aujourd'hui » pour comparer.)
 
 Contrainte qui commande tout, donnée par l'auteur :
