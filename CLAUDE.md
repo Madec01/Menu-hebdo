@@ -62,16 +62,6 @@ court et en français simple :
 Ce point s'appuie sur `note.md` — donc `note.md` doit toujours contenir de quoi
 l'écrire : une section « Défauts connus » et une section « Ce qui reste ».
 
-**Au début de chaque session**, après l'avoir lu, faire à l'auteur un point
-court et en français simple :
-
-1. les **bugs identifiés** et pas encore corrigés,
-2. les **modifications qui restent à faire**, dans l'ordre prévu,
-3. où on en était exactement.
-
-Ce point s'appuie sur `note.md` — donc `note.md` doit toujours contenir de quoi
-l'écrire : une section « Défauts connus » et une section « Ce qui reste ».
-
 - Le mettre à jour **dès qu'un morceau de travail est terminé** (et pas
   seulement quand l'auteur annonce un « clear » : un clear efface la mémoire
   sans prévenir).
@@ -94,11 +84,11 @@ Quatre phases, dans cet ordre :
 1. ~~**Le continu**~~ — la partie technique est **faite** (solveur nodal,
    liaison de puissance, mesure, générateur, oscilloscope, rails et tunnels).
    Il ne reste que son **chapitre de cours**, suivi dans `note.md`.
-2. **Produire** — aimant qu'on fait passer dans une bobine à la souris,
-   dynamo à manivelle dont l'effort augmente avec la charge, turbine
-   alimentée par le four ou la chaudière, panneau solaire, thermocouple.
+2. ~~**Produire**~~ — **faite** (aimant, bobine d'induction, dynamo à
+   manivelle, chaudière, turbine, panneau solaire, thermopile), avec son
+   chapitre 32.
 3. **L'alternatif** — condensateur et bobine, pas de temps plus fin,
-   résonance, pont redresseur.
+   générateur alternatif, ralenti global, résonance, pont redresseur.
 4. **L'éther** — la radio : la position sur le plan compte vraiment, accord
    LC, modulations AM / FM / Morse / numérique, obstacles. Et le son, qui est
    le même moteur tourné beaucoup plus lentement.
