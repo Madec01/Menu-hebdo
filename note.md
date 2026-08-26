@@ -55,6 +55,18 @@ de travail est nu, avec le logo pour seul repère.
   passent à la ligne, et une ligne incomplète est **centrée**. Elles étaient à
   62×60 avec un nom en 8 px : illisible, l'auteur l'a signalé. La rangée est
   plafonnée à trois lignes (`max-height:272px`), au-delà elle défile.
+- **Les symboles suivent.** Les composants sans dessin à eux affichaient un
+  caractère posé par `glyphIcon()` en corps 13 dans une boîte de 32×24 : perdu
+  au milieu d'une tuile agrandie. La taille dépend maintenant du nombre de
+  caractères (22 / 19 / 15 / 12) et le centrage vertical passe par
+  `dominant-baseline` au lieu d'une ligne de base posée à la main.
+  Cinq composants ont reçu un **vrai dessin** au lieu d'un caractère, parce
+  qu'aucune taille de police ne les aurait sauvés : le rail (`▤`), le cadre et
+  l'écran (`▭`, `🖵`), le tunnel (`⇢`) et le convoyeur. Ils sont dans `ICO`,
+  préfixés `__`, et référencés par `icon:ICO.__NOM` dans leur `defComp`.
+  **Piège** : `TUNP` avait déjà sa clé `icon` ; ajouter la mienne a créé un
+  doublon silencieux (la seconde gagne). Vérifier qu'un `defComp` n'a qu'une
+  seule clé `icon` avant d'en poser une.
 - L'ouverture s'anime (`@keyframes panneauOuvre`, 0,19 s). **On n'anime que
   `transform` et `opacity`** : la grille se redessine 60 fois par seconde
   derrière, animer une largeur la ferait saccader. `prefers-reduced-motion`
