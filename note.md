@@ -710,7 +710,8 @@ lot séparé.
 
 ## LES DEUX CHANTIERS SUIVANTS, demandés par l'auteur
 
-### A. Le guide est à refaire
+### A. Le guide est à refaire — **maquette faite, en attente de validation**
+Maquette cliquable : **`maquettes/le-guide-en-pleine-page.html`**.
 Verdict de l'auteur : « **trop complexe à utiliser et trop étroit** ».
 Aujourd'hui c'est une colonne unique de texte dense dans une fenêtre étroite,
 avec en prime tout le pavé des raccourcis clavier collé à la fin.
@@ -723,6 +724,23 @@ Ce qu'il veut :
   bouton « Touches et raccourcis » dans le **menu**, avec sa propre fenêtre.
 
 Le menu a déjà sa section **Aide** prête à l'accueillir (`MENU_PLAN`).
+
+Ce que propose la maquette :
+- **une page plein écran**, pas une fenêtre : en-tête (titre + recherche + ✕),
+  filtres par atelier, sommaire à gauche, fiches à droite ;
+- **trois chemins** vers l'information, selon ce qu'on sait déjà : la recherche
+  (je sais quoi), les filtres par atelier (je sais où), le sommaire (je furète) ;
+- **le sommaire en colonne à gauche plutôt qu'en onglets** — avec neuf sections,
+  une rangée d'onglets déborde ; une colonne les montre toutes, avec le nombre
+  de fiches de chacune, et laisse le haut aux filtres par atelier ;
+- **une fiche par composant** (symbole, nom, texte, « Essaie », « Dans la vraie
+  vie »), en grille de deux ou trois par ligne ;
+- **les touches ont leur propre page**, rangées par geste (se déplacer,
+  sélectionner, câbler, modifier, effacer, affichage).
+
+Proposition en plus, à valider : **clic droit sur un composant du plan →
+« Ouvrir le guide ici »**, qui ouvre le guide sur sa fiche. C'est ce qui fait
+passer le guide de « document qu'on lit une fois » à « chose qu'on consulte ».
 
 ### B. Lâcher un câble dans le vide doit proposer les composants DÉJÀ POSÉS
 Aujourd'hui, quand on tire un câble et qu'on le lâche dans le vide, l'appli

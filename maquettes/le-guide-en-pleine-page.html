@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  img,svg,video{max-width:100%;height:auto}
+</style>
+</head>
+<body>
+<title>Le guide, en pleine page</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+
+<style>
+:root{
+  --bg0:#05070d; --panel:rgba(12,19,36,.9); --panel2:rgba(16,25,46,.94);
+  --border:rgba(120,160,220,.16); --border2:rgba(120,160,220,.3);
+  --text:#e9f2ff; --dim:#8698ba; --dim2:#61729180;
+  --cyan:#38e1ff; --green:#3dff9e; --amber:#ffc23d; --violet:#b18cff; --red:#ff5c69;
+  --disp:'Chakra Petch',system-ui,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+  --at:var(--cyan);
+}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg0);color:var(--text);font-family:var(--disp);
+  font-size:16px;line-height:1.55;
+  background-image:radial-gradient(80% 50% at 50% -10%,#0d1830 0%,var(--bg0) 60%);
+  background-attachment:fixed}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+
+.wrap{max-width:1100px;margin:0 auto;padding:56px 22px 90px}
+.eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.22em;text-transform:uppercase;
+  color:var(--cyan);margin:0 0 14px}
+h1{font-size:clamp(34px,6vw,56px);line-height:1.05;margin:0 0 18px;font-weight:700;
+  letter-spacing:-.015em;text-wrap:balance}
+h2{font-size:clamp(21px,2.6vw,27px);margin:60px 0 8px;font-weight:600;letter-spacing:-.01em}
+h3{font-size:17px;margin:26px 0 6px;font-weight:600}
+p{margin:0 0 14px;color:#c3d1e6;max-width:66ch}
+.lede{font-size:clamp(16.5px,2vw,19px);color:#aebfd8;max-width:60ch}
+b,strong{color:#fff;font-weight:600}
+code{font-family:var(--mono);font-size:.9em;color:var(--cyan);
+  background:rgba(56,225,255,.08);padding:1px 5px;border-radius:4px}
+ul{color:#c3d1e6;max-width:66ch;padding-left:20px} li{margin-bottom:7px}
+
+/* ================= la maquette ================= */
+.ctrls{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin:30px 0 14px}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.seg button{padding:8px 15px;font-size:14px;color:var(--dim);transition:background .16s,color .16s}
+.seg button+button{border-left:1px solid var(--border)}
+.seg button[aria-pressed="true"]{background:rgba(56,225,255,.13);color:#fff}
+.hint{font-family:var(--mono);font-size:11.5px;color:var(--dim2);flex:1;min-width:180px}
+
+.mock{position:relative;width:100%;aspect-ratio:100/64;container-type:inline-size;
+  border:1px solid var(--border);border-radius:14px;overflow:hidden;
+  background:radial-gradient(120% 90% at 50% 0%,#0c1526 0%,var(--bg0) 70%);
+  box-shadow:0 24px 70px rgba(0,0,0,.55)}
+.page{position:absolute;inset:0;display:flex;flex-direction:column;font-size:1.3cqw}
+[data-vue="rac"] .p-guide,[data-vue="guide"] .p-rac{display:none}
+
+/* --- en-tête de la page --- */
+.ph{display:flex;align-items:center;gap:1.4cqw;padding:1.5cqw 2cqw;
+  border-bottom:1px solid var(--border);background:rgba(9,15,28,.5)}
+.ph .ico{font-size:2cqw;line-height:1}
+.ph h3{margin:0;font-size:1.9cqw;font-weight:700;letter-spacing:-.01em;white-space:nowrap}
+.ph .sub{font-family:var(--mono);font-size:.95cqw;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--dim2);white-space:nowrap}
+.rech{flex:1;min-width:0;display:flex;align-items:center;gap:.8cqw;
+  padding:.85cqw 1.2cqw;border-radius:.9cqw;border:1px solid var(--border2);
+  background:rgba(5,9,18,.7);font-family:var(--mono);font-size:1.1cqw;color:#cfdcf0}
+.rech .ph-k{margin-left:auto;font-size:.9cqw;color:var(--dim2);
+  border:1px solid var(--border);border-radius:.4cqw;padding:.1cqw .5cqw}
+.fermer{flex:none;width:3.2cqw;height:3.2cqw;border-radius:.8cqw;border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;font-size:1.5cqw;color:var(--dim)}
+.fermer:hover{color:#fff;border-color:var(--border2)}
+
+/* --- filtres par atelier --- */
+.ats{display:flex;gap:.5cqw;padding:1cqw 2cqw;border-bottom:1px solid var(--border)}
+.at{display:flex;align-items:center;gap:.5cqw;padding:.55cqw 1.1cqw;border-radius:2cqw;
+  border:1px solid var(--border);font-size:1.1cqw;font-weight:600;
+  color:color-mix(in srgb,var(--tc,#8698ba) 55%,#8195b4);white-space:nowrap;transition:.15s}
+.at:hover{color:color-mix(in srgb,var(--tc,#fff) 80%,#fff)}
+.at[aria-selected="true"]{color:#061018;border-color:transparent;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--tc) 60%,#fff),var(--tc))}
+.at .n{font-family:var(--mono);font-size:.85cqw;opacity:.75}
+
+/* --- corps : sommaire à gauche, fiches à droite --- */
+.corps{flex:1;display:flex;min-height:0}
+.som{width:21cqw;flex:none;border-right:1px solid var(--border);padding:1.2cqw .9cqw;
+  display:flex;flex-direction:column;gap:.15cqw;overflow-y:auto;background:rgba(7,12,24,.4)}
+.som .cap{font-family:var(--mono);font-size:.85cqw;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--dim2);padding:.3cqw .8cqw .6cqw}
+.som button{display:flex;align-items:center;gap:.7cqw;padding:.7cqw .8cqw;border-radius:.7cqw;
+  font-size:1.15cqw;color:#a9bbd6;text-align:left;transition:.15s;border-left:2px solid transparent}
+.som button:hover{background:rgba(255,255,255,.045);color:#dbe6f5}
+.som button[aria-current="true"]{background:color-mix(in srgb,var(--at) 12%,transparent);
+  color:#fff;border-left-color:var(--at);font-weight:600}
+.som .b{margin-left:auto;font-family:var(--mono);font-size:.9cqw;color:var(--dim2)}
+
+.fiches{flex:1;min-width:0;overflow-y:auto;padding:1.4cqw 2cqw 2cqw}
+.sec-t{font-family:var(--mono);font-size:.95cqw;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--at);margin:0 0 .5cqw}
+.sec-p{font-size:1.15cqw;line-height:1.55;color:#a9bbd6;margin:0 0 1.4cqw;max-width:62cqw}
+.grille{display:grid;gap:.9cqw;grid-template-columns:repeat(auto-fill,minmax(23cqw,1fr))}
+.fiche{border:1px solid var(--border);border-radius:1cqw;padding:1.1cqw 1.2cqw;
+  background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));
+  transition:.15s}
+.fiche:hover{border-color:var(--at)}
+.fiche .tete{display:flex;align-items:center;gap:.8cqw;margin-bottom:.6cqw}
+.fiche .sym{width:3cqw;height:2.6cqw;border-radius:.6cqw;display:flex;align-items:center;
+  justify-content:center;font-size:1.6cqw;color:var(--c,var(--at));
+  background:color-mix(in srgb,var(--c,var(--at)) 12%,transparent);
+  border:1px solid color-mix(in srgb,var(--c,var(--at)) 30%,transparent);flex:none}
+.fiche h4{margin:0;font-size:1.25cqw;font-weight:700}
+.fiche .t{font-size:1.08cqw;line-height:1.5;color:#b0c1da;margin:0}
+.fiche .ex{margin-top:.7cqw;font-size:1cqw;line-height:1.45;color:#8fd9b4;
+  border-left:2px solid rgba(61,255,158,.4);padding-left:.8cqw}
+.fiche .re{margin-top:.6cqw;font-size:1cqw;line-height:1.45;color:#c3a86a;
+  border-left:2px solid rgba(255,194,61,.35);padding-left:.8cqw}
+
+/* --- la page des raccourcis --- */
+.rac-corps{flex:1;overflow-y:auto;padding:1.6cqw 2cqw 2cqw;
+  display:grid;gap:1.6cqw 2.2cqw;grid-template-columns:repeat(auto-fill,minmax(30cqw,1fr));
+  align-content:start}
+.rac-grp .cap{font-family:var(--mono);font-size:.9cqw;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--cyan);margin-bottom:.7cqw}
+.rac{display:flex;align-items:baseline;gap:.8cqw;padding:.42cqw 0;
+  border-bottom:1px solid rgba(120,160,220,.08)}
+.rac .k{flex:none;display:flex;gap:.3cqw}
+kbd{font-family:var(--mono);font-size:.95cqw;color:#cfdcf0;background:rgba(255,255,255,.06);
+  border:1px solid var(--border2);border-bottom-width:2px;border-radius:.4cqw;
+  padding:.15cqw .55cqw;white-space:nowrap}
+.rac .d{font-size:1.05cqw;color:#a9bbd6;line-height:1.4}
+
+.tag{position:absolute;font-family:var(--mono);font-size:1cqw;letter-spacing:.04em;
+  color:var(--amber);background:rgba(255,194,61,.12);border:1px solid rgba(255,194,61,.34);
+  padding:.25cqw .7cqw;border-radius:.6cqw;pointer-events:none;white-space:nowrap}
+
+/* ================= le reste de la page ================= */
+.cards{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));margin-top:18px}
+.card{border:1px solid var(--border);border-radius:12px;padding:18px;
+  background:linear-gradient(180deg,rgba(255,255,255,.032),rgba(255,255,255,.012))}
+.card p{margin:0;font-size:14.5px;color:#b7c6e0}
+.card .n{font-family:var(--mono);font-size:11px;letter-spacing:.18em;color:var(--cyan);
+  text-transform:uppercase;margin-bottom:8px}
+.avis{border-left:2px solid var(--amber);padding:2px 0 2px 18px;margin:22px 0}
+.avis h3{color:var(--amber);margin-top:0}
+table.lots{width:100%;border-collapse:collapse;font-size:14.5px;margin-top:6px}
+table.lots th{text-align:left;font-family:var(--mono);font-size:11px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--dim2);padding:0 12px 10px 0;font-weight:500}
+table.lots td{padding:12px 12px 12px 0;border-top:1px solid var(--border);vertical-align:top;color:#bccbe4}
+table.lots td:first-child{color:#fff;font-weight:600;white-space:nowrap}
+.chip{display:inline-block;font-family:var(--mono);font-size:11px;padding:2px 8px;
+  border-radius:20px;border:1px solid currentColor;white-space:nowrap}
+.c-ok{color:var(--green)} .c-mid{color:var(--amber)}
+.tbl-wrap{overflow-x:auto}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="wrap">
+
+<p class="eyebrow">NodeFlow · proposition pour le guide</p>
+<h1>Le guide, en pleine page</h1>
+<p class="lede">Une <b>page à elle seule</b> dans l'appli, pas une fenêtre étroite.
+Un sommaire à gauche, des fiches à droite, une recherche qui filtre tout, et les
+touches parties dans leur propre page.</p>
+
+<section>
+  <div class="ctrls">
+    <div class="seg" role="group" aria-label="Page">
+      <button id="b-guide" aria-pressed="true">Le guide</button>
+      <button id="b-rac" aria-pressed="false">Touches &amp; raccourcis</button>
+    </div>
+    <span class="hint">Cliquable : les ateliers en haut, les sections à gauche.</span>
+  </div>
+
+  <div class="mock" id="mock" data-vue="guide" data-at="tout">
+
+    <!-- ================= LE GUIDE ================= -->
+    <div class="page p-guide">
+      <div class="ph">
+        <span class="ico">📘</span>
+        <div><h3>Guide</h3><div class="sub">104 composants · 9 sections</div></div>
+        <div class="rech">🔍 chercher un composant, un mot, une notion…
+          <span class="ph-k">Échap pour fermer</span></div>
+        <button class="fermer" title="Revenir au plan">✕</button>
+      </div>
+
+      <div class="ats" id="m-ats">
+        <button class="at" data-at="tout" style="--tc:#8fa6c8" aria-selected="true">
+          Tout <span class="n">104</span></button>
+        <button class="at" data-at="elec" style="--tc:#38e1ff" aria-selected="false">
+          ⚡ Électronique <span class="n">46</span></button>
+        <button class="at" data-at="proc" style="--tc:#3dff9e" aria-selected="false">
+          🏭 Process <span class="n">34</span></button>
+        <button class="at" data-at="phys" style="--tc:#b18cff" aria-selected="false">
+          🔌 Énergie &amp; ondes <span class="n">24</span></button>
+      </div>
+
+      <div class="corps">
+        <nav class="som" id="m-som"></nav>
+        <div class="fiches" id="m-fiches"></div>
+      </div>
+    </div>
+
+    <!-- ================= LES RACCOURCIS ================= -->
+    <div class="page p-rac">
+      <div class="ph">
+        <span class="ico">⌨</span>
+        <div><h3>Touches &amp; raccourcis</h3><div class="sub">tous les gestes de l'atelier</div></div>
+        <div class="rech">🔍 chercher un geste…
+          <span class="ph-k">Échap pour fermer</span></div>
+        <button class="fermer" title="Revenir au plan">✕</button>
+      </div>
+      <div class="rac-corps" id="m-rac"></div>
+    </div>
+  </div>
+</section>
+
+<h2>Ce qui change</h2>
+<div class="cards">
+  <div class="card"><div class="n">une page, pas une fenêtre</div><p>Le guide occupe
+    <b>tout l'écran</b>. On y entre depuis le menu, on en sort par ✕ ou par Échap, et
+    on retombe exactement où on était sur le plan.</p></div>
+  <div class="card"><div class="n">le sommaire à gauche</div><p>Neuf sections, avec le
+    <b>nombre de fiches</b> à côté de chacune. On voit d'un coup d'œil tout ce que contient
+    le guide, et où aller. C'est ça, la navigation simple.</p></div>
+  <div class="card"><div class="n">des fiches, pas un pavé</div><p>Une fiche par composant :
+    le symbole, le nom, à quoi ça sert, <b>« Essaie »</b> et <b>« Dans la vraie vie »</b>.
+    Deux ou trois par ligne. On balaie du regard au lieu de lire une colonne.</p></div>
+  <div class="card"><div class="n">les touches s'en vont</div><p>Elles avaient leur pavé
+    collé au bout du guide. Elles ont maintenant <b>leur propre page</b>, ouverte depuis
+    le menu, rangée par geste.</p></div>
+</div>
+
+<h2>Comment on s'y retrouve — trois chemins</h2>
+<p>C'est le point sur lequel je me suis le plus arrêté. Trois façons d'arriver à
+l'information, selon ce qu'on sait déjà :</p>
+<ul>
+  <li><b>Je sais ce que je cherche</b> → la <b>recherche</b> en haut. Elle filtre les
+  fiches pendant qu'on tape, dans les noms comme dans les textes. Le sommaire à gauche
+  montre alors combien de résultats par section.</li>
+  <li><b>Je sais dans quel monde je suis</b> → les <b>ateliers</b> en haut :
+  ⚡ Électronique, 🏭 Process, 🔌 Énergie &amp; ondes. Quand tu travailles sur une radio,
+  les quarante-six composants logiques n'ont rien à faire là.</li>
+  <li><b>Je furète</b> → le <b>sommaire</b>. Les sections dans l'ordre où on les
+  rencontre : les outils, les entrées, les portes, la mémoire, le calcul, les sorties…</li>
+</ul>
+
+<div class="avis">
+  <h3>Trois choix où j'ai un avis, dis-moi si tu n'es pas d'accord</h3>
+  <p><b>1. Le sommaire à gauche plutôt que des onglets en haut.</b> Tu parlais d'onglets.
+  Avec neuf sections, une rangée d'onglets déborde ou devient illisible. Une colonne les
+  montre <b>toutes en même temps</b>, avec leur nombre de fiches — et elle laisse la place
+  aux filtres par atelier, eux, en haut. Tu gardes le geste « cliquer pour filtrer », mais
+  sans rien perdre de vue.</p>
+  <p><b>2. La section « L'atelier — les outils qui t'aident » reste en tête.</b> C'est du
+  texte suivi, pas des fiches : l'inspecteur, la glissière, l'analyseur, le cartouche de
+  leçon. Je la garde en première section, présentée en fiches larges plutôt qu'en un
+  seul bloc.</p>
+  <p><b>3. Un lien depuis les composants.</b> Clic droit sur un composant du plan →
+  « Ouvrir le guide ici ». Le guide s'ouvre directement sur sa fiche. C'est ce qui
+  transforme le guide de « document qu'on lit une fois » en « chose qu'on consulte ».
+  Ça n'était pas dans ta demande, mais ça coûte trois lignes.</p>
+</div>
+
+<h2>Comment je le livrerais</h2>
+<div class="tbl-wrap">
+<table class="lots">
+  <tr><th>Étape</th><th>Ce que tu obtiens</th><th>Risque</th></tr>
+  <tr><td>1 · la page</td>
+    <td>Le guide devient une page plein écran : en-tête, sommaire à gauche, fiches à droite.
+      Le contenu ne change pas, il est seulement rangé autrement.</td>
+    <td><span class="chip c-ok">faible</span></td></tr>
+  <tr><td>2 · chercher &amp; filtrer</td>
+    <td>La barre de recherche et les filtres par atelier, avec les compteurs par section.</td>
+    <td><span class="chip c-ok">faible</span></td></tr>
+  <tr><td>3 · les raccourcis</td>
+    <td>Leur page à eux, ouverte par un bouton du menu, rangée par geste.</td>
+    <td><span class="chip c-ok">faible</span></td></tr>
+  <tr><td>4 · le lien direct</td>
+    <td>« Ouvrir le guide ici » depuis un composant du plan.</td>
+    <td><span class="chip c-mid">à valider</span></td></tr>
+</table>
+</div>
+<p style="margin-top:18px">Les trois premières étapes se tiennent : je les livrerais
+<b>d'un bloc</b>, c'est la même page. La quatrième seulement si elle te plaît.</p>
+
+</div>
+
+<script>
+const mock = document.getElementById('mock');
+const $ = s => document.querySelector(s);
+
+/* Le contenu de la maquette reprend de vraies fiches de l'appli. */
+const SECTIONS = [
+  { id:'outils', nom:'L’atelier', ico:'🎚', at:['tout'], n:5,
+    p:'Les outils qui t’aident : la glissière, l’inspecteur, l’analyseur, le cartouche de leçon, la gomme.',
+    f:[['🎚','La glissière','#38e1ff','Survole un composant réglable et tire la barre du bas. La durée d’une temporisation, la fréquence d’une horloge, la consigne d’un thermostat se règlent d’un geste, sans rien ouvrir.','Maintiens Maj pour affiner le réglage.',null],
+       ['🔧','L’inspecteur','#38e1ff','Double-clic sur un composant ouvre son panneau de réglages : fréquence exacte, contenu d’une ROM, étiquette personnalisée… Les réglages voyagent avec le composant.',null,'Les réglages survivent au copier-coller, aux sauvegardes et aux puces.'],
+       ['🔬','L’analyseur','#38e1ff','Il remonte les câbles depuis chaque ampoule et écrit l’équation booléenne de ton circuit.','Sur les missions « boîte noire », il est brouillé : à toi de déduire.',null],
+       ['🩹','La gomme','#ff5c69','Prends-la dans les outils ou avec la touche G, puis glisse sur ce que tu veux effacer. Tout un trait ne fait qu’une seule annulation.','Échap la range. Les composants verrouillés d’une leçon résistent.',null],
+       ['📌','Le cartouche de leçon','#b18cff','L’explication est posée sur le plan, à côté des composants dont elle parle, et reliée à eux par un trait.','Attrape-le par sa barre de titre pour le déplacer ; double-clic pour le remettre tout seul.',null]] },
+  { id:'entrees', nom:'Les entrées', ico:'⌁', at:['elec','proc'], n:9,
+    p:'Tout circuit commence par des sources : elles injectent des 0 et des 1 que la logique va transformer.',
+    f:[['⌁','Interrupteur','#38e1ff','Deux états stables, 0 ou 1. Clique dessus pour basculer. C’est ta main dans le circuit.','Deux interrupteurs et une porte ET : tu tiens la mission 2.',null],
+       ['◍','Bouton poussoir','#38e1ff','Il vaut 1 tant qu’on appuie, et retombe à 0 dès qu’on lâche.',null,'C’est le bouton d’un ascenseur : on appuie, on relâche, et pourtant la cabine part.'],
+       ['⏱','Horloge','#38e1ff','Elle alterne 0 et 1 toute seule, à la fréquence qu’on lui donne.','Branche-la sur un compteur : tu obtiens un chronomètre.',null],
+       ['1','Vrai · 1','#ffc23d','Une source qui vaut toujours 1. Utile pour forcer une entrée.',null,null]] },
+  { id:'portes', nom:'Les portes', ico:'&', at:['elec'], n:11,
+    p:'Une porte lit ses entrées et applique sa règle, en permanence, instantanément. Toute l’informatique repose sur ces sept règles.',
+    f:[['&','ET','#ffc23d','La sortie vaut 1 seulement si TOUTES les entrées valent 1. C’est la double sécurité.','Une mise à feu à deux clés : il faut les deux, en même temps.',null],
+       ['≥1','OU','#ffc23d','La sortie vaut 1 dès qu’AU MOINS UNE entrée vaut 1.',null,'C’est l’alarme d’une maison : n’importe quelle fenêtre suffit.'],
+       ['▷','NON','#ffc23d','Elle inverse : 0 devient 1, 1 devient 0. La plus simple, et pourtant indispensable.',null,null],
+       ['⊕','XOR','#ff5c69','La sortie vaut 1 si les entrées sont DIFFÉRENTES. C’est le « ou bien ».','Le va-et-vient d’un couloir : deux interrupteurs, une lampe.','Deux interrupteurs d’escalier, c’est exactement un XOR.'],
+       ['⊼','NON-ET','#ffc23d','Un ET suivi d’un NON. Porte universelle : on peut tout reconstruire avec elle seule.',null,'La porte la plus fabriquée de l’histoire : 4 transistors en CMOS.']] },
+  { id:'memoire', nom:'Mémoire & temps', ico:'D', at:['elec'], n:7,
+    p:'Jusqu’ici la sortie ne dépendait que du présent. Ces composants introduisent le passé : c’est la logique séquentielle.',
+    f:[['D','Bascule D','#38e1ff','Elle mémorise l’entrée D au moment du front d’horloge, et la garde jusqu’au suivant.','Quatre bascules côte à côte : tu as un registre 4 bits.',null],
+       ['RS','Verrou RS','#38e1ff','S allume, R éteint, et le circuit se souvient. Deux NOR croisés — le premier bit de mémoire de l’histoire.',null,null],
+       ['#','Compteur','#38e1ff','Il compte les fronts d’horloge et sort le nombre en binaire.',null,null]] },
+  { id:'sorties', nom:'Les sorties', ico:'◉', at:['elec','proc'], n:10,
+    p:'Un circuit ne sert à rien si on ne voit pas ce qu’il raconte. Chaque sortie traduit des bits en lumière, chiffres, son ou mouvement.',
+    f:[['◉','Ampoule','#3dff9e','Elle s’allume quand son entrée vaut 1. La façon la plus directe de voir un signal.',null,null],
+       ['◐','Afficheur 7 segments','#3dff9e','Il traduit 4 bits en un chiffre lisible, de 0 à 9.','Branche un compteur dessus et regarde-le compter.',null],
+       ['♪','Buzzer','#3dff9e','Il émet un son tant que son entrée vaut 1. La hauteur se règle dans l’inspecteur.',null,null]] },
+  { id:'cablage', nom:'Câblage', ico:'▤', at:['elec','phys'], n:8,
+    p:'Ce qui range le schéma sans rien calculer : la barre, le point nommé, le cadre.',
+    f:[['▤','Rail de distribution','#ffc23d','Toutes ses bornes sont un seul et même point électrique. On amène le courant une fois, chacun s’y raccorde par un moignon.',null,'Dans un tableau électrique, ces barres de cuivre s’appellent des jeux de barres.'],
+       ['⊶','Tunnel','#38e1ff','Deux tunnels de même nom ne sont pas « reliés » : ils SONT le même point. Zéro fil tracé.',null,'Sur un schéma d’armoire, l’alimentation et la masse ne sont presque jamais tracées en fil.']] },
+  { id:'continu', nom:'⚡ Le continu', ico:'⎓', at:['phys'], n:8,
+    p:'Le courant, la tension, la résistance : ici les bornes sont hexagonales et le circuit est une boucle fermée.',
+    f:[['⎓','Pile','#b18cff','Elle pousse le courant. Sa résistance interne explique pourquoi sa tension baisse quand on tire dessus.','Court-circuite-la et regarde le courant s’envoler : c’est pour ça qu’un fusible existe.',null],
+       ['Ω','Résistance','#b18cff','Elle freine le courant. U = R × I, et c’est tout.',null,'Les anneaux de couleur ne sont pas décoratifs : ils donnent la valeur.'],
+       ['⊣⊢','Condensateur','#b18cff','Un réservoir de charge : il se remplit en courbe, garde sa tension, et se vide dans une ampoule qui s’éteint en fondu.','En série sur de l’alternatif : ça passe. En continu : ça bloque.',null]] },
+  { id:'alternatif', nom:'⚡ L’alternatif', ico:'∿', at:['phys'], n:6,
+    p:'Ce qui a de la mémoire, et ce qui trie. Une tension qui monte, redescend, passe par zéro et repart en négatif.',
+    f:[['∿','Générateur alternatif','#b18cff','Sa tension change de sens en permanence. C’est ce que fait toute prise de courant.','Au-delà de quelques hertz l’œil ne suit plus : prends le ralenti ×1 dans les outils.',null],
+       ['◠','Bobine','#b18cff','Elle s’oppose aux changements de courant. À l’ouverture, elle fabrique une surtension.',null,'C’est l’étincelle qu’on voit aux contacts d’un relais.']] },
+  { id:'radio', nom:'📡 La radio', ico:'((•', at:['phys'], n:9,
+    p:'Sans un seul fil. La distance compte, les murs atténuent, et il faut s’accorder sur la bonne fréquence.',
+    f:[['((•','Émetteur radio','#b18cff','Il rayonne à la fréquence choisie. Plus on s’éloigne, plus le signal faiblit — et un mur en mange une partie.','Pose un récepteur à six mètres, puis mets un mur entre les deux.',null],
+       ['◈','Accord LC','#b18cff','Une bobine et un condensateur choisissent une fréquence et rejettent les autres. C’est le bouton d’une radio.',null,'C’est exactement ce que fait la molette d’un vieux poste : elle change un condensateur.']] }
+];
+
+const RAC = [
+  ['Se déplacer', [
+    [['Glisser le fond'],'déplacer la vue'],
+    [['Molette'],'zoomer'],
+    [['F'],'recadrer sur tout le circuit'],
+    [['Ctrl','F'],'chercher un composant posé, et s’y rendre']
+  ]],
+  ['Sélectionner', [
+    [['Clic'],'sélectionner un composant'],
+    [['Maj','clic'],'ajouter ou retirer de la sélection'],
+    [['Maj','glisser le fond'],'sélection rectangle'],
+    [['Ctrl','A'],'tout sélectionner'],
+    [['Échap'],'désélectionner']
+  ]],
+  ['Câbler', [
+    [['Tirer d’une borne'],'poser un câble'],
+    [['Clic sur une entrée câblée'],'détacher le fil'],
+    [['Double-clic sur un fil'],'ajouter une poignée ◆'],
+    [['Suppr'],'effacer le fil survolé'],
+    [['🪄'],'ranger les câbles automatiquement']
+  ]],
+  ['Modifier', [
+    [['R'],'tourner'],
+    [['M'],'miroir'],
+    [['Tirer la barre du bas'],'régler le paramètre principal'],
+    [['Double-clic'],'ouvrir l’inspecteur'],
+    [['Maj','glisser'],'dupliquer (l’original reste)'],
+    [['Ctrl','C'],'copier'], [['Ctrl','V'],'coller'], [['Ctrl','X'],'couper']
+  ]],
+  ['Effacer & revenir', [
+    [['Suppr'],'effacer ce qui est survolé ou sélectionné'],
+    [['G'],'prendre la gomme, puis glisser'],
+    [['Ctrl','Z'],'annuler'], [['Ctrl','Y'],'refaire']
+  ]],
+  ['Affichage', [
+    [['N'],'noms des composants'],
+    [['P'],'révéler les pannes'],
+    [['Survol'],'infobulle détaillée']
+  ]]
+];
+
+let atCur = 'tout', secCur = 'outils';
+
+function visibles(){
+  return SECTIONS.filter(s => atCur === 'tout' || s.at.includes(atCur));
+}
+function peindre(){
+  const vis = visibles();
+  if (!vis.some(s => s.id === secCur)) secCur = vis.length ? vis[0].id : null;
+  const at = { tout:'#8fa6c8', elec:'#38e1ff', proc:'#3dff9e', phys:'#b18cff' }[atCur];
+  mock.querySelector('.p-guide').style.setProperty('--at', at);
+
+  $('#m-som').innerHTML = '<div class="cap">Sections</div>' + vis.map(s =>
+    '<button data-sec="' + s.id + '" aria-current="' + (s.id === secCur) + '">' +
+    '<span>' + s.nom + '</span><span class="b">' + s.n + '</span></button>').join('');
+
+  const s = vis.find(x => x.id === secCur);
+  $('#m-fiches').innerHTML = s ? (
+    '<div class="sec-t">' + s.nom + '</div><p class="sec-p">' + s.p + '</p><div class="grille">' +
+    s.f.map(([sym, nom, c, t, ex, re]) =>
+      '<div class="fiche" style="--c:' + c + '"><div class="tete">' +
+      '<span class="sym">' + sym + '</span><h4>' + nom + '</h4></div>' +
+      '<p class="t">' + t + '</p>' +
+      (ex ? '<div class="ex">💡 <b>Essaie :</b> ' + ex + '</div>' : '') +
+      (re ? '<div class="re">🌍 ' + re + '</div>' : '') +
+      '</div>').join('') + '</div>') : '';
+
+  mock.querySelectorAll('.at').forEach(b =>
+    b.setAttribute('aria-selected', b.dataset.at === atCur));
+}
+
+$('#m-ats').addEventListener('click', e => {
+  const b = e.target.closest('.at'); if (!b) return;
+  atCur = b.dataset.at; peindre();
+});
+$('#m-som').addEventListener('click', e => {
+  const b = e.target.closest('button[data-sec]'); if (!b) return;
+  secCur = b.dataset.sec; peindre();
+});
+
+$('#m-rac').innerHTML = RAC.map(([t, l]) =>
+  '<div class="rac-grp"><div class="cap">' + t + '</div>' +
+  l.map(([ks, d]) => '<div class="rac"><span class="k">' +
+    ks.map(k => '<kbd>' + k + '</kbd>').join('') + '</span><span class="d">' + d + '</span></div>').join('') +
+  '</div>').join('');
+
+const presse = (id, on) => $(id).setAttribute('aria-pressed', on ? 'true' : 'false');
+$('#b-guide').onclick = () => { mock.dataset.vue = 'guide'; presse('#b-guide', 1); presse('#b-rac', 0); };
+$('#b-rac').onclick   = () => { mock.dataset.vue = 'rac';   presse('#b-guide', 0); presse('#b-rac', 1); };
+
+peindre();
+</script>
+
+</body>
+</html>
