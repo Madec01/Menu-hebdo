@@ -125,6 +125,17 @@ une quarantaine de points par période — pour que son onde reste une onde et n
 un escalier. L'oscilloscope échantillonne au même rythme, avec une fenêtre qui
 descend à 20 ms.
 
+**La radio.** Premier domaine où **la position des boîtiers compte**. Un
+**émetteur** s'alimente comme une ampoule et rayonne ce qu'il consomme ; un
+**récepteur** capte, sans le moindre fil entre les deux. Deux lois, toutes deux
+vraies : la distance (deux fois plus loin, quatre fois moins de puissance — la
+tension, elle, n'est divisée que par deux) et les obstacles (un **mur** posé
+sur le trajet en retient sa part, selon sa matière : bois, brique, béton,
+métal). L'échelle du plan est fixée à **50 pixels pour un mètre**. Le récepteur
+n'est pas qu'un afficheur : c'est une source, quelques millivolts avec la
+résistance de son antenne en série — assez pour un oscilloscope, pas pour une
+ampoule.
+
 **Les pannes.** Une installation qui marche n'apprend rien : ce qu'on apprend,
 c'est à trouver *pourquoi* elle ne marche plus. Tout composant accepte une
 panne — hors service, mesure figée, dérive, organe bloqué — et rien ne se voit

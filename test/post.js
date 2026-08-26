@@ -2864,7 +2864,7 @@ T('T149 trois ateliers : la palette se recompose, les favoris ne bougent pas', (
   ok(phys && !phys.bientot, 'l’atelier Énergie & ondes n’est plus « bientôt »');
   setAppMode('phys');
   eq(appMode, 'phys', 'et il s’ouvre');
-  deq(cles(), ['ener','mesu','prod','alt','wirep'], 'énergie : cinq onglets, aucun surchargé');
+  deq(cles(), ['ener','mesu','prod','alt','onde','wirep'], 'énergie : six onglets, aucun surchargé');
   // aucune rangée ne doit déborder : au-delà d'une dizaine de tuiles, le
   // composant du bout devient introuvable (il faut deviner qu'on peut faire
   // défiler la rangée).
@@ -4743,7 +4743,8 @@ T('T205 les chapitres ⚡ : à la fin du cours, et dans leur atelier', () => {
   eq(missions.filter(m => /Chapitre 31/.test(m.ch)).length, 10, 'dix leçons au chapitre 31');
   eq(missions.filter(m => /Chapitre 32/.test(m.ch)).length, 8, 'huit au chapitre 32');
   eq(missions.filter(m => /Chapitre 33/.test(m.ch)).length, 8, 'huit au chapitre 33');
-  eq(lec.length, 26, 'vingt-six leçons dans l’atelier ⚡ en tout');
+  eq(missions.filter(m => /Chapitre 34/.test(m.ch)).length, 4, 'quatre au chapitre 34');
+  eq(lec.length, 30, 'trente leçons dans l’atelier ⚡ en tout');
   // toutes à la fin du catalogue, et groupées
   const prem = missions.findIndex(m => m.dom === 'phys');
   eq(prem + lec.length, missions.length, 'elles occupent la fin du catalogue');
@@ -4756,9 +4757,10 @@ T('T205 les chapitres ⚡ : à la fin du cours, et dans leur atelier', () => {
   });
   // les chapitres apparaissent dans la carte du cours, l’un après l’autre
   const noms = chapitres().map(c => c.ch || c.nom || c.name || '');
-  ok(/Chapitre 31/.test(noms[noms.length - 3]), 'le chapitre 31 vient en premier des trois');
-  ok(/Chapitre 32/.test(noms[noms.length - 2]), 'puis le chapitre 32');
-  ok(/Chapitre 33/.test(noms[noms.length - 1]), 'et le chapitre 33 ferme le cours');
+  ok(/Chapitre 31/.test(noms[noms.length - 4]), 'le chapitre 31 vient en premier des quatre');
+  ok(/Chapitre 32/.test(noms[noms.length - 3]), 'puis le chapitre 32');
+  ok(/Chapitre 33/.test(noms[noms.length - 2]), 'puis le chapitre 33');
+  ok(/Chapitre 34/.test(noms[noms.length - 1]), 'et le chapitre 34 ferme le cours');
   // et charger une leçon bascule dans l’atelier ⚡
   setAppMode('elec');
   loadMission(prem);
@@ -5558,7 +5560,7 @@ T('T228 les composants de l’alternatif sont complets et rangés', () => {
 });
 
 
-console.log('\n— ⚡ Lot 8 : finitions — fils droits, bornes libres, condensateur visible —');
+console.log('\n— ⚡ Finitions : fils droits, bornes libres, condensateur visible —');
 
 T('T229 un fil droit reste droit, même quand un autre passe dans le couloir', () => {
   board();
@@ -5643,6 +5645,124 @@ T('T231 le condensateur : jusqu’au farad, et il dit combien de temps il a mis'
   laisseFiler(3000);
   ok(co._vide, 'coupé, il a rendu ce qu’il gardait');
   ok(Math.abs(memLu(co, 'u0')) < 1, 'et il est retombé près de zéro');
+});
+
+console.log('\n— 📡 Lot 8 : la radio — la distance et les obstacles —');
+
+/* Un émetteur alimenté, et un récepteur qu'on pose où l'on veut. */
+function posteRadio(dxPx, dyPx){
+  board();
+  const g = mk('GENE', 0, 0), e = mk('EMET', 320, 0), m = mk('MASSE', 640, 0);
+  g.opt.u = 12; g.opt.ri = .1; g.opt.ilim = 3; e.opt.pw = 1; e.opt.un = 12;
+  link(g, 0, e, 0); link(e, 0, m, 0); link(m, 0, g, 0);
+  const r = mk('RECEP', 320 + (dxPx || 0), dyPx || 0);
+  r.opt.seuil = .3;
+  sim(); sim();                 // la 2e image : l'émetteur a publié sa puissance
+  return { g, e, m, r };
+}
+
+T('T232 la radio : sans fil, et deux fois plus loin c’est quatre fois moins', () => {
+  const A = posteRadio(0, 500);
+  ok(A.e._ray > .9 && A.e._ray < 1.1, 'l’émetteur rayonne ce qu’il consomme (' + A.e._ray.toFixed(3) + ' W)');
+  ok(!wires.some(w => w.outPin.comp === A.e && w.inPin.comp === A.r), 'aucun fil ne les relie');
+  ok(A.r._uant > 0, 'et pourtant le récepteur capte (' + fmtVolt(A.r._uant) + ')');
+  ok(A.r._src === A.e, 'il sait de qui ça vient');
+  const d1 = A.r._dist, u1 = A.r._uant, p1 = A.r._recu;
+  // on l'éloigne exactement deux fois plus
+  A.r.y = A.r.y + (A.r.y - (A.e.y + A.e.bh / 2 - A.r.bh / 2));
+  sim(); sim();
+  const d2 = A.r._dist, u2 = A.r._uant, p2 = A.r._recu;
+  near(d2 / d1, 2, .04, 'il est deux fois plus loin (' + fmtMetre(d1) + ' → ' + fmtMetre(d2) + ')');
+  near(u1 / u2, 2, .06, 'la TENSION est divisée par deux');
+  near(p1 / p2, 4, .2, 'mais la PUISSANCE par quatre — c’est ça, la loi du carré');
+  // un émetteur débranché n’émet rien
+  wires = wires.filter(w => w.outPin.comp !== A.g);
+  recalcFan(); sim(); sim();
+  near(A.e._ray, 0, 1e-3, 'débranché, il ne rayonne plus rien');
+  near(A.r._uant, 0, 1e-6, 'et le récepteur ne capte plus rien');
+});
+
+T('T233 un mur sur le trajet coupe, un mur à côté ne fait rien', () => {
+  // le rognage de segment, d’abord, tout seul
+  ok(segCoupeRect(0, 0, 100, 0, 40, -10, 20, 20), 'un segment qui traverse');
+  ok(!segCoupeRect(0, 0, 100, 0, 40, 40, 20, 20), 'un rectangle posé à côté');
+  ok(!segCoupeRect(0, 0, 30, 0, 40, -10, 20, 20), 'un rectangle au-delà du bout');
+  ok(segCoupeRect(0, 0, 0, 100, -10, 40, 20, 20), 'un segment vertical');
+
+  const A = posteRadio(0, 600);
+  const libre = A.r._uant;
+  ok(A.r.outPins[2].state === 1, 'sans obstacle, la liaison tient');
+  // un mur POSÉ À CÔTÉ ne change rien
+  const cote = mk('MUR', 1400, 300);
+  cote.opt.mat = 'metal'; cote.opt.larg = 288; cote.opt.haut = 64;
+  REG.MUR.restore(cote);
+  sim(); sim();
+  near(A.r._uant, libre, libre * .001, 'un mur à côté du trajet ne gêne personne');
+  eq(A.r._murs, 0, 'et il n’est pas compté');
+  // le même mur, mis en travers
+  cote.x = 240; cote.y = 300;
+  sim(); sim();
+  eq(A.r._murs, 1, 'en travers, il compte');
+  ok(A.r._uant < libre * .1, 'et il coupe pour de bon (' + fmtVolt(libre) + ' → ' + fmtVolt(A.r._uant) + ')');
+  eq(A.r.outPins[2].state, 0, 'la liaison est perdue');
+  // les quatre matières, dans l’ordre
+  const lus = ONDE_MATS.map(m => { cote.opt.mat = m[0]; sim(); sim(); return A.r._uant; });
+  for (let i = 1; i < lus.length; i++)
+    ok(lus[i] < lus[i-1], ONDE_MATS[i][2] + ' coupe plus que ' + ONDE_MATS[i-1][2]);
+  // deux murs coupent plus qu’un
+  const deux = mk('MUR', 240, 420);
+  deux.opt.mat = 'bois'; deux.opt.larg = 288; deux.opt.haut = 64;
+  REG.MUR.restore(deux);
+  cote.opt.mat = 'bois'; sim(); sim();
+  const d2 = A.r._uant;
+  wires = wires; components = components.filter(c => c !== deux);
+  sim(); sim();
+  ok(d2 < A.r._uant * .8, 'deux cloisons coupent plus qu’une seule');
+});
+
+T('T234 le récepteur est une vraie source, et un seuil qui décide', () => {
+  const A = posteRadio(0, 400);
+  ok(A.r._uant > .3, 'il capte largement');
+  // un voltmètre à ses bornes lit la tension qu’il produit
+  const v = mk('VOLT', 900, 400);
+  relierBornes(v.inPins[0], A.r.outPins[0]);
+  relierBornes(v.inPins[1], A.r.inPins[0]);
+  sim(); sim();
+  ok(Math.abs(A.r.u) > .05, 'ses bornes ⚡ portent bien une tension (' + fmtVolt(A.r.u) + ')');
+  // la sortie MES parle en volts, la sortie SEU décide
+  const mes = raw2phys(A.r.outPins[1].state, { min:0, max:5 });
+  near(mes, Math.min(5, A.r._uant), .05, 'la sortie MES dit la même chose, en volts');
+  eq(A.r.outPins[2].state, 1, 'au-dessus du seuil, SEU est à 1');
+  A.r.opt.seuil = 4.9;
+  sim(); sim();
+  eq(A.r.outPins[2].state, 0, 'seuil relevé : SEU retombe à 0');
+  eq(A.r._hs, 1, 'et il retient qu’il a été hors de portée');
+});
+
+T('T235 les trois pièces de la radio sont complètes et rangées', () => {
+  ['EMET', 'RECEP', 'MUR'].forEach(t => {
+    const d = REG[t];
+    ok(d, t + ' est au registre');
+    ok(d.guide && d.guide.txt.length > 40, t + ' a son entrée de guide');
+    ok(TOOL_TABS.some(x => x.items.includes(t)), t + ' est rangé dans un onglet');
+    board(); mk(t, 100, 100); sim(); drawScene(0);
+  });
+  const on = TOOL_TABS.find(t => t.key === 'onde');
+  ok(on, 'l’onglet « La radio » existe');
+  ok(on.items.length >= 3 && on.items.length <= 11, 'il ne déborde pas (' + on.items.length + ')');
+  ok(FAM_SECTIONS.some(f => f.key === 'onde'), 'la famille a sa section de guide');
+  // l’échelle du plan est dite quelque part, sinon « la distance » ne veut rien dire
+  eq(ONDE_PXM, 50, '50 pixels valent un mètre');
+  eq(fmtMetre(.4), '40 cm', 'les petites distances se disent en centimètres');
+  eq(fmtMetre(3.25), '3,3 m', 'et les autres en mètres');
+  // le mur se redimensionne par sa poignée, comme un cadre
+  board();
+  const m = mk('MUR', 0, 0);
+  ok(REG.MUR.grip(m), 'il a une poignée de coin');
+  gripStart(m, m.x + m.w, m.y + m.h);
+  gripMove(m.x + m.w + 160, m.y + m.h + 96);
+  ok(m.w > 96 && m.h > 288, 'et il s’étire (' + m.w + '×' + m.h + ')');
+  eq(m.opt.larg, m.w, 'la taille est rangée dans les réglages, donc sauvegardée');
 });
 
 /* ===================== bilan ===================== */

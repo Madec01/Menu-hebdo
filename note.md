@@ -5,17 +5,52 @@ dans `CLAUDE.md`.
 
 ## Où en est le projet
 
-- **v6.23**, branche `claude/architecte-logique-v5-vntfkp`, **234 tests verts**
+- **v6.24**, branche `claude/architecte-logique-v5-vntfkp`, **238 tests verts**
   (`npm test`).
-- `logicgates.html` : ~12 900 lignes, un seul `<script>`, aucune dépendance.
-- Copies figées dans `versions/` (v5.1 → v6.23), avec leur tableau dans
+- `logicgates.html` : ~13 300 lignes, un seul `<script>`, aucune dépendance.
+- Copies figées dans `versions/` (v5.1 → v6.24), avec leur tableau dans
   `versions/README.md`.
-- Catalogue : **174 leçons en 33 chapitres** — 63 à table de vérité (dont 8
-  boîtes noires), 85 libres, et 18 à **condition de réussite** (chapitres 31 et 32).
+- Catalogue : **178 leçons en 34 chapitres** — 63 à table de vérité (dont 8
+  boîtes noires), 85 libres, et 30 à **condition de réussite** (chapitres 31 à 34).
 
 ## Ce qui vient d'être fait
 
-**Lot 8 : trois finitions signalées à l'usage** (v6.23).
+**📡 Lot 8 : la radio — la distance et les obstacles** (v6.24). **Phase 4
+commencée.**
+
+Premier calcul du fichier où **la position des boîtiers compte pour de vrai**.
+
+- `solveOndes()`, juste AVANT `solveElec()` dans `simulate()`. Elle lit la
+  puissance que chaque émetteur a consommée à l'image d'avant et pose sur
+  chaque récepteur la tension qu'il capte. **Le décalage d'une image est
+  voulu** : le récepteur est lui-même une source pour le solveur du continu,
+  donc sans ce décalage c'est l'œuf et la poule.
+- **La physique**, en deux lignes et deux constantes : `ONDE_PXM = 50`
+  (50 px = 1 m) et `ONDE_D0 = .5`. Reçu = `Pe · (d0/d)² · ∏ atténuations`,
+  puis `U = √(P·300)` — 300 Ω, l'impédance d'une antenne. Vérifié : à 1 W,
+  0,77 V à 11 m, et doubler la distance divise la tension par 2 et la
+  puissance par 4, au chiffre près.
+- **Calibrage** : seuil du récepteur à **0,3 V** par défaut, ce qui donne une
+  portée utile de ~29 m à 1 W — soit exactement une largeur d'écran. Sans ça,
+  un émetteur de 1 W porte à 170 m et on ne perd jamais le signal à l'écran.
+- `segCoupeRect()` : rognage de Liang-Barsky. Il n'existait **aucun**
+  utilitaire d'intersection dans le fichier.
+- Trois composants, famille `onde`, **sixième onglet ⚡ « La radio »** :
+  `EMET` (résistance ordinaire vue du circuit — il rayonne ce qu'il consomme,
+  donc mal alimenté il émet moins), `RECEP` (source de `_uant` volts derrière
+  300 Ω, plus une sortie `MES` en volts et une sortie `SEU` tout-ou-rien),
+  `MUR` (redimensionnable par sa poignée, comme `ZONE` — le mécanisme
+  `grip`/`gripAt`/`gripMove` était déjà générique).
+- `pickComp` : **un mur cède le pas**. Il est grand et volerait sinon les clics
+  des pièces posées dessus. Il est aussi dessiné derrière, avec `ZONE`.
+- `drawOndes()` : arceaux concentriques autour de chaque émetteur (le dernier
+  marque la portée utile) et trait pointillé émetteur → récepteur, cyan si la
+  liaison tient, rouge sinon. Dessiné entre la grille et les câbles.
+- **Chapitre 34 « Sans fil »**, quatre leçons m175 → m178. m176 compare
+  **deux** récepteurs plutôt que d'exiger un déplacement : un montage figé ne
+  peut pas démontrer un mouvement (même problème que l'interrupteur de m169).
+
+**Lot 7 bis : trois finitions signalées à l'usage** (v6.23).
 
 1. **Les fils droits restent droits.** Deux bornes exactement en face
    donnaient bien un trait droit… jusqu'à ce qu'un deuxième câble emprunte le
@@ -434,5 +469,15 @@ Prévoir un champ `m.check(components, wires)`.
 → il manque encore des **montages d'exemple ⚡ pour l'alternatif** dans le
 menu 📦 (les quatre existants ne couvrent que le continu).
 
-**Phase 4 — l'éther.** Lot 8 : la distance et les obstacles. Lot 9 : accord
-LC, AM et FM. Lot 10 : Morse, numérique, le son, chapitre final.
+**Phase 4 — l'éther.** Lot 8 (distance et obstacles) : **FAIT**, v6.24.
+Lot 9 : accord LC, AM et FM. Lot 10 : Morse, numérique, le son, chapitre final.
+→ **La question FM est en attente** : « plutôt que de simuler l'onde on simule
+la simulation d'onde ». Interprétation proposée à l'auteur et non encore
+tranchée : modéliser la LIAISON (fréquence d'émission contre accord du
+récepteur, distance, obstacles) au lieu d'intégrer la porteuse. Une porteuse à
+100 MHz demanderait deux millions de fois plus de points que ce que le moteur
+peut calculer — le lot 8 est bâti dans cet esprit et ne contient donc aucune
+fréquence : un émetteur émet, un récepteur reçoit, point.
+→ **Un audit UI/UX complet de l'overlay a été demandé** pendant le lot 8
+(hiérarchie visuelle, ergonomie, accessibilité/responsive, technique). Son
+rapport alimentera la refonte de l'overlay prévue après la phase 4.
