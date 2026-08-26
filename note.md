@@ -27,13 +27,27 @@ démarrage, prend les vrais éléments (avec leurs écouteurs, leurs classes `on
 leurs `title` mis à jour dynamiquement) et les `appendChild` ailleurs. On leur
 ajoute juste un `<span class="ml">` pour le libellé. C'est la seule façon sûre :
 les recréer obligerait à rebrancher quatorze comportements à la main.
+- **La règle du partage**, posée après un retour de l'auteur (« la boîte à
+  outils manque de beaucoup des outils ») : les **OUTILS** sont ce qui **AGIT**
+  sur le circuit (annuler, refaire, analyser, ranger les câbles, recentrer,
+  capture, tout effacer, et la gomme au lot 4) ; le **MENU** est ce qui le
+  **RÈGLE** (grille magnétique, noms, mode de tracé, vitesse, son) et ce qui
+  fait **aller** ailleurs.
 - `MENU_PLAN` : quatre sections (Aller / Affichage / Simulation / Aide).
   Deux entrées sont créées de toutes pièces — « Les leçons » et « Bac à sable » —
   parce que leurs déclencheurs vivaient dans le cartouche d'énoncé, qui est
   masqué en bac à sable.
 - `OUTILS_GESTES` : annuler, refaire, capture. **Visibles même outils repliés.**
-- `#infos` (table & compteurs) déménage DANS `#outils`, puis « Tout effacer »
-  tout en bas, séparé par un trait.
+- `#infos` (table & compteurs) **flotte** : il garde sa place en bas à droite
+  mais démarre `masque`, et le bouton `btn-infos` des outils l'appelle.
+  **Exception assumée** : en leçon avec table de vérité, il s'ouvre tout seul —
+  sinon on chercherait où lire son résultat. C'est `montreInfos()` à la fin de
+  `loadMission()`.
+- **`#btn-start` (« Commencer les missions ») est masqué** : il faisait doublon
+  avec Menu → Les leçons. Masqué, pas supprimé — son code le manipule encore.
+- Le bouton qui **range le panneau des objets passe à GAUCHE** de la rangée
+  d'onglets, dans le même coin que celui qui l'ouvre. Une croix quand il est
+  ouvert, le pictogramme de puce quand il est rangé.
 
 **« Tout effacer » est devenu annulable**, condition posée avant de le mettre à
 côté des flèches. Le piège : `loadMission()` fait `undoStack = [snapshot]`, donc

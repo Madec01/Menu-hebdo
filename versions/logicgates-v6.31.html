@@ -66,7 +66,7 @@ button{font-family:inherit}
 #btn-menu svg{color:var(--cyan)}
 #btn-menu:hover{color:#fff;border-color:var(--border-hi)}
 
-#outils{position:fixed;right:12px;top:12px;z-index:21;width:252px;padding:8px;
+#outils{position:fixed;right:12px;top:12px;z-index:21;width:230px;padding:8px;
   display:flex;flex-direction:column;gap:8px;transition:width .18s cubic-bezier(.2,.8,.3,1)}
 #outils.replie{width:auto;padding:6px}
 #outils.replie #outils-corps{display:none}
@@ -75,9 +75,11 @@ button{font-family:inherit}
 #outils-gestes{display:flex;align-items:center;gap:5px;flex:1}
 #outils-corps{display:flex;flex-direction:column;gap:8px}
 #outils .trait{height:1px;background:var(--border)}
-#outils #infos{position:static;width:auto;padding:0;background:none;border:0;
-  box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
+#outils-corps .outils-rang{display:flex;flex-wrap:wrap;gap:5px}
 #outils #btn-reset{width:100%;margin:0}
+#infos.masque{display:none}
+/* « Commencer les missions » faisait doublon avec Menu → Les leçons */
+#btn-start{display:none!important}
 @media (prefers-reduced-motion:reduce){ #outils{transition:none} }
 
 /* Le menu : des tuiles rangées par section, l'état lisible d'un coup d'œil */
@@ -299,7 +301,8 @@ table.tt tr.tt-fail td:first-child::before{content:'✗ ';color:var(--red)}
 #tool-search:focus{border-color:var(--dom)}
 .tool-pli{width:36px;height:36px;flex:none;margin-bottom:2px;border-radius:10px;
   border:1px solid var(--border);background:rgba(9,15,28,.7);color:var(--dim);
-  cursor:pointer;font-size:13px;transition:.15s}
+  cursor:pointer;font-size:13px;transition:.15s;display:flex;
+  align-items:center;justify-content:center}
 .tool-pli:hover{color:#fff;border-color:var(--dom)}
 #toolbar.replie .tool-pli{width:44px;height:44px;margin:0;border:0;background:none;
   font-size:20px;color:#b6c6e0}
@@ -777,7 +780,7 @@ table.tt tr.tt-fail td:first-child::before{content:'✗ ';color:var(--red)}
 @media (max-width:900px){
   #actions{width:210px}
   #enonce{left:232px;right:232px}
-  #outils{width:214px}
+  #outils{width:196px}
 }
 /* Le texte des fenêtres redevient sélectionnable : on y lit des équations, des
    explications et des raccourcis, et le blocage posé pour le plan de travail
@@ -869,7 +872,12 @@ table.tt tr.tt-fail td:first-child::before{content:'✗ ';color:var(--red)}
 <div id="outils" class="glass">
   <div id="outils-tete">
     <div id="outils-gestes"></div>
-    <button class="icon-btn" id="btn-outils-pli" title="Ranger les outils">
+    <button class="icon-btn" id="btn-infos" title="Table de vérité et compteurs">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="2"/>
+      <path d="M3 9.5h18M3 15h18M9 4v16M15 4v16"/></svg>
+  </button>
+  <button class="icon-btn" id="btn-outils-pli" title="Ranger les outils">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
         stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
     </button>
@@ -904,7 +912,7 @@ table.tt tr.tt-fail td:first-child::before{content:'✗ ';color:var(--red)}
 </div>
 
 <!-- ======= TABLE DE VÉRITÉ ET COMPTEURS (en bas, à gauche) ======= -->
-<div id="infos" class="glass">
+<div id="infos" class="glass masque">
   <div id="infos-head">
     <span>Table &amp; compteurs</span>
     <button id="infos-tab" title="Replier / déplier">▾</button>
@@ -14118,7 +14126,8 @@ function buildToolbar(){
       'stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' +
       '<rect x="7" y="7" width="10" height="10" rx="1.4"/>' +
       '<path d="M10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4"/></svg>'
-    : '▾';
+    : '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+      'stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
   pli.title = barreRepliee ? 'Ouvrir le panneau des composants'
                            : 'Ranger le panneau (rend tout le plan de travail)';
   pli.setAttribute('aria-label', pli.title);
@@ -14134,7 +14143,7 @@ function buildToolbar(){
     bar.appendChild(pli);
     majHauteurBarre(); return;
   }
-  tete.appendChild(pli);
+  tete.insertBefore(pli, tete.firstChild);
   bar.appendChild(tete);
   /* Le corps du panneau : c'est lui qui porte le fond, collé aux onglets. */
   const corps = document.createElement('div'); corps.className = 'tool-corps';
@@ -14255,20 +14264,21 @@ const MENU_PLAN = [
   ['Affichage', [
     ['btn-snap',   'Grille magnétique'],
     ['btn-labels', 'Noms des composants'],
-    ['btn-wire',   'Tracé des câbles'],
-    ['btn-route',  'Ranger les câbles'],
-    ['btn-center', 'Recentrer la vue']
+    ['btn-wire',   'Tracé des câbles']
   ]],
   ['Simulation', [
-    ['btn-slow',    'Vitesse du circuit'],
-    ['btn-sound',   'Son'],
-    ['btn-analyze', 'Analyser le circuit']
+    ['btn-slow',  'Vitesse du circuit'],
+    ['btn-sound', 'Son']
   ]],
   ['Aide', [
     ['btn-guide', 'Le guide des composants']
   ]]
 ];
-const OUTILS_GESTES = ['btn-undo', 'btn-redo', 'btn-photo'];
+/* Le partage est simple, et c'est lui qui rend le menu lisible :
+   les OUTILS sont ce qui AGIT sur le circuit, le MENU ce qui le RÈGLE.
+   « Ranger les câbles » agit, « Grille magnétique » règle. */
+const OUTILS_GESTES = ['btn-undo', 'btn-redo'];
+const OUTILS_ACTIONS = ['btn-infos', 'btn-analyze', 'btn-route', 'btn-center', 'btn-photo'];
 
 function menuTuile(id, texte, action){
   let b;
@@ -14314,15 +14324,20 @@ function rangerLeHaut(){
     if (b && gestes) gestes.appendChild(b);
   });
 
-  /* La boîte à outils reçoit la table et les compteurs, puis « Tout effacer »
-     tout en bas, séparé par un trait : un bouton qui détruit ne se met pas à
-     côté de deux boutons qui réparent. */
+  /* Le corps : les actions, puis « Tout effacer » tout en bas, séparé par un
+     trait. Un bouton qui détruit ne se met pas à côté de ceux qui réparent. */
   const oc = document.getElementById('outils-corps');
   const trait = () => { const t = document.createElement('div'); t.className = 'trait'; return t; };
-  const infos = document.getElementById('infos');
+  const rang = document.createElement('div'); rang.className = 'outils-rang';
+  OUTILS_ACTIONS.forEach(id => {
+    const b = document.getElementById(id);
+    if (b) rang.appendChild(b);
+  });
   const reset = document.getElementById('btn-reset');
-  if (oc && infos){ oc.appendChild(trait()); oc.appendChild(infos); }
-  if (oc && reset){ oc.appendChild(trait()); oc.appendChild(reset); }
+  if (oc){
+    oc.appendChild(rang);
+    if (reset){ oc.appendChild(trait()); oc.appendChild(reset); }
+  }
 }
 
 function ouvrirMenu(){ document.getElementById('menu-modal').classList.add('show'); }
@@ -15463,6 +15478,8 @@ function loadMission(idx){
   }
   renderSommaire(); buildToolbar(); updateToolbar(); updateProgressPill(); updateStats(true);
   majMarque();
+  { const m2 = missions[idx];
+    montreInfos(!!(m2 && m2.tt && m2.tt.length)); }
   undoStack = [snapshotState()]; redoStack = []; undoT = 0;
   ttSig = '§';
 }
@@ -15890,6 +15907,30 @@ function syncOutils(){
   if (o) o.classList.toggle('replie', outilsReplies);
   if (b) b.title = outilsReplies ? 'Ouvrir les outils' : 'Ranger les outils';
 }
+/* La table de vérité et les compteurs ne sont plus posés en permanence : ils
+   flottent, et un bouton des outils les appelle. Une exception assumée : en
+   leçon avec table de vérité, ils s'ouvrent TOUT SEULS la première fois — sans
+   quoi on chercherait où lire son résultat. */
+function majBtnInfos(){
+  const b = document.getElementById('btn-infos');
+  const i = document.getElementById('infos');
+  if (!b || !i) return;
+  const ouvert = !i.classList.contains('masque');
+  b.classList.toggle('on', ouvert);
+  b.title = ouvert ? 'Ranger la table et les compteurs'
+                   : 'Table de vérité et compteurs';
+}
+function montreInfos(on){
+  const i = document.getElementById('infos');
+  if (!i) return;
+  i.classList.toggle('masque', !on);
+  majBtnInfos();
+}
+document.getElementById('btn-infos').addEventListener('click', () => {
+  const i = document.getElementById('infos');
+  AudioSys.click();
+  montreInfos(i.classList.contains('masque'));
+});
 document.getElementById('btn-outils-pli').addEventListener('click', () => {
   outilsReplies = !outilsReplies;
   try { localStorage.setItem('al2_outils', outilsReplies ? '1' : '0'); } catch(e){}
