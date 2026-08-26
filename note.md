@@ -344,6 +344,14 @@ fichier lui-même.)*
 
 ## Chantiers demandés, hors feuille de route
 
+- **Refonte complète de l'overlay, APRÈS la phase 4.** Demandé explicitement.
+  L'overlay, c'est tout ce qui flotte au-dessus du plan : l'en-tête et ses
+  treize boutons, le bandeau `#enonce`, la colonne `#actions`, le bloc
+  `#infos`, le cartouche de leçon, le bandeau de victoire, la barre du bas.
+  Ça s'est empilé lot après lot sans jamais être repensé d'un bloc.
+  **Avant de coder, demander à l'auteur ce qui le gêne précisément** — la même
+  erreur que pour la barre du bas serait de refondre à l'aveugle.
+
 - **Refondre la barre du bas.** L'auteur la trouve « peu ergonomique à
   l'usage », même après la refonte de la v6.6. À reprendre en entier, pas à
   rafistoler.
