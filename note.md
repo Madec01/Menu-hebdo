@@ -37,8 +37,11 @@ le chapitre et la leçon, ou « simulateur de circuits & missions ».
 de travail est nu, avec le logo pour seul repère.
 
 **Lot 1 — le panneau des composants.**
-- Il est ancré **en bas à gauche** et **épouse son contenu** (`width:auto`,
-  `min-width:820px`) : plus de vide à droite, jamais.
+- Il est ancré **en bas à gauche** et prend **toute la largeur**
+  (`left:12px; right:12px`). Essai raté au passage : je l'avais fait épouser
+  son contenu pour supprimer le vide à droite — l'auteur l'a lu comme un bug
+  (« il ne prend que la moitié de l'écran »). Il veut la pleine largeur, et une
+  ligne incomplète simplement centrée. **Ne pas y revenir.**
 - **Replié, il devient un seul bouton de 48 px** dans le coin, avec un
   pictogramme de puce au trait. C'est la « grille nue ».
 - Les ateliers sont devenus de **vrais onglets collés au corps** du panneau :
