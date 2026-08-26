@@ -32,6 +32,7 @@ version en cours, il suffit d'en recopier une par-dessus `logicgates.html`.
 | `logicgates-v6.28.html` | v6.28 : 📮 lot 10 — Morse, trame numérique, haut-parleur, et le chapitre 36 « Tout se tient ». **La feuille de route ⚡ est terminée** |
 | `logicgates-v6.29.html` | v6.29 : 🔧 lot A — le câble annonce sa couleur avant qu'on lâche, les cibles de clic se mesurent en pixels d'écran, et la vérification en continu cesse de rejouer la table pour rien |
 | `logicgates-v6.30.html` | v6.30 : **NodeFlow** — nouveau nom, logo vectoriel en filigrane sur le plan de travail, et le panneau des composants se range en bas à gauche (onglets d'atelier collés au panneau, onglet ★ Rapide, tuiles centrées sur plusieurs lignes) |
+| `logicgates-v6.31.html` | v6.31 : lot 2 — **l'en-tête disparaît**. Un bouton Menu seul en haut à gauche, la boîte à outils en haut à droite (annuler / refaire / capture, table &amp; compteurs, « Tout effacer » enfin annulable), et la colonne d'actions passe à gauche |
 | `logicgates-v6.18.html` | v6.18 : l'atelier ⚡ passe à quatre onglets (Le continu · Mesure · Produire · Câblage) — une rangée de quinze tuiles débordait de l'écran et le composant du bout devenait introuvable |
 | `logicgates-v6.17.html` | v6.17 : ⚡ lot 4 — produire du courant : aimant qu'on promène, bobine (loi de Faraday), dynamo à manivelle avec effort et retard sentis, oscilloscope enfin signé |
 | `logicgates-v6.16.html` | v6.16 : ⚡ lot 3 — chapitre 31 « Le courant continu » (10 leçons à vraie condition de réussite), la leçon ouvre son atelier, quatre montages d'exemple ⚡ |

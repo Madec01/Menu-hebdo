@@ -5798,20 +5798,23 @@ T('T237 l’overlay : ce qui se recouvrait ne se recouvre plus', () => {
     return m ? +m[1] : null;
   };
   const zToast = z('#toast-box'), zModale = z('.modal-overlay'), zBarre = z('#toolbar'),
-        zCorb = z('#trash-zone'), zEntete = z('#hud-header');
+        zCorb = z('#trash-zone'), zMenu = z('#btn-menu'), zOutils = z('#outils');
   ok(zToast > zModale, 'les messages passent DEVANT le voile des fenêtres (' +
      zToast + ' contre ' + zModale + ')');
   ok(zCorb > zBarre, 'la corbeille passe devant la barre du bas (' + zCorb + ' contre ' + zBarre + ')');
-  ok(zEntete > zBarre, 'et l’en-tête aussi');
+  ok(zMenu > zBarre, 'le bouton Menu passe devant la barre du bas');
+  ok(zOutils > zBarre, 'la boîte à outils aussi');
   // la corbeille et les messages sont calés sur la HAUTEUR RÉELLE de la barre
   ok(/#trash-zone\{[^}]*bottom:calc\(var\(--barh/.test(__HTML.replace(/\n\s*/g, '')),
      'la corbeille suit la hauteur de la barre du bas');
   ok(/#toast-box\{[^}]*bottom:calc\(var\(--barh/.test(__HTML.replace(/\n\s*/g, '')),
      'les messages aussi');
   // l’énoncé cesse d’être centré avant de passer sous les boutons d’action
-  ok(/@media \(max-width:1136px\)/.test(__HTML), 'un palier à 1136 px, là où le recouvrement commence');
-  ok(/#hud-header\{[^}]*overflow-x:auto/.test(__HTML.replace(/\n\s*/g, '')),
-     'l’en-tête ne peut plus perdre ses derniers boutons');
+  ok(/@media \(max-width:1180px\)/.test(__HTML),
+     'un palier à 1180 px : l’énoncé cesse d’être centré avant de toucher la colonne d’actions ou les outils');
+  // l’en-tête n’existe plus à l’écran : il ne peut donc plus déborder
+  ok(/#hud-header\{display:none/.test(__HTML.replace(/\n\s*/g, '')),
+     'l’ancien en-tête est masqué, pas supprimé');
   // « Mes puces » défile enfin, comme les autres fenêtres
   ok(/#chips-list\{[^}]*overflow-y:auto/.test(__HTML.replace(/\n\s*/g, '')),
      'la fenêtre des puces défile');

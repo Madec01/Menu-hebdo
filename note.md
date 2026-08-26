@@ -5,16 +5,56 @@ dans `CLAUDE.md`.
 
 ## Où en est le projet
 
-- **v6.30 — l'appli s'appelle maintenant NodeFlow.**
+- **v6.31 — l'appli s'appelle maintenant NodeFlow.**
   Branche `claude/architecte-logique-v5-vntfkp`, **255 tests verts**
   (`npm test`).
 - `logicgates.html` : ~14 400 lignes, un seul `<script>`, aucune dépendance.
-- Copies figées dans `versions/` (v5.1 → v6.30), avec leur tableau dans
+- Copies figées dans `versions/` (v5.1 → v6.31), avec leur tableau dans
   `versions/README.md`.
 - Catalogue : **188 leçons en 36 chapitres** — 63 à table de vérité (dont 8
   boîtes noires), 85 libres, et 30 à **condition de réussite** (chapitres 31 à 34).
 
 ## Ce qui vient d'être fait
+
+### v6.31 — lot 2 : le haut de l'écran
+
+**L'en-tête n'existe plus à l'écran.** `#hud-header` est en `display:none`,
+**mais il est toujours dans le HTML, vide** : le supprimer aurait cassé les
+`getElementById` de ses quatorze boutons — page blanche garantie.
+
+**Les boutons ne sont pas recréés, ils sont DÉPLACÉS.** `rangerLeHaut()`, au
+démarrage, prend les vrais éléments (avec leurs écouteurs, leurs classes `on`,
+leurs `title` mis à jour dynamiquement) et les `appendChild` ailleurs. On leur
+ajoute juste un `<span class="ml">` pour le libellé. C'est la seule façon sûre :
+les recréer obligerait à rebrancher quatorze comportements à la main.
+- `MENU_PLAN` : quatre sections (Aller / Affichage / Simulation / Aide).
+  Deux entrées sont créées de toutes pièces — « Les leçons » et « Bac à sable » —
+  parce que leurs déclencheurs vivaient dans le cartouche d'énoncé, qui est
+  masqué en bac à sable.
+- `OUTILS_GESTES` : annuler, refaire, capture. **Visibles même outils repliés.**
+- `#infos` (table & compteurs) déménage DANS `#outils`, puis « Tout effacer »
+  tout en bas, séparé par un trait.
+
+**« Tout effacer » est devenu annulable**, condition posée avant de le mettre à
+côté des flèches. Le piège : `loadMission()` fait `undoStack = [snapshot]`, donc
+un `pushUndo()` avant l'effacement serait écrasé. On prend donc l'état AVANT, on
+efface, puis on repose `undoStack = [avant, apres]`.
+
+**La colonne d'actions `#actions` passe à GAUCHE** (`left:12px; top:64px`), sous
+le bouton Menu. À droite elle se retrouvait sous la boîte à outils et devenait
+totalement inatteignable — la leçon était injouable. C'est aussi sa place
+définitive au lot 3.
+
+**Deux conséquences en cascade, faciles à oublier :**
+- `zoneUtile()` bornait la droite avec `#actions` et `#infos`. Les deux ont
+  bougé : elle borne maintenant la gauche avec `#actions` et la droite avec
+  `#outils`, et seulement si le bloc descend plus bas que l'énoncé.
+- L'énoncé vit dans la **bande libre** entre les deux colonnes. Palier à
+  1180 px (et non plus 1136) : c'est là qu'un énoncé de 640 px centré
+  toucherait la boîte à outils.
+
+**Vérifié dans un vrai navigateur** à 1500 et 1024 px : aucun des quatre blocs
+du haut ne se recouvre, et Ctrl+Z ramène bien le circuit après « Tout effacer ».
 
 ### v6.30 — NodeFlow, et le lot 1 de la refonte de l'overlay
 
@@ -560,7 +600,7 @@ parti. Tant que c'est vrai, ce bouton ne doit pas voisiner ↶ ↷.
 | Lot | Contenu | Risque |
 |---|---|---|
 | ~~1 · le panneau~~ | **FAIT en v6.30** | — |
-| 2 · le haut | en-tête supprimé, Menu, Outils, filigrane | moyen (14 boutons à déplacer) |
+| ~~2 · le haut~~ | **FAIT en v6.31** | — |
 | 3 · la leçon | panneau d'actions pliable, suivi sur la grille | faible |
 | 4 · la gomme | effacement au glisser + « tout effacer » annulable | moyen |
 | 5 · plus tard | « la leçon sur le schéma » montre les objets **un par un** | élevé — à part |
