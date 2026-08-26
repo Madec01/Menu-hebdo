@@ -5,16 +5,60 @@ dans `CLAUDE.md`.
 
 ## Où en est le projet
 
-- **v6.31 — l'appli s'appelle maintenant NodeFlow.**
+- **v6.32 — l'appli s'appelle maintenant NodeFlow.**
   Branche `claude/architecte-logique-v5-vntfkp`, **255 tests verts**
   (`npm test`).
 - `logicgates.html` : ~14 400 lignes, un seul `<script>`, aucune dépendance.
-- Copies figées dans `versions/` (v5.1 → v6.31), avec leur tableau dans
+- Copies figées dans `versions/` (v5.1 → v6.32), avec leur tableau dans
   `versions/README.md`.
 - Catalogue : **188 leçons en 36 chapitres** — 63 à table de vérité (dont 8
   boîtes noires), 85 libres, et 30 à **condition de réussite** (chapitres 31 à 34).
 
 ## Ce qui vient d'être fait
+
+### v6.32 — lot 3 : la leçon
+
+**L'énoncé descend dans le panneau de gauche.** `#enonce` n'est plus un bandeau
+flottant : `rangerLaLecon()` le déplace DANS `#actions`, qui devient le panneau
+de leçon sous le bouton Menu. Le **titre y est masqué** (`#actions #mission-title
+{display:none}`) : il est déjà écrit en filigrane sur la grille, l'écrire deux
+fois ne servait à rien.
+
+**PIÈGE, deux heures perdues si on ne le sait pas** : `position:static`
+**n'annule pas** `transform`. L'énoncé gardait son `translateX(-50%)` du temps
+où il était centré, et son texte sortait du panneau par la gauche. Il faut
+remettre `transform:none; left:auto; right:auto` à la main.
+
+**Plié, il ne reste que trois icônes** — ampoule, coche verte, cible — chacune
+dans sa couleur. C'est le choix de l'auteur contre mon avis : le garde-fou
+contre le clic malheureux sur « la réponse » tient entièrement à la couleur.
+Mécanique : `#actions.plie .btn{font-size:0}` efface le texte, et un
+`<span class="ai">` ajouté au début de chaque bouton porte l'icône.
+
+**Le suivi se pose sur la grille**, en bas à droite (`#suivi`) : l'objectif
+(`#mission-badges` déménagé), les compteurs portes/câbles, et le résultat en
+direct (`#live-box` déménagé). `pointer-events:none` — on ne clique jamais
+dedans, il ne doit jamais voler un clic destiné au plan.
+
+**Deux mécaniques à ne pas casser :**
+- `--svh` publie la hauteur du suivi, et `#infos` (la table) se pose au-dessus.
+  Le suivi **grandit après coup** quand le résultat en direct arrive : d'où
+  l'appel à `majHauteurSuivi()` à **chaque sortie** de `renderLive()`, et pas
+  seulement au chargement de la leçon.
+- `effaceSuivi()`, dans la boucle de rendu, met `.efface` pendant un glisser
+  (`dragged`, `wiring`, `selRect`). La classe ne change que si l'état change —
+  on est appelé soixante fois par seconde.
+
+**En bac à sable**, `#actions` prend `.vide` et disparaît complètement : plus
+rien à gauche.
+
+**Deux retours de l'auteur intégrés au passage :**
+- La **vitesse** rejoint les outils (elle agit sur la simulation). Le menu n'a
+  plus que trois sections : Aller, Réglages, Aide.
+- Le bouton qui **range le panneau des objets** se pose exactement là où
+  réapparaît celui qui le rouvre : le coin **en bas à gauche**, en absolu dans
+  `#toolbar`. Le corps du panneau a `padding-left:62px` pour lui laisser la
+  place. Un seul endroit à retenir.
 
 ### v6.31 — lot 2 : le haut de l'écran
 
@@ -615,7 +659,7 @@ parti. Tant que c'est vrai, ce bouton ne doit pas voisiner ↶ ↷.
 |---|---|---|
 | ~~1 · le panneau~~ | **FAIT en v6.30** | — |
 | ~~2 · le haut~~ | **FAIT en v6.31** | — |
-| 3 · la leçon | panneau d'actions pliable, suivi sur la grille | faible |
+| ~~3 · la leçon~~ | **FAIT en v6.32** | — |
 | 4 · la gomme | effacement au glisser + « tout effacer » annulable | moyen |
 | 5 · plus tard | « la leçon sur le schéma » montre les objets **un par un** | élevé — à part |
 
