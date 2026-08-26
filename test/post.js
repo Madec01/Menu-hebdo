@@ -4790,7 +4790,15 @@ T('T206 la condition de réussite regarde le circuit, pas le clic', () => {
    tourner la manivelle) ou simplement du temps (monter en pression). Un
    montage de référence n'est bon que s'il est réellement jouable. */
 function joueMontage(tours){
-  for (let k = 0; k < (tours || 60); k++){
+  const n = tours || 60;
+  /* On MANŒUVRE le montage, on ne le regarde pas seulement tourner : un
+     interrupteur qu'on n'ouvre jamais n'apprend rien, et c'est l'ouverture
+     qui décharge un condensateur. On rouvre puis on referme, et on laisse
+     l'installation dans l'état où on l'a trouvée. */
+  const inters = components.filter(c => c.type === 'INTERP' && c.state);
+  for (let k = 0; k < n; k++){
+    const ouvert = k >= Math.floor(n * .4) && k < Math.floor(n * .75);
+    inters.forEach(s => { s.state = ouvert ? 0 : 1; });
     components.filter(c => c.type === 'AIMANT').forEach(a => {
       const b = components.find(c => c.type === 'BOBINE');
       if (!b) return;
@@ -5547,6 +5555,94 @@ T('T228 les composants de l’alternatif sont complets et rangés', () => {
     ok(alt.items.includes(t), t + ' y est rangé'));
   // sa section de guide existe, sinon T57 tomberait sans dire pourquoi
   ok(FAM_SECTIONS.some(f => f.key === 'alt'), 'la famille a sa section de guide');
+});
+
+
+console.log('\n— ⚡ Lot 8 : finitions — fils droits, bornes libres, condensateur visible —');
+
+T('T229 un fil droit reste droit, même quand un autre passe dans le couloir', () => {
+  board();
+  const p = mk('PILE', 0, 0), k = mk('INTERP', 400, 0);
+  const w = link(p, 0, k, 0);
+  sim(); drawScene(0); spreadRoutes();
+  const ya = p.outPins[0].y;
+  ok(w._raw.every(q => Math.abs(q.y - ya) < .5), 'seul, il est parfaitement droit');
+  ok(w._rp.every(q => Math.abs(q.y - ya) < .5), 'et le tracé posé aussi');
+  // un deuxième fil part de la même borne : c'est LUI qui s'écarte
+  const l = mk('LAMPE', 400, 320);
+  const w2 = link(p, 0, l, 0);
+  sim(); drawScene(0); spreadRoutes();
+  ok(w._rp.every(q => Math.abs(q.y - ya) < .6),
+     'le fil droit n’a pas bougé (' + w._rp.map(q => Math.round(q.y)).join(',') + ')');
+  ok(w2._rp.some(q => Math.abs(q.y - ya) > 4), 'et l’autre s’est bien écarté');
+});
+
+T('T230 en puissance, une borne se relie à n’importe quelle borne', () => {
+  board();
+  const l1 = mk('LAMPE', 0, 0), l2 = mk('LAMPE', 300, 0);
+  // deux ampoules en parallèle : entrée sur entrée, sortie sur sortie
+  relierBornes(l1.inPins[0], l2.inPins[0]);
+  relierBornes(l1.outPins[0], l2.outPins[0]);
+  eq(wires.length, 2, 'les deux fils de parallèle sont posés');
+  relierBornes(l1.inPins[0], l2.inPins[0]);
+  eq(wires.length, 2, 'le même fil ne se pose pas deux fois');
+  relierBornes(l2.inPins[0], l1.inPins[0]);
+  eq(wires.length, 2, 'ni dans l’autre sens');
+  // et ça marche vraiment : les deux ampoules brillent pareil
+  const g = mk('PILE', -300, 0), m = mk('MASSE', 600, 0);
+  link(g, 0, l1, 0); link(l1, 0, m, 0); link(m, 0, g, 0);
+  sim();
+  ok(l1.p > .05 && l2.p > .05, 'les deux éclairent');
+  near(l1.p, l2.p, Math.max(.02, l1.p * .05), 'et elles se partagent le courant à égalité');
+  // un signal, lui, garde son sens
+  board();
+  const a = mk('SWITCH', 0, 0), b = mk('SWITCH', 200, 0);
+  relierBornes(a.outPins[0], b.outPins[0]);
+  eq(wires.length, 0, 'deux sorties logiques ne se relient pas');
+  // le côté de chaque bout survit à une sauvegarde
+  board();
+  const p1 = mk('LAMPE', 0, 0), p2 = mk('LAMPE', 300, 0);
+  relierBornes(p1.inPins[0], p2.inPins[0]);
+  const data = serializeGroup(components);
+  board();
+  spawnGroup(data, 0, 0, false);
+  eq(wires.length, 1, 'le fil est relu');
+  ok(!wires[0].outPin.isOutput && !wires[0].inPin.isOutput,
+     'et ses deux bouts sont toujours des entrées');
+});
+
+T('T231 le condensateur : jusqu’au farad, et il dit combien de temps il a mis', () => {
+  board();
+  const d = REG.CONDO.opts.find(o => o.k === 'cap');
+  ok(d.max >= 1e6, 'la capacité monte jusqu’au farad (' + d.max + ' µF)');
+  ok(d.log, 'et sa glissière compte en décades');
+  // la glissière logarithmique : le milieu de la course, c'est la racine
+  const pr = { min:1, max:10000, log:true, step:1 };
+  near(paramVal(pr, .5), 100, 1, 'à mi-course d’une échelle log, on est à la racine');
+  near(paramFrac(pr, 100), .5, .01, 'et l’aller-retour retombe juste');
+  eq(paramArrondi(pr, 4712), 4700, 'deux chiffres significatifs');
+  eq(paramArrondi(pr, 47.12), 47, 'à toutes les échelles');
+  // le chronomètre : un remplissage lent est mesuré, un remplissage éclair est signalé
+  board();
+  const pl = mk('PILE', 0, 0), k = mk('INTERP', 200, 0),
+        r = mk('RESIS', 400, 0), co = mk('CONDO', 600, 0), g = mk('MASSE', 800, 0);
+  r.opt.r = 1000; co.opt.cap = 1000;                // une seconde de constante
+  link(pl, 0, k, 0); link(k, 0, r, 0); link(r, 0, co, 0); link(co, 0, g, 0); link(g, 0, pl, 0);
+  k.state = 1; sim();
+  laisseFiler(6000);
+  ok(co._tplein > .5 && co._tplein < 12,
+     'le remplissage mesuré tient debout (' + co._tplein.toFixed(2) + ' s)');
+  ok(co._upk > 4, 'et il est bien monté à la tension de la pile');
+  ok(!co._vide, 'plein, il n’est évidemment pas marqué vidé');
+  // on coupe, il se vide dans une ampoule : cette fois c'est la DÉCHARGE
+  const la = mk('LAMPE', 600, 300);
+  la.opt.un = 4.5; la.opt.pn = .8;
+  link(r, 0, la, 0); link(la, 0, g, 0);
+  laisseFiler(300);
+  k.state = 0;
+  laisseFiler(3000);
+  ok(co._vide, 'coupé, il a rendu ce qu’il gardait');
+  ok(Math.abs(memLu(co, 'u0')) < 1, 'et il est retombé près de zéro');
 });
 
 /* ===================== bilan ===================== */

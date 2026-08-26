@@ -5,15 +5,62 @@ dans `CLAUDE.md`.
 
 ## Où en est le projet
 
-- **v6.22**, branche `claude/architecte-logique-v5-vntfkp`, **231 tests verts**
+- **v6.23**, branche `claude/architecte-logique-v5-vntfkp`, **234 tests verts**
   (`npm test`).
-- `logicgates.html` : ~12 800 lignes, un seul `<script>`, aucune dépendance.
-- Copies figées dans `versions/` (v5.1 → v6.22), avec leur tableau dans
+- `logicgates.html` : ~12 900 lignes, un seul `<script>`, aucune dépendance.
+- Copies figées dans `versions/` (v5.1 → v6.23), avec leur tableau dans
   `versions/README.md`.
 - Catalogue : **174 leçons en 33 chapitres** — 63 à table de vérité (dont 8
   boîtes noires), 85 libres, et 18 à **condition de réussite** (chapitres 31 et 32).
 
 ## Ce qui vient d'être fait
+
+**Lot 8 : trois finitions signalées à l'usage** (v6.23).
+
+1. **Les fils droits restent droits.** Deux bornes exactement en face
+   donnaient bien un trait droit… jusqu'à ce qu'un deuxième câble emprunte le
+   même couloir : la règle anti-superposition (`spreadRoutes`) écartait tout
+   le monde, y compris lui, d'où une bosse de 5,5 px à chaque bout — et un fil
+   déjà posé qui changeait de forme tout seul. Désormais `buildRoute` marque
+   le fil (`w._droit`) et `spreadRoutes` en fait le **point fixe** de son
+   couloir : les autres s'écartent autour de lui.
+
+2. **Les bornes de puissance se relient dans tous les sens.** Une borne à vis
+   n'a pas de sens : deux ampoules en parallèle se câblent entrée sur entrée
+   et sortie sur sortie, et un voltmètre se pose aux bornes de ce qu'on veut.
+   Nouvelle fonction `relierBornes(départ, arrivée)` (nommée, donc testable) :
+   le sens compte toujours pour un signal ou un tuyau, jamais pour `pui`.
+   Trois conséquences : cliquer une borne ⚡ déjà câblée commence un NOUVEAU
+   fil au lieu de décrocher l'ancien (pour en retirer un : le survoler, Suppr) ;
+   `recalcFan` distingue les deux côtés d'un même rang de broches ; et le
+   **format d'enregistrement gagne un sixième champ** `sd` qui dit de quel côté
+   est chaque bout — absent (0) = l'ancien cas, donc les vieilles sauvegardes
+   se relisent telles quelles (`wireSide` / `wireEnds`, quatre points de
+   relecture : puce, groupe, mission, bac à sable).
+
+3. **Le condensateur revu.** Le vrai défaut n'était pas dans le moteur (la
+   décharge était juste, mesurée) : c'est que **tout se passait en quelques
+   millisecondes**, donc en moins d'une image. Un condensateur de 10 000 µF —
+   l'ancien maximum — se vide dans une ampoule de 25 Ω en 250 ms.
+   - la capacité monte maintenant **jusqu'au farad** (le supercondensateur
+     existe pour de vrai), sur une **glissière logarithmique** : nouveau champ
+     `log:true` sur une option, plus `paramFrac` / `paramVal` / `paramArrondi`
+     (deux chiffres significatifs) et `disp` pour afficher « 22 mF » au lieu
+     de « 22000 µF ». `INDUC.ind` en profite aussi.
+   - le boîtier affiche un **chrono du dernier remplissage** (⏱ 50 ms), en
+     rouge sous 0,2 s, avec le conseil dans l'infobulle. Il est MESURÉ, pas
+     calculé : le chronomètre tourne tant qu'un courant notable passe.
+     **Deux seuils** (démarrer à 50 % de la crête, continuer jusqu'à 12 %) —
+     avec un seuil unique, le courant résiduel de fin de charge, arrondi à
+     0,1 mA, clignotait autour et relançait un chrono qui écrasait la mesure.
+   - `c._upk` et `c._vide` : « il a été chargé, puis il est retombé sous le
+     tiers ». C'est ce qui permet à m169 d'exiger une VRAIE décharge.
+   - **m169 refaite** : interrupteur, 22 000 µF, ampoule 4,5 V / 0,8 W. Vérifié
+     dans Chromium : plein à 4,33 V, on ouvre, 1,04 V à 0,6 s, éteint à 2,6 s.
+   - `joueMontage` (harnais) **manœuvre** maintenant les interrupteurs de
+     puissance au milieu de la course et les remet comme il les a trouvés :
+     un montage de référence qu'on ne manœuvre jamais ne peut pas démontrer
+     une décharge.
 
 **⚡ Lot 7 : trier le courant** (v6.22). **Phase 3 terminée.**
 
