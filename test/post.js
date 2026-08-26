@@ -5765,6 +5765,94 @@ T('T235 les trois pièces de la radio sont complètes et rangées', () => {
   eq(m.opt.larg, m.w, 'la taille est rangée dans les réglages, donc sauvegardée');
 });
 
+console.log('\n— 🧰 Réparations de l’overlay —');
+
+T('T236 aucun identifiant en double dans le balisage', () => {
+  /* `getElementById` ne rend QUE le premier trouvé. Deux éléments qui portent
+     le même identifiant, et le code écrit dans le mauvais sans rien dire :
+     c'est exactement ce qui faisait écrire au panneau « Relier à… » son titre
+     dans celui de la recherche. Ce test-là aurait attrapé le bug. */
+  const vus = new Map();
+  const doubles = [];
+  for (const m of __HTML.matchAll(/\bid="([\w-]+)"/g)){
+    const k = m[1];
+    if (vus.has(k)) doubles.push(k); else vus.set(k, 1);
+  }
+  ok(!doubles.length, 'identifiants portés par deux éléments : ' + [...new Set(doubles)].join(', '));
+  // et les deux panneaux flottants ont bien chacun les leurs
+  ['find-head', 'find-title', 'find-hint', 'find-close',
+   'quick-head', 'quick-title', 'quick-hint', 'quick-close'].forEach(id =>
+    ok(__HTML.includes('id="' + id + '"'), id + ' existe dans le balisage'));
+  // …et chacun son style : celui de la recherche n’en avait aucun
+  ok(/#quick-close,#find-close\{/.test(__HTML), 'les deux croix de fermeture sont stylées ensemble');
+  ok(/#quick-title,#find-title\{/.test(__HTML), 'les deux titres aussi');
+});
+
+T('T237 l’overlay : ce qui se recouvrait ne se recouvre plus', () => {
+  const z = sel => {
+    const m = __HTML.match(new RegExp(sel.replace(/[.#]/g, '\\$&') + '\\{[^}]*z-index:(\\d+)'));
+    return m ? +m[1] : null;
+  };
+  const zToast = z('#toast-box'), zModale = z('.modal-overlay'), zBarre = z('#toolbar'),
+        zCorb = z('#trash-zone'), zEntete = z('#hud-header');
+  ok(zToast > zModale, 'les messages passent DEVANT le voile des fenêtres (' +
+     zToast + ' contre ' + zModale + ')');
+  ok(zCorb > zBarre, 'la corbeille passe devant la barre du bas (' + zCorb + ' contre ' + zBarre + ')');
+  ok(zEntete > zBarre, 'et l’en-tête aussi');
+  // la corbeille et les messages sont calés sur la HAUTEUR RÉELLE de la barre
+  ok(/#trash-zone\{[^}]*bottom:calc\(var\(--barh/.test(__HTML.replace(/\n\s*/g, '')),
+     'la corbeille suit la hauteur de la barre du bas');
+  ok(/#toast-box\{[^}]*bottom:calc\(var\(--barh/.test(__HTML.replace(/\n\s*/g, '')),
+     'les messages aussi');
+  // l’énoncé cesse d’être centré avant de passer sous les boutons d’action
+  ok(/@media \(max-width:1136px\)/.test(__HTML), 'un palier à 1136 px, là où le recouvrement commence');
+  ok(/#hud-header\{[^}]*overflow-x:auto/.test(__HTML.replace(/\n\s*/g, '')),
+     'l’en-tête ne peut plus perdre ses derniers boutons');
+  // « Mes puces » défile enfin, comme les autres fenêtres
+  ok(/#chips-list\{[^}]*overflow-y:auto/.test(__HTML.replace(/\n\s*/g, '')),
+     'la fenêtre des puces défile');
+  ok(/#chips-modal \.modal-content\{[^}]*max-height/.test(__HTML.replace(/\n\s*/g, '')),
+     'et elle a une hauteur maximale');
+});
+
+T('T238 le clavier : une fenêtre ouverte prend la main', () => {
+  ok(typeof modaleOuverte === 'function', 'la fenêtre du dessus se repère');
+  ok(typeof dansChamp === 'function', 'et un champ de saisie aussi');
+  eq(dansChamp({ tagName:'INPUT' }), true, 'un champ de texte en est un');
+  eq(dansChamp({ tagName:'BUTTON' }), false, 'un bouton, non — c’est tout le bug : ' +
+     'le curseur posé sur un bouton de fenêtre laissait passer Suppr jusqu’au plan');
+  eq(dansChamp(null), false, 'et rien du tout non plus');
+  // le garde-fou est bien AVANT les raccourcis, pas après
+  const src = __HTML.slice(__HTML.indexOf('const modale = modaleOuverte(), champ = dansChamp'));
+  const iGarde = src.indexOf('if (modale || champ) return;');
+  const iSuppr = src.indexOf("e.key === 'Delete'");
+  ok(iGarde > 0 && iSuppr > iGarde, 'Suppr est traité APRÈS le garde-fou');
+  ok(src.indexOf("e.key === 'Escape'") < iGarde, 'et Échap AVANT, pour traverser les champs');
+});
+
+T('T239 les animations se coupent, le texte se copie, les couleurs se lisent', () => {
+  const plat = __HTML.replace(/\n\s*/g, '');
+  ok(/@media \(prefers-reduced-motion: reduce\)/.test(plat),
+     'le réglage système « réduire les animations » est écouté');
+  ok(plat.includes("matchMedia('(prefers-reduced-motion: reduce)').matches) return;"),
+     'et les confettis s’abstiennent aussi');
+  ok(/\.modal-content,[^{]*\{user-select:text/.test(plat),
+     'le texte des fenêtres se sélectionne');
+  // le vert du bouton principal : blanc dessus, il faut au moins 4,5 pour 1
+  const m = plat.match(/\.btn-verify\{background:linear-gradient\(180deg,(#[0-9a-f]{6})/);
+  ok(m, 'le bouton de vérification a bien un dégradé');
+  const lum = h => {
+    const c = [1,3,5].map(i => parseInt(h.substr(i,2),16)/255)
+      .map(v => v <= .03928 ? v/12.92 : Math.pow((v+.055)/1.055, 2.4));
+    return .2126*c[0] + .7152*c[1] + .0722*c[2];
+  };
+  const ratio = 1.05 / (lum(m[1]) + .05);
+  ok(ratio >= 4.5, 'et le blanc dessus tient le seuil (' + ratio.toFixed(2) + ' pour 1)');
+  // « Sandbox libre » ne détruit rien : il ne doit plus porter l’habit du rouge
+  ok(/id="som-sandbox"/.test(__HTML), 'le bouton existe');
+  ok(!/btn-ghost" id="som-sandbox"/.test(__HTML), 'et il n’est plus peint en rouge');
+});
+
 /* ===================== bilan ===================== */
 console.log('\n' + (__fail ? '✗' : '✓') + ' ' + __pass + ' test(s) réussi(s), ' +
             __fail + ' échec(s)' + (__fail ? ' : ' + __failures.join(', ') : '') + '\n');

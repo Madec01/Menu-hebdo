@@ -26,6 +26,7 @@ version en cours, il suffit d'en recopier une par-dessus `logicgates.html`.
 | `logicgates-v6.22.html` | v6.22 : ⚡ lot 7 — diode, pont redresseur, résonance, et le chapitre 33 « Le courant alternatif » |
 | `logicgates-v6.23.html` | v6.23 : finitions — les fils droits restent droits, les bornes de puissance se relient dans tous les sens, et le condensateur devient visible (jusqu’au farad, glissière logarithmique, chrono de remplissage) |
 | `logicgates-v6.24.html` | v6.24 : 📡 lot 8 — la radio : émetteur, récepteur, obstacles, et le chapitre 34 « Sans fil ». La position des boîtiers sur le plan compte enfin |
+| `logicgates-v6.25.html` | v6.25 : réparations de l’overlay — une fenêtre ouverte prend la main sur le clavier, les messages passent devant le voile, la corbeille sort de sous la barre, l’énoncé et l’en-tête tiennent sous 1136 px |
 | `logicgates-v6.18.html` | v6.18 : l'atelier ⚡ passe à quatre onglets (Le continu · Mesure · Produire · Câblage) — une rangée de quinze tuiles débordait de l'écran et le composant du bout devenait introuvable |
 | `logicgates-v6.17.html` | v6.17 : ⚡ lot 4 — produire du courant : aimant qu'on promène, bobine (loi de Faraday), dynamo à manivelle avec effort et retard sentis, oscilloscope enfin signé |
 | `logicgates-v6.16.html` | v6.16 : ⚡ lot 3 — chapitre 31 « Le courant continu » (10 leçons à vraie condition de réussite), la leçon ouvre son atelier, quatre montages d'exemple ⚡ |

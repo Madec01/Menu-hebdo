@@ -5,15 +5,57 @@ dans `CLAUDE.md`.
 
 ## Où en est le projet
 
-- **v6.24**, branche `claude/architecte-logique-v5-vntfkp`, **238 tests verts**
+- **v6.25**, branche `claude/architecte-logique-v5-vntfkp`, **242 tests verts**
   (`npm test`).
 - `logicgates.html` : ~13 300 lignes, un seul `<script>`, aucune dépendance.
-- Copies figées dans `versions/` (v5.1 → v6.24), avec leur tableau dans
+- Copies figées dans `versions/` (v5.1 → v6.25), avec leur tableau dans
   `versions/README.md`.
 - Catalogue : **178 leçons en 34 chapitres** — 63 à table de vérité (dont 8
   boîtes noires), 85 libres, et 30 à **condition de réussite** (chapitres 31 à 34).
 
 ## Ce qui vient d'être fait
+
+**🧰 Réparations de l'overlay** (v6.25). Onze défauts, tous **reproduits dans
+Chromium avant correction** — deux audits UI/UX indépendants, recoupés.
+
+- **Le clavier.** Une fenêtre ouverte prend désormais la main : `modaleOuverte()`
+  + `dansChamp()` en tête du gestionnaire. Avant, le filtre ne rejetait que les
+  champs de saisie : **curseur sur un bouton de « Mes montages », touche Suppr,
+  et un composant du plan disparaissait** (reproduit). Et Échap, filtré dès
+  qu'on tapait dans un champ, ne fermait rien — alors que l'écran promet
+  « Échap pour fermer » à quatre endroits, tous dans des panneaux qui mettent
+  le curseur dans leur champ en s'ouvrant.
+- **Les messages passaient derrière le voile** (toast 60, voile 80). Or c'est
+  précisément là qu'on les déclenche : « montage enregistré », « nom déjà
+  pris ». Passés à 120, et calés sur `--barh` (ils recouvraient la barre).
+- **Trois identifiants en double** : `quick-head/title/hint` servaient aux DEUX
+  panneaux flottants, et `getElementById` ne rend que le premier — le panneau
+  « Relier à… » écrivait son titre dans celui de la recherche. **T236 scanne
+  maintenant tout le balisage** : ce test aurait attrapé le bug.
+- **La corbeille** était intégralement recouverte par la barre du bas sous
+  1512 px de large, c'est-à-dire partout. Sur `--barh` et z 22.
+- **L'énoncé** est centré, les boutons collés à droite : recouvrement dès
+  1136 px (**56 px de texte mangés à 1024**, mesuré). Il cesse d'être centré à
+  ce palier. Rétrécir un bloc centré ne sert à rien : ça ne libère que la
+  moitié de chaque côté — c'est ce que faisait l'ancienne règle à 900 px.
+- **L'en-tête perdait 174 px de boutons à 1024 px** (mesuré), inatteignables
+  puisque le corps ne défile pas. Deux paliers + défilement horizontal en filet.
+- **Contraste** : le blanc sur le vert de « Vérifier le circuit » donnait
+  **2,62 pour 1**, le plus mauvais chiffre du fichier, sur le bouton le plus
+  regardé. Dégradés assombris, on est à 5,4. (Un des deux audits affirmait que
+  « le contraste n'est pas le problème » — vrai pour la palette, faux pour les
+  boutons.)
+- Plus : « Mes puces » défile enfin (seule fenêtre sans hauteur maximale, son
+  bouton Fermer pouvait sortir de l'écran), « Sandbox libre » n'est plus peint
+  en rouge (`btn-second`), le flou n'est plus appliqué deux fois, le texte des
+  fenêtres se sélectionne, et `prefers-reduced-motion` coupe les animations
+  **et les 160 confettis**.
+
+**Ce qui reste des deux audits, pour la refonte de l'overlay** : sémantique de
+dialogue (`role`, `aria-modal`, `aria-live`), gestion et piège du focus, cibles
+tactiles à 44 px, vraie couche mobile sous 560 px, éditeur GRAFCET en petite
+largeur, échelle typographique (vingt tailles aujourd'hui, dont du 7,5 px), et
+la bascule éventuelle vers la balise `<dialog>`.
 
 **📡 Lot 8 : la radio — la distance et les obstacles** (v6.24). **Phase 4
 commencée.**
