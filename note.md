@@ -799,6 +799,39 @@ avec T207 comme garde-fou.
   recherche qu'on oublie ? la barre qui mange l'écran ? Une refonte à l'aveugle
   coûterait cher pour rien.
 
+## LA PROPOSITION D'OVERLAY — maquette faite, en attente de validation
+
+Maquette cliquable « La grille nue » :
+https://claude.ai/code/artifact/ccb01f10-c79b-4ab0-8bb7-9dd58819f9da
+(source : `scratchpad/grille-nue.html`, cinq états : panneau rangé, panneau
+ouvert, menu ouvert, mode leçon, et « aujourd'hui » pour comparer.)
+
+Contrainte qui commande tout, donnée par l'auteur :
+**« je veux que la grille soit le plus épurée possible, d'où le fait de
+pouvoir ranger le panneau des ateliers en bas à gauche au clic ».**
+Correction de sa vision initiale : pas d'entrées « sandbox / chapitre /
+montage » séparées — un seul **bouton Menu en haut à gauche**.
+
+Ce que la maquette propose :
+1. **En-tête** : `⚡ ARCHITECTE LOGIQUE` + `☰ Menu` + fil d'Ariane à gauche,
+   `↶ ↷` + pastille de progression à droite. Les 14 boutons partent au menu.
+2. **Menu** : grande fenêtre au centre, **tuiles en 5 sections** (Aller /
+   Affichage / Simulation / Circuit / Aide), l'état de chaque réglage écrit
+   à côté. Surtout pas une liste de 25 lignes.
+3. **Panneau des objets** : ancré en bas à gauche. Au repos = **un seul
+   bouton 🧰**. Au clic il se déplie vers la droite en 3 rangées (ateliers +
+   recherche / catégories / tuiles). **« ★ Rapide » devient la première
+   catégorie et la catégorie par défaut** — ça remplace la 4ᵉ rangée de
+   favoris qu'il voulait, sans manger de hauteur.
+4. **Zone Outils** en haut à droite : information seulement (table de vérité
+   + compteurs), rangeable elle aussi.
+5. **Bandeau de leçon** au centre haut : chapitre, titre, objectif, et les
+   trois actions. « Tout effacer » part au menu.
+
+Livraison proposée en 4 lots : 1 en-tête, **2 panneau (à faire en premier :
+c'est lui qui donne la grille nue, et c'est le moins risqué)**, 3 leçon,
+4 zone Outils.
+
 ## Ce qui reste
 
 Découpage validé avec l'auteur. Un lot, on livre, il teste, il valide.
