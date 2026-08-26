@@ -2864,7 +2864,7 @@ T('T149 trois ateliers : la palette se recompose, les favoris ne bougent pas', (
   ok(phys && !phys.bientot, 'l’atelier Énergie & ondes n’est plus « bientôt »');
   setAppMode('phys');
   eq(appMode, 'phys', 'et il s’ouvre');
-  deq(cles(), ['ener','mesu','prod','wirep'], 'énergie : quatre onglets, aucun surchargé');
+  deq(cles(), ['ener','mesu','prod','alt','wirep'], 'énergie : cinq onglets, aucun surchargé');
   // aucune rangée ne doit déborder : au-delà d'une dizaine de tuiles, le
   // composant du bout devient introuvable (il faut deviner qu'on peut faire
   // défiler la rangée).
@@ -4742,7 +4742,8 @@ T('T205 les chapitres ⚡ : à la fin du cours, et dans leur atelier', () => {
   const lec = missions.filter(m => m.dom === 'phys');
   eq(missions.filter(m => /Chapitre 31/.test(m.ch)).length, 10, 'dix leçons au chapitre 31');
   eq(missions.filter(m => /Chapitre 32/.test(m.ch)).length, 8, 'huit au chapitre 32');
-  eq(lec.length, 18, 'dix-huit leçons dans l’atelier ⚡ en tout');
+  eq(missions.filter(m => /Chapitre 33/.test(m.ch)).length, 8, 'huit au chapitre 33');
+  eq(lec.length, 26, 'vingt-six leçons dans l’atelier ⚡ en tout');
   // toutes à la fin du catalogue, et groupées
   const prem = missions.findIndex(m => m.dom === 'phys');
   eq(prem + lec.length, missions.length, 'elles occupent la fin du catalogue');
@@ -4755,8 +4756,9 @@ T('T205 les chapitres ⚡ : à la fin du cours, et dans leur atelier', () => {
   });
   // les chapitres apparaissent dans la carte du cours, l’un après l’autre
   const noms = chapitres().map(c => c.ch || c.nom || c.name || '');
-  ok(/Chapitre 31/.test(noms[noms.length - 2]), 'le chapitre 31 est l’avant-dernier');
-  ok(/Chapitre 32/.test(noms[noms.length - 1]), 'le chapitre 32 est le dernier');
+  ok(/Chapitre 31/.test(noms[noms.length - 3]), 'le chapitre 31 vient en premier des trois');
+  ok(/Chapitre 32/.test(noms[noms.length - 2]), 'puis le chapitre 32');
+  ok(/Chapitre 33/.test(noms[noms.length - 1]), 'et le chapitre 33 ferme le cours');
   // et charger une leçon bascule dans l’atelier ⚡
   setAppMode('elec');
   loadMission(prem);
@@ -5452,6 +5454,99 @@ T('T225 un câble ne traverse plus un boîtier posé sur son chemin', () => {
   sim();
   const ys = [...new Set(wires[0].route().map(q => Math.round(q.y)))];
   eq(ys.length, 1, 'sans obstacle, le fil ne fait aucun détour');
+});
+
+T('T226 la diode ne laisse passer que dans un sens, le pont redresse les deux', () => {
+  // --- une diode seule : la moitié de l’onde disparaît ---
+  board();
+  const g = mk('GENEAC', 0, 0), d = mk('DIODE', 300, 0),
+        l = mk('LAMPE', 600, 0), ms = mk('MASSE', 900, 0);
+  g.opt.hz = 4; g.opt.amp = 12;
+  link(g, 0, d, 0); link(d, 0, l, 0); link(l, 0, ms, 0); link(ms, 0, g, 0);
+  sim();
+  let mini = 1e9, maxi = -1e9;
+  for (let k = 0; k < 60; k++){ laisseFiler(8, 8); mini = Math.min(mini, d.i); maxi = Math.max(maxi, d.i); }
+  ok(maxi > .01, 'elle laisse passer dans son sens (' + maxi.toFixed(3) + ' A)');
+  ok(mini > -.01, 'et rien dans l’autre (' + mini.toFixed(4) + ' A)');
+  // à l’envers, plus rien ne passe du tout
+  board();
+  const g2 = mk('GENEAC', 0, 0), d2 = mk('DIODE', 300, 0),
+        l2 = mk('LAMPE', 600, 0), m2 = mk('MASSE', 900, 0);
+  g2.opt.hz = 4; g2.opt.amp = 12;
+  link(g2, 0, d2, 0); link(d2, 0, l2, 0); link(l2, 0, m2, 0); link(m2, 0, g2, 0);
+  sim();
+  const vf = 5;                        // un seuil énorme : elle ne s’ouvre jamais
+  d2.opt.vf = vf;
+  let passe = 0;
+  for (let k = 0; k < 40; k++){ laisseFiler(8, 8); passe = Math.max(passe, Math.abs(d2.i)); }
+  ok(passe < .5, 'un seuil trop haut la garde fermée (' + passe.toFixed(3) + ' A)');
+
+  // --- le pont : les deux alternances, du même côté ---
+  board();
+  const g3 = mk('GENEAC', 0, 60), pt = mk('PONT', 340, 0),
+        l3 = mk('LAMPE', 720, 60), m3 = mk('MASSE', 60, 300);
+  g3.opt.hz = 4; g3.opt.amp = 14;
+  link(g3, 0, pt, 0); link(m3, 0, g3, 0); link(m3, 0, pt, 1);
+  link(pt, 0, l3, 0); link(l3, 0, pt, 2);
+  sim();
+  let umin = 1e9, umax = -1e9, allume = 0, tours = 0;
+  for (let k = 0; k < 60; k++){
+    laisseFiler(8, 8); tours++;
+    const u = (+pt.outPins[0].state || 0) - (+pt.inPins[2].state || 0);
+    umin = Math.min(umin, u); umax = Math.max(umax, u);
+    if (l3.p > .05) allume++;
+  }
+  ok(umax > 5, 'la sortie monte (' + umax.toFixed(1) + ' V)');
+  ok(umin > -.6, 'et ne passe jamais vraiment sous zéro (' + umin.toFixed(2) + ' V)');
+  ok(allume / tours > .5,
+     'l’ampoule éclaire plus de la moitié du temps : les DEUX alternances servent ('
+     + Math.round(allume / tours * 100) + ' %)');
+});
+
+T('T227 le circuit LC a une fréquence préférée', () => {
+  board();
+  const g = mk('GENEAC', 0, 0), b = mk('INDUC', 300, 0), co = mk('CONDO', 600, 0),
+        r = mk('RESIS', 900, 0), ms = mk('MASSE', 1200, 0);
+  g.opt.amp = 12; g.opt.ri = .5;
+  b.opt.ind = 1000; b.opt.rs = 1;      // 1 H
+  co.opt.cap = 100;                    // 100 µF  →  f0 ≈ 15,9 Hz
+  r.opt.r = 2;
+  link(g, 0, b, 0); link(b, 0, co, 0); link(co, 0, r, 0); link(r, 0, ms, 0); link(ms, 0, g, 0);
+  const f0 = 1 / (2 * Math.PI * Math.sqrt(1 * 100e-6));
+  near(f0, 15.9, .3, 'la fréquence propre théorique vaut bien 15,9 Hz');
+  const mesure = hz => {
+    g.opt.hz = hz;
+    sim();
+    laisseFiler(200, 8);               // on laisse le régime s’établir
+    let pic = 0;
+    for (let k = 0; k < 40; k++){ laisseFiler(8, 8); pic = Math.max(pic, Math.abs(r.i)); }
+    return pic;
+  };
+  const bas = mesure(5), pres = mesure(16), haut = mesure(50);
+  ok(pres > bas * 2,  'à la résonance le courant dépasse largement celui du bas (' +
+     pres.toFixed(3) + ' contre ' + bas.toFixed(3) + ' A)');
+  ok(pres > haut * 2, 'et celui du haut (' + pres.toFixed(3) + ' contre ' + haut.toFixed(3) + ' A)');
+  // les deux pièces sont indispensables : l’une sans l’autre, pas de pic
+  ok(elecSous > 1, 'le circuit réclame bien des sous-pas');
+});
+
+T('T228 les composants de l’alternatif sont complets et rangés', () => {
+  ['DIODE', 'PONT'].forEach(t => {
+    const d = REG[t];
+    ok(d && d.elec, t + ' est un composant de puissance');
+    ok(d.guide && d.guide.txt.length > 40, t + ' a son entrée de guide');
+    ok(TOOL_TABS.some(x => x.items.includes(t)), t + ' est rangé dans un onglet');
+    board(); mk(t, 100, 100); sim(); drawScene(0);
+  });
+  // le cinquième onglet ⚡ existe et ne déborde pas
+  const alt = TOOL_TABS.find(t => t.key === 'alt');
+  ok(alt, 'l’onglet « L’alternatif » existe');
+  ok(alt.items.length >= 5 && alt.items.length <= 11,
+     'il contient les pièces de l’alternatif sans déborder (' + alt.items.length + ')');
+  ['GENEAC', 'CONDO', 'INDUC', 'DIODE', 'PONT'].forEach(t =>
+    ok(alt.items.includes(t), t + ' y est rangé'));
+  // sa section de guide existe, sinon T57 tomberait sans dire pourquoi
+  ok(FAM_SECTIONS.some(f => f.key === 'alt'), 'la famille a sa section de guide');
 });
 
 /* ===================== bilan ===================== */

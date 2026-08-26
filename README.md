@@ -105,6 +105,19 @@ trente-deux — parce qu'un condensateur se charge en une milliseconde et qu'une
 image en dure seize. Sans mémoire ni source rapide sur le plan, un seul pas :
 le calcul reste exactement celui d'avant.
 
+**Trier le courant.** Une **diode** est un clapet : elle laisse passer dans un
+sens et bloque dans l'autre, à partir d'une tension de seuil. Seule, elle jette
+la moitié d'une onde alternative. En **pont** — quatre diodes en losange — elle
+la *retourne* : les deux alternances ressortent du même côté. Ajoute un gros
+condensateur en sortie et les bosses se comblent : c'est l'intérieur d'un
+chargeur de téléphone.
+
+**La fréquence préférée.** Une bobine s'oppose d'autant plus au courant que ça
+change vite ; un condensateur, exactement l'inverse. À une fréquence précise
+les deux s'annulent, et le courant s'envole — la **résonance**. Elle ne dépend
+que de la bobine et du condensateur, et c'est ce qui permet à une radio de
+choisir une station.
+
 **L'alternatif.** Le **générateur alternatif** ne pousse pas toujours dans le
 même sens : amplitude, fréquence jusqu'à 100 Hz, et forme de l'onde au choix
 (sinus, carré, triangle). Il réclame lui-même le pas de temps qu'il lui faut —
@@ -213,7 +226,7 @@ concatène entre `test/pre.js` (stubs DOM / Canvas / Audio / localStorage, plus
 une horloge `Date.now` pilotable) et `test/post.js` (les tests), puis exécute le
 tout dans un contexte `vm`. Aucun navigateur, aucune dépendance npm.
 
-228 tests couvrent le moteur, le séquentiel, les blocs numériques, l'analogique
+231 tests couvrent le moteur, le séquentiel, les blocs numériques, l'analogique
 et la régulation (dont une boucle fermée four + thermostat), l'édition,
 l'orientation, les tunnels, les puces, l'interface, le balisage et le guide.
 Deux tests valident automatiquement **tout** nouveau composant du registre

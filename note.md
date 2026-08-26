@@ -5,15 +5,33 @@ dans `CLAUDE.md`.
 
 ## Où en est le projet
 
-- **v6.21**, branche `claude/architecte-logique-v5-vntfkp`, **228 tests verts**
+- **v6.22**, branche `claude/architecte-logique-v5-vntfkp`, **231 tests verts**
   (`npm test`).
 - `logicgates.html` : ~12 800 lignes, un seul `<script>`, aucune dépendance.
-- Copies figées dans `versions/` (v5.1 → v6.21), avec leur tableau dans
+- Copies figées dans `versions/` (v5.1 → v6.22), avec leur tableau dans
   `versions/README.md`.
-- Catalogue : **166 leçons en 32 chapitres** — 63 à table de vérité (dont 8
+- Catalogue : **174 leçons en 33 chapitres** — 63 à table de vérité (dont 8
   boîtes noires), 85 libres, et 18 à **condition de réussite** (chapitres 31 et 32).
 
 ## Ce qui vient d'être fait
+
+**⚡ Lot 7 : trier le courant** (v6.22). **Phase 3 terminée.**
+
+- `DIODE` et `PONT` redresseur : les premiers composants NON LINÉAIRES de
+  l'atelier. Ils entrent dans la boucle d'essais qui servait déjà à la
+  limitation de courant (portée de 6 à 12 tours : un pont a quatre diodes,
+  dont deux basculent à chaque alternance).
+- La **résonance** ne demandait aucun composant : bobine + condensateur +
+  générateur suffisaient. Vérifié dans Chromium — sur un LC de 2 H et 200 µF,
+  le pic tombe à 8 Hz pour une théorie à 7,96 Hz.
+- **Chapitre 33 « Le courant alternatif »**, huit leçons (m167 → m174), de
+  « le courant qui change de sens » à « fabriquer du continu ».
+- Cinquième onglet ⚡ **« L'alternatif »** et famille `alt` : GENEAC, CONDO,
+  INDUC, DIODE, PONT. « Le continu » débordait à douze tuiles.
+- `c.icrete` / `c.pcrete` : la crête récente, qui s'efface doucement. Sans
+  elles, impossible d'écrire une condition de réussite sur un circuit qui
+  pulse — au moment du contrôle, une sinusoïde peut passer par zéro.
+  `ckPulsees(part)` s'en sert.
 
 **Le tracé des câbles, deux défauts de fond** (v6.21). Mesuré sur les 722
 câbles de tous les montages livrés : **traversées 61 → 10**, **pire détour
@@ -131,6 +149,18 @@ Avant ça (v6.8 → v6.10) : la refonte de l'affichage en trois lots — bandeau
 plan ; sommaire devenu carte du cours.
 
 ## Décisions qui expliquent le code
+
+- **Une diode s'ouvre sur la TENSION et se ferme sur le COURANT.** Fermer sur
+  la tension aussi faisait osciller les quatre diodes d'un pont entre deux
+  états au passage par zéro : le calcul s'arrêtait au bout de ses douze tours
+  sur un état incohérent, et la sortie plongeait à −0,6 V.
+- **`poseDiode` écrit `br.g` et `br.e` DANS la branche**, pas seulement dans
+  la matrice. Première version : la matrice était juste, mais le bloc qui
+  publie les résultats relisait la résistance d'origine et annonçait −12 A à
+  contresens. Toute non-linéarité doit poser ses valeurs pour de bon.
+- **Le `−` d'un pont redresseur est une ENTRÉE.** Déclaré en sortie, le
+  montage était incâblable : on ne branche pas une sortie sur une sortie, et
+  le courant doit bien revenir quelque part.
 
 - **Le solveur tourne AVANT les passes, une seule fois.** `solveElec()` est
   appelé en tête de `simulate()`, pas dans la boucle des 5 passes. Les
@@ -345,12 +375,9 @@ Prévoir un champ `m.check(components, wires)`.
 
 **Phase 2 — produire : TERMINÉE.**
 
-**Phase 3 — l'alternatif.** Lot 6 : **FAIT** (v6.20). Reste le **lot 7** :
-résonance (un circuit LC a une fréquence préférée), pont redresseur
-(transformer l'alternatif en continu), et le **chapitre 33** avec ses leçons à
-condition de réussite — plus des montages d'exemple. Le socle est là : les
-sous-pas, la mémoire et le générateur alternatif marchent, il ne reste que du
-catalogue et de la pédagogie.
+**Phase 3 — l'alternatif : TERMINÉE** (lots 6 et 7, v6.20 et v6.22).
+→ il manque encore des **montages d'exemple ⚡ pour l'alternatif** dans le
+menu 📦 (les quatre existants ne couvrent que le continu).
 
 **Phase 4 — l'éther.** Lot 8 : la distance et les obstacles. Lot 9 : accord
 LC, AM et FM. Lot 10 : Morse, numérique, le son, chapitre final.

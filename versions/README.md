@@ -23,6 +23,7 @@ version en cours, il suffit d'en recopier une par-dessus `logicgates.html`.
 | `logicgates-v6.19.html` | v6.19 : ⚡ lot 5 — chaudière, turbine à vapeur, panneau solaire, thermopile, chapitre 32 ; et six onglets qui débordaient de l'écran, dégonflés dans les trois ateliers |
 | `logicgates-v6.20.html` | v6.20 : ⚡ lot 6 — horloge du simulateur et ralenti, sous-pas de temps, condensateur, bobine, générateur alternatif |
 | `logicgates-v6.21.html` | v6.21 : tracé des câbles — le contournement se faufile entre les obstacles, et un fil ne traverse plus un boîtier |
+| `logicgates-v6.22.html` | v6.22 : ⚡ lot 7 — diode, pont redresseur, résonance, et le chapitre 33 « Le courant alternatif » |
 | `logicgates-v6.18.html` | v6.18 : l'atelier ⚡ passe à quatre onglets (Le continu · Mesure · Produire · Câblage) — une rangée de quinze tuiles débordait de l'écran et le composant du bout devenait introuvable |
 | `logicgates-v6.17.html` | v6.17 : ⚡ lot 4 — produire du courant : aimant qu'on promène, bobine (loi de Faraday), dynamo à manivelle avec effort et retard sentis, oscilloscope enfin signé |
 | `logicgates-v6.16.html` | v6.16 : ⚡ lot 3 — chapitre 31 « Le courant continu » (10 leçons à vraie condition de réussite), la leçon ouvre son atelier, quatre montages d'exemple ⚡ |
@@ -57,5 +58,6 @@ node test/run.js versions/logicgates-v6.17.html --smoke
 node test/run.js versions/logicgates-v6.18.html --smoke
 node test/run.js versions/logicgates-v6.19.html --smoke
 node test/run.js versions/logicgates-v6.20.html --smoke
-node test/run.js versions/logicgates-v6.21.html          # suite complète
+node test/run.js versions/logicgates-v6.21.html --smoke
+node test/run.js versions/logicgates-v6.22.html          # suite complète
 ```
