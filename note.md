@@ -30,7 +30,12 @@ remet `suppressUndo = false` et appelle `markDirty()` une fois. Sans ça,
 
 **Les quatre garde-fous**, tous obligatoires — un outil « mode » qui ne se voit
 pas se fait oublier et détruit par surprise :
-- le curseur devient une gomme (SVG en `data:` dans `GOMME_CURSEUR`) ;
+- le curseur devient une gomme (SVG en `data:` dans `GOMME_CURSEUR`).
+  **PIÈGE, corrigé après signalement** : le `#` d'une couleur doit être encodé
+  par `encodeURIComponent`, PAS écrit `%23` à la main — sinon il devient
+  `%2523`, la couleur est invalide, le trait ne se dessine pas, et comme le
+  fond est en `fill="none"`, **le curseur disparaît complètement**. Le tracé est
+  doublé d'un liseré sombre pour rester visible sur fond clair ;
 - `#gomme-liseré` ceint la grille en rouge tant qu'elle est prise ;
 - on en sort par **Échap** (traité AVANT tout le reste dans le `keydown`), par
   **clic droit**, ou en recliquant le bouton ; charger une leçon la range aussi ;

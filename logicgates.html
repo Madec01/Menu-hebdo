@@ -5384,11 +5384,22 @@ function overTrash(sx, sy){
    le curseur change, un liseré rouge ceint la grille, on en sort par Échap,
    par un clic droit ou en recliquant le bouton — et surtout, TOUT UN TRAIT DE
    GOMME NE FAIT QU'UNE SEULE ANNULATION. Ctrl+Z ramène tout d'un coup. */
-const GOMME_CURSEUR = 'url("data:image/svg+xml;utf8,' + encodeURIComponent(
-  '<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" ' +
-  'fill="none" stroke="%23ff5c69" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+/* Le curseur de la gomme, dessiné ici et embarqué dans l'adresse.
+   PIÈGE : le « # » d'une couleur doit être encodé, et c'est encodeURIComponent
+   qui le fait — l'écrire déjà encodé donne un %2523, une couleur invalide, un
+   trait qui ne se dessine pas, et donc un curseur COMPLÈTEMENT INVISIBLE
+   (le fond est en fill="none"). Un liseré blanc double le tracé pour que la
+   gomme reste visible sur les composants clairs comme sur le fond sombre. */
+const GOMME_SVG =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" ' +
+  'fill="none" stroke-width="3.4" stroke="#0b1020" stroke-linecap="round" stroke-linejoin="round">' +
   '<path d="M8.5 19.5L4 15a1.6 1.6 0 010-2.3l8.2-8.2a1.6 1.6 0 012.3 0l4.5 4.5a1.6 1.6 0 010 2.3l-7.2 7.2z"/>' +
-  '<path d="M9 20h10"/></svg>').replace(/%23/g, '%23') + '") 4 22, crosshair';
+  '<path d="M9 20h10"/>' +
+  '<g stroke="#ff5c69" stroke-width="1.9">' +
+  '<path d="M8.5 19.5L4 15a1.6 1.6 0 010-2.3l8.2-8.2a1.6 1.6 0 012.3 0l4.5 4.5a1.6 1.6 0 010 2.3l-7.2 7.2z" fill="rgba(255,92,105,.22)"/>' +
+  '<path d="M9 20h10"/></g></svg>';
+const GOMME_URL = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(GOMME_SVG);
+const GOMME_CURSEUR = 'url("' + GOMME_URL + '") 5 23, crosshair';
 let gomme = false, gommeTrait = false, gommeN = 0;
 
 function setGomme(on, muet){
