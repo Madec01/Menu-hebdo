@@ -5,15 +5,29 @@ dans `CLAUDE.md`.
 
 ## Où en est le projet
 
-- **v6.19**, branche `claude/architecte-logique-v5-vntfkp`, **221 tests verts**
+- **v6.20**, branche `claude/architecte-logique-v5-vntfkp`, **226 tests verts**
   (`npm test`).
-- `logicgates.html` : ~12 500 lignes, un seul `<script>`, aucune dépendance.
-- Copies figées dans `versions/` (v5.1 → v6.19), avec leur tableau dans
+- `logicgates.html` : ~12 800 lignes, un seul `<script>`, aucune dépendance.
+- Copies figées dans `versions/` (v5.1 → v6.20), avec leur tableau dans
   `versions/README.md`.
 - Catalogue : **166 leçons en 32 chapitres** — 63 à table de vérité (dont 8
   boîtes noires), 85 libres, et 18 à **condition de réussite** (chapitres 31 et 32).
 
 ## Ce qui vient d'être fait
+
+**⚡ Lot 6 : l'alternatif** (v6.20). Phase 3 entamée. Trois morceaux :
+
+1. **Une horloge pour le circuit.** Le simulateur lisait l'heure de la machine
+   à 54 endroits ; 45 lignes sont passées sur `simNow`. Deux temps cohabitent
+   désormais : l'AFFICHAGE (animations, clignotements — vraie montre, toujours)
+   et la SIMULATION (`simNow`, que le ralenti étire). Le bouton ⏱ de l'en-tête
+   cycle ×1 / ×10 / ×100 et ralentit **tout** — vérifié : une temporisation
+   d'une seconde demande douze secondes réelles en ×10.
+2. **Les sous-pas.** `solveElec` découpe l'image en jusqu'à 32 pas dès qu'une
+   branche a de la mémoire ou réclame de la finesse. Sans elles : **un seul
+   pas**, calcul identique à avant.
+3. **`CONDO`, `INDUC`, `GENEAC`** (sinus / carré / triangle, jusqu'à 100 Hz),
+   et l'oscilloscope qui échantillonne au sous-pas, fenêtre jusqu'à 20 ms.
 
 **⚡ Énergie & ondes, lot 1 sur 10 : le socle du continu** (v6.11). L'atelier
 🔌 n'est plus grisé. Il contient quatre composants — `PILE`, `INTERP`
@@ -121,9 +135,28 @@ plan ; sommaire devenu carte du cours.
 - **Les bornes de puissance ne sont pas remises à zéro entre les passes**
   (ligne du `forEach` de `simulate`), sinon les tensions posées par le solveur
   seraient effacées avant d'être lues.
-- **`simDt`, une horloge unique pour tout le circuit.** Créée mais pas encore
-  utilisée : elle servira aux composants à mémoire (phase 3). Les composants
-  existants gardent chacun leur `c.lastT` — ne pas les convertir sans raison.
+- **Deux variables de temps, et pas une.** `simNow` (l'horloge du circuit)
+  n'est **PAS** plafonnée : les temporisations comparent des échéances, et un
+  plafond leur ferait rater un saut dans le temps — c'est ce qui a permis aux
+  48 tests qui pilotent `Date.now` de passer sans être touchés. `simDt` reste
+  plafonné à 200 ms : il sert à intégrer, un pas énorme ferait diverger.
+  Restent en temps réel, à raison : dates de sauvegarde, annulation, appui
+  long, dé du composant ALÉA, cadence du panneau d'aide, export PNG.
+- **Le modèle compagnon met la mémoire dans le moule existant.** Sur UN pas de
+  temps, un condensateur se comporte comme une résistance en série avec une
+  pile (`r = dt/C`, `e = −u_précédent`) ; une bobine pareil (`r = rs + L/dt`,
+  `e = (L/dt)·i_précédent`). Le solveur ignore donc jusqu'à leur existence.
+  Méthode d'Euler implicite : elle ne s'emballe jamais, même à pas grossier —
+  une méthode plus fine ferait osciller l'affichage au moindre réglage.
+- **Une branche peut réclamer un pas de temps.** `br.dtMax` : le générateur
+  alternatif demande 1/(40·hz), soit quarante points par période. `br.dyn`
+  dit que sa tension change à chaque sous-pas, et le crochet `pas(c, dt)` la
+  recalcule. `avant(c)` ne fait plus qu'exposer la valeur de l'instant — c'est
+  `pas` qui fait avancer la phase, sinon les 32 sous-pas verraient tous la
+  même tension et l'onde redeviendrait un escalier.
+- **`elecSous`** vaut 0 quand aucune mémoire n'est sur le plan : c'est la
+  garantie que l'existant est inchangé, et c'est aussi ce qui empêche
+  l'oscilloscope de compter deux fois ses points.
 - **Trois causes de plus au « les câbles font n'importe quoi »**, corrigées en
   v6.14 :
   1. `recalcFan` ne classait les fils que par borne de DÉPART. Deux fils qui
@@ -281,15 +314,12 @@ Prévoir un champ `m.check(components, wires)`.
 
 **Phase 2 — produire : TERMINÉE.**
 
-**Phase 3 — l'alternatif.** Lot 6 : condensateur et bobine d'inductance
-(c'est là qu'il faudra des **sous-pas de temps** : une image de 16 ms est
-beaucoup trop grossière pour un circuit RC), **et un générateur de tension
-alternative** — demandé explicitement par l'auteur, à ne pas oublier :
-fréquence et amplitude réglables, phase accumulée avec le pas de temps et non
-avec `Date.now()`. Lot 7 : résonance, pont redresseur, chapitre.
-→ attention, l'oscilloscope n'échantillonne qu'une fois par image (~60 points
-par seconde) : au-delà de quelques hertz, la sinusoïde deviendra illisible. À
-traiter dans le lot 6.
+**Phase 3 — l'alternatif.** Lot 6 : **FAIT** (v6.20). Reste le **lot 7** :
+résonance (un circuit LC a une fréquence préférée), pont redresseur
+(transformer l'alternatif en continu), et le **chapitre 33** avec ses leçons à
+condition de réussite — plus des montages d'exemple. Le socle est là : les
+sous-pas, la mémoire et le générateur alternatif marchent, il ne reste que du
+catalogue et de la pédagogie.
 
 **Phase 4 — l'éther.** Lot 8 : la distance et les obstacles. Lot 9 : accord
 LC, AM et FM. Lot 10 : Morse, numérique, le son, chapitre final.

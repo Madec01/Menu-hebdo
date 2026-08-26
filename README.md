@@ -90,6 +90,28 @@ hydraulique à deux branches, remplissage automatique à deux seuils, perceuse
 pilotée en GRAFCET, et un
 **atelier complet** où trois boucles tournent en parallèle.
 
+**Le temps, et le ralenti.** Deux horloges cohabitent : celle de l'affichage,
+qui anime et clignote à la vitesse du monde, et celle du **circuit**, qui le
+fait vieillir. Le bouton ⏱ de l'en-tête étire la seconde — ×1, ×10, ×100 — et
+il les étire **toutes ensemble** : la sinusoïde, la temporisation, la montée en
+température du four. C'est ce qui rend regardable un secteur à 50 Hz.
+
+**Ce qui a de la mémoire.** Une résistance ne se souvient de rien. Un
+**condensateur** et une **bobine d'inductance**, si : leur état dépend de tout
+ce qui a précédé. Le premier se remplit en courbe et garde sa charge ; la
+seconde s'oppose aux changements de courant et fabrique une surtension quand on
+coupe. Pour eux, le solveur **découpe chaque image en sous-pas** — jusqu'à
+trente-deux — parce qu'un condensateur se charge en une milliseconde et qu'une
+image en dure seize. Sans mémoire ni source rapide sur le plan, un seul pas :
+le calcul reste exactement celui d'avant.
+
+**L'alternatif.** Le **générateur alternatif** ne pousse pas toujours dans le
+même sens : amplitude, fréquence jusqu'à 100 Hz, et forme de l'onde au choix
+(sinus, carré, triangle). Il réclame lui-même le pas de temps qu'il lui faut —
+une quarantaine de points par période — pour que son onde reste une onde et non
+un escalier. L'oscilloscope échantillonne au même rythme, avec une fenêtre qui
+descend à 20 ms.
+
 **Les pannes.** Une installation qui marche n'apprend rien : ce qu'on apprend,
 c'est à trouver *pourquoi* elle ne marche plus. Tout composant accepte une
 panne — hors service, mesure figée, dérive, organe bloqué — et rien ne se voit
@@ -183,7 +205,7 @@ concatène entre `test/pre.js` (stubs DOM / Canvas / Audio / localStorage, plus
 une horloge `Date.now` pilotable) et `test/post.js` (les tests), puis exécute le
 tout dans un contexte `vm`. Aucun navigateur, aucune dépendance npm.
 
-221 tests couvrent le moteur, le séquentiel, les blocs numériques, l'analogique
+226 tests couvrent le moteur, le séquentiel, les blocs numériques, l'analogique
 et la régulation (dont une boucle fermée four + thermostat), l'édition,
 l'orientation, les tunnels, les puces, l'interface, le balisage et le guide.
 Deux tests valident automatiquement **tout** nouveau composant du registre

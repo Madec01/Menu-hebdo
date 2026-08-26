@@ -5281,6 +5281,120 @@ T('T219 l’horloge du simulateur, et le ralenti', () => {
   board();
 });
 
+/* Faire s'écouler du VRAI temps de circuit : les sous-pas ne servent que si
+   `simDt` est non nul, et le harnais fige l'horloge tant qu'on ne l'avance pas. */
+function laisseFiler(ms, pasImage){
+  const pas = pasImage || 16;
+  for (let t = 0; t < ms; t += pas){ __advance(pas); sim(); }
+}
+
+T('T220 le condensateur : il se remplit en courbe, il garde, il se vide', () => {
+  board();
+  const p = mk('PILE', 0, 0), k = mk('INTERP', 200, 0),
+        r = mk('RESIS', 400, 0), co = mk('CONDO', 600, 0), g = mk('MASSE', 800, 0);
+  r.opt.r = 1000; co.opt.cap = 1000;        // 1 kΩ × 1000 µF : une seconde de constante
+  link(p, 0, k, 0); link(k, 0, r, 0); link(r, 0, co, 0); link(co, 0, g, 0); link(g, 0, p, 0);
+  k.state = 1;
+  sim();
+  const uc = () => (co._mem && co._mem.u0) || 0;
+  near(uc(), 0, .05, 'au départ il est vide');
+  // il ne se remplit pas d’un coup : c’est toute la différence avec un fil
+  laisseFiler(200);
+  const a = uc();
+  ok(a > .5 && a < 1.4, 'à 0,2 s il est à peine entamé (' + a.toFixed(2) + ' V)');
+  laisseFiler(800);
+  const b = uc();
+  // 4,5 V × (1 − e⁻¹) = 2,84 V
+  near(b, 2.84, .35, 'à 1 s (une constante de temps) il est aux deux tiers');
+  ok(b > a, 'et il a bien continué de monter');
+  laisseFiler(3000);
+  const plein = uc();
+  near(plein, 4.5, .2, 'au bout de plusieurs constantes il atteint la pile');
+  // on coupe : il GARDE sa charge, c’est ça, avoir de la mémoire
+  k.state = 0;
+  laisseFiler(500);
+  near(uc(), plein, .25, 'interrupteur ouvert, il garde sa tension');
+  // le pas de temps a bien été découpé
+  ok(elecSous > 1, 'la mémoire a déclenché les sous-pas (' + elecSous + ')');
+});
+
+T('T221 la bobine : le courant met du temps à s’établir', () => {
+  board();
+  const p = mk('PILE', 0, 0), k = mk('INTERP', 200, 0),
+        b = mk('INDUC', 400, 0), g = mk('MASSE', 600, 0);
+  b.opt.ind = 2000; b.opt.rs = 2;           // 2 H sur 2 Ω : une seconde de constante
+  link(p, 0, k, 0); link(k, 0, b, 0); link(b, 0, g, 0); link(g, 0, p, 0);
+  k.state = 1;
+  sim();
+  const il = () => (b._mem && b._mem.i0) || 0;
+  near(il(), 0, .05, 'à l’instant où on ferme, elle ne laisse rien passer');
+  laisseFiler(200);
+  const a = Math.abs(il());
+  laisseFiler(5000);
+  const c = Math.abs(il());
+  ok(c > a, 'le courant monte en pente, il ne bondit pas');
+  ok(c > 1, 'et il finit par s’établir pour de bon (' + c.toFixed(2) + ' A)');
+  /* Régime établi : la bobine n’est plus qu’un fil résistant, et le rapport
+     U / I sur ELLE retombe sur la résistance de son fil. On ne compare pas à
+     4,5 / 2 : la pile a sa propre résistance interne, et l’interrupteur la
+     sienne. Tant que le courant monte encore, ce rapport reste au-dessus de
+     rs — c’est justement la tension que la bobine oppose au changement. */
+  const rap = Math.abs(b.u) / c;
+  ok(rap >= 1.9 && rap < 2.5,
+     'U / I sur la bobine retombe sur la résistance de son fil (' + rap.toFixed(2) + ' Ω pour 2 Ω)');
+  ok(elecSous > 1, 'elle aussi a déclenché les sous-pas');
+});
+
+T('T222 le générateur alternatif : il change de sens, et assez finement', () => {
+  board();
+  const g = mk('GENEAC', 0, 0), l = mk('LAMPE', 300, 0);
+  g.opt.hz = 2; g.opt.amp = 12; g.opt.forme = 'sinus';
+  link(g, 0, l, 0); link(l, 0, g, 0);
+  sim();
+  // une période entière, relevée finement
+  let mini = 1e9, maxi = -1e9, zero = 0;
+  for (let i = 0; i < 40; i++){
+    laisseFiler(16, 16);
+    const v = g.emf;
+    mini = Math.min(mini, v); maxi = Math.max(maxi, v);
+    if (Math.abs(v) < 3) zero++;
+  }
+  ok(maxi > 9,  'il monte jusqu’à son amplitude (' + maxi.toFixed(1) + ' V)');
+  ok(mini < -9, 'et il descend autant de l’autre côté (' + mini.toFixed(1) + ' V)');
+  ok(zero > 0,  'en passant par zéro — c’est ce qui le distingue d’une pile');
+  ok(elecSous > 1, 'il réclame des sous-pas pour que l’onde reste une onde (' + elecSous + ')');
+  // les trois formes existent et donnent bien trois signaux différents
+  eq(acValeur('carre', .1),  1, 'le carré est en haut sur la première moitié');
+  eq(acValeur('carre', .6), -1, 'et en bas sur la seconde');
+  near(acValeur('tri', .25), 0, .001, 'le triangle passe par son sommet au quart');
+  near(acValeur('sinus', .25), 1, .001, 'le sinus, lui, est au sommet au quart');
+  // et la phase avance vraiment avec l’horloge du circuit, pas avec la montre
+  const ph0 = g.ph;
+  laisseFiler(250, 16);
+  ok(Math.abs(g.ph - ph0) > .1, 'la phase a tourné');
+});
+
+T('T223 les trois nouveaux sont complets et rangés, sans faire déborder', () => {
+  ['CONDO', 'INDUC', 'GENEAC'].forEach(t => {
+    const d = REG[t];
+    ok(d, t + ' existe');
+    ok(d.elec, t + ' est un composant de puissance');
+    ok(d.guide && d.guide.txt.length > 40, t + ' a son entrée de guide');
+    ok(TOOL_TABS.some(x => x.items.includes(t)), t + ' est rangé dans un onglet');
+    // il se pose, se simule et se dessine
+    board();
+    const c = mk(t, 100, 100);
+    sim(); drawScene(0);
+    ok(c, t + ' se pose sans erreur');
+  });
+  // le rangement ne fait déborder aucun onglet
+  TOOL_TABS.filter(t => (t.dom || []).includes('phys')).forEach(t =>
+    ok(t.items.length <= 11, 'onglet ⚡ « ' + t.name + ' » : ' + t.items.length + ' tuiles'));
+  // sans mémoire ni source rapide, le solveur retrouve son pas unique
+  const b = boucle(); sim();
+  eq(elecSous, 0, 'un circuit continu ordinaire ne coûte pas un sous-pas');
+});
+
 /* ===================== bilan ===================== */
 console.log('\n' + (__fail ? '✗' : '✓') + ' ' + __pass + ' test(s) réussi(s), ' +
             __fail + ' échec(s)' + (__fail ? ' : ' + __failures.join(', ') : '') + '\n');
