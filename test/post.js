@@ -4745,7 +4745,8 @@ T('T205 les chapitres ⚡ : à la fin du cours, et dans leur atelier', () => {
   eq(missions.filter(m => /Chapitre 33/.test(m.ch)).length, 8, 'huit au chapitre 33');
   eq(missions.filter(m => /Chapitre 34/.test(m.ch)).length, 4, 'quatre au chapitre 34');
   eq(missions.filter(m => /Chapitre 35/.test(m.ch)).length, 4, 'quatre au chapitre 35');
-  eq(lec.length, 34, 'trente-quatre leçons dans l’atelier ⚡ en tout');
+  eq(missions.filter(m => /Chapitre 36/.test(m.ch)).length, 6, 'six au chapitre 36');
+  eq(lec.length, 40, 'quarante leçons dans l’atelier ⚡ en tout');
   // toutes à la fin du catalogue, et groupées
   const prem = missions.findIndex(m => m.dom === 'phys');
   eq(prem + lec.length, missions.length, 'elles occupent la fin du catalogue');
@@ -4758,8 +4759,8 @@ T('T205 les chapitres ⚡ : à la fin du cours, et dans leur atelier', () => {
   });
   // les chapitres apparaissent dans la carte du cours, l’un après l’autre
   const noms = chapitres().map(c => c.ch || c.nom || c.name || '');
-  ['31','32','33','34','35'].forEach((n, i) =>
-    ok(new RegExp('Chapitre ' + n).test(noms[noms.length - 5 + i]),
+  ['31','32','33','34','35','36'].forEach((n, i) =>
+    ok(new RegExp('Chapitre ' + n).test(noms[noms.length - 6 + i]),
        'le chapitre ' + n + ' est à sa place dans la carte du cours'));
   // et charger une leçon bascule dans l’atelier ⚡
   setAppMode('elec');
@@ -4792,7 +4793,10 @@ T('T206 la condition de réussite regarde le circuit, pas le clic', () => {
    tourner la manivelle) ou simplement du temps (monter en pression). Un
    montage de référence n'est bon que s'il est réellement jouable. */
 function joueMontage(tours){
-  const n = tours || 60;
+  /* 90 tours de 60 ms = 5,4 s de temps de circuit. Il en faut autant depuis
+     le chapitre 36 : un message en Morse à 10 mots par minute met quatre
+     secondes à partir, et le décodeur ne peut rien affirmer avant. */
+  const n = tours || 90;
   /* On MANŒUVRE le montage, on ne le regarde pas seulement tourner : un
      interrupteur qu'on n'ouvre jamais n'apprend rien, et c'est l'ouverture
      qui décharge un condensateur. On rouvre puis on referme, et on laisse
@@ -5951,7 +5955,7 @@ T('T241 AM et FM : ce qui entre ressort, et le bruit ne les touche pas pareil', 
      Math.round((maxi - mini) * 100) + ' points)');
   // la FM au MÊME endroit, avec la MÊME puissance
   const D = station({ freq:98, mod:'fm', pw:.2, dy:420, seuil:.05 });
-  near(D.r._uant, C.r._uant / C.e._amp, .05, 'même distance, même puissance');
+  near(D.r._dist, C.r._dist, .01, 'les deux liaisons font la même distance');
   eq(D.r._grese, 0, 'la FM, elle, est parfaitement propre au même endroit');
   let fmini = 9, fmaxi = -9;
   for (let k = 0; k < 40; k++){ sim(); fmini = Math.min(fmini, D.r._dem); fmaxi = Math.max(fmaxi, D.r._dem); }
@@ -6017,6 +6021,128 @@ T('T243 le décor n’est pas un obstacle pour les câbles', () => {
   const boite = trace('RESIS');
   ok(boite.L > seul.L, 'mais un composant posé en travers, oui (' + boite.L + ' px)');
   ok(DECOR.has('ZONE') && DECOR.has('MUR') && !DECOR.has('RESIS'), 'la liste du décor est juste');
+});
+
+console.log('\n— 📮 Lot 10 : transmettre quelque chose —');
+
+T('T244 le Morse : la table, la trame, et un aller-retour complet', () => {
+  eq(MORSE.S, '...', 'S vaut trois points');
+  eq(MORSE.O, '---', 'O vaut trois traits');
+  eq(MORSE_INV['.-'], 'A', 'et la table se relit dans l’autre sens');
+  eq(Object.keys(MORSE).length, 36, 'les 26 lettres et les 10 chiffres');
+  // la trame de « E », la lettre la plus courte : un point, puis le silence de fin
+  deq(morseTrame('E'), [1,0,0,0,0,0,0,0], 'un point suivi de sept unités de silence');
+  // « SOS » : 5 + 3 + 11 + 3 + 5 + 7 unités
+  eq(morseTrame('SOS').length, 34, 'SOS fait 34 unités');
+  eq(morseUnite(12), 100, 'à 12 mots/minute, un point dure 100 ms');
+  eq(morseNet('sos, à l’aide !'), 'SOS A L AIDE', 'accents et ponctuation deviennent des espaces');
+
+  // l’aller-retour : le manipulateur parle, le décodeur écrit
+  board();
+  const m = mk('MANIP', 0, 0), d = mk('DECMOR', 400, 0);
+  m.opt.msg = 'SOS'; m.opt.wpm = 12; d.opt.wpm = 12;
+  link(m, 0, d, 0);
+  sim();
+  laisseFiler(4200);
+  ok(d.txt.indexOf('SOS') >= 0, 'le décodeur a écrit SOS (reçu : « ' + d.txt + ' »)');
+  // …et si les deux ne sont pas d’accord sur la vitesse, ça ne veut plus rien dire
+  const juste = d.txt;
+  d.txt = ''; d.sig = ''; d.opt.wpm = 5;      // le décodeur croit qu’on va deux fois moins vite
+  laisseFiler(4200);
+  ok(d.txt.indexOf('SOS') < 0,
+     'à la mauvaise vitesse, le texte devient illisible (« ' + d.txt + ' » au lieu de « ' + juste + ' »)');
+});
+
+T('T245 la trame numérique : un octet bit par bit, et ce qui la casse', () => {
+  eq(SERIE_N, 11, 'onze cases : départ, huit bits, deux stop');
+  eq(serieBit(0, 0), 1, 'la première case est toujours le bit de départ');
+  eq(serieBit(1, 1), 1, 'le bit de poids faible part en premier');
+  eq(serieBit(1, 2), 0, 'et les suivants sont à zéro');
+  eq(serieBit(128, 8), 1, 'le poids fort part en dernier');
+  eq(serieBit(255, 9), 0, 'le stop est un silence');
+  eq(serieBin(65), '01000001', 'le binaire s’écrit poids fort à gauche');
+
+  board();
+  const e = mk('SERIE', 0, 0), r = mk('DESERIE', 400, 0);
+  e.opt.oct = 65; e.opt.baud = 8; r.opt.baud = 8;
+  link(e, 0, r, 0);
+  sim();
+  laisseFiler(4000);
+  eq(r.oct, 65, 'la valeur est arrivée entière');
+  eq(r.err, 0, 'sans erreur de trame');
+  ok(r.nb >= 2, 'et elle s’est répétée (' + r.nb + ' octets reçus)');
+  // une autre valeur passe aussi
+  e.opt.oct = 200;
+  laisseFiler(4000);
+  eq(r.oct, 200, 'on change la valeur, elle suit');
+  // le mauvais débit : les bits sont lus au mauvais moment
+  r.opt.baud = 3; r.oct = 0; r.nb = 0;
+  laisseFiler(6000);
+  ok(r.oct !== 200 || r.err, 'au mauvais débit, ce qui sort n’a plus rien à voir (' + r.oct + ')');
+  // le débit règle bien la durée d’un bit
+  e.opt.baud = 4;
+  eq(Math.round(1000 / 4), 250, 'à 4 bits/s, un bit dure 250 ms');
+});
+
+T('T246 le haut-parleur mesure la fréquence du courant qui le traverse', () => {
+  board();
+  const g = mk('GENEAC', 0, 0), h = mk('HP', 400, 0), m = mk('MASSE', 800, 0);
+  g.opt.hz = 50; g.opt.amp = 12; g.opt.ri = .5; h.opt.z = 8;
+  link(g, 0, h, 0); link(h, 0, m, 0); link(m, 0, g, 0);
+  sim();
+  laisseFiler(1200);
+  ok(h._hz > 44 && h._hz < 56, 'il mesure bien 50 Hz (' + h._hz.toFixed(1) + ')');
+  ok(h.pcrete > .1, 'et il reçoit de la puissance (' + fmtWatt(h.pcrete) + ')');
+  // on change la fréquence de la source : la mesure suit
+  g.opt.hz = 20;
+  laisseFiler(2000);
+  ok(h._hz > 17 && h._hz < 23, 'on descend à 20 Hz, il suit (' + h._hz.toFixed(1) + ')');
+  // du continu ne fait aucun son
+  board();
+  const p = mk('PILE', 0, 0), h2 = mk('HP', 400, 0), m2 = mk('MASSE', 800, 0);
+  link(p, 0, h2, 0); link(h2, 0, m2, 0); link(m2, 0, p, 0);
+  sim(); laisseFiler(600);
+  near(h2._hz, 0, 1e-9, 'du courant continu ne fait pas de son');
+  ok(h2.p > .1, 'alors qu’il consomme bel et bien (' + fmtWatt(h2.p) + ')');
+  eq(fmtHz(50), '50 Hz', 'une fréquence audible se lit en Hz');
+  eq(fmtHz(1200), '1.2 kHz', 'et les aigus en kHz');
+
+  /* La crête d'un circuit alternatif se mesure pendant les SOUS-PAS, pas une
+     fois par image. Le piège : une image de 60 ms tombe exactement trois fois
+     par période sur du 50 Hz — donc toujours au même endroit de la sinusoïde,
+     et si cet endroit est un passage par zéro, la crête mesurée valait zéro. */
+  board();
+  const g3 = mk('GENEAC', 0, 0), h3 = mk('HP', 400, 0), m3 = mk('MASSE', 800, 0);
+  g3.opt.hz = 50; g3.opt.amp = 12; g3.opt.ri = .5; h3.opt.z = 8;
+  link(g3, 0, h3, 0); link(h3, 0, m3, 0); link(m3, 0, g3, 0);
+  sim();
+  laisseFiler(1200, 60);                       // 60 ms pile : trois périodes par image
+  near(h3.p, 0, .05, 'à cette cadence, l’instant tombe toujours sur le zéro');
+  ok(h3.pcrete > 5, 'et pourtant la crête est juste (' + fmtWatt(h3.pcrete) +
+     ') — elle est prise sur les sous-pas');
+  ok(h3.icrete > .8, 'le courant crête aussi (' + fmtAmp(h3.icrete) + ')');
+});
+
+T('T247 les cinq pièces du lot 10 sont complètes et rangées', () => {
+  ['MANIP', 'DECMOR', 'SERIE', 'DESERIE', 'HP'].forEach(t => {
+    const d = REG[t];
+    ok(d, t + ' est au registre');
+    ok(d.guide && d.guide.txt.length > 40, t + ' a son entrée de guide');
+    ok(TOOL_TABS.some(x => x.items.includes(t)), t + ' est rangé dans un onglet');
+    board(); mk(t, 100, 100); sim(); drawScene(0);
+  });
+  // les quatre qui déroulent une séquence sont marqués séquentiels : sans ça,
+  // la vérification en continu les prendrait pour de la logique combinatoire
+  ['MANIP', 'DECMOR', 'SERIE', 'DESERIE'].forEach(t =>
+    ok(REG[t].seq, t + ' est marqué séquentiel'));
+  // aucun n’est une « entrée » : sinon les montages de référence les refuseraient
+  ['MANIP', 'SERIE'].forEach(t =>
+    ok(!INPUT_TYPES.includes(t), t + ' n’est pas classé comme entrée'));
+  const on = TOOL_TABS.find(t => t.key === 'onde');
+  ok(on.items.length >= 8 && on.items.length <= 11,
+     'l’onglet La radio ne déborde pas (' + on.items.length + ' tuiles)');
+  // le son ne part jamais pendant une vérification, ni sur un plan effacé
+  ok(__HTML.includes('if (simulating || hz < 25'), 'le haut-parleur se tait pendant une vérification');
 });
 
 /* ===================== bilan ===================== */

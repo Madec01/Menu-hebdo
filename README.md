@@ -152,6 +152,21 @@ porteuse de 100 MHz ne se calcule pas point par point — deux millions de fois
 trop de travail : on simule ce que la liaison fait au signal, avec les vraies
 formules.
 
+**Transmettre quelque chose.** Le **manipulateur Morse** envoie un message en
+points et en traits, le **décodeur** le réécrit — à partir de rien d'autre que
+des durées, et à condition que les deux soient réglés sur la même vitesse.
+L'**émetteur numérique** envoie un octet bit par bit avec un bit de départ ; le
+récepteur le remonte, en échantillonnant au milieu de chaque case, et dit
+`ERR` quand la trame est cassée. Branchés sur une liaison radio, ils traversent
+la pièce sans le moindre fil — et le numérique montre sa falaise : parfait,
+puis d'un coup plus rien.
+
+**Le son.** Le **haut-parleur** transforme le courant qui le traverse en son,
+dont la hauteur est la **fréquence mesurée** de ce courant — comptée sur les
+sous-pas du solveur, parce qu'on ne peut pas reconnaître du 50 Hz en regardant
+soixante fois par seconde. C'est là que le domaine se referme : un haut-parleur
+et une antenne font la même chose, à deux vitesses différentes.
+
 **Les pannes.** Une installation qui marche n'apprend rien : ce qu'on apprend,
 c'est à trouver *pourquoi* elle ne marche plus. Tout composant accepte une
 panne — hors service, mesure figée, dérive, organe bloqué — et rien ne se voit

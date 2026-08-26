@@ -5,15 +5,61 @@ dans `CLAUDE.md`.
 
 ## Où en est le projet
 
-- **v6.26**, branche `claude/architecte-logique-v5-vntfkp`, **245 tests verts**
+- **v6.28**, branche `claude/architecte-logique-v5-vntfkp`, **250 tests verts**
   (`npm test`).
-- `logicgates.html` : ~13 800 lignes, un seul `<script>`, aucune dépendance.
-- Copies figées dans `versions/` (v5.1 → v6.26), avec leur tableau dans
+- `logicgates.html` : ~14 400 lignes, un seul `<script>`, aucune dépendance.
+- Copies figées dans `versions/` (v5.1 → v6.28), avec leur tableau dans
   `versions/README.md`.
-- Catalogue : **182 leçons en 35 chapitres** — 63 à table de vérité (dont 8
+- Catalogue : **188 leçons en 36 chapitres** — 63 à table de vérité (dont 8
   boîtes noires), 85 libres, et 30 à **condition de réussite** (chapitres 31 à 34).
 
 ## Ce qui vient d'être fait
+
+**📮 Lot 10 : transmettre quelque chose** (v6.28). **LA FEUILLE DE ROUTE ⚡ EST
+TERMINÉE** — la section correspondante de `CLAUDE.md` a été supprimée, comme
+elle le demandait elle-même.
+
+Cinq pièces : `MANIP` (manipulateur Morse), `DECMOR` (décodeur), `SERIE` /
+`DESERIE` (émetteur et récepteur numériques série), `HP` (haut-parleur). Plus
+le **chapitre 36 « Tout se tient »**, six leçons, m183 → m188.
+
+- **La règle des séquences temporisées** : elles avancent dans `commit()`, qui
+  n'est appelé QU'UNE FOIS par image (`:4942`), jamais dans `eval()`, appelé
+  cinq fois (`:4935`). Et avec un `while (simNow - c.t0 >= T){ c.t0 += T; … }`,
+  pas un `if` : sinon la vitesse plafonne en silence dès qu'une case dure moins
+  qu'une image. Toutes s'appuient sur `simNow` (jamais plafonné, suit le
+  ralenti) et se taisent quand `simulating` est vrai — sinon une vérification
+  en continu ferait avancer le message.
+- `seq:true` sur les quatre : sans ça, `boardCombinatoire()` les prendrait pour
+  de la logique combinatoire.
+- **Aucune n'est de famille `in` ni `sense`**, donc aucune n'atterrit dans
+  `INPUT_TYPES` (`:8345`) — leurs montages de référence peuvent les contenir.
+- **Le Morse** : une seule règle de durée, le point est l'unité, le trait en
+  vaut trois, les silences une / trois / sept. `morseUnite(wpm) = 1200/wpm`
+  (convention internationale sur le mot PARIS, qui vaut 50 unités). Le décodeur
+  ne connaît QUE des durées — d'où la leçon : les deux bouts doivent être
+  réglés sur la même vitesse, sinon les traits passent pour des points.
+- **La trame numérique** : 11 cases — départ, 8 bits (poids faible d'abord),
+  2 stop. Le récepteur échantillonne au MILIEU de chaque case, ce qui lui
+  laisse une demi-case de tolérance d'horloge. Débit volontairement lent
+  (2 à 20 bits/s) : à 60 images par seconde, un bit doit durer au moins deux
+  images pour être vu.
+
+**DEUX DÉFAUTS DU MOTEUR TROUVÉS EN CHEMIN, tous deux corrigés :**
+
+1. **La crête d'un circuit alternatif était mesurée une fois par image.** Elle
+   tombait donc à zéro quand l'image tombait pile sur un passage par zéro — et
+   une image de 60 ms tombe *exactement* trois fois par période sur du 50 Hz.
+   `icrete`/`pcrete` sont maintenant pris sur **tous les sous-pas**
+   (`br.ipk` / `br.ppk`). Ça corrige aussi, rétroactivement, la mesure de crête
+   des chapitres 33 et 35.
+2. **Il n'existait aucun moyen de suivre un courant plus finement qu'une
+   image.** Nouveau crochet `sous(c, dt, i)`, appelé à chaque sous-pas avec le
+   courant de l'instant. C'est ce qui permet au haut-parleur de mesurer 50 Hz :
+   on ne peut pas compter des alternances en regardant soixante fois par
+   seconde. Et on **lisse la période, pas la fréquence** — l'inverse d'une
+   moyenne n'est pas la moyenne des inverses, et ça suffisait à afficher 54 Hz
+   pour du 50.
 
 **📻 Lot 9 : l'accord et la modulation** (v6.26).
 
@@ -724,7 +770,7 @@ avec T207 comme garde-fou.
   recherche qu'on oublie ? la barre qui mange l'écran ? Une refonte à l'aveugle
   coûterait cher pour rien.
 
-## Ce qui reste : ⚡ Énergie & ondes, lots 4 à 10
+## Ce qui reste
 
 Découpage validé avec l'auteur. Un lot, on livre, il teste, il valide.
 
@@ -740,10 +786,14 @@ Prévoir un champ `m.check(components, wires)`.
 → il manque encore des **montages d'exemple ⚡ pour l'alternatif** dans le
 menu 📦 (les quatre existants ne couvrent que le continu).
 
-**Phase 4 — l'éther.** Lot 8 (distance et obstacles) : **FAIT**, v6.24.
-Lot 9 (accord, bande passante, AM/FM, bruit) : **FAIT**, v6.26 — la question
-« simuler la simulation d'onde » est tranchée, voir plus haut.
-Lot 10 : Morse, numérique, le son, chapitre final.
+**Phase 4 — l'éther : TERMINÉE.** Lot 8 (distance et obstacles) v6.24,
+lot 9 (accord, bande passante, AM/FM, bruit) v6.26, lot 10 (Morse, trame
+numérique, haut-parleur, chapitre final) v6.28.
+
+**➡️ LA FEUILLE DE ROUTE ⚡ EST TERMINÉE.** La suite du travail est dans
+« Chantiers demandés » et « L'audit du moteur » ci-dessus. L'ordre convenu avec
+l'auteur : le **lot A** de l'audit (petit, sans risque, gain immédiat), puis la
+**refonte de l'overlay et des menus**.
 → **Un audit UI/UX complet de l'overlay a été demandé** pendant le lot 8
 (hiérarchie visuelle, ergonomie, accessibilité/responsive, technique). Son
 rapport alimentera la refonte de l'overlay prévue après la phase 4.

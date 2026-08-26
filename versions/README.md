@@ -28,6 +28,8 @@ version en cours, il suffit d'en recopier une par-dessus `logicgates.html`.
 | `logicgates-v6.24.html` | v6.24 : 📡 lot 8 — la radio : émetteur, récepteur, obstacles, et le chapitre 34 « Sans fil ». La position des boîtiers sur le plan compte enfin |
 | `logicgates-v6.25.html` | v6.25 : réparations de l’overlay — une fenêtre ouverte prend la main sur le clavier, les messages passent devant le voile, la corbeille sort de sous la barre, l’énoncé et l’en-tête tiennent sous 1136 px |
 | `logicgates-v6.26.html` | v6.26 : 📻 lot 9 — l’accord et la modulation : fréquence, bande passante, AM/FM, grésillement et effet de seuil, chapitre 35 « Choisir sa station » |
+| `logicgates-v6.27.html` | v6.27 : un mur n’est plus un obstacle pour les câbles, et l’audit du moteur au carnet |
+| `logicgates-v6.28.html` | v6.28 : 📮 lot 10 — Morse, trame numérique, haut-parleur, et le chapitre 36 « Tout se tient ». **La feuille de route ⚡ est terminée** |
 | `logicgates-v6.18.html` | v6.18 : l'atelier ⚡ passe à quatre onglets (Le continu · Mesure · Produire · Câblage) — une rangée de quinze tuiles débordait de l'écran et le composant du bout devenait introuvable |
 | `logicgates-v6.17.html` | v6.17 : ⚡ lot 4 — produire du courant : aimant qu'on promène, bobine (loi de Faraday), dynamo à manivelle avec effort et retard sentis, oscilloscope enfin signé |
 | `logicgates-v6.16.html` | v6.16 : ⚡ lot 3 — chapitre 31 « Le courant continu » (10 leçons à vraie condition de réussite), la leçon ouvre son atelier, quatre montages d'exemple ⚡ |
