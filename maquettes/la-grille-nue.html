@@ -13,232 +13,353 @@
 <title>La grille nue</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 
 <style>
 /* ---------------------------------------------------------------
-   Palette et polices reprises telles quelles de l'application :
-   une maquette qui ne ressemblerait pas au produit ne servirait à
-   rien. Parti pris sombre assumé, comme l'atelier lui-même.
+   Palette et polices reprises telles quelles de l'application.
+   Parti pris sombre assumé, comme l'atelier lui-même : la maquette
+   doit ressembler au produit, sinon elle ne sert à rien.
    --------------------------------------------------------------- */
 :root{
-  --bg0:#05070d; --bg1:#0a101f;
-  --panel:rgba(12,19,36,.86); --panel2:rgba(9,14,28,.94);
-  --border:rgba(99,179,255,.18); --border-hi:rgba(99,220,255,.4);
-  --cyan:#38e1ff; --green:#3dff9e; --amber:#ffc23d; --violet:#b18cff;
-  --red:#ff5c69; --text:#e9f2ff; --dim:#8698ba; --dim2:#5d6c88;
+  --bg0:#05070d; --bg1:#0a1120;
+  --panel:rgba(12,19,36,.9); --panel2:rgba(16,25,46,.94);
+  --border:rgba(120,160,220,.16); --border2:rgba(120,160,220,.28);
+  --text:#e9f2ff; --dim:#8698ba; --dim2:#61729180;
+  --cyan:#38e1ff; --green:#3dff9e; --amber:#ffc23d; --violet:#b18cff; --red:#ff5c69;
+  --disp:'Chakra Petch',system-ui,sans-serif;
   --mono:'IBM Plex Mono',ui-monospace,monospace;
-  --disp:'Chakra Petch','IBM Plex Mono',sans-serif;
+  --at:var(--cyan);            /* couleur de l'atelier courant */
 }
-*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0; background:var(--bg0); color:var(--text); font-family:var(--disp);
+  font-size:16px; line-height:1.55;
+  background-image:radial-gradient(80% 50% at 50% -10%, #0d1830 0%, var(--bg0) 60%);
+  background-attachment:fixed}
 button{font:inherit; color:inherit; background:none; border:0; padding:0; cursor:pointer}
-body{
-  margin:0; background:var(--bg0); color:var(--text);
-  font-family:var(--disp); font-size:16px; line-height:1.6;
-  background-image:
-    radial-gradient(1100px 620px at 12% -8%, rgba(56,225,255,.09), transparent 62%),
-    radial-gradient(900px 520px at 92% 4%, rgba(177,140,255,.08), transparent 60%);
-  background-attachment:fixed;
-}
-.wrap{max-width:1120px; margin:0 auto; padding:clamp(28px,5vw,68px) clamp(18px,4vw,32px) 90px}
+:focus-visible{outline:2px solid var(--cyan); outline-offset:2px}
 
-/* ---- Typographie ---- */
-h1{font-size:clamp(30px,5.2vw,50px); font-weight:700; letter-spacing:-.015em; line-height:1.08;
-   margin:0 0 14px; text-wrap:balance}
-h2{font-size:clamp(21px,2.7vw,27px); font-weight:700; letter-spacing:-.01em; margin:0 0 6px; text-wrap:balance}
-h3{font-size:17px; font-weight:600; margin:0 0 6px; letter-spacing:.01em}
-p{margin:0 0 14px; max-width:66ch}
-.lede{font-size:clamp(16px,1.9vw,19px); color:#c3d2ea; max-width:60ch}
+.wrap{max-width:1080px; margin:0 auto; padding:56px 22px 90px}
 .eyebrow{font-family:var(--mono); font-size:11.5px; letter-spacing:.22em; text-transform:uppercase;
-  color:var(--cyan); margin:0 0 12px}
-.dim{color:var(--dim)}
+  color:var(--cyan); margin:0 0 14px}
+h1{font-size:clamp(34px,6vw,58px); line-height:1.04; margin:0 0 18px; font-weight:700;
+  letter-spacing:-.015em; text-wrap:balance}
+h2{font-size:clamp(21px,2.6vw,28px); margin:64px 0 8px; font-weight:600; letter-spacing:-.01em}
+h3{font-size:17px; margin:26px 0 6px; font-weight:600}
+p{margin:0 0 14px; color:#c3d1e6; max-width:66ch}
+.lede{font-size:clamp(16.5px,2vw,19px); color:#aebfd8; max-width:60ch}
 b,strong{color:#fff; font-weight:600}
-code{font-family:var(--mono); font-size:.88em; color:var(--cyan);
-  background:rgba(56,225,255,.09); padding:1px 5px; border-radius:5px}
-section{margin-top:clamp(46px,7vw,84px)}
-.rule{height:1px; background:linear-gradient(90deg,var(--border),transparent); margin:0 0 26px}
+code{font-family:var(--mono); font-size:.9em; color:var(--cyan);
+  background:rgba(56,225,255,.08); padding:1px 5px; border-radius:4px}
 
-/* ================= LA MAQUETTE ================= */
-.stage{margin:26px 0 0}
-.ctrls{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; align-items:center}
-.seg{display:flex; gap:3px; padding:3px; border-radius:11px; border:1px solid var(--border);
-     background:rgba(5,9,18,.6)}
-.seg button{font-family:var(--disp); font-size:13px; font-weight:600; letter-spacing:.02em;
-  padding:7px 14px; border-radius:8px; border:1px solid transparent; background:none;
-  color:var(--dim); cursor:pointer; transition:.16s}
-.seg button:hover{color:var(--text); background:rgba(255,255,255,.05)}
-.seg button[aria-pressed="true"]{background:rgba(56,225,255,.14); border-color:rgba(56,225,255,.4); color:#fff}
-.seg button:focus-visible, .mock button:focus-visible{outline:2px solid var(--cyan); outline-offset:2px}
-.hint{font-family:var(--mono); font-size:11.5px; color:var(--dim2); margin-left:2px}
+/* ================= la scène ================= */
+.stage{margin-top:34px}
+.ctrls{display:flex; flex-wrap:wrap; gap:10px 16px; align-items:center; margin-bottom:14px}
+.seg{display:inline-flex; border:1px solid var(--border); border-radius:10px; overflow:hidden}
+.seg button{padding:8px 15px; font-size:14px; color:var(--dim); transition:background .16s, color .16s}
+.seg button+button{border-left:1px solid var(--border)}
+.seg button[aria-pressed="true"]{background:rgba(56,225,255,.13); color:#fff}
+.hint{font-family:var(--mono); font-size:11.5px; color:var(--dim2); flex:1; min-width:180px}
 
-.mock{
-  position:relative; width:100%; aspect-ratio:100/62; container-type:inline-size;
+.mock{position:relative; width:100%; aspect-ratio:100/62; container-type:inline-size;
   border:1px solid var(--border); border-radius:14px; overflow:hidden;
-  background:
-    radial-gradient(120% 90% at 50% 0%, #0c1526 0%, var(--bg0) 70%);
-  box-shadow:0 24px 70px rgba(0,0,0,.55);
-}
+  background:radial-gradient(120% 90% at 50% 0%, #0c1526 0%, var(--bg0) 70%);
+  box-shadow:0 24px 70px rgba(0,0,0,.55)}
 .mock .grid{position:absolute; inset:0;
-  background-image:radial-gradient(rgba(120,160,220,.16) 1px, transparent 1px);
+  background-image:radial-gradient(rgba(120,160,220,.15) 1px, transparent 1px);
   background-size:2.4cqw 2.4cqw}
-/* un bout de circuit, pour que la grille ne soit pas vide pour rien */
-.mock .circ{position:absolute; left:26%; top:47%; width:48%; height:22%}
-.mock .box{position:absolute; border:1px solid rgba(177,140,255,.5); border-radius:1cqw;
-  background:rgba(20,28,50,.75); font-family:var(--mono); font-size:1.15cqw; color:#cbd8ef;
+.circ{position:absolute; left:26%; top:44%; width:48%; height:20%}
+.box{position:absolute; border:1px solid rgba(177,140,255,.5); border-radius:1cqw;
+  background:rgba(20,28,50,.75); font-family:var(--mono); font-size:1.1cqw; color:#cbd8ef;
   display:flex; align-items:center; justify-content:center}
-.mock .wire{position:absolute; height:.28cqw; background:rgba(177,140,255,.55); border-radius:2px}
+.wire{position:absolute; height:.26cqw; background:rgba(177,140,255,.55); border-radius:2px}
 
-.lay{position:absolute; inset:0; font-size:1.35cqw}
-.lay button{font-family:var(--disp)}
-.glass{background:var(--panel); border:1px solid var(--border); border-radius:1.2cqw;
-  backdrop-filter:blur(10px)}
+.lay{position:absolute; inset:0; font-size:1.3cqw}
+.glass{background:var(--panel); border:1px solid var(--border); border-radius:1.1cqw;
+  backdrop-filter:blur(10px); box-shadow:0 1.4cqw 4cqw rgba(0,0,0,.45)}
+.ic{width:1em; height:1em; display:block; stroke:currentColor; fill:none;
+  stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round}
 
-/* --- en-tête --- */
-.hdr{position:absolute; left:1.6cqw; top:1.6cqw; right:1.6cqw; height:5.2cqw;
-  display:flex; align-items:center; gap:1.1cqw; padding:0 1.4cqw}
-.logo{font-size:2.1cqw; line-height:1}
-.brand{font-weight:700; letter-spacing:.12em; font-size:1.5cqw; white-space:nowrap}
-.crumb{font-family:var(--mono); font-size:1.15cqw; color:var(--dim); white-space:nowrap}
-.spacer{flex:1}
-.ibtn{width:3.4cqw; height:3.4cqw; border-radius:.8cqw; border:1px solid var(--border);
+/* ---- le filigrane : le titre, posé sur la grille ---- */
+.mark{position:absolute; left:50%; top:2.4cqw; transform:translateX(-50%); text-align:center;
+  pointer-events:none; user-select:none; width:64cqw}
+.mark .k{font-family:var(--mono); font-size:1.15cqw; letter-spacing:.42em;
+  color:rgba(233,242,255,.3); text-transform:uppercase}
+.mark .t{font-weight:700; font-size:3.6cqw; letter-spacing:.06em; line-height:1.15;
+  color:rgba(233,242,255,.12); text-transform:uppercase;
+  -webkit-text-stroke:.5px rgba(233,242,255,.14)}
+.mark .t.lec{font-size:2.9cqw; letter-spacing:.02em; text-transform:none;
+  color:rgba(233,242,255,.17)}
+
+/* ---- le bouton Menu, seul en haut à gauche ---- */
+.menubtn{position:absolute; left:1.6cqw; top:1.6cqw; display:flex; align-items:center; gap:.75cqw;
+  padding:.85cqw 1.3cqw; font-size:1.3cqw; font-weight:600; color:#dbe6f5;
+  transition:border-color .16s, background .16s}
+.menubtn .ic{font-size:1.5cqw; color:var(--cyan)}
+.menubtn:hover{border-color:var(--border2)}
+
+/* ---- la zone Outils, en haut à droite ---- */
+.outils{position:absolute; right:1.6cqw; top:1.6cqw; width:21cqw; padding:.9cqw;
+  transform-origin:100% 0; transition:transform .18s cubic-bezier(.2,.8,.3,1), opacity .14s}
+.tools{display:flex; align-items:center; gap:.5cqw}
+.tbtn{width:3.2cqw; height:3.2cqw; border-radius:.75cqw; border:1px solid var(--border);
   background:rgba(255,255,255,.03); display:flex; align-items:center; justify-content:center;
-  font-size:1.45cqw; color:var(--dim); flex:none}
-.ibtn.on{color:var(--cyan); border-color:rgba(56,225,255,.45); background:rgba(56,225,255,.1)}
-.menubtn{display:flex; align-items:center; gap:.7cqw; padding:.75cqw 1.3cqw; border-radius:.9cqw;
-  border:1px solid rgba(56,225,255,.4); background:rgba(56,225,255,.12); color:#fff;
-  font-weight:600; font-size:1.35cqw; white-space:nowrap}
-.pill{font-family:var(--mono); font-size:1.15cqw; color:var(--dim); padding:.55cqw 1cqw;
-  border-radius:1.4cqw; border:1px solid var(--border); white-space:nowrap}
-
-/* --- bandeau de leçon --- */
-.enonce{position:absolute; left:50%; transform:translateX(-50%); top:8.4cqw; width:46cqw;
-  padding:1.3cqw 1.6cqw}
-.enonce .ch{font-family:var(--mono); font-size:1.05cqw; color:var(--cyan); letter-spacing:.1em;
-  text-transform:uppercase}
-.enonce .ti{font-weight:700; font-size:1.85cqw; margin:.35cqw 0 .55cqw}
-.enonce .goal{display:inline-block; font-family:var(--mono); font-size:1.05cqw; color:var(--amber);
-  border:1px solid rgba(255,194,61,.35); background:rgba(255,194,61,.1);
-  padding:.25cqw .8cqw; border-radius:1cqw}
-.acts{display:flex; gap:.7cqw; margin-top:1.1cqw}
-.acts button{flex:1; padding:.85cqw; border-radius:.8cqw; font-weight:700; font-size:1.2cqw;
-  border:1px solid transparent}
-.a-sol{background:rgba(255,194,61,.1); color:var(--amber); border-color:rgba(255,194,61,.35)}
-.a-hint{background:rgba(255,255,255,.05); color:#c5d1e7; border-color:rgba(255,255,255,.14)}
-.a-go{background:linear-gradient(180deg,#0a7a43,#076b3a); color:#fff}
-
-/* --- zone Outils --- */
-.outils{position:absolute; right:1.6cqw; top:8.4cqw; width:20cqw; padding:1cqw 1.1cqw}
-.outils .cap{display:flex; align-items:center; justify-content:space-between;
-  font-family:var(--mono); font-size:1cqw; letter-spacing:.14em; color:var(--dim);
-  text-transform:uppercase}
-.tt{width:100%; border-collapse:collapse; font-family:var(--mono); font-size:1.05cqw; margin-top:.9cqw}
-.tt th{color:var(--dim2); font-weight:500; padding:.2cqw 0}
-.tt td{text-align:center; padding:.25cqw 0; color:#cbd8ef}
-.tt tr.ko td{color:var(--red)}
-.tt tr.ok td{color:var(--green)}
-.cnt{display:flex; gap:.6cqw; margin-top:.9cqw; font-family:var(--mono); font-size:1cqw}
-.cnt span{flex:1; background:rgba(255,255,255,.04); border-radius:.6cqw; padding:.4cqw;
+  font-size:1.55cqw; color:#b6c6e0; transition:border-color .15s, color .15s, background .15s}
+.tbtn:hover{border-color:var(--border2); color:#fff}
+.tbtn.gom{color:var(--amber); border-color:rgba(255,194,61,.34); background:rgba(255,194,61,.09)}
+.tsep{width:1px; height:2.2cqw; background:var(--border); margin:0 .25cqw}
+.trait{height:1px; background:var(--border); margin:.85cqw 0}
+.cnt{display:flex; gap:.55cqw; font-family:var(--mono); font-size:.95cqw}
+.cnt span{flex:1; background:rgba(255,255,255,.04); border-radius:.55cqw; padding:.4cqw;
   text-align:center; color:var(--dim)}
-.cnt b{color:var(--text); display:block; font-size:1.25cqw}
-.outilsFold{position:absolute; right:1.6cqw; top:8.4cqw; padding:.7cqw 1.1cqw;
-  font-family:var(--mono); font-size:1.1cqw; color:var(--dim)}
+.cnt b{color:var(--text); display:block; font-size:1.2cqw; font-weight:600}
+.eff{display:flex; align-items:center; gap:.6cqw; font-size:1.1cqw; color:#f2929c;
+  padding:.35cqw .2cqw; border-radius:.6cqw; transition:background .15s}
+.eff:hover{background:rgba(255,92,105,.1)}
+.outilsFold{position:absolute; right:1.6cqw; top:1.6cqw; display:flex; align-items:center;
+  gap:.45cqw; padding:.55cqw .65cqw; transform-origin:100% 0}
 
-/* --- panneau des objets, en bas à gauche --- */
-.objFold{position:absolute; left:1.6cqw; bottom:1.6cqw; width:4.6cqw; height:4.6cqw;
-  border-radius:1.2cqw; display:flex; align-items:center; justify-content:center; font-size:2cqw}
-.obj{position:absolute; left:1.6cqw; bottom:1.6cqw; right:1.6cqw; padding:1cqw;
-  display:flex; flex-direction:column; gap:.75cqw}
-.r1{display:flex; gap:.5cqw; align-items:center}
-.tab{padding:.6cqw 1.1cqw; border-radius:.7cqw; border:1px solid var(--border);
-  font-size:1.2cqw; font-weight:600; color:var(--dim); background:rgba(255,255,255,.03);
-  white-space:nowrap; display:flex; align-items:center; gap:.45cqw}
-.tab.on{color:#fff; border-color:rgba(56,225,255,.45); background:rgba(56,225,255,.13)}
-.srch{flex:1; min-width:0; padding:.6cqw 1cqw; border-radius:.7cqw; border:1px solid var(--border);
-  background:rgba(5,9,18,.6); font-family:var(--mono); font-size:1.1cqw; color:var(--dim2)}
-.r2{display:flex; gap:.4cqw; flex-wrap:wrap}
-.cat{padding:.4cqw .9cqw; border-radius:.6cqw; font-family:var(--mono); font-size:1cqw;
-  letter-spacing:.06em; color:#9db0cf; background:none; border-bottom:2px solid transparent}
-.cat.on{color:var(--cyan); border-bottom-color:var(--cyan)}
-.r3{display:flex; gap:.6cqw}
-.tile{width:6cqw; height:6cqw; border-radius:.8cqw; border:1px solid rgba(255,255,255,.16);
-  background:rgba(255,255,255,.045); display:flex; flex-direction:column; align-items:center;
-  justify-content:center; gap:.35cqw}
-.tile i{font-style:normal; font-size:1.9cqw; color:var(--c,#8fa6c8)}
-.tile span{font-family:var(--mono); font-size:.95cqw; color:#b9c8e0}
-.tile.fav{border-color:rgba(255,194,61,.5)}
+/* ---- le panneau des objets, en bas à gauche ---- */
+.objFold{position:absolute; left:1.6cqw; bottom:1.6cqw; width:4.4cqw; height:4.4cqw;
+  display:flex; align-items:center; justify-content:center; font-size:2.2cqw; color:#b6c6e0;
+  transform-origin:0 100%; transition:color .15s, border-color .15s}
+.objFold:hover{color:#fff; border-color:var(--border2)}
 
-/* --- le menu, ouvert en grand --- */
-.veil{position:absolute; inset:0; background:rgba(3,6,12,.78); backdrop-filter:blur(4px)}
-.menu{position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:56cqw;
-  background:rgba(12,19,36,.97); border:1px solid var(--border-hi); border-radius:1.4cqw;
-  padding:2cqw 2.2cqw 2.2cqw}
-.menu h4{margin:0 0 1.4cqw; font-size:1.9cqw; font-weight:700; letter-spacing:.02em}
-.mgrp{margin-bottom:1.3cqw}
-.mgrp .lab{font-family:var(--mono); font-size:.95cqw; letter-spacing:.2em; color:var(--dim2);
-  text-transform:uppercase; margin-bottom:.6cqw}
-.mrow{display:flex; gap:.6cqw; flex-wrap:wrap}
-.mit{display:flex; align-items:center; gap:.6cqw; padding:.7cqw 1cqw; border-radius:.8cqw;
-  border:1px solid var(--border); background:rgba(255,255,255,.035); font-size:1.2cqw;
-  color:#d5e0f2; white-space:nowrap}
-.mit .st{font-family:var(--mono); font-size:1cqw; color:var(--green)}
+.obj{position:absolute; left:1.6cqw; bottom:1.6cqw; right:1.6cqw;
+  transform-origin:0 100%; transition:transform .2s cubic-bezier(.2,.8,.3,1), opacity .15s;
+  background:none; border:0; box-shadow:none}
+/* la rangée d'onglets : les ateliers, grands, et la recherche à leur droite */
+.ats{display:flex; align-items:flex-end; gap:.4cqw; padding-right:.4cqw}
+.at{display:flex; align-items:center; gap:.6cqw; padding:.95cqw 1.5cqw;
+  border-radius:1cqw 1cqw 0 0; font-size:1.35cqw; font-weight:600;
+  color:color-mix(in srgb, var(--tc) 52%, #7f90ae);
+  border:1px solid var(--border); border-bottom:0; background:rgba(9,15,28,.72);
+  white-space:nowrap; transition:color .15s, background .15s, padding .15s}
+.at .ic{font-size:1.5cqw}
+.at .ic{color:color-mix(in srgb, var(--tc) 70%, #7f90ae)}
+.at:hover{color:color-mix(in srgb, var(--tc) 80%, #fff)}
+.at[aria-selected="true"]{color:#fff; background:var(--panel2); padding-top:1.25cqw;
+  border-color:var(--border2); box-shadow:inset 0 .3cqw 0 var(--tc)}
+.at[aria-selected="true"] .ic{color:var(--tc)}
+.srch{flex:1; min-width:0; display:flex; align-items:center; gap:.7cqw; margin-bottom:.15cqw;
+  padding:.85cqw 1.1cqw; border-radius:.9cqw; border:1px solid var(--border);
+  background:rgba(5,9,18,.66); font-family:var(--mono); font-size:1.1cqw; color:var(--dim2)}
+.srch .ic{font-size:1.3cqw; color:var(--dim)}
+/* le corps, collé aux onglets : c'est ça qui dit « ce qui suit appartient à l'onglet » */
+.body{border:1px solid var(--border2); border-radius:0 1.1cqw 1.1cqw 1.1cqw;
+  background:var(--panel2); backdrop-filter:blur(10px); padding:.9cqw 1.1cqw 1.1cqw;
+  box-shadow:0 1.4cqw 4cqw rgba(0,0,0,.5), inset 0 .18cqw 0 rgba(255,255,255,.04)}
+.cats{display:flex; gap:1.5cqw; flex-wrap:wrap; padding:0 .2cqw .75cqw;
+  border-bottom:1px solid var(--border)}
+.cat{font-family:var(--mono); font-size:1.05cqw; letter-spacing:.05em; color:#8fa3c4;
+  padding-bottom:.55cqw; margin-bottom:-.8cqw; border-bottom:2px solid transparent;
+  transition:color .15s}
+.cat:hover{color:#cfdcf0}
+.cat[aria-selected="true"]{color:var(--at); border-bottom-color:var(--at)}
+.tiles{display:flex; flex-wrap:wrap; gap:.6cqw; justify-content:center; margin-top:1.3cqw;
+  min-height:6.4cqw}
+.tile{width:7cqw; height:6.4cqw; border-radius:.85cqw; border:1px solid rgba(255,255,255,.13);
+  background:rgba(255,255,255,.04); display:flex; flex-direction:column; align-items:center;
+  justify-content:center; gap:.3cqw; transition:border-color .15s, background .15s, transform .15s}
+.tile:hover{border-color:var(--at); background:color-mix(in srgb, var(--at) 12%, transparent);
+  transform:translateY(-.25cqw)}
+.tile i{font-style:normal; font-size:1.9cqw; color:var(--at); line-height:1}
+.tile span{font-family:var(--mono); font-size:.92cqw; color:#b3c3dc; letter-spacing:.02em}
+.objClose{width:3.6cqw; height:3.6cqw; margin-bottom:.15cqw; flex:none;
+  border-radius:.9cqw; border:1px solid var(--border); background:rgba(9,15,28,.72);
+  display:flex; align-items:center; justify-content:center; font-size:1.5cqw; color:var(--dim);
+  transition:color .15s, border-color .15s}
+.objClose:hover{color:#fff; border-color:var(--border2)}
+
+/* ---- mode leçon : le panneau des actions, sous le Menu ---- */
+.act{position:absolute; left:1.6cqw; top:6.6cqw; transform-origin:0 0;
+  transition:transform .2s cubic-bezier(.2,.8,.3,1), opacity .15s}
+.act.plie{width:4.4cqw; padding:.55cqw; display:flex; flex-direction:column; gap:.5cqw}
+.act.plie .abtn{width:3.2cqw; height:3.2cqw; border-radius:.7cqw; display:flex;
+  align-items:center; justify-content:center; font-size:1.7cqw; border:1px solid transparent}
+.act .sep{height:1px; background:var(--border); margin:.15cqw .3cqw}
+.act .dep{width:3.2cqw; height:2.4cqw; display:flex; align-items:center; justify-content:center;
+  font-size:1.4cqw; color:var(--dim); border-radius:.6cqw; transition:color .15s}
+.act .dep:hover{color:#fff}
+.act.deplie{width:29cqw; padding:1.1cqw 1.2cqw}
+.act .chap{font-family:var(--mono); font-size:1cqw; letter-spacing:.11em; color:var(--cyan);
+  text-transform:uppercase}
+.act .tit{font-weight:700; font-size:1.5cqw; margin:.25cqw 0 .5cqw; line-height:1.2}
+.act .txt{font-size:1.12cqw; line-height:1.5; color:#b8c8e2; margin-bottom:1cqw}
+.act .row{display:flex; gap:.55cqw}
+.act .row .abtn{flex:1; display:flex; align-items:center; justify-content:center; gap:.45cqw;
+  padding:.8cqw .3cqw; border-radius:.75cqw; font-size:1cqw; font-weight:600;
+  border:1px solid transparent; white-space:nowrap}
+.a-lec{background:rgba(255,255,255,.05); color:#cfdcf0; border-color:rgba(255,255,255,.14)!important}
+.a-sol{background:rgba(255,194,61,.1); color:var(--amber); border-color:rgba(255,194,61,.36)!important}
+.a-ok{background:linear-gradient(180deg,#0b8a4b,#077040); color:#fff}
+.actTab{position:absolute; right:.8cqw; top:.9cqw; width:2.6cqw; height:2.6cqw;
+  display:flex; align-items:center; justify-content:center; font-size:1.4cqw; color:var(--dim);
+  border-radius:.6cqw; transition:color .15s, background .15s}
+.actTab:hover{color:#fff; background:rgba(255,255,255,.06)}
+
+/* ---- mode leçon : le suivi, posé sur la grille ---- */
+.hud{position:absolute; right:1.6cqw; bottom:1.6cqw; width:23cqw; padding:.95cqw 1.1cqw;
+  background:rgba(8,13,26,.55); border:1px solid rgba(120,160,220,.13); border-radius:1cqw;
+  transition:opacity .2s, transform .2s cubic-bezier(.2,.8,.3,1)}
+.hud .lab{font-family:var(--mono); font-size:.92cqw; letter-spacing:.15em; color:var(--dim2);
+  text-transform:uppercase}
+.hud .but{font-size:1.15cqw; color:#d6e2f3; margin:.3cqw 0 .8cqw; line-height:1.35}
+.step{display:flex; align-items:center; gap:.6cqw; font-family:var(--mono); font-size:1.02cqw;
+  color:#93a6c6; padding:.16cqw 0}
+.step .dot{width:1.25cqw; height:1.25cqw; border-radius:50%; border:1px solid var(--border2);
+  display:flex; align-items:center; justify-content:center; font-size:.85cqw; flex:none}
+.step.ok{color:#8fd9b4} .step.ok .dot{border-color:var(--green); color:var(--green)}
+.step.now{color:#fff} .step.now .dot{border-color:var(--cyan); color:var(--cyan);
+  box-shadow:0 0 0 .3cqw rgba(56,225,255,.15)}
+
+/* ---- le menu, en grand ---- */
+.veil{position:absolute; inset:0; background:rgba(3,6,12,.76); backdrop-filter:blur(4px);
+  transition:opacity .2s}
+.menu{position:absolute; left:50%; top:50%; width:54cqw; padding:2cqw 2.2cqw 2.2cqw;
+  transform:translate(-50%,-50%); transform-origin:50% 50%;
+  transition:transform .2s cubic-bezier(.2,.8,.3,1), opacity .16s}
+.menu h4{margin:0 0 1.4cqw; font-size:2cqw; font-weight:700; display:flex;
+  align-items:center; justify-content:space-between}
+.mgrp{font-family:var(--mono); font-size:.95cqw; letter-spacing:.2em; color:var(--dim2);
+  text-transform:uppercase; margin:1.5cqw 0 .7cqw}
+.mrow{display:flex; flex-wrap:wrap; gap:.55cqw}
+.mit{display:flex; align-items:center; gap:.55cqw; padding:.7cqw 1cqw; border-radius:.8cqw;
+  border:1px solid var(--border); background:rgba(255,255,255,.03); font-size:1.2cqw;
+  color:#d5e0f2; white-space:nowrap; transition:border-color .15s, background .15s}
+.mit:hover{border-color:var(--border2); background:rgba(255,255,255,.06)}
+.mit .ic{font-size:1.4cqw; color:var(--dim)}
+.mit .st{font-family:var(--mono); font-size:.98cqw; color:var(--green)}
 .mit .st.off{color:var(--dim2)}
-.mit.big{border-color:rgba(56,225,255,.35); background:rgba(56,225,255,.09); font-weight:600; color:#fff}
-.mit.dgr{border-color:rgba(255,92,105,.3); color:#f79aa2}
+.mit.big{border-color:rgba(56,225,255,.38); background:rgba(56,225,255,.1); color:#fff; font-weight:600}
+.mit.big .ic{color:var(--cyan)}
+.mit.dgr{border-color:rgba(255,92,105,.3); color:#f2929c}
+.mit.dgr .ic{color:#f2929c}
+.mclose{width:3.2cqw; height:3.2cqw; border-radius:.8cqw; border:1px solid var(--border);
+  display:flex; align-items:center; justify-content:center; font-size:1.5cqw; color:var(--dim)}
+
+/* ---- états : c'est là que se jouent les animations ---- */
+[data-obj="0"] .obj,[data-obj="1"] .objFold,
+[data-out="0"] .outils,[data-out="1"] .outilsFold,
+[data-menu="0"] .veil,[data-menu="0"] .menu,
+[data-mode="sand"] .act,[data-mode="sand"] .hud,
+[data-act="0"] .act.deplie,[data-act="1"] .act.plie{
+  opacity:0; pointer-events:none; visibility:hidden}
+[data-obj="0"] .obj{transform:scale(.9) translateY(1cqw)}
+[data-obj="1"] .hud{transform:translateY(-21cqw)}
+[data-out="0"] .outils{transform:scale(.92)}
+[data-menu="0"] .menu{transform:translate(-50%,-50%) scale(.95)}
+[data-act="0"] .act.deplie,[data-act="1"] .act.plie{transform:scale(.94)}
+[data-v="new"] .old,[data-v="old"] .new{display:none}
 
 /* --- l'existant, pour comparer --- */
-.old .hdr{gap:.55cqw}
+.old .hdrOld{position:absolute; left:1.6cqw; top:1.6cqw; right:1.6cqw; height:5.2cqw;
+  display:flex; align-items:center; gap:.55cqw; padding:0 1.4cqw}
+.old .brand{font-weight:700; letter-spacing:.12em; font-size:1.25cqw; white-space:nowrap}
+.ibtn{width:3.4cqw; height:3.4cqw; border-radius:.8cqw; border:1px solid var(--border);
+  background:rgba(255,255,255,.03); display:flex; align-items:center; justify-content:center;
+  font-size:1.4cqw; color:var(--dim); flex:none}
+.ibtn.on{color:var(--cyan); border-color:rgba(56,225,255,.45); background:rgba(56,225,255,.1)}
+.pill{font-family:var(--mono); font-size:1.1cqw; color:var(--dim); padding:.5cqw 1cqw;
+  border-radius:1.4cqw; border:1px solid var(--border); white-space:nowrap}
 .old .enonceOld{position:absolute; left:50%; transform:translateX(-50%); top:8cqw; width:44cqw;
   padding:1cqw 1.3cqw}
 .old .colOld{position:absolute; right:1.2cqw; top:8cqw; width:16cqw; display:flex;
   flex-direction:column; gap:.6cqw}
-.old .colOld button{padding:.85cqw; border-radius:.7cqw; font-weight:700; font-size:1.15cqw;
+.old .colOld button{padding:.85cqw; border-radius:.7cqw; font-weight:700; font-size:1.1cqw;
   border:1px solid transparent}
 .old .infosOld{position:absolute; right:1.2cqw; bottom:18cqw; width:16cqw; padding:.9cqw}
 .old .barOld{position:absolute; left:1.2cqw; right:1.2cqw; bottom:1.2cqw; padding:.9cqw;
   display:flex; flex-direction:column; gap:.6cqw}
-.tag{position:absolute; font-family:var(--mono); font-size:1.05cqw; letter-spacing:.05em;
-  color:var(--amber); background:rgba(255,194,61,.12); border:1px solid rgba(255,194,61,.35);
-  padding:.25cqw .7cqw; border-radius:.6cqw; pointer-events:none}
+.old .o1{display:flex; gap:.5cqw; align-items:center}
+.old .o2{display:flex; gap:1.2cqw; flex-wrap:wrap}
+.old .o3{display:flex; gap:.6cqw}
+.old .tabOld{padding:.6cqw 1.1cqw; border-radius:.7cqw; border:1px solid var(--border);
+  font-size:1.15cqw; font-weight:600; color:var(--dim); background:rgba(255,255,255,.03);
+  white-space:nowrap}
+.old .tabOld.on{color:#fff; border-color:rgba(56,225,255,.45); background:rgba(56,225,255,.13)}
+.old .catOld{font-family:var(--mono); font-size:1cqw; color:#9db0cf}
+.old .catOld.on{color:var(--cyan)}
+.old .tileOld{width:6cqw; height:6cqw; border-radius:.8cqw; border:1px solid rgba(255,255,255,.16);
+  background:rgba(255,255,255,.045); display:flex; flex-direction:column; align-items:center;
+  justify-content:center; gap:.3cqw; font-family:var(--mono); font-size:.9cqw; color:#b3c3dc}
+.tag{position:absolute; font-family:var(--mono); font-size:1.02cqw; letter-spacing:.04em;
+  color:var(--amber); background:rgba(255,194,61,.12); border:1px solid rgba(255,194,61,.34);
+  padding:.25cqw .7cqw; border-radius:.6cqw; pointer-events:none; white-space:nowrap}
 
 /* ================= le reste de la page ================= */
-.cards{display:grid; gap:14px; grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
-.card{border:1px solid var(--border); border-radius:12px; padding:18px 18px 16px;
+.cards{display:grid; gap:14px; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); margin-top:18px}
+.card{border:1px solid var(--border); border-radius:12px; padding:18px;
   background:linear-gradient(180deg,rgba(255,255,255,.032),rgba(255,255,255,.012))}
 .card p{margin:0; font-size:14.5px; color:#b7c6e0}
 .card .n{font-family:var(--mono); font-size:11px; letter-spacing:.18em; color:var(--cyan);
   text-transform:uppercase; margin-bottom:8px}
-
 .move{display:grid; grid-template-columns:1fr auto 1fr; gap:12px; align-items:center;
-  border:1px solid var(--border); border-radius:12px; padding:14px 16px; margin-bottom:10px;
+  border:1px solid var(--border); border-radius:12px; padding:13px 16px; margin-bottom:9px;
   background:rgba(255,255,255,.022)}
 .move .from{font-family:var(--mono); font-size:13px; color:var(--dim)}
 .move .to{font-size:15px; color:#dbe6f5}
 .move .ar{color:var(--cyan); font-size:18px}
 @media (max-width:620px){ .move{grid-template-columns:1fr; gap:4px} .move .ar{display:none} }
-
 table.lots{width:100%; border-collapse:collapse; font-size:14.5px; margin-top:6px}
 table.lots th{text-align:left; font-family:var(--mono); font-size:11px; letter-spacing:.16em;
   text-transform:uppercase; color:var(--dim2); padding:0 12px 10px 0; font-weight:500}
 table.lots td{padding:12px 12px 12px 0; border-top:1px solid var(--border); vertical-align:top; color:#bccbe4}
 table.lots td:first-child{color:#fff; font-weight:600; white-space:nowrap}
-.chip{display:inline-block; font-family:var(--mono); font-size:11px; padding:2px 8px; border-radius:20px;
-  border:1px solid currentColor; white-space:nowrap}
+.chip{display:inline-block; font-family:var(--mono); font-size:11px; padding:2px 8px;
+  border-radius:20px; border:1px solid currentColor; white-space:nowrap}
 .c-ok{color:var(--green)} .c-mid{color:var(--amber)} .c-hi{color:var(--red)}
 .tbl-wrap{overflow-x:auto}
-
 .avis{border-left:2px solid var(--amber); padding:2px 0 2px 18px; margin:22px 0}
-.avis h3{color:var(--amber)}
-
+.avis h3{color:var(--amber); margin-top:0}
+ul{color:#c3d1e6; max-width:66ch; padding-left:20px}
+li{margin-bottom:7px}
 @media (prefers-reduced-motion:reduce){ *{transition:none!important; animation:none!important} }
 </style>
 
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+<symbol id="i-undo" viewBox="0 0 24 24"><path d="M4 9h11a5 5 0 010 10h-6"/><path d="M8 5L4 9l4 4"/></symbol>
+<symbol id="i-redo" viewBox="0 0 24 24"><path d="M20 9H9a5 5 0 000 10h6"/><path d="M16 5l4 4-4 4"/></symbol>
+<symbol id="i-gom" viewBox="0 0 24 24"><path d="M8.5 19.5L4 15a1.6 1.6 0 010-2.3l8.2-8.2a1.6 1.6 0 012.3 0l4.5 4.5a1.6 1.6 0 010 2.3l-7.2 7.2z"/><path d="M9 20h10"/><path d="M9.6 7.4l6.9 6.9"/></symbol>
+<symbol id="i-cam" viewBox="0 0 24 24"><path d="M3 8h3.5L8 5.5h8L17.5 8H21v11H3z"/><circle cx="12" cy="13.5" r="3.4"/></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13"/></symbol>
+<symbol id="i-chip" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="1.4"/><path d="M10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></symbol>
+<symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3.6l2.6 5.4 5.9.8-4.3 4.1 1.05 5.9L12 17l-5.25 2.8L7.8 13.9 3.5 9.8l5.9-.8z"/></symbol>
+<symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13.5 2.5L5 13.5h5.5L10 21.5 19 10.5h-5.6z"/></symbol>
+<symbol id="i-fact" viewBox="0 0 24 24"><path d="M3 20V10l5.5 3.5V10L14 13.5V10l6.5 4v6z"/><path d="M3 20h18"/></symbol>
+<symbol id="i-wave" viewBox="0 0 24 24"><path d="M2 12c2.5-6 5-6 7.5 0S15 18 17.5 12 22 6.5 22 6.5"/></symbol>
+<symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 17.5h6M10 20.5h4"/><path d="M12 3a6 6 0 00-3.4 10.9c.6.5.9 1 .9 1.6h5c0-.6.3-1.1.9-1.6A6 6 0 0012 3z"/></symbol>
+<symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.4"/><circle cx="12" cy="12" r=".6" fill="currentColor"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M4.5 12.8l5 5L19.5 6.5"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+<symbol id="i-l" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+<symbol id="i-r" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
+<symbol id="i-d" viewBox="0 0 24 24"><path d="M5 9l7 7 7-7"/></symbol>
+<symbol id="i-grid" viewBox="0 0 24 24"><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></symbol>
+<symbol id="i-tag" viewBox="0 0 24 24"><path d="M4 4h8l8 8-8 8-8-8z"/><circle cx="8.5" cy="8.5" r="1.2"/></symbol>
+<symbol id="i-map" viewBox="0 0 24 24"><path d="M3 6l6-2.5 6 2.5 6-2.5v15L15 21l-6-2.5L3 21z"/><path d="M9 3.5v15M15 6v15"/></symbol>
+<symbol id="i-route" viewBox="0 0 24 24"><path d="M3 18h5V9h8V6h5"/><circle cx="3.5" cy="18" r="1.4"/><circle cx="20.5" cy="6" r="1.4"/></symbol>
+<symbol id="i-center" viewBox="0 0 24 24"><path d="M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4"/><circle cx="12" cy="12" r="2"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5.3l3.4 2"/></symbol>
+<symbol id="i-snd" viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13L7.5 14.5H4z"/><path d="M16 9.5a4 4 0 010 5"/></symbol>
+<symbol id="i-scope" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M6 14c2-5 3.5-5 5.5 0S15 15 18 10"/></symbol>
+<symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5.5A2 2 0 016 4h5v16H6a2 2 0 00-2 1.5z"/><path d="M20 5.5A2 2 0 0018 4h-5v16h5a2 2 0 012 1.5z"/></symbol>
+<symbol id="i-kbd" viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M6 10h.01M9.5 10h.01M13 10h.01M16.5 10h.01M8 14h8"/></symbol>
+<symbol id="i-box" viewBox="0 0 24 24"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/></symbol>
+<symbol id="i-save" viewBox="0 0 24 24"><path d="M4 4h12l4 4v12H4z"/><path d="M8 4v6h8V4M8 20v-6h8v6"/></symbol>
+<symbol id="i-cards" viewBox="0 0 24 24"><rect x="3" y="4" width="12" height="16" rx="1.6"/><path d="M17.5 6.5L21 8v11l-6 2"/></symbol>
+</defs></svg>
+
 <div class="wrap">
 
-<p class="eyebrow">Architecte Logique · proposition d'interface</p>
+<p class="eyebrow">Architecte Logique · proposition d'interface, deuxième version</p>
 <h1>La grille nue</h1>
-<p class="lede">Une seule règle : <b>le plan de travail d'abord</b>. Tout ce qui n'est pas
-le circuit se range, se replie, ou disparaît dans un menu — et revient au clic, là où on
-l'attend. Voici ta maquette, adaptée à ce qui existe déjà.</p>
+<p class="lede">Plus rien en haut. Le titre est passé <b>sur la grille</b>, en filigrane.
+Il ne reste qu'un bouton <b>Menu</b> à gauche, la boîte à <b>Outils</b> à droite, et le
+panneau des objets rangé <b>en bas à gauche</b>. Tout s'ouvre au clic, tout s'anime,
+tout se referme.</p>
 
 <section class="stage">
   <div class="ctrls">
@@ -250,13 +371,14 @@ l'attend. Voici ta maquette, adaptée à ce qui existe déjà.</p>
       <button id="b-sand" aria-pressed="true">Bac à sable</button>
       <button id="b-lec" aria-pressed="false">Mode leçon</button>
     </div>
-    <span class="hint">La maquette est cliquable : le menu, le panneau des objets, la zone Outils.</span>
+    <span class="hint">Tout est cliquable : les onglets d'atelier, les catégories,
+      le Menu, les panneaux qui se plient.</span>
   </div>
 
-  <div class="mock" id="mock" data-v="new" data-mode="sand" data-menu="0" data-obj="0" data-out="1">
+  <div class="mock" id="mock" data-v="new" data-mode="sand" data-menu="0" data-obj="0"
+       data-out="1" data-act="0">
     <div class="grid"></div>
 
-    <!-- un bout de circuit, pour donner l'échelle -->
     <div class="circ" aria-hidden="true">
       <div class="box" style="left:0;top:10%;width:22%;height:60%">SWITCH</div>
       <div class="wire" style="left:22%;top:36%;width:16%"></div>
@@ -267,132 +389,140 @@ l'attend. Voici ta maquette, adaptée à ce qui existe déjà.</p>
 
     <!-- ================== LA PROPOSITION ================== -->
     <div class="lay new">
-      <div class="hdr glass">
-        <span class="logo">⚡</span>
-        <span class="brand">ARCHITECTE LOGIQUE</span>
-        <button class="menubtn" id="m-open">☰ Menu</button>
-        <span class="crumb" id="m-crumb">Bac à sable</span>
-        <span class="spacer"></span>
-        <span class="ibtn" title="Annuler">↶</span>
-        <span class="ibtn" title="Refaire">↷</span>
-        <span class="pill">0 / 188 ✓ · 0 ★</span>
+
+      <!-- le titre, en filigrane, accroché au haut de l'écran -->
+      <div class="mark" id="m-mark">
+        <div class="k" id="m-mk">bac à sable</div>
+        <div class="t" id="m-mt">Architecte Logique</div>
       </div>
 
-      <!-- bandeau de leçon -->
-      <div class="enonce glass" id="m-enonce">
-        <div class="ch">Chapitre 34 · Sans fil</div>
-        <div class="ti">175. Ça part sans fil</div>
-        <span class="goal">⭐ aucun fil entre les deux</span>
-        <div class="acts">
-          <button class="a-hint">💡 La leçon sur le schéma</button>
-          <button class="a-sol">🎯 Donne la réponse</button>
-          <button class="a-go">✓ Vérifier</button>
+      <!-- Menu, seul en haut à gauche -->
+      <button class="menubtn glass" id="m-open">
+        <svg class="ic"><use href="#i-menu"/></svg> Menu</button>
+
+      <!-- Outils, en haut à droite -->
+      <div class="outils glass">
+        <div class="tools">
+          <button class="tbtn" title="Annuler"><svg class="ic"><use href="#i-undo"/></svg></button>
+          <button class="tbtn" title="Refaire"><svg class="ic"><use href="#i-redo"/></svg></button>
+          <span class="tsep"></span>
+          <button class="tbtn gom" title="Gomme"><svg class="ic"><use href="#i-gom"/></svg></button>
+          <button class="tbtn" title="Capture"><svg class="ic"><use href="#i-cam"/></svg></button>
+          <span style="flex:1"></span>
+          <button class="tbtn" id="m-outclose" aria-label="Ranger les outils">
+            <svg class="ic"><use href="#i-r"/></svg></button>
+        </div>
+        <div class="trait"></div>
+        <div class="cnt"><span>Portes<b>4</b></span><span>Câbles<b>7</b></span><span>Zoom<b>100%</b></span></div>
+        <div class="trait"></div>
+        <button class="eff"><svg class="ic"><use href="#i-trash"/></svg> Tout effacer</button>
+      </div>
+      <div class="outilsFold glass" id="m-outopen">
+        <button class="tbtn" title="Annuler"><svg class="ic"><use href="#i-undo"/></svg></button>
+        <button class="tbtn" title="Refaire"><svg class="ic"><use href="#i-redo"/></svg></button>
+        <span class="tsep"></span>
+        <button class="tbtn" aria-label="Ouvrir les outils"><svg class="ic"><use href="#i-l"/></svg></button>
+      </div>
+
+      <!-- mode leçon : le panneau des actions, sous le Menu -->
+      <div class="act plie glass">
+        <button class="abtn a-lec" title="La leçon sur le schéma"><svg class="ic"><use href="#i-bulb"/></svg></button>
+        <button class="abtn a-sol" title="Donne la réponse"><svg class="ic"><use href="#i-target"/></svg></button>
+        <button class="abtn a-ok" title="Vérifier"><svg class="ic"><use href="#i-check"/></svg></button>
+        <div class="sep"></div>
+        <button class="dep" id="m-actopen" aria-label="Déplier"><svg class="ic"><use href="#i-r"/></svg></button>
+      </div>
+      <div class="act deplie glass">
+        <div class="chap" style="padding-right:3cqw">Chapitre 34 · sans fil</div>
+        <div class="tit">175. Ça part sans fil</div>
+        <div class="txt">Alimente un ÉMETTEUR RADIO et pose un RÉCEPTEUR à côté.
+          Aucun fil entre les deux — et pourtant il reçoit.</div>
+        <div class="row">
+          <button class="abtn a-lec"><svg class="ic"><use href="#i-bulb"/></svg> La leçon</button>
+          <button class="abtn a-sol"><svg class="ic"><use href="#i-target"/></svg> La réponse</button>
+          <button class="abtn a-ok"><svg class="ic"><use href="#i-check"/></svg> Vérifier</button>
+        </div>
+        <button class="actTab" id="m-actclose" aria-label="Replier"><svg class="ic"><use href="#i-l"/></svg></button>
+      </div>
+
+      <!-- mode leçon : le suivi, posé sur la grille -->
+      <div class="hud">
+        <div class="lab">objectif</div>
+        <div class="but">Faire s'allumer l'ampoule du récepteur, sans aucun câble entre les deux postes.</div>
+        <div class="step ok"><span class="dot"><svg class="ic"><use href="#i-check"/></svg></span> Émetteur posé et alimenté</div>
+        <div class="step now"><span class="dot">2</span> Poser le récepteur à moins de 6 m</div>
+        <div class="step"><span class="dot">3</span> Relier son ampoule</div>
+      </div>
+
+      <!-- le panneau des objets -->
+      <button class="objFold glass" id="m-objopen" aria-label="Ouvrir le panneau des objets">
+        <svg class="ic"><use href="#i-chip"/></svg></button>
+
+      <div class="obj" id="m-obj">
+        <div class="ats" id="m-ats">
+          <button class="at" data-at="rapide" style="--tc:#ffc23d" aria-selected="true">
+            <svg class="ic"><use href="#i-star"/></svg> Rapide</button>
+          <button class="at" data-at="elec" style="--tc:#38e1ff" aria-selected="false">
+            <svg class="ic"><use href="#i-bolt"/></svg> Électronique</button>
+          <button class="at" data-at="proc" style="--tc:#b18cff" aria-selected="false">
+            <svg class="ic"><use href="#i-fact"/></svg> Process</button>
+          <button class="at" data-at="ener" style="--tc:#3dff9e" aria-selected="false">
+            <svg class="ic"><use href="#i-wave"/></svg> Énergie &amp; ondes</button>
+          <div class="srch"><svg class="ic"><use href="#i-search"/></svg>
+            chercher dans tout le catalogue…</div>
+          <button class="objClose" id="m-objclose" aria-label="Ranger le panneau">
+            <svg class="ic"><use href="#i-d"/></svg></button>
+        </div>
+        <div class="body">
+          <div class="cats" id="m-cats"></div>
+          <div class="tiles" id="m-tiles"></div>
         </div>
       </div>
 
-      <!-- zone Outils -->
-      <button class="outilsFold glass" id="m-outopen">◂ Outils</button>
-      <div class="outils glass" id="m-outils">
-        <div class="cap"><span>Outils</span><button class="ibtn" id="m-outclose"
-          style="width:2.4cqw;height:2.4cqw;font-size:1.1cqw" aria-label="Ranger">▸</button></div>
-        <table class="tt" id="m-tt">
-          <tr><th>A</th><th>B</th><th>Q</th></tr>
-          <tr class="ok"><td>0</td><td>0</td><td>0</td></tr>
-          <tr class="ok"><td>0</td><td>1</td><td>1</td></tr>
-          <tr class="ko"><td>1</td><td>0</td><td>0</td></tr>
-          <tr class="ok"><td>1</td><td>1</td><td>1</td></tr>
-        </table>
-        <div class="cnt">
-          <span>Portes<b>4</b></span><span>Câbles<b>7</b></span><span>Zoom<b>100%</b></span>
-        </div>
-      </div>
-
-      <!-- panneau des objets -->
-      <button class="objFold glass" id="m-objopen" title="Ouvrir les objets">🧰</button>
-      <div class="obj glass" id="m-obj">
-        <div class="r1">
-          <button class="tab on">⚡ Électronique</button>
-          <button class="tab">🏭 Process</button>
-          <button class="tab">🔌 Énergie &amp; ondes</button>
-          <div class="srch">🔍 chercher dans tout le catalogue…</div>
-          <button class="ibtn" id="m-objclose" aria-label="Ranger le panneau">◂</button>
-        </div>
-        <div class="r2">
-          <button class="cat on">★ Rapide</button>
-          <button class="cat">Entrées</button>
-          <button class="cat">Portes</button>
-          <button class="cat">Mémoire</button>
-          <button class="cat">Calcul</button>
-          <button class="cat">Données</button>
-          <button class="cat">Sorties</button>
-          <button class="cat">Câblage</button>
-        </div>
-        <div class="r3">
-          <div class="tile fav"><i style="--c:#ffc23d">★</i><span>ET</span></div>
-          <div class="tile fav"><i style="--c:#ffc23d">★</i><span>OU</span></div>
-          <div class="tile fav"><i style="--c:#ffc23d">★</i><span>NON</span></div>
-          <div class="tile"><i style="--c:#38e1ff">⌁</i><span>INTER.</span></div>
-          <div class="tile"><i style="--c:#3dff9e">◉</i><span>AMPOULE</span></div>
-          <div class="tile"><i style="--c:#b18cff">⎓</i><span>PILE</span></div>
-          <div class="tile"><i style="--c:#5aa2ff">⊣⊢</i><span>CONDO</span></div>
-        </div>
-      </div>
-
-      <!-- le menu, ouvert en grand -->
+      <!-- le menu -->
       <div class="veil" id="m-veil"></div>
-      <div class="menu" id="m-menu">
-        <h4 style="display:flex;align-items:center;justify-content:space-between">Menu
-          <button class="ibtn" id="m-mclose" aria-label="Fermer">✕</button></h4>
-        <div class="mgrp">
-          <div class="lab">Aller</div>
-          <div class="mrow">
-            <button class="mit big">📚 Les leçons</button>
-            <button class="mit big">🧪 Bac à sable</button>
-            <button class="mit">📦 Exemples</button>
-            <button class="mit">💾 Mes montages</button>
-          </div>
+      <div class="menu glass">
+        <h4>Menu
+          <button class="mclose" id="m-mclose" aria-label="Fermer"><svg class="ic"><use href="#i-x"/></svg></button>
+        </h4>
+
+        <div class="mgrp">Aller</div>
+        <div class="mrow">
+          <button class="mit big"><svg class="ic"><use href="#i-cards"/></svg> Les leçons</button>
+          <button class="mit big"><svg class="ic"><use href="#i-chip"/></svg> Bac à sable</button>
+          <button class="mit"><svg class="ic"><use href="#i-box"/></svg> Exemples</button>
+          <button class="mit"><svg class="ic"><use href="#i-save"/></svg> Mes montages</button>
         </div>
-        <div class="mgrp">
-          <div class="lab">Affichage</div>
-          <div class="mrow">
-            <button class="mit">⊞ Grille magnétique <span class="st">activée</span></button>
-            <button class="mit">🔤 Noms des composants <span class="st off">masqués</span></button>
-            <button class="mit">🗺 Mini-plan <span class="st off">auto</span></button>
-            <button class="mit">〰 Tracé des câbles <span class="st">à angles droits</span></button>
-            <button class="mit">⛶ Recentrer la vue</button>
-          </div>
+
+        <div class="mgrp">Affichage</div>
+        <div class="mrow">
+          <button class="mit"><svg class="ic"><use href="#i-grid"/></svg> Grille magnétique <span class="st">activée</span></button>
+          <button class="mit"><svg class="ic"><use href="#i-tag"/></svg> Noms des composants <span class="st off">masqués</span></button>
+          <button class="mit"><svg class="ic"><use href="#i-map"/></svg> Mini-plan <span class="st">auto</span></button>
+          <button class="mit"><svg class="ic"><use href="#i-route"/></svg> Tracé des câbles <span class="st">à angles droits</span></button>
+          <button class="mit"><svg class="ic"><use href="#i-center"/></svg> Recentrer la vue</button>
         </div>
-        <div class="mgrp">
-          <div class="lab">Simulation</div>
-          <div class="mrow">
-            <button class="mit">⏱ Vitesse <span class="st">×1</span></button>
-            <button class="mit">🔊 Son <span class="st">activé</span></button>
-          </div>
+
+        <div class="mgrp">Simulation</div>
+        <div class="mrow">
+          <button class="mit"><svg class="ic"><use href="#i-clock"/></svg> Vitesse <span class="st">×1</span></button>
+          <button class="mit"><svg class="ic"><use href="#i-snd"/></svg> Son <span class="st">activé</span></button>
+          <button class="mit"><svg class="ic"><use href="#i-scope"/></svg> Analyser le circuit</button>
         </div>
-        <div class="mgrp">
-          <div class="lab">Circuit</div>
-          <div class="mrow">
-            <button class="mit">🔬 Analyser</button>
-            <button class="mit">🪄 Ranger les câbles</button>
-            <button class="mit">📷 Exporter en image</button>
-            <button class="mit dgr">🗑 Tout effacer</button>
-          </div>
-        </div>
-        <div class="mgrp" style="margin-bottom:0">
-          <div class="lab">Aide</div>
-          <div class="mrow">
-            <button class="mit">📘 Le guide</button>
-            <button class="mit">⌨ Les raccourcis</button>
-          </div>
+
+        <div class="mgrp">Aide</div>
+        <div class="mrow">
+          <button class="mit"><svg class="ic"><use href="#i-book"/></svg> Le guide</button>
+          <button class="mit"><svg class="ic"><use href="#i-kbd"/></svg> Les raccourcis</button>
         </div>
       </div>
     </div>
 
     <!-- ================== AUJOURD'HUI ================== -->
     <div class="lay old">
-      <div class="hdr glass">
-        <span class="logo">⚡</span>
-        <span class="brand" style="font-size:1.25cqw">ARCHITECTE LOGIQUE</span>
+      <div class="hdrOld glass">
+        <span style="font-size:2cqw">⚡</span>
+        <span class="brand">ARCHITECTE LOGIQUE</span>
         <span class="pill">0 / 188 ✓</span>
         <span class="ibtn">⊹</span><span class="ibtn on">⊞</span><span class="ibtn on">🔊</span>
         <span class="ibtn on">🔤</span><span class="ibtn">🔬</span><span class="ibtn">📷</span>
@@ -403,225 +533,267 @@ l'attend. Voici ta maquette, adaptée à ce qui existe déjà.</p>
       </div>
 
       <div class="enonceOld glass">
-        <div class="ch" style="font-family:var(--mono);font-size:1cqw;color:var(--cyan)">CHAPITRE 34 · SANS FIL</div>
-        <div class="ti" style="font-weight:700;font-size:1.6cqw;margin:.3cqw 0">175. Ça part sans fil</div>
-        <div class="dim" style="font-size:1.1cqw;line-height:1.5">Alimente un ÉMETTEUR RADIO et pose un
+        <div style="font-family:var(--mono);font-size:1cqw;color:var(--cyan)">CHAPITRE 34 · SANS FIL</div>
+        <div style="font-weight:700;font-size:1.55cqw;margin:.3cqw 0">175. Ça part sans fil</div>
+        <div style="font-size:1.08cqw;line-height:1.5;color:#b8c8e2">Alimente un ÉMETTEUR RADIO et pose un
           RÉCEPTEUR à côté. Aucun fil entre les deux — et pourtant il reçoit.</div>
       </div>
 
       <div class="colOld">
-        <button class="a-hint">💡 La leçon sur le schéma</button>
-        <button class="a-go">Vérifier le circuit</button>
+        <button class="a-lec">💡 La leçon sur le schéma</button>
+        <button class="a-ok">Vérifier le circuit</button>
         <button class="a-sol">🎯 Donne-moi la solution</button>
-        <button style="background:rgba(255,92,105,.08);color:#f79aa2;border-color:rgba(255,92,105,.28)">Tout effacer</button>
-        <span class="tag" style="right:0; top:19.6cqw; white-space:nowrap">recouvre l'énoncé sous 1136 px</span>
+        <button style="background:rgba(255,92,105,.08);color:#f2929c;border-color:rgba(255,92,105,.28)!important">Tout effacer</button>
+        <span class="tag" style="right:0; top:19.6cqw">recouvre l'énoncé sous 1136 px</span>
       </div>
 
       <div class="infosOld glass">
-        <div class="cap" style="font-family:var(--mono);font-size:.95cqw;color:var(--dim);letter-spacing:.14em">TABLE &amp; COMPTEURS</div>
-        <div class="cnt"><span>Portes<b>4</b></span><span>Câbles<b>7</b></span><span>Zoom<b>100%</b></span></div>
+        <div style="font-family:var(--mono);font-size:.92cqw;color:var(--dim);letter-spacing:.14em">TABLE &amp; COMPTEURS</div>
+        <div class="cnt" style="margin-top:.8cqw"><span>Portes<b>4</b></span><span>Câbles<b>7</b></span><span>Zoom<b>100%</b></span></div>
       </div>
 
       <div class="barOld glass">
-        <div class="r1">
-          <button class="tab on">⚡ Électronique</button>
-          <button class="tab">🏭 Process</button>
-          <button class="tab">🔌 Énergie &amp; ondes</button>
-          <div class="srch">🔍 chercher dans tout le catalogue…</div>
+        <div class="o1">
+          <button class="tabOld on">⚡ Électronique</button>
+          <button class="tabOld">🏭 Process</button>
+          <button class="tabOld">🔌 Énergie &amp; ondes</button>
+          <div class="srch" style="margin:0">🔍 chercher dans tout le catalogue…</div>
         </div>
-        <div class="r2">
-          <button class="cat on">Entrées</button><button class="cat">Portes</button>
-          <button class="cat">Mémoire</button><button class="cat">Calcul</button>
-          <button class="cat">Données &amp; bus</button><button class="cat">Sorties</button>
-          <button class="cat">Câblage</button>
+        <div class="o2">
+          <button class="catOld on">Entrées</button><button class="catOld">Portes</button>
+          <button class="catOld">Mémoire</button><button class="catOld">Calcul</button>
+          <button class="catOld">Données &amp; bus</button><button class="catOld">Sorties</button>
+          <button class="catOld">Câblage</button>
         </div>
-        <div class="r3">
-          <div class="tile"><i style="--c:#ffc23d">1</i><span>VRAI 1</span></div>
-          <div class="tile"><i style="--c:#38e1ff">⌁</i><span>INTER.</span></div>
-          <div class="tile"><i style="--c:#ffc23d">&amp;</i><span>ET</span></div>
-          <div class="tile"><i style="--c:#ffc23d">≥1</i><span>OU</span></div>
-          <div class="tile"><i style="--c:#ffc23d">▷</i><span>NON</span></div>
-          <div class="tile"><i style="--c:#3dff9e">◉</i><span>AMPOULE</span></div>
-          <div class="tile"><i style="--c:#b18cff">▤</i><span>RAIL·8</span></div>
+        <div class="o3">
+          <div class="tileOld"><b style="font-size:1.7cqw;color:var(--amber)">1</b>VRAI 1</div>
+          <div class="tileOld"><b style="font-size:1.7cqw;color:var(--cyan)">⌁</b>INTER.</div>
+          <div class="tileOld"><b style="font-size:1.7cqw;color:var(--amber)">&amp;</b>ET</div>
+          <div class="tileOld"><b style="font-size:1.7cqw;color:var(--amber)">≥1</b>OU</div>
+          <div class="tileOld"><b style="font-size:1.7cqw;color:var(--amber)">▷</b>NON</div>
+          <div class="tileOld"><b style="font-size:1.7cqw;color:var(--green)">◉</b>AMPOULE</div>
+          <div class="tileOld"><b style="font-size:1.7cqw;color:var(--violet)">▤</b>RAIL·8</div>
         </div>
-        <span class="tag" style="left:0; top:-3.4cqw">toujours là · 3 rangées · 24 % de la hauteur</span>
+        <span class="tag" style="left:0; top:-3.2cqw">toujours là · 3 rangées · 24 % de la hauteur · vide à droite</span>
       </div>
     </div>
   </div>
 </section>
 
-<section>
-  <h2>Ce qui change, et pourquoi</h2>
-  <div class="rule"></div>
-  <div class="cards">
-    <div class="card">
-      <div class="n">01 · L'en-tête</div>
-      <h3>Quatorze boutons → un menu</h3>
-      <p>Mesuré : à 1024 px de large, <b>174 pixels de boutons sortent de l'écran</b> et deviennent
-      inatteignables. Il ne reste que le nom, le <b>Menu</b>, le fil d'Ariane, et <b>annuler / refaire</b> —
-      les deux seules commandes qu'on utilise sans arrêt et que tout le monde cherche là.</p>
-    </div>
-    <div class="card">
-      <div class="n">02 · Le panneau des objets</div>
-      <h3>Il se range en bas à gauche</h3>
-      <p>Au repos, un seul bouton 🧰. La grille est <b>entièrement nue</b>. Au clic, le panneau se déplie
-      vers la droite ; au clic suivant, il rentre. C'est le seul élément qui mange vraiment de la place :
-      autant qu'il ne soit là que quand on s'en sert.</p>
-    </div>
-    <div class="card">
-      <div class="n">03 · La zone Outils</div>
-      <h3>De l'information, jamais des actions</h3>
-      <p>En haut à droite : la table de vérité et les compteurs, et rien d'autre. Elle se range aussi.
-      Les actions, elles, remontent dans le bandeau de la leçon — là où on lit ce qu'on doit faire.</p>
-    </div>
-    <div class="card">
-      <div class="n">04 · Le bandeau de leçon</div>
-      <h3>Titre, objectif, trois boutons</h3>
-      <p>Tout ce qui concerne la leçon au même endroit, en haut au centre. La description longue se
-      déplie sous le titre. Fini la colonne de droite qui <b>mangeait 56 pixels d'énoncé</b> dès qu'on
-      descendait sous 1136 px.</p>
-    </div>
-  </div>
-</section>
+<h2>Ce qui change, et pourquoi</h2>
+<div class="cards">
+  <div class="card"><div class="n">le haut</div><p>Plus de barre. Un bouton <b>Menu</b> à gauche,
+    la boîte à <b>Outils</b> à droite, et entre les deux le titre <b>en filigrane</b>, accroché
+    au haut de l'écran : il ne bouge pas quand tu te déplaces ou que tu zoomes.</p></div>
+  <div class="card"><div class="n">le bas</div><p>Le panneau des objets ne prend plus 24 % de
+    l'écran en permanence. Au repos, <b>un seul bouton discret</b> en bas à gauche. Il se déplie
+    au clic, il se replie au clic.</p></div>
+  <div class="card"><div class="n">la leçon</div><p>Le chapitre et le titre sont dans le filigrane.
+    L'énoncé et les trois boutons sont dans un <b>panneau pliable</b> sous le Menu. Le suivi —
+    objectif, ce qui est fait, ce qui reste — est <b>posé sur la grille</b>, en bas à droite.</p></div>
+  <div class="card"><div class="n">effacer</div><p>Une <b>gomme</b> dans les Outils : on la prend,
+    on glisse sur ce qu'on veut faire disparaître. <b>Tout effacer</b> est en bas du panneau, à
+    l'écart des flèches, en rouge.</p></div>
+</div>
 
-<section>
-  <h2>Où va chacun des quatorze boutons</h2>
-  <div class="rule"></div>
-  <p class="dim">Rien n'est supprimé. Tout se retrouve, mais rangé par ce à quoi ça sert plutôt que
-  par ordre d'arrivée.</p>
+<h2>Le panneau des objets, en détail</h2>
+<p>C'est là que portaient tes trois reproches. Voici les trois réponses — essaie-les
+directement dans la maquette, elles sont vivantes.</p>
 
-  <div class="move"><span class="from">↶ ↷ annuler / refaire</span><span class="ar">→</span>
-    <span class="to"><b>Restent dans l'en-tête.</b> Utilisés en permanence, et attendus là.</span></div>
-  <div class="move"><span class="from">⊞ grille · 🔤 noms · 〰 câbles · 🗺 mini-plan · ⊹ recentrer</span><span class="ar">→</span>
-    <span class="to">Menu ▸ <b>Affichage</b>. Ce sont des réglages : on les change une fois, pas dix fois par minute.</span></div>
-  <div class="move"><span class="from">×1 ralenti · 🔊 son</span><span class="ar">→</span>
-    <span class="to">Menu ▸ <b>Simulation</b>, avec leur état écrit à côté (<code>×1</code>, <code>activé</code>).</span></div>
-  <div class="move"><span class="from">🔬 analyser · 🪄 ranger les câbles · 📷 photo</span><span class="ar">→</span>
-    <span class="to">Menu ▸ <b>Circuit</b>. Des actions qu'on déclenche, pas des états.</span></div>
-  <div class="move"><span class="from">📦 exemples · 💾 mes montages</span><span class="ar">→</span>
-    <span class="to">Menu ▸ <b>Aller</b>, avec les leçons et le bac à sable. C'est la même question : « qu'est-ce que j'ouvre ? »</span></div>
-  <div class="move"><span class="from">📘 guide</span><span class="ar">→</span>
-    <span class="to">Menu ▸ <b>Aide</b>, avec la liste des raccourcis (qui n'existe pas encore).</span></div>
-  <div class="move"><span class="from">🗑 Tout effacer <span style="color:#f79aa2">(colonne de droite)</span></span><span class="ar">→</span>
-    <span class="to">Menu ▸ Circuit, en bas et en rouge. Il détruit sans prévenir : il n'a rien à faire à un clic de « Vérifier ».</span></div>
-</section>
+<h3>1. Les ateliers sont devenus de vrais onglets</h3>
+<p>Ils sont plus grands, ils portent un pictogramme au trait plutôt qu'un emoji, et
+l'onglet actif <b>monte d'un cran et se colle au panneau</b> : même fond, pas de trait de
+séparation entre eux. C'est le geste classique du classeur à intercalaires — on voit
+d'un coup d'œil que ce qui est en dessous appartient à l'onglet du dessus.
+La recherche prend toute la place restante, à leur droite.</p>
 
-<section>
-  <h2>Trois arbitrages où j'ai un avis</h2>
-  <div class="rule"></div>
+<h3>2. Chaque atelier a sa couleur, et il la donne à tout ce qu'il contient</h3>
+<p><span style="color:var(--amber)">★ Rapide</span> est ambre,
+<span style="color:var(--cyan)">Électronique</span> cyan,
+<span style="color:var(--violet)">Process</span> violet,
+<span style="color:var(--green)">Énergie &amp; ondes</span> vert.
+Cette couleur passe au liseré de l'onglet, au soulignement de la catégorie choisie,
+aux symboles des tuiles et à leur bordure au survol. Change d'atelier dans la maquette :
+tout le panneau change de teinte d'un bloc. Le rattachement n'est plus à deviner.</p>
 
-  <div class="avis">
-    <h3>Les favoris : une rangée en moins</h3>
-    <p>Ton croquis met les favoris sur une <b>quatrième rangée</b>. Je les mets à la place en
-    <b>première catégorie</b>, « ★ Rapide », et <b>c'est celle qui s'ouvre par défaut</b>. Tu retrouves
-    tes favoris sans un clic, exactement comme avec une rangée dédiée — mais le panneau fait une
-    rangée de moins, soit une cinquantaine de pixels de grille rendus à chaque ouverture.</p>
-  </div>
+<h3>3. Le vide à droite disparaît, sans que rien ne s'étire</h3>
+<p>Les tuiles gardent <b>toujours la même taille</b> — une tuile ne doit pas maigrir parce
+que sa catégorie est bien remplie. Elles se rangent sur autant de lignes que nécessaire, et
+quand il n'y en a pas assez pour finir une ligne, <b>la ligne est centrée</b>.
+Clique sur « Portes » puis sur « Sorties » : la première déborde sur deux lignes, la
+seconde tient sur une, centrée. Dans les deux cas, plus de trou à droite.</p>
 
-  <div class="avis">
-    <h3>Le menu : des tuiles, pas une liste</h3>
-    <p>Cinq sections de cinq entrées, ça fait vingt-cinq lignes — c'est-à-dire le même encombrement
-    déplacé ailleurs. En tuiles sur deux ou trois colonnes, avec l'état écrit à côté de chaque
-    réglage, tout tient sans défilement et se lit d'un coup d'œil.</p>
-  </div>
+<h2>Les animations</h2>
+<p>Tout ce qui s'ouvre s'ouvre <b>depuis son bouton</b> : le panneau des objets grandit
+depuis le coin en bas à gauche, les Outils depuis le coin en haut à droite, le menu
+depuis le centre. Environ <b>0,18 seconde</b> — assez pour que l'œil suive le mouvement,
+assez court pour qu'on ne l'attende jamais.</p>
+<div class="avis">
+  <h3>Un point technique, parce qu'il compte ici plus qu'ailleurs</h3>
+  <p>La grille se redessine soixante fois par seconde pendant que la simulation tourne.
+  Si on anime la <b>largeur</b> d'un panneau, le navigateur doit tout recalculer à chaque
+  image — et l'animation saccade, sur ta machine comme sur les autres. On anime donc
+  uniquement <b>l'image du panneau</b> : on l'agrandit et on la rend opaque, sans jamais
+  toucher à ses dimensions réelles. C'est invisible à l'œil et c'est ce qui fait la
+  différence entre fluide et poussif.</p>
+  <p>Et si un jour tu actives « réduire les animations » dans ton système, tout s'ouvre
+  instantanément, sans transition. C'est déjà le cas dans cette maquette.</p>
+</div>
 
-  <div class="avis">
-    <h3>Le fil d'Ariane remplace les onglets</h3>
-    <p>Tu as retiré les onglets <i>SandBox / Chapitre / montage</i> du haut. Il faut quand même
-    savoir <b>où l'on est</b> : je mets un simple texte à côté du bouton Menu — « Bac à sable », ou
-    « Chapitre 34 · leçon 1 / 4 ». Ça ne coûte aucun bouton et ça répond à la question.</p>
-  </div>
-</section>
+<h2>Où va chacun des quatorze boutons</h2>
+<div class="move"><span class="from">↶ ↷ annuler / refaire</span><span class="ar">→</span><span class="to"><b>Outils</b> — et ils restent visibles même Outils replié</span></div>
+<div class="move"><span class="from">📷 capture d'image</span><span class="ar">→</span><span class="to"><b>Outils</b>, à côté de la gomme</span></div>
+<div class="move"><span class="from">🗑 tout effacer</span><span class="ar">→</span><span class="to"><b>Outils</b>, en bas, séparé, en rouge <span class="chip c-mid">à rendre annulable d'abord</span></span></div>
+<div class="move"><span class="from">⊞ grille · 🔤 noms · 〰 tracé · 🗺 mini-plan · ⊹ recentrer</span><span class="ar">→</span><span class="to"><b>Menu</b> → Affichage, avec l'état écrit à côté</span></div>
+<div class="move"><span class="from">×1 vitesse · 🔊 son · 🔬 analyser</span><span class="ar">→</span><span class="to"><b>Menu</b> → Simulation</span></div>
+<div class="move"><span class="from">📦 exemples · 💾 mes montages · 📚 leçons</span><span class="ar">→</span><span class="to"><b>Menu</b> → Aller</span></div>
+<div class="move"><span class="from">📘 le guide · ⌨ raccourcis</span><span class="ar">→</span><span class="to"><b>Menu</b> → Aide</span></div>
+<div class="move"><span class="from">0 / 188 ✓ progression</span><span class="ar">→</span><span class="to"><b>Supprimée de l'écran</b> — elle ne vit plus que dans le choix des leçons</span></div>
+<div class="move"><span class="from">💡 leçon · 🎯 réponse · ✓ vérifier</span><span class="ar">→</span><span class="to"><b>Panneau des actions</b>, sous le Menu, pliable</span></div>
 
-<section>
-  <h2>Comment je le livrerais</h2>
-  <div class="rule"></div>
-  <p>Quatre lots, chacun essayable seul. Aucun ne dépend du suivant.</p>
-  <div class="tbl-wrap">
-  <table class="lots">
-    <tr><th>Lot</th><th>Ce qu'il contient</th><th>Effort</th><th>Risque</th></tr>
-    <tr>
-      <td>1 · L'en-tête</td>
-      <td>Le bouton Menu, le fil d'Ariane, annuler / refaire, et le menu en grand avec ses cinq
-      sections. Les quatorze boutons disparaissent de l'écran.</td>
-      <td><span class="chip c-mid">moyen</span></td>
-      <td><span class="chip c-ok">faible</span></td>
-    </tr>
-    <tr>
-      <td>2 · Le panneau</td>
-      <td>Le panneau des objets qui se range en bas à gauche et se déplie vers la droite, avec
-      « ★ Rapide » en première catégorie. La grille devient nue.</td>
-      <td><span class="chip c-mid">moyen</span></td>
-      <td><span class="chip c-ok">faible</span></td>
-    </tr>
-    <tr>
-      <td>3 · La leçon</td>
-      <td>Le bandeau titre + objectif + trois actions, la description qui se déplie, et la colonne
-      de droite qui disparaît.</td>
-      <td><span class="chip c-mid">moyen</span></td>
-      <td><span class="chip c-mid">moyen</span> — touche les 188 leçons</td>
-    </tr>
-    <tr>
-      <td>4 · La zone Outils</td>
-      <td>Le panneau d'information à droite, rangeable, avec la table de vérité et les compteurs.</td>
-      <td><span class="chip c-ok">petit</span></td>
-      <td><span class="chip c-ok">faible</span></td>
-    </tr>
-  </table>
-  </div>
-  <p style="margin-top:22px">Je commencerais par le <b>lot 2</b> plutôt que par le 1 : c'est celui qui
-  donne tout de suite ce que tu cherches — une grille nue — et c'est le moins risqué des deux.</p>
-</section>
+<h2>Ce qui reste à trancher</h2>
+<ul>
+  <li><b>Les trois icônes en mode plié.</b> Tu les veux nues : ampoule, cible, coche verte.
+  C'est fait. Le garde-fou tient alors entièrement à la couleur — la coche est verte,
+  la cible est ambre, l'ampoule est neutre. Trois couleurs différentes pour trois gestes
+  différents, on ne peut pas les confondre du coin de l'œil. Mais garde en tête que
+  « la réponse » reste le bouton qu'on ne veut pas toucher par accident : si à l'usage tu
+  te fais avoir une fois, on lui remettra une confirmation.</li>
+  <li><b>Le filigrane en mode leçon.</b> Je l'ai fait plus discret que le titre du bac à
+  sable, parce qu'il est plus long et qu'il y a déjà le suivi sur la grille. À valider à
+  l'œil, sur ton écran.</li>
+  <li><b>Le suivi en bas à droite.</b> C'est le coin le moins utilisé, mais ça reste un
+  choix. On peut le passer en haut, sous le filigrane, si tu préfères. Il s'efface pendant
+  qu'on fait glisser un composant, dans tous les cas.</li>
+</ul>
+
+<h2>Comment je le livrerais</h2>
+<div class="tbl-wrap">
+<table class="lots">
+  <tr><th>Lot</th><th>Ce que tu obtiens</th><th>Ce que ça touche</th><th>Risque</th></tr>
+  <tr><td>1 · le panneau</td>
+    <td>La grille nue. Le panneau se range en bas à gauche, les ateliers deviennent des
+      onglets colorés, les tuiles se centrent.</td>
+    <td>La barre du bas, uniquement.</td><td><span class="chip c-ok">faible</span></td></tr>
+  <tr><td>2 · le haut</td>
+    <td>L'en-tête disparaît. Menu à gauche, Outils à droite avec la gomme, titre en filigrane.</td>
+    <td>Quatorze boutons à déplacer, chacun appelé par son nom à plusieurs endroits.</td>
+    <td><span class="chip c-mid">moyen</span></td></tr>
+  <tr><td>3 · la leçon</td>
+    <td>Panneau d'actions pliable, énoncé dedans, suivi posé sur la grille.</td>
+    <td>L'énoncé, la colonne d'actions, le bandeau de victoire.</td>
+    <td><span class="chip c-ok">faible</span></td></tr>
+  <tr><td>4 · la gomme</td>
+    <td>Effacement au glisser, avec l'annulation qui rattrape tout. Et « tout effacer »
+      devient annulable.</td>
+    <td>Le moteur de sélection et l'historique.</td>
+    <td><span class="chip c-mid">moyen</span></td></tr>
+  <tr><td>5 · plus tard</td>
+    <td>« La leçon sur le schéma » montre les objets <b>un par un</b>, au fur et à mesure
+      que tu poses, au lieu de tout afficher d'un coup.</td>
+    <td>Le moteur : il doit reconnaître ce que tu viens de poser.</td>
+    <td><span class="chip c-hi">élevé — à part</span></td></tr>
+</table>
+</div>
+<p style="margin-top:18px">Je commencerais par le <b>lot 1</b> : c'est lui qui te donne la
+grille nue tout de suite, et c'est celui qui touche le moins au reste.</p>
 
 </div>
 
 <script>
-(function(){
-  var m = document.getElementById('mock');
-  function set(k, v){ m.dataset[k] = v; appliquer(); }
-  function appliquer(){
-    var neuf = m.dataset.v === 'new', lec = m.dataset.mode === 'lec';
-    document.getElementById('b-new').setAttribute('aria-pressed', neuf);
-    document.getElementById('b-old').setAttribute('aria-pressed', !neuf);
-    document.getElementById('b-sand').setAttribute('aria-pressed', !lec);
-    document.getElementById('b-lec').setAttribute('aria-pressed', lec);
-    var q = function(id){ return document.getElementById(id); };
-    // proposition / existant
-    document.querySelector('.lay.new').style.display = neuf ? '' : 'none';
-    document.querySelector('.lay.old').style.display = neuf ? 'none' : '';
-    // mode
-    q('m-enonce').style.display = (neuf && lec) ? '' : 'none';
-    q('m-crumb').textContent = lec ? 'Chapitre 34 · leçon 1 / 4' : 'Bac à sable';
-    document.querySelector('.old .enonceOld').style.display = lec ? '' : 'none';
-    document.querySelector('.old .colOld').style.display = lec ? '' : 'none';
-    q('m-tt').style.display = lec ? '' : 'none';
-    // panneau des objets
-    var ouvert = m.dataset.obj === '1';
-    q('m-obj').style.display = ouvert ? '' : 'none';
-    q('m-objopen').style.display = ouvert ? 'none' : '';
-    // zone outils
-    var out = m.dataset.out === '1';
-    q('m-outils').style.display = out ? '' : 'none';
-    q('m-outopen').style.display = out ? 'none' : '';
-    // menu
-    var mo = m.dataset.menu === '1';
-    q('m-veil').style.display = mo ? '' : 'none';
-    q('m-menu').style.display = mo ? '' : 'none';
-  }
-  document.getElementById('b-new').onclick = function(){ set('v','new'); };
-  document.getElementById('b-old').onclick = function(){ set('v','old'); };
-  document.getElementById('b-sand').onclick = function(){ set('mode','sand'); };
-  document.getElementById('b-lec').onclick = function(){ set('mode','lec'); };
-  document.getElementById('m-open').onclick = function(){ set('menu','1'); };
-  document.getElementById('m-veil').onclick = function(){ set('menu','0'); };
-  document.getElementById('m-mclose').onclick = function(){ set('menu','0'); };
-  document.getElementById('m-objopen').onclick = function(){ set('obj','1'); };
-  document.getElementById('m-objclose').onclick = function(){ set('obj','0'); };
-  document.getElementById('m-outopen').onclick = function(){ set('out','1'); };
-  document.getElementById('m-outclose').onclick = function(){ set('out','0'); };
-  addEventListener('keydown', function(e){ if (e.key === 'Escape') set('menu','0'); });
-  appliquer();
-})();
+const mock = document.getElementById('mock');
+const $ = s => document.querySelector(s);
+
+/* ---- le catalogue de la maquette : de vrais composants de l'appli ---- */
+const CAT = {
+  rapide:{ coul:'#ffc23d', cats:{
+    'Récemment posés':[['((•','ÉMETTEUR'],['•))','RÉCEPTEUR'],['⌇','ANTENNE'],['◉','AMPOULE'],
+      ['⎓','PILE'],['⌁','INTER.'],['◈','ACCORD LC'],['∿','ALTERNATIF']],
+    'Mes habituels':[['&','ET'],['≥1','OU'],['▷','NON'],['⌁','INTER.'],['◉','AMPOULE'],
+      ['⎓','PILE'],['⊣⊢','CONDO'],['⏱','HORLOGE'],['▤','RAIL·8'],['D','BASCULE D'],
+      ['↯','RELAIS'],['Ω','RÉSIST.']] } },
+  elec:{ coul:'#38e1ff', cats:{
+    'Entrées':[['1','VRAI 1'],['0','FAUX 0'],['⌁','INTER.'],['⏱','HORLOGE'],['◍','BOUTON'],
+      ['⇥','IMPULSION'],['▥','CLAVIER']],
+    'Portes':[['&','ET'],['≥1','OU'],['▷','NON'],['⊼','NON-ET'],['⊽','NON-OU'],['⊕','XOR'],
+      ['⊙','XNOR'],['&3','ET 3'],['≥3','OU 3'],['⇄','TAMPON'],['⊘','3 ÉTATS'],['⊞','MAJORITÉ'],
+      ['⊻','PARITÉ'],['↔','COMPARE'],['⇉','DÉCODEUR']],
+    'Mémoire':[['D','BASCULE D'],['RS','VERROU RS'],['JK','BASCULE JK'],['T','BASCULE T'],
+      ['▦','REGISTRE'],['#','COMPTEUR'],['▣','ROM']],
+    'Sorties':[['◉','AMPOULE'],['◐','7 SEG'],['♪','BUZZER'],['▭','ÉCRAN'],['⌸','BARGRAPHE']],
+    'Câblage':[['▤','RAIL·8'],['⊶','TUNNEL'],['⧉','PUCE'],['⌷','CADRE'],['▬','MUR']] } },
+  proc:{ coul:'#b18cff', cats:{
+    'Capteurs':[['🌡','TEMPÉR.'],['⇪','PRESSION'],['≋','NIVEAU'],['⟳','DÉBIT'],['◎','PRÉSENCE'],
+      ['⌾','FIN COURSE']],
+    'Actionneurs':[['⊗','MOTEUR'],['⧖','VANNE'],['▲','VÉRIN'],['♨','CHAUFFE'],['⊙','POMPE']],
+    'Régulation':[['∫','PID'],['⊿','RAMPE'],['⌁','SEUIL'],['⊞','GRAFCET']],
+    'Procédés':[['◫','CUVE'],['⊟','FOUR'],['⌇','TAPIS'],['⌘','MALAXEUR']] } },
+  ener:{ coul:'#3dff9e', cats:{
+    'Sources':[['⎓','PILE'],['∿','ALTERNATIF'],['☀','SOLAIRE'],['⌁','GÉNÉRAT.']],
+    'Passifs':[['Ω','RÉSIST.'],['⊣⊢','CONDO'],['◠','BOBINE'],['⧎','TRANSFO'],['↯','DIODE']],
+    'Radio':[['((•','ÉMETTEUR'],['•))','RÉCEPTEUR'],['⌇','ANTENNE'],['◈','ACCORD LC'],
+      ['∿→','MODUL. AM'],['·−','MORSE']],
+    'Mesure':[['V','VOLTMÈTRE'],['A','AMPÈRE.'],['W','WATTMÈTRE'],['▭','OSCILLO']] } }
+};
+let atCur = 'rapide', catCur = 'Mes habituels';
+
+function peindre(){
+  const a = CAT[atCur];
+  mock.querySelector('.new').style.setProperty('--at', a.coul);
+  const noms = Object.keys(a.cats);
+  if (!noms.includes(catCur)) catCur = noms[0];
+
+  $('#m-cats').innerHTML = noms.map(n =>
+    '<button class="cat" data-cat="' + n + '" aria-selected="' + (n === catCur) + '">' +
+    n + '</button>').join('');
+
+  $('#m-tiles').innerHTML = a.cats[catCur].map(t =>
+    '<button class="tile"><i>' + t[0] + '</i><span>' + t[1] + '</span></button>').join('');
+
+  mock.querySelectorAll('.at').forEach(b =>
+    b.setAttribute('aria-selected', b.dataset.at === atCur));
+}
+
+$('#m-ats').addEventListener('click', e => {
+  const b = e.target.closest('.at'); if (!b) return;
+  atCur = b.dataset.at; catCur = Object.keys(CAT[atCur].cats)[0]; peindre();
+});
+$('#m-cats').addEventListener('click', e => {
+  const b = e.target.closest('.cat'); if (!b) return;
+  catCur = b.dataset.cat; peindre();
+});
+
+/* ---- les états de la maquette ---- */
+function set(k, v){ mock.dataset[k] = v; }
+const presse = (id, on) => $(id).setAttribute('aria-pressed', on ? 'true' : 'false');
+
+function mode(m){
+  set('mode', m);
+  presse('#b-sand', m === 'sand'); presse('#b-lec', m === 'lec');
+  $('#m-mk').textContent = m === 'lec' ? 'Chapitre 34 · sans fil' : 'bac à sable';
+  $('#m-mt').textContent = m === 'lec' ? '175. Ça part sans fil' : 'Architecte Logique';
+  $('#m-mt').classList.toggle('lec', m === 'lec');
+}
+function version(v){
+  set('v', v); presse('#b-new', v === 'new'); presse('#b-old', v === 'old');
+}
+
+$('#b-new').onclick = () => version('new');
+$('#b-old').onclick = () => version('old');
+$('#b-sand').onclick = () => mode('sand');
+$('#b-lec').onclick = () => mode('lec');
+
+$('#m-objopen').onclick  = () => set('obj', '1');
+$('#m-objclose').onclick = () => set('obj', '0');
+$('#m-outclose').onclick = () => set('out', '0');
+$('#m-outopen').onclick  = () => set('out', '1');
+$('#m-actopen').onclick  = () => set('act', '1');
+$('#m-actclose').onclick = () => set('act', '0');
+$('#m-open').onclick     = () => set('menu', '1');
+$('#m-mclose').onclick   = () => set('menu', '0');
+$('#m-veil').onclick     = () => set('menu', '0');
+
+peindre();
 </script>
 
 </body>

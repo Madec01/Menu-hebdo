@@ -799,37 +799,95 @@ avec T207 comme garde-fou.
   recherche qu'on oublie ? la barre qui mange l'écran ? Une refonte à l'aveugle
   coûterait cher pour rien.
 
-## LA PROPOSITION D'OVERLAY — maquette faite, en attente de validation
+## LA REFONTE DE L'OVERLAY — cahier des charges VALIDÉ avec l'auteur
 
-Maquette cliquable « La grille nue » : **`maquettes/la-grille-nue.html`**,
-fichier autonome à ouvrir dans un navigateur (cinq états : panneau rangé, panneau
-ouvert, menu ouvert, mode leçon, et « aujourd'hui » pour comparer.)
+Maquette cliquable : **`maquettes/la-grille-nue.html`** (fichier autonome, six états).
+Rien n'est encore codé dans l'appli. Tout ce qui suit est validé point par point.
 
-Contrainte qui commande tout, donnée par l'auteur :
-**« je veux que la grille soit le plus épurée possible, d'où le fait de
-pouvoir ranger le panneau des ateliers en bas à gauche au clic ».**
-Correction de sa vision initiale : pas d'entrées « sandbox / chapitre /
-montage » séparées — un seul **bouton Menu en haut à gauche**.
+### La règle qui commande tout
+**« Je veux que la grille soit le plus épurée possible. »** Tout ce qui n'est pas le
+circuit se range, se replie, ou part dans le menu.
 
-Ce que la maquette propose :
-1. **En-tête** : `⚡ ARCHITECTE LOGIQUE` + `☰ Menu` + fil d'Ariane à gauche,
-   `↶ ↷` + pastille de progression à droite. Les 14 boutons partent au menu.
-2. **Menu** : grande fenêtre au centre, **tuiles en 5 sections** (Aller /
-   Affichage / Simulation / Circuit / Aide), l'état de chaque réglage écrit
-   à côté. Surtout pas une liste de 25 lignes.
-3. **Panneau des objets** : ancré en bas à gauche. Au repos = **un seul
-   bouton 🧰**. Au clic il se déplie vers la droite en 3 rangées (ateliers +
-   recherche / catégories / tuiles). **« ★ Rapide » devient la première
-   catégorie et la catégorie par défaut** — ça remplace la 4ᵉ rangée de
-   favoris qu'il voulait, sans manger de hauteur.
-4. **Zone Outils** en haut à droite : information seulement (table de vérité
-   + compteurs), rangeable elle aussi.
-5. **Bandeau de leçon** au centre haut : chapitre, titre, objectif, et les
-   trois actions. « Tout effacer » part au menu.
+### L'écran
+- **En haut : plus de barre du tout.** Un bouton **Menu** seul en haut à gauche, la boîte
+  à **Outils** en haut à droite.
+- **Le titre passe sur la grille**, en filigrane, opacité faible, stylisé, **accroché au
+  haut de l'écran** (il ne bouge pas au zoom ni au déplacement).
+  Bac à sable → « ARCHITECTE LOGIQUE ». Leçon → chapitre + titre de la leçon.
+- **La progression « 0/188 » disparaît de l'écran.** Elle ne vit plus que dans l'écran de
+  choix des leçons. (Donc `#progress-pill` et `updateProgressPill` sortent de l'en-tête.)
 
-Livraison proposée en 4 lots : 1 en-tête, **2 panneau (à faire en premier :
-c'est lui qui donne la grille nue, et c'est le moins risqué)**, 3 leçon,
-4 zone Outils.
+### Le panneau des objets (bas gauche)
+- Au repos : **un seul bouton**, pictogramme au trait (surtout pas un emoji — verdict de
+  l'auteur : « ça fait jouet, on est adulte »).
+- Déplié : **onglets d'atelier grands**, en vrais onglets collés au corps du panneau
+  (même fond, pas de trait entre eux) — c'est ça qui dit « ce qui est en dessous
+  appartient à l'onglet ».
+- **Quatre ateliers**, chacun sa couleur, qui se propage au soulignement de la catégorie,
+  aux symboles des tuiles et à leur survol :
+  ★ Rapide (ambre) · ⚡ Électronique (cyan) · 🏭 Process (violet) · 🔌 Énergie & ondes (vert).
+- **Tuiles de taille FIXE**, jamais étirées. Elles se rangent sur plusieurs lignes ;
+  **une ligne incomplète est centrée**. Plus de vide à droite.
+- La recherche occupe toute la place restante à droite des onglets.
+
+### La zone Outils (haut droite) — validée telle quelle
+```
+OUTILS
+  ↶  ↷  |  🩹 Gomme  📷            ▸
+  ───────────────────────────────────
+  Portes 4    Câbles 7    Zoom 100%
+  ───────────────────────────────────
+  🗑 Tout effacer            (rouge, en bas, à l'écart)
+```
+**Repliée, elle garde ↶ ↷ visibles** — annuler est un geste d'urgence, il ne doit jamais
+demander d'ouvrir quoi que ce soit.
+
+### Le mode leçon
+- Menu haut gauche, Outils haut droite, **chapitre + titre en filigrane** sur la grille.
+- **Sous le Menu : un panneau d'actions pliable.**
+  - Plié : trois icônes nues — **ampoule** (la leçon), **cible** (la réponse),
+    **coche verte** (vérifier). Décision de l'auteur, contre mon avis ; le garde-fou est
+    alors entièrement dans la couleur (neutre / ambre / vert).
+  - Déplié : les trois boutons en entier **+ l'énoncé**.
+- **Le suivi est posé sur la grille**, en bas à droite : objectif, étapes faites, étape en
+  cours, étapes restantes. Il **remonte au-dessus du panneau des objets** quand celui-ci
+  s'ouvre, et **s'efface pendant qu'on fait glisser un composant**.
+- Pas de doublon : le filigrane porte chapitre + titre, le panneau porte l'énoncé.
+
+### Les animations
+Demandées explicitement. Tout s'ouvre **depuis son bouton**, en ~0,18 s.
+**Piège à ne pas rater** : la grille se redessine 60 fois par seconde. Animer `width`,
+`height`, `left` ou `top` force un recalcul de mise en page à chaque image et ça saccade.
+On n'anime que `transform` et `opacity`. Et `prefers-reduced-motion` coupe tout.
+
+### La gomme — validée
+- Dans les Outils. **Efface au GLISSER**, pas au clic un par un : sinon elle n'apporte
+  rien de plus que survol + Suppr, qui existe déjà (`logicgates.html`, touche `Delete`).
+- Quatre garde-fous obligatoires : curseur en gomme · liseré rouge autour de la grille ·
+  sortie par Échap / clic droit / re-clic · **chaque effacement passe par l'historique**.
+- Elle refuse les composants verrouillés des leçons **et le montre** (curseur « interdit »).
+
+### DÉFAUT TROUVÉ EN CHEMIN, à corriger avant de déplacer le bouton
+**« Tout effacer » n'est pas annulable.** `logicgates.html:15527` appelle `clearBoard()`
+(ou `loadMission`) sans `pushUndo()`, et `loadMission` fait `undoStack = [snapshotState()]`
+(ligne ~15139) qui écrase l'historique. Aucune confirmation non plus. Un clic, tout est
+parti. Tant que c'est vrai, ce bouton ne doit pas voisiner ↶ ↷.
+
+### Livraison en cinq lots
+| Lot | Contenu | Risque |
+|---|---|---|
+| **1 · le panneau** | grille nue, onglets colorés, tuiles centrées | faible — **à faire en premier** |
+| 2 · le haut | en-tête supprimé, Menu, Outils, filigrane | moyen (14 boutons à déplacer) |
+| 3 · la leçon | panneau d'actions pliable, suivi sur la grille | faible |
+| 4 · la gomme | effacement au glisser + « tout effacer » annulable | moyen |
+| 5 · plus tard | « la leçon sur le schéma » montre les objets **un par un** | élevé — à part |
+
+### À noter pour plus tard (demandé par l'auteur)
+« La leçon sur le schéma » **affiche tout d'un coup**. Elle devrait montrer les objets à
+poser **au fur et à mesure**. Deux lectures : une simple animation, ou — bien meilleur —
+ne montrer que **l'objet suivant**, le suivant n'apparaissant qu'une fois le précédent
+posé. La seconde demande que le moteur reconnaisse ce qu'on vient de poser : vrai travail,
+lot séparé.
 
 ## Ce qui reste
 
