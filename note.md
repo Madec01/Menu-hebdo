@@ -5,16 +5,49 @@ dans `CLAUDE.md`.
 
 ## Où en est le projet
 
-- **v6.32 — l'appli s'appelle maintenant NodeFlow.**
+- **v6.33 — l'appli s'appelle maintenant NodeFlow.** La refonte de l'overlay
+  est **terminée** (lots 1 à 4).
   Branche `claude/architecte-logique-v5-vntfkp`, **255 tests verts**
   (`npm test`).
 - `logicgates.html` : ~14 400 lignes, un seul `<script>`, aucune dépendance.
-- Copies figées dans `versions/` (v5.1 → v6.32), avec leur tableau dans
+- Copies figées dans `versions/` (v5.1 → v6.33), avec leur tableau dans
   `versions/README.md`.
 - Catalogue : **188 leçons en 36 chapitres** — 63 à table de vérité (dont 8
   boîtes noires), 85 libres, et 30 à **condition de réussite** (chapitres 31 à 34).
 
 ## Ce qui vient d'être fait
+
+### v6.33 — lot 4 : la gomme (la refonte de l'overlay est terminée)
+
+**Elle efface AU GLISSER.** C'était la condition : au clic un par un, elle
+n'apporterait rien de plus que « survoler + `Suppr` », qui existe déjà.
+
+**Un trait de gomme = UNE SEULE annulation.** Mécanique : au premier effacement
+du trait, `pushUndo()` puis `suppressUndo = true` ; à `pointerup`, `finGomme()`
+remet `suppressUndo = false` et appelle `markDirty()` une fois. Sans ça,
+`deleteComponent()` → `markDirty()` → `pushUndo()` aurait empilé un jalon par
+élément, et il aurait fallu vingt Ctrl+Z pour rattraper un geste.
+
+**Les quatre garde-fous**, tous obligatoires — un outil « mode » qui ne se voit
+pas se fait oublier et détruit par surprise :
+- le curseur devient une gomme (SVG en `data:` dans `GOMME_CURSEUR`) ;
+- `#gomme-liseré` ceint la grille en rouge tant qu'elle est prise ;
+- on en sort par **Échap** (traité AVANT tout le reste dans le `keydown`), par
+  **clic droit**, ou en recliquant le bouton ; charger une leçon la range aussi ;
+- chaque trait passe par l'historique.
+
+**Les composants verrouillés sont refusés ET ça se voit** : `gommeCible()`
+renvoie l'objet avec `verrou:true` au lieu de `null`, ce qui permet d'afficher
+`cursor:not-allowed`. Renvoyer `null` aurait donné une gomme qui « ne marche
+pas » sans dire pourquoi.
+
+Raccourci **`G`**. Interceptions dans `pointerdown`, `pointermove` (sur
+`e.buttons & 1`), `pointerup` et `contextmenu` du canvas.
+
+**Vérifié dans un vrai navigateur** : un trait qui balaie 3 composants et
+2 câbles les efface tous, **un seul** Ctrl+Z ramène l'ensemble ; Échap et `G`
+prennent et rangent l'outil ; un composant verrouillé de leçon résiste et
+affiche le curseur d'interdiction.
 
 ### v6.32 — lot 3 : la leçon
 
@@ -660,7 +693,7 @@ parti. Tant que c'est vrai, ce bouton ne doit pas voisiner ↶ ↷.
 | ~~1 · le panneau~~ | **FAIT en v6.30** | — |
 | ~~2 · le haut~~ | **FAIT en v6.31** | — |
 | ~~3 · la leçon~~ | **FAIT en v6.32** | — |
-| 4 · la gomme | effacement au glisser + « tout effacer » annulable | moyen |
+| ~~4 · la gomme~~ | **FAIT en v6.33** | — |
 | 5 · plus tard | « la leçon sur le schéma » montre les objets **un par un** | élevé — à part |
 
 ### À noter pour plus tard (demandé par l'auteur)
@@ -669,6 +702,28 @@ poser **au fur et à mesure**. Deux lectures : une simple animation, ou — bien
 ne montrer que **l'objet suivant**, le suivant n'apparaissant qu'une fois le précédent
 posé. La seconde demande que le moteur reconnaisse ce qu'on vient de poser : vrai travail,
 lot séparé.
+
+## LES DEUX CHANTIERS SUIVANTS, demandés par l'auteur
+
+### A. Le guide est à refaire
+Verdict de l'auteur : « **trop complexe à utiliser et trop étroit** ».
+Aujourd'hui c'est une colonne unique de texte dense dans une fenêtre étroite,
+avec en prime tout le pavé des raccourcis clavier collé à la fin.
+
+Ce qu'il veut :
+- une **grande fenêtre**, pas une colonne ;
+- des **onglets** pour filtrer par sujet (où chercher son information) ;
+- une **barre de recherche** ;
+- et **toute la partie touches et raccourcis SORT du guide** : elle devient un
+  bouton « Touches et raccourcis » dans le **menu**, avec sa propre fenêtre.
+
+Le menu a déjà sa section **Aide** prête à l'accueillir (`MENU_PLAN`).
+
+### B. Lâcher un câble dans le vide doit proposer les composants DÉJÀ POSÉS
+Aujourd'hui, quand on tire un câble et qu'on le lâche dans le vide, l'appli
+propose seulement de **créer un nouveau composant** à raccorder. Elle devrait
+d'abord proposer de le **raccorder à un composant déjà présent sur la grille** —
+c'est le cas le plus fréquent, et c'est celui qu'elle n'offre pas.
 
 ## Ce qui reste
 
