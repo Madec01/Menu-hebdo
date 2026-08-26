@@ -5,389 +5,55 @@ dans `CLAUDE.md`.
 
 ## Où en est le projet
 
-- **v6.29**, branche `claude/architecte-logique-v5-vntfkp`, **255 tests verts**
+- **v6.30 — l'appli s'appelle maintenant NodeFlow.**
+  Branche `claude/architecte-logique-v5-vntfkp`, **255 tests verts**
   (`npm test`).
 - `logicgates.html` : ~14 400 lignes, un seul `<script>`, aucune dépendance.
-- Copies figées dans `versions/` (v5.1 → v6.29), avec leur tableau dans
+- Copies figées dans `versions/` (v5.1 → v6.30), avec leur tableau dans
   `versions/README.md`.
 - Catalogue : **188 leçons en 36 chapitres** — 63 à table de vérité (dont 8
   boîtes noires), 85 libres, et 30 à **condition de réussite** (chapitres 31 à 34).
 
 ## Ce qui vient d'être fait
 
-**🔧 Lot A de l'audit : ce qui se voit tout de suite** (v6.29). Les huit points
-sont faits.
+### v6.30 — NodeFlow, et le lot 1 de la refonte de l'overlay
 
-1. **La vérification en continu ne rejoue plus la table pour rien.** Compteur
-   `logicVersion`, incrémenté dans `markDirty()` — le seul point de passage de
-   toute modification du plan (56 appels). Filet de sécurité : on compare aussi
-   les nombres de composants et de fils, au cas où un chemin oublierait
-   `markDirty`. **Basculer un interrupteur n'invalide PAS**, et c'est voulu :
-   `liveCheck` sauvegarde les entrées, pilote la table lui-même, puis les
-   restaure — leur état n'entre pas dans son résultat.
-2. **`compSig` voit la taille** (`bw`/`bh`) : étirer un cadre ou un mur réveille
-   enfin le cache des tracés.
-3. **Les cibles de clic se mesurent en PIXELS D'ÉCRAN** : `tolPin()` = 14 px
-   (24 au doigt), `tolFil()` = 11 px (18). Toujours `Math.max` avec le dessin,
-   sinon la zone deviendrait plus petite que la broche en vue rapprochée.
-   `touchMode` suit `e.pointerType`, remis à jour au `pointermove` aussi —
-   sinon un effleurement sur un portable tactile laissait les cibles larges
-   pour le reste de la séance. Vérifié : 14 px d'écran à tous les zooms.
-4. **Le magnétisme aussi**, avec une **hystérésis** : `ALIGN_PRISE = 8`,
-   `ALIGN_LACHE = 13` pixels d'écran. `alignAccroche` mémorise à quoi on est
-   collé et se remet à zéro à chaque nouveau geste. **`Alt` coupe tout.**
-5. **Le câble annonce sa couleur AVANT qu'on lâche.** `canConnect(from, to)`
-   rend `{ etat:'oui'|'remplace'|'deja'|'non'|'rien' }` : vert, ambre, rouge,
-   plus un anneau de la même couleur sur la borne visée. Et le fil qui va être
-   remplacé s'efface d'avance (38 % d'opacité).
-   **T248 met le prédicteur et le juge face à face** : si `canConnect` et
-   `connectWire` divergeaient un jour, l'annonce serait pire que rien.
-6. **Un losange fantôme** sur le fil survolé, là où le double-clic posera une
-   poignée. Sans lui, on double-cliquait à l'aveugle — et surtout on ignorait
-   qu'on pouvait le faire.
-7. **`elecTrop` ne renonce plus en silence** : un message une seule fois, avec
-   le nombre de points et la limite.
-8. ~~Les murs~~ — fait en v6.27.
+**Le nom.** L'appli s'appelle NodeFlow. Changé : le titre de l'onglet, l'en-tête,
+le nom du fichier d'export PNG, le message d'import, le README.
+**Les clés `localStorage` restent en `al2_*`** — les toucher effacerait les
+sauvegardes et les réglages de l'auteur.
 
-**📮 Lot 10 : transmettre quelque chose** (v6.28). **LA FEUILLE DE ROUTE ⚡ EST
-TERMINÉE** — la section correspondante de `CLAUDE.md` a été supprimée, comme
-elle le demandait elle-même.
+**Le logo.** Il est dans le fichier, **en dur, en vectoriel** : les lettres sont
+des tracés SVG, pas du texte. Aucune police à télécharger, identique sur toutes
+les machines, net à toutes les tailles, ~2,8 Ko.
+Les tracés ont été extraits de Poppins ExtraBold avec `fontTools` ; le script
+qui les a produits est jetable, le résultat est figé dans le HTML.
+Trois couches, chacune avec sa classe pour régler l'opacité séparément :
+`.mq-lettres` (.12), `.mq-anneau` (.58), `.mq-cable` (.68), `.mq-point` (.76).
+Le logo est **accroché au haut de l'écran** (`#marque`, `position:fixed`), donc
+il ne bouge ni au zoom ni au déplacement. Dessous, `#marque-sous` dit où on est :
+le chapitre et la leçon, ou « simulateur de circuits & missions ».
+**En bac à sable, le cartouche d'énoncé s'efface** (il ne disait rien) : le plan
+de travail est nu, avec le logo pour seul repère.
 
-Cinq pièces : `MANIP` (manipulateur Morse), `DECMOR` (décodeur), `SERIE` /
-`DESERIE` (émetteur et récepteur numériques série), `HP` (haut-parleur). Plus
-le **chapitre 36 « Tout se tient »**, six leçons, m183 → m188.
-
-- **La règle des séquences temporisées** : elles avancent dans `commit()`, qui
-  n'est appelé QU'UNE FOIS par image (`:4942`), jamais dans `eval()`, appelé
-  cinq fois (`:4935`). Et avec un `while (simNow - c.t0 >= T){ c.t0 += T; … }`,
-  pas un `if` : sinon la vitesse plafonne en silence dès qu'une case dure moins
-  qu'une image. Toutes s'appuient sur `simNow` (jamais plafonné, suit le
-  ralenti) et se taisent quand `simulating` est vrai — sinon une vérification
-  en continu ferait avancer le message.
-- `seq:true` sur les quatre : sans ça, `boardCombinatoire()` les prendrait pour
-  de la logique combinatoire.
-- **Aucune n'est de famille `in` ni `sense`**, donc aucune n'atterrit dans
-  `INPUT_TYPES` (`:8345`) — leurs montages de référence peuvent les contenir.
-- **Le Morse** : une seule règle de durée, le point est l'unité, le trait en
-  vaut trois, les silences une / trois / sept. `morseUnite(wpm) = 1200/wpm`
-  (convention internationale sur le mot PARIS, qui vaut 50 unités). Le décodeur
-  ne connaît QUE des durées — d'où la leçon : les deux bouts doivent être
-  réglés sur la même vitesse, sinon les traits passent pour des points.
-- **La trame numérique** : 11 cases — départ, 8 bits (poids faible d'abord),
-  2 stop. Le récepteur échantillonne au MILIEU de chaque case, ce qui lui
-  laisse une demi-case de tolérance d'horloge. Débit volontairement lent
-  (2 à 20 bits/s) : à 60 images par seconde, un bit doit durer au moins deux
-  images pour être vu.
-
-**DEUX DÉFAUTS DU MOTEUR TROUVÉS EN CHEMIN, tous deux corrigés :**
-
-1. **La crête d'un circuit alternatif était mesurée une fois par image.** Elle
-   tombait donc à zéro quand l'image tombait pile sur un passage par zéro — et
-   une image de 60 ms tombe *exactement* trois fois par période sur du 50 Hz.
-   `icrete`/`pcrete` sont maintenant pris sur **tous les sous-pas**
-   (`br.ipk` / `br.ppk`). Ça corrige aussi, rétroactivement, la mesure de crête
-   des chapitres 33 et 35.
-2. **Il n'existait aucun moyen de suivre un courant plus finement qu'une
-   image.** Nouveau crochet `sous(c, dt, i)`, appelé à chaque sous-pas avec le
-   courant de l'instant. C'est ce qui permet au haut-parleur de mesurer 50 Hz :
-   on ne peut pas compter des alternances en regardant soixante fois par
-   seconde. Et on **lisse la période, pas la fréquence** — l'inverse d'une
-   moyenne n'est pas la moyenne des inverses, et ça suffisait à afficher 54 Hz
-   pour du 50.
-
-**📻 Lot 9 : l'accord et la modulation** (v6.26).
-
-**LA DÉCISION DE FOND, prise avec l'auteur** : on ne simule PAS la porteuse, on
-simule ce que la LIAISON fait au signal. Une porteuse de 100 MHz, c'est cent
-millions d'allers-retours par seconde — deux millions de fois plus de points
-que le moteur n'en calcule. En revanche l'accord, le désaccord, le brouillage,
-l'atténuation et le bruit se modélisent exactement, et ce sont eux qu'on veut
-comprendre. C'est ce que l'auteur appelait « simuler la simulation d'onde ».
-
-- **L'accord** : `ondeAccord(df, bp) = 1/(1 + |2·df/bp|⁴)`. Cloche à flancs
-  raides — 1 au centre, la moitié au bord de la bande passante, presque rien
-  au-delà. L'exposant 4 (et pas 2) parce qu'un vrai poste a plusieurs étages :
-  avec un exposant 2, deux stations à 200 kHz d'écart se brouillaient encore.
-- **`ondeCapa(f)`** : le condensateur qu'il faudrait avec une bobine de 1 µH,
-  par f = 1/(2π√(LC)). C'est la formule du chapitre 33 appliquée telle quelle,
-  et elle donne quelques picofarads — les vraies valeurs. C'est ce qui relie
-  le bouton d'accord au circuit LC déjà appris.
-- **La modulation**, sur l'entrée `MOD` de l'émetteur : AM fait varier `_amp`
-  (jamais jusqu'à zéro, `ONDE_AMMIN = .2`), FM fait varier `_fem` de
-  ±excursion (75 kHz par défaut, la vraie valeur de la radio FM).
-- **Le bruit, et c'est le cœur pédagogique du lot** : `snr = _uant/ONDE_UBRUIT`.
-  En AM le bruit s'ajoute à l'amplitude donc au signal — grésillement
-  progressif. En FM il ne touche pas la fréquence — signal parfait jusqu'au
-  seuil (`ONDE_FMSEUIL = 4`), puis **décrochage brutal**. C'est l'effet de
-  seuil, il est réel, et c'est ce qu'on vit en voiture.
-- **Calibrage** : `ONDE_UBRUIT = .05` V, choisi pour que le grésillement
-  devienne sensible au moment même où le seuil de réception est atteint.
-- **La mire.** `POT` est dans `INPUT_TYPES`, donc `spawnGroup` le REFUSE dans
-  une démo de mission (règle voulue : l'élève pose ses propres entrées). Un
-  émetteur modulé sans rien sur MOD envoie donc une **mire d'essai** —
-  `_xeff = (sin(simNow/900)+1)/2`. Les démos passent leur propre test, et
-  c'est en plus une vraie commodité.
-- **Chapitre 35 « Choisir sa station »**, m179 → m182.
-- Au passage : les nouveaux formateurs (`fmtMetre`, `fmtMHz`, `fmtKHz`)
-  écrivaient « 98,0 MHz » avec une virgule alors que tout le fichier écrit
-  « 6.0 V » avec un point. Aligné sur le point.
-
-**🧰 Réparations de l'overlay** (v6.25). Onze défauts, tous **reproduits dans
-Chromium avant correction** — deux audits UI/UX indépendants, recoupés.
-
-- **Le clavier.** Une fenêtre ouverte prend désormais la main : `modaleOuverte()`
-  + `dansChamp()` en tête du gestionnaire. Avant, le filtre ne rejetait que les
-  champs de saisie : **curseur sur un bouton de « Mes montages », touche Suppr,
-  et un composant du plan disparaissait** (reproduit). Et Échap, filtré dès
-  qu'on tapait dans un champ, ne fermait rien — alors que l'écran promet
-  « Échap pour fermer » à quatre endroits, tous dans des panneaux qui mettent
-  le curseur dans leur champ en s'ouvrant.
-- **Les messages passaient derrière le voile** (toast 60, voile 80). Or c'est
-  précisément là qu'on les déclenche : « montage enregistré », « nom déjà
-  pris ». Passés à 120, et calés sur `--barh` (ils recouvraient la barre).
-- **Trois identifiants en double** : `quick-head/title/hint` servaient aux DEUX
-  panneaux flottants, et `getElementById` ne rend que le premier — le panneau
-  « Relier à… » écrivait son titre dans celui de la recherche. **T236 scanne
-  maintenant tout le balisage** : ce test aurait attrapé le bug.
-- **La corbeille** était intégralement recouverte par la barre du bas sous
-  1512 px de large, c'est-à-dire partout. Sur `--barh` et z 22.
-- **L'énoncé** est centré, les boutons collés à droite : recouvrement dès
-  1136 px (**56 px de texte mangés à 1024**, mesuré). Il cesse d'être centré à
-  ce palier. Rétrécir un bloc centré ne sert à rien : ça ne libère que la
-  moitié de chaque côté — c'est ce que faisait l'ancienne règle à 900 px.
-- **L'en-tête perdait 174 px de boutons à 1024 px** (mesuré), inatteignables
-  puisque le corps ne défile pas. Deux paliers + défilement horizontal en filet.
-- **Contraste** : le blanc sur le vert de « Vérifier le circuit » donnait
-  **2,62 pour 1**, le plus mauvais chiffre du fichier, sur le bouton le plus
-  regardé. Dégradés assombris, on est à 5,4. (Un des deux audits affirmait que
-  « le contraste n'est pas le problème » — vrai pour la palette, faux pour les
-  boutons.)
-- Plus : « Mes puces » défile enfin (seule fenêtre sans hauteur maximale, son
-  bouton Fermer pouvait sortir de l'écran), « Sandbox libre » n'est plus peint
-  en rouge (`btn-second`), le flou n'est plus appliqué deux fois, le texte des
-  fenêtres se sélectionne, et `prefers-reduced-motion` coupe les animations
-  **et les 160 confettis**.
-
-**Ce qui reste des deux audits, pour la refonte de l'overlay** : sémantique de
-dialogue (`role`, `aria-modal`, `aria-live`), gestion et piège du focus, cibles
-tactiles à 44 px, vraie couche mobile sous 560 px, éditeur GRAFCET en petite
-largeur, échelle typographique (vingt tailles aujourd'hui, dont du 7,5 px), et
-la bascule éventuelle vers la balise `<dialog>`.
-
-**📡 Lot 8 : la radio — la distance et les obstacles** (v6.24). **Phase 4
-commencée.**
-
-Premier calcul du fichier où **la position des boîtiers compte pour de vrai**.
-
-- `solveOndes()`, juste AVANT `solveElec()` dans `simulate()`. Elle lit la
-  puissance que chaque émetteur a consommée à l'image d'avant et pose sur
-  chaque récepteur la tension qu'il capte. **Le décalage d'une image est
-  voulu** : le récepteur est lui-même une source pour le solveur du continu,
-  donc sans ce décalage c'est l'œuf et la poule.
-- **La physique**, en deux lignes et deux constantes : `ONDE_PXM = 50`
-  (50 px = 1 m) et `ONDE_D0 = .5`. Reçu = `Pe · (d0/d)² · ∏ atténuations`,
-  puis `U = √(P·300)` — 300 Ω, l'impédance d'une antenne. Vérifié : à 1 W,
-  0,77 V à 11 m, et doubler la distance divise la tension par 2 et la
-  puissance par 4, au chiffre près.
-- **Calibrage** : seuil du récepteur à **0,3 V** par défaut, ce qui donne une
-  portée utile de ~29 m à 1 W — soit exactement une largeur d'écran. Sans ça,
-  un émetteur de 1 W porte à 170 m et on ne perd jamais le signal à l'écran.
-- `segCoupeRect()` : rognage de Liang-Barsky. Il n'existait **aucun**
-  utilitaire d'intersection dans le fichier.
-- Trois composants, famille `onde`, **sixième onglet ⚡ « La radio »** :
-  `EMET` (résistance ordinaire vue du circuit — il rayonne ce qu'il consomme,
-  donc mal alimenté il émet moins), `RECEP` (source de `_uant` volts derrière
-  300 Ω, plus une sortie `MES` en volts et une sortie `SEU` tout-ou-rien),
-  `MUR` (redimensionnable par sa poignée, comme `ZONE` — le mécanisme
-  `grip`/`gripAt`/`gripMove` était déjà générique).
-- `pickComp` : **un mur cède le pas**. Il est grand et volerait sinon les clics
-  des pièces posées dessus. Il est aussi dessiné derrière, avec `ZONE`.
-- `drawOndes()` : arceaux concentriques autour de chaque émetteur (le dernier
-  marque la portée utile) et trait pointillé émetteur → récepteur, cyan si la
-  liaison tient, rouge sinon. Dessiné entre la grille et les câbles.
-- **Chapitre 34 « Sans fil »**, quatre leçons m175 → m178. m176 compare
-  **deux** récepteurs plutôt que d'exiger un déplacement : un montage figé ne
-  peut pas démontrer un mouvement (même problème que l'interrupteur de m169).
-
-**Lot 7 bis : trois finitions signalées à l'usage** (v6.23).
-
-1. **Les fils droits restent droits.** Deux bornes exactement en face
-   donnaient bien un trait droit… jusqu'à ce qu'un deuxième câble emprunte le
-   même couloir : la règle anti-superposition (`spreadRoutes`) écartait tout
-   le monde, y compris lui, d'où une bosse de 5,5 px à chaque bout — et un fil
-   déjà posé qui changeait de forme tout seul. Désormais `buildRoute` marque
-   le fil (`w._droit`) et `spreadRoutes` en fait le **point fixe** de son
-   couloir : les autres s'écartent autour de lui.
-
-2. **Les bornes de puissance se relient dans tous les sens.** Une borne à vis
-   n'a pas de sens : deux ampoules en parallèle se câblent entrée sur entrée
-   et sortie sur sortie, et un voltmètre se pose aux bornes de ce qu'on veut.
-   Nouvelle fonction `relierBornes(départ, arrivée)` (nommée, donc testable) :
-   le sens compte toujours pour un signal ou un tuyau, jamais pour `pui`.
-   Trois conséquences : cliquer une borne ⚡ déjà câblée commence un NOUVEAU
-   fil au lieu de décrocher l'ancien (pour en retirer un : le survoler, Suppr) ;
-   `recalcFan` distingue les deux côtés d'un même rang de broches ; et le
-   **format d'enregistrement gagne un sixième champ** `sd` qui dit de quel côté
-   est chaque bout — absent (0) = l'ancien cas, donc les vieilles sauvegardes
-   se relisent telles quelles (`wireSide` / `wireEnds`, quatre points de
-   relecture : puce, groupe, mission, bac à sable).
-
-3. **Le condensateur revu.** Le vrai défaut n'était pas dans le moteur (la
-   décharge était juste, mesurée) : c'est que **tout se passait en quelques
-   millisecondes**, donc en moins d'une image. Un condensateur de 10 000 µF —
-   l'ancien maximum — se vide dans une ampoule de 25 Ω en 250 ms.
-   - la capacité monte maintenant **jusqu'au farad** (le supercondensateur
-     existe pour de vrai), sur une **glissière logarithmique** : nouveau champ
-     `log:true` sur une option, plus `paramFrac` / `paramVal` / `paramArrondi`
-     (deux chiffres significatifs) et `disp` pour afficher « 22 mF » au lieu
-     de « 22000 µF ». `INDUC.ind` en profite aussi.
-   - le boîtier affiche un **chrono du dernier remplissage** (⏱ 50 ms), en
-     rouge sous 0,2 s, avec le conseil dans l'infobulle. Il est MESURÉ, pas
-     calculé : le chronomètre tourne tant qu'un courant notable passe.
-     **Deux seuils** (démarrer à 50 % de la crête, continuer jusqu'à 12 %) —
-     avec un seuil unique, le courant résiduel de fin de charge, arrondi à
-     0,1 mA, clignotait autour et relançait un chrono qui écrasait la mesure.
-   - `c._upk` et `c._vide` : « il a été chargé, puis il est retombé sous le
-     tiers ». C'est ce qui permet à m169 d'exiger une VRAIE décharge.
-   - **m169 refaite** : interrupteur, 22 000 µF, ampoule 4,5 V / 0,8 W. Vérifié
-     dans Chromium : plein à 4,33 V, on ouvre, 1,04 V à 0,6 s, éteint à 2,6 s.
-   - `joueMontage` (harnais) **manœuvre** maintenant les interrupteurs de
-     puissance au milieu de la course et les remet comme il les a trouvés :
-     un montage de référence qu'on ne manœuvre jamais ne peut pas démontrer
-     une décharge.
-
-**⚡ Lot 7 : trier le courant** (v6.22). **Phase 3 terminée.**
-
-- `DIODE` et `PONT` redresseur : les premiers composants NON LINÉAIRES de
-  l'atelier. Ils entrent dans la boucle d'essais qui servait déjà à la
-  limitation de courant (portée de 6 à 12 tours : un pont a quatre diodes,
-  dont deux basculent à chaque alternance).
-- La **résonance** ne demandait aucun composant : bobine + condensateur +
-  générateur suffisaient. Vérifié dans Chromium — sur un LC de 2 H et 200 µF,
-  le pic tombe à 8 Hz pour une théorie à 7,96 Hz.
-- **Chapitre 33 « Le courant alternatif »**, huit leçons (m167 → m174), de
-  « le courant qui change de sens » à « fabriquer du continu ».
-- Cinquième onglet ⚡ **« L'alternatif »** et famille `alt` : GENEAC, CONDO,
-  INDUC, DIODE, PONT. « Le continu » débordait à douze tuiles.
-- `c.icrete` / `c.pcrete` : la crête récente, qui s'efface doucement. Sans
-  elles, impossible d'écrire une condition de réussite sur un circuit qui
-  pulse — au moment du contrôle, une sinusoïde peut passer par zéro.
-  `ckPulsees(part)` s'en sert.
-
-**Le tracé des câbles, deux défauts de fond** (v6.21). Mesuré sur les 722
-câbles de tous les montages livrés : **traversées 61 → 10**, **pire détour
-282 → 114 px**.
-
-1. `bypassY` n'avait que deux choix : au-dessus de TOUT, ou en dessous de
-   TOUT. Il ne savait pas se faufiler ENTRE deux obstacles — un fil dont les
-   deux bornes étaient à la même hauteur grimpait de 186 px et survolait
-   l'écran entier pour éviter deux ampoules entre lesquelles il y avait toute
-   la place. Il cherche maintenant le **couloir libre le plus proche**
-   (`bouchons()` fusionne les bandes occupées ; `bypassY` prend le meilleur
-   couloir). Et il **serre sa marge** (26 → 16 → 10 px) plutôt que de renoncer
-   quand tous les couloirs sont trop étroits.
-2. Le chemin vers l'AVANT ne regardait rien : un fil traversait tranquillement
-   un boîtier posé entre ses deux bornes dès qu'elles étaient à la même
-   hauteur. `barreH` / `barreV` le vérifient désormais avant de tracer.
-
-**⚡ Lot 6 : l'alternatif** (v6.20). Phase 3 entamée. Trois morceaux :
-
-1. **Une horloge pour le circuit.** Le simulateur lisait l'heure de la machine
-   à 54 endroits ; 45 lignes sont passées sur `simNow`. Deux temps cohabitent
-   désormais : l'AFFICHAGE (animations, clignotements — vraie montre, toujours)
-   et la SIMULATION (`simNow`, que le ralenti étire). Le bouton ⏱ de l'en-tête
-   cycle ×1 / ×10 / ×100 et ralentit **tout** — vérifié : une temporisation
-   d'une seconde demande douze secondes réelles en ×10.
-2. **Les sous-pas.** `solveElec` découpe l'image en jusqu'à 32 pas dès qu'une
-   branche a de la mémoire ou réclame de la finesse. Sans elles : **un seul
-   pas**, calcul identique à avant.
-3. **`CONDO`, `INDUC`, `GENEAC`** (sinus / carré / triangle, jusqu'à 100 Hz),
-   et l'oscilloscope qui échantillonne au sous-pas, fenêtre jusqu'à 20 ms.
-
-**⚡ Énergie & ondes, lot 1 sur 10 : le socle du continu** (v6.11). L'atelier
-🔌 n'est plus grisé. Il contient quatre composants — `PILE`, `INTERP`
-(interrupteur de puissance), `LAMPE` (ampoule à filament), `MASSE` — et un
-**vrai solveur nodal** qui résout tout le circuit d'un coup.
-
-Ce qu'on peut faire : la boucle pile → interrupteur → ampoule → masse → pile.
-Deux ampoules en parallèle et la pile s'affaisse, visiblement. On ouvre la
-boucle et tout s'éteint.
-
-**⚡ Lot 5 : produire autrement, et rejoindre le Process** (v6.19). Phase 2
-terminée. `CHAUD` (la chaudière — elle n'avait JAMAIS été écrite, la feuille de
-route la promettait depuis le début), `TURBINE` à vapeur avec régulateur,
-`SOLAIRE` (source de COURANT, qui voit les ampoules posées à côté de lui),
-`SEEBECK` (thermopile). Chapitre 32, huit leçons.
-
-**Six onglets débordaient de l'écran**, dans les trois ateliers (`calc` et
-`act` en avaient seize). Dégonflés : deux onglets de plus (« Données & bus »,
-« Procédés ») et une règle nouvelle — un composant rangé À LA MAIN dans un
-onglet n'est plus rangé une seconde fois par sa famille. Un onglet marqué
-`emprunt:true` fait exception (il emprunte sans priver l'atelier d'origine).
-
-**v6.18 — l'atelier ⚡ passe à quatre onglets** : Le continu (8), Mesure (3),
-Produire (3), Câblage (7). Une seule rangée de quinze tuiles débordait de
-l'écran, et l'auteur ne retrouvait plus l'aimant. Trois familles nouvelles
-(`mesu`, `prod`, `wirp`) avec chacune sa section de guide.
-
-**⚡ Lot 4 : produire du courant** (v6.17). `AIMANT` (se promène à la souris,
-aucune borne — il agit par sa position), `BOBINE` (loi de Faraday : la tension
-suit la VITESSE à laquelle le champ change ; immobile au centre = zéro), et
-`DYNAMO` à manivelle qu'on tourne à la souris, dont l'effort et le retard sur
-la main augmentent avec la charge. Deux jauges côte à côte : effort fourni et
-électricité produite. L'oscilloscope montre enfin le NÉGATIF (il écrêtait) —
-sans quoi la moitié de l'alternatif était invisible.
-
-**⚡ Lot 3 : le chapitre du continu** (v6.16). Le **chapitre 31 « Le courant
-continu »**, dix leçons à la fin du catalogue, chacune avec son montage de
-référence et sa **vraie condition de réussite** — c'est le premier chapitre où
-« Vérifier » regarde le circuit au lieu de croire le joueur sur parole. Quatre
-**montages d'exemple ⚡** dans le menu 📦 (la boucle, le banc de mesure, le
-variateur, les deux barres et un fusible).
-
-**v6.15 — le câblage de l'atelier ⚡, et le fusible.** L'onglet Câblage de
-l'atelier énergie est maintenant le sien (`wirep`) : les barres et le tunnel de
-PUISSANCE en tête, ceux de signal en dessous pour les sorties de mesure.
-Avant, il n'offrait que les rails logiques, qui refusent la puissance à juste
-titre — d'où la confusion. Les barres de puissance sont aussi **redessinées**
-en jeu de barres épais à têtes de vis hexagonales, impossibles à confondre avec
-le mince liseré ambre du rail de signal. Et quand on se trompe malgré tout, le
-message de refus **nomme le jumeau à prendre**.
-
-Nouveau composant : le **FUSIBLE** (calibre réglable, fond au-delà, se remplace
-au clic).
-
-Les deux mécanismes du chapitre :
-- `m.check(components, wires)` — la troisième façon de gagner, pour les leçons
-  sans table de vérité. Rend `true`, ou **la phrase qui dit ce qui manque** —
-  c'est elle que le joueur lit, donc elle doit être utile, pas décorative.
-  Vocabulaire d'appui : `ckTous`, `ckUn`, `ckAllumees`, `ckSources`,
-  `ckDebite`, `ckBoucle`, juste avant `const missions`.
-- `m.dom` — l'atelier de la leçon ; `loadMission` y bascule tout seul.
-**T207 est le garde-fou du chapitre** : il pose le montage de référence de
-chaque leçon et exige qu'il passe sa propre condition. Toute nouvelle leçon à
-`check` doit y survivre.
-
-**v6.14 — confort et câblage.** Rail et tunnel de puissance (`RAILP4`,
-`RAILP8`, `TUNP`). Le **clic simple sélectionne** (et actionne toujours le
-composant), **Maj + glisser duplique**, **Ctrl+X** coupe. Le tracé des câbles
-corrigé sur trois points de plus (voir « Décisions »).
-
-**⚡ Lot 2 : mesurer, régler, regarder** (v6.13). Sept composants :
-`RESIS` (anneaux de couleur), `POTP` (potentiomètre à trois bornes, un vrai
-diviseur), `VOLT`, `AMP`, `GENE` (alimentation réglable à la souris avec
-limitation de courant), `OSCILLO` (deux sondes de tension + une entrée de
-mesure, base de temps réelle), et le court-circuit signalé.
-
-**v6.12 — les trois défauts trouvés par l'auteur en essayant le lot 1**, tous
-corrigés : les câbles qui serpentaient (trois causes, dont un vieux bug
-d'écartement cumulatif qui touchait TOUS les domaines), l'éclat des ampoules
-qui se figeait au-delà de deux, et le circuit qui refusait de fonctionner sans
-masse. Voir « Décisions » ci-dessous.
-
-Avant ça (v6.8 → v6.10) : la refonte de l'affichage en trois lots — bandeau
-`#enonce`, `#infos` repliable, `#actions` ; cartouche de leçon posé sur le
-plan ; sommaire devenu carte du cours.
+**Lot 1 — le panneau des composants.**
+- Il est ancré **en bas à gauche** et **épouse son contenu** (`width:auto`,
+  `min-width:820px`) : plus de vide à droite, jamais.
+- **Replié, il devient un seul bouton de 48 px** dans le coin, avec un
+  pictogramme de puce au trait. C'est la « grille nue ».
+- Les ateliers sont devenus de **vrais onglets collés au corps** du panneau :
+  même fond, pas de trait entre eux, liseré de la couleur de l'atelier.
+  Inactifs, ils portent déjà leur teinte.
+- **Un quatrième onglet ★ Rapide**, en tête. Attention : `favOnglet` est un
+  drapeau à part, **`appMode` ne change pas** quand on y va — sinon tout le
+  moteur (formes de bornes, filtrage des leçons) aurait suivi. Deux catégories :
+  « Mes épingles » et « Les plus posés ». L'ancienne rangée de favoris a disparu.
+- Les **tuiles gardent une taille fixe** (62×60), passent à la ligne, et une
+  ligne incomplète est **centrée**.
+- L'ouverture s'anime (`@keyframes panneauOuvre`, 0,19 s). **On n'anime que
+  `transform` et `opacity`** : la grille se redessine 60 fois par seconde
+  derrière, animer une largeur la ferait saccader. `prefers-reduced-motion`
+  coupe tout.
 
 ## Décisions qui expliquent le code
 
@@ -876,7 +542,7 @@ parti. Tant que c'est vrai, ce bouton ne doit pas voisiner ↶ ↷.
 ### Livraison en cinq lots
 | Lot | Contenu | Risque |
 |---|---|---|
-| **1 · le panneau** | grille nue, onglets colorés, tuiles centrées | faible — **à faire en premier** |
+| ~~1 · le panneau~~ | **FAIT en v6.30** | — |
 | 2 · le haut | en-tête supprimé, Menu, Outils, filigrane | moyen (14 boutons à déplacer) |
 | 3 · la leçon | panneau d'actions pliable, suivi sur la grille | faible |
 | 4 · la gomme | effacement au glisser + « tout effacer » annulable | moyen |
