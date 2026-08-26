@@ -46,6 +46,20 @@ toutes les explications doivent être en français simple, sans jargon.
 - Cela ne change rien à la règle du dessus : on propose, on explique, et on
   attend la validation avant de coder.
 
+## Vérifier son travail
+
+- **Toute modification d'affichage se vérifie dans un vrai navigateur**, jamais
+  seulement par les tests. Le harnais fabrique n'importe quel élément à la
+  demande : supprimer un élément du HTML sans supprimer les
+  `getElementById` correspondants donne des tests verts et une **page blanche**
+  chez l'auteur. Chromium est là pour ça (`/opt/pw-browsers/chromium-1194`).
+- **Un script de correction vérifie chaque ancre juste avant de l'appliquer**
+  (`grep -c` = 1), et enchaîne ses remplacements — sinon un remplacement qui
+  dépend du précédent échoue silencieusement, et le fichier n'est écrit qu'à la
+  fin, donc tout le travail est perdu.
+- **Toujours `rm -rf node_modules package-lock.json` avant de committer.**
+  Playwright n'est installé que le temps des captures.
+
 ## Le carnet de bord : note.md
 
 `note.md` est le fichier à lire **en premier** quand une session démarre : il

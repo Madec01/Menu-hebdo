@@ -212,30 +212,23 @@ plan ; sommaire devenu carte du cours.
 
 ## Pièges du fichier (durement acquis)
 
-1. **Le harnais de test ne voit pas un élément manquant.** `test/pre.js`
-   fabrique n'importe quel `getElementById` à la demande. Supprimer un élément
-   du HTML **sans** supprimer les `getElementById` correspondants donne des
-   tests verts et une **page blanche dans le navigateur**. Seul T62 (contrôle
-   textuel) alerte. → **Toute modification d'affichage se vérifie dans
-   Chromium**, jamais seulement par les tests.
-2. Le stub renvoie **toujours** `[]` pour `querySelectorAll` et **des zéros**
-   pour `getBoundingClientRect` ; `requestAnimationFrame` ne tourne pas, donc
-   `render()` n'est jamais appelée en test. Un code testable est un code en
-   **fonctions nommées** appelables directement.
-3. **Les scripts de correction Python doivent enchaîner leurs remplacements**
-   (vérifier l'ancre juste avant de l'appliquer), sinon un remplacement qui
-   dépend du précédent échoue. Et vérifier `grep -c` = 1 sur chaque ancre.
-   Attention aux apostrophes typographiques `’` : le fichier en contient des
-   vraies, pas des `’`.
-4. `bw`/`bh` sont des **getters** qui tiennent compte de la rotation ; `w`/`h`
+*(Les règles de travail — vérifier dans Chromium, ancrer les scripts,
+nettoyer avant de committer — sont dans `CLAUDE.md`. Ici, les faits sur le
+fichier lui-même.)*
+
+1. Le stub de test renvoie **toujours** `[]` pour `querySelectorAll` et **des
+   zéros** pour `getBoundingClientRect` ; `requestAnimationFrame` ne tourne
+   pas, donc `render()` n'est jamais appelée en test. Un code testable est un
+   code en **fonctions nommées** appelables directement.
+2. Attention aux **apostrophes typographiques** `’` dans les ancres de
+   recherche : le fichier en contient des vraies, pas des `'`.
+3. `bw`/`bh` sont des **getters** qui tiennent compte de la rotation ; `w`/`h`
    sont les valeurs brutes. Pour tout rectangle, c'est `bw`/`bh`.
-5. Trois ids sont **dupliqués** dans le HTML (`quick-head`, `quick-title`,
+4. Trois ids sont **dupliqués** dans le HTML (`quick-head`, `quick-title`,
    `quick-hint`, dans `#find` et `#quick`). Bug latent, ne pas s'en inspirer.
-6. Toujours `rm -rf node_modules package-lock.json` avant de committer
-   (Playwright n'est installé que le temps des captures).
-7. **Les nouvelles leçons s'ajoutent à la FIN du tableau `missions`.** T178,
+5. **Les nouvelles leçons s'ajoutent à la FIN du tableau `missions`.** T178,
    T179 et T48 supposent que la première leçon du cours est celle d'aujourd'hui.
-8. Un composant ajouté au registre doit être **complet** (nom, nom court,
+6. Un composant ajouté au registre doit être **complet** (nom, nom court,
    famille, icône, couleur, w/h ≥ 40, entrée de guide de plus de 40 signes,
    présence dans un onglet) : T66 et T57 le vérifient tout seuls. Une nouvelle
    famille exige une entrée dans `FAM_SECTIONS`, sinon son guide n'est jamais
