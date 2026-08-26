@@ -51,8 +51,10 @@ de travail est nu, avec le logo pour seul repère.
   drapeau à part, **`appMode` ne change pas** quand on y va — sinon tout le
   moteur (formes de bornes, filtrage des leçons) aurait suivi. Deux catégories :
   « Mes épingles » et « Les plus posés ». L'ancienne rangée de favoris a disparu.
-- Les **tuiles gardent une taille fixe** (62×60), passent à la ligne, et une
-  ligne incomplète est **centrée**.
+- Les **tuiles gardent une taille fixe** (92×86, symbole 40 px, nom en 10 px),
+  passent à la ligne, et une ligne incomplète est **centrée**. Elles étaient à
+  62×60 avec un nom en 8 px : illisible, l'auteur l'a signalé. La rangée est
+  plafonnée à trois lignes (`max-height:272px`), au-delà elle défile.
 - L'ouverture s'anime (`@keyframes panneauOuvre`, 0,19 s). **On n'anime que
   `transform` et `opacity`** : la grille se redessine 60 fois par seconde
   derrière, animer une largeur la ferait saccader. `prefers-reduced-motion`

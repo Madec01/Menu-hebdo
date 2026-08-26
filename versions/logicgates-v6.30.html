@@ -287,11 +287,11 @@ table.tt tr.tt-fail td:first-child::before{content:'✗ ';color:var(--red)}
 .tool-tab.active::after{content:'';position:absolute;left:13px;right:13px;bottom:1px;height:2px;
   border-radius:2px;background:var(--dom)}
 .tool-none{font-family:var(--mono);font-size:10.5px;color:var(--dim);padding:10px 4px}
-.tool-lock{position:absolute;top:2px;right:3px;font-size:9px;font-style:normal;opacity:.85}
+.tool-lock{position:absolute;top:4px;right:5px;font-size:11px;font-style:normal;opacity:.85}
 .tool-plus{border-style:dashed!important;color:#b18cff!important}
 /* les favoris : même tuile, un liseré et une étoile pour les épingles */
 .fav-btn{background:rgba(255,194,61,.05);border-color:rgba(255,194,61,.16)}
-.fav-star{position:absolute;top:2px;right:4px;font-size:8px;font-style:normal;color:var(--amber);
+.fav-star{position:absolute;top:4px;right:6px;font-size:10px;font-style:normal;color:var(--amber);
   opacity:.9}
 #sel-hud{position:fixed;bottom:calc(var(--barh,150px) + 26px);left:50%;transform:translateX(-50%);z-index:19;
   padding:7px 16px;font-family:var(--mono);font-size:10.5px;color:#bfe4ff;border-radius:10px;
@@ -397,7 +397,7 @@ table.tt tr.tt-fail td:first-child::before{content:'✗ ';color:var(--red)}
 .tool-group-label{font-family:var(--mono);font-size:8.5px;letter-spacing:.24em;color:var(--dim);
   text-transform:uppercase;text-align:center}
 .tool-row{display:flex;flex-wrap:wrap;justify-content:center;gap:5px;padding:4px 2px 2px;
-  max-height:210px;overflow-y:auto;overflow-x:hidden;
+  max-height:272px;overflow-y:auto;overflow-x:hidden;
   scrollbar-width:none}
 .tool-row::-webkit-scrollbar{display:none}
 .tool-row::-webkit-scrollbar{display:none}
@@ -410,11 +410,11 @@ table.tt tr.tt-fail td:first-child::before{content:'✗ ';color:var(--red)}
   mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)}
 .tool-sep{width:1px;background:linear-gradient(transparent,rgba(99,179,255,.25),transparent);
   margin:2px 8px;align-self:stretch}
-.tool-btn{width:62px;height:60px;border-radius:11px;border:1px solid rgba(255,255,255,.07);
-  background:rgba(255,255,255,.025);cursor:pointer;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;gap:2px;transition:.16s;position:relative;color:var(--c,#9db)}
-.tool-btn svg{width:26px;height:22px;display:block}
-.tool-btn span{font-family:var(--mono);font-size:8px;letter-spacing:.02em;color:var(--dim);
+.tool-btn{width:92px;height:86px;border-radius:13px;border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.028);cursor:pointer;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:5px;transition:.16s;position:relative;color:var(--c,#9db)}
+.tool-btn svg{width:40px;height:34px;display:block}
+.tool-btn span{font-family:var(--mono);font-size:10px;letter-spacing:.02em;color:#9fb0cc;
   white-space:nowrap;font-weight:500}
 .tool-btn:hover:not(:disabled){transform:translateY(-3px);border-color:var(--c);
   background:color-mix(in srgb,var(--c) 10%,transparent);
@@ -422,7 +422,7 @@ table.tt tr.tt-fail td:first-child::before{content:'✗ ';color:var(--red)}
 .tool-btn:hover:not(:disabled) span{color:var(--text)}
 .tool-btn:active:not(:disabled){transform:translateY(-1px)}
 .tool-btn:disabled{opacity:.28;cursor:not-allowed;filter:grayscale(.8)}
-.tool-btn:disabled::after{content:'✕';position:absolute;top:2px;right:5px;font-size:9px;color:var(--red)}
+.tool-btn:disabled::after{content:'✕';position:absolute;top:4px;right:7px;font-size:11px;color:var(--red)}
 
 /* ---------- Trash ---------- */
 /* La barre du bas est opaque et fait 150 px de haut : posée à 16 px du bord,
