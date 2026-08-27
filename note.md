@@ -5,17 +5,64 @@ dans `CLAUDE.md`.
 
 ## Où en est le projet
 
-- **v6.42 — l'appli s'appelle maintenant NodeFlow.** La refonte de l'overlay
+- **v6.43 — l'appli s'appelle maintenant NodeFlow.** La refonte de l'overlay
   est **terminée** (lots 1 à 4), le guide est devenu une page, et **les 136
   composants du catalogue ont tous leur fiche complète**.
-  Branche `claude/architecte-logique-v5-vntfkp`, **266 tests verts** (`npm test`).
+  Branche `claude/architecte-logique-v5-vntfkp`, **267 tests verts** (`npm test`).
 - `logicgates.html` : ~14 400 lignes, un seul `<script>`, aucune dépendance.
-- Copies figées dans `versions/` (v5.1 → v6.42), avec leur tableau dans
+- Copies figées dans `versions/` (v5.1 → v6.43), avec leur tableau dans
   `versions/README.md`.
 - Catalogue : **191 leçons en 37 chapitres** — 63 à table de vérité (dont 8
   boîtes noires), 85 libres, et 30 à **condition de réussite** (chapitres 31 à 34).
 
 ## Ce qui vient d'être fait
+
+### v6.43 — câblage ④ : les câbles ⚡ disent leur rôle
+
+Dans l'atelier ⚡, **tout était violet** : une masse, une alimentation et un fil
+de charge avaient exactement la même tête. Trois rôles, maintenant :
+
+| rôle | teinte | largeur | second indice |
+| --- | --- | --- | --- |
+| alimentation | rouge `#ff7b6b` | 9 | la plus épaisse |
+| puissance ordinaire | violet `#b18cff` | 8 | — |
+| masse | gris-bleu `#8fa1c4` | 7 | **gaine hachurée** `[11,6]` |
+
+**Le rôle ne se devine pas : il vient du solveur.** Un câble appartient à un
+**point électrique**, et c'est le point qui a un rôle — exactement la notion de
+« classe de réseau » des logiciels de schéma. Deux repères sont publiés à
+chaque résolution :
+- `elecNetMasse` — le point choisi comme zéro (`solPt`) ;
+- `elecNetsAlim` — les points où débouche une borne `pui` de sortie d'un
+  composant marqué `source:true`.
+
+Chaque broche retient son point dans `Pin.net` (rempli à l'étape 9 du solveur,
+remis à `-1` quand il n'y a pas de circuit). `Wire.role` est un getter mis en
+cache dans `_role`, vidé à chaque résolution.
+
+**`source:true` posé sur huit composants** : PILE, GENE, GENEAC, BOBINE,
+DYNAMO, TURBINE, SOLAIRE, SEEBECK. T264 vérifie la liste **dans les deux
+sens** — aucun oubli, aucune source marquée par erreur.
+
+**Deux choses trouvées en chemin, et corrigées :**
+1. **Un fil de masse est à 0 V par définition** : le juger sur la tension le
+   montrait éteint alors qu'il travaille. Le rôle masse porte `parCourant:true`
+   et se juge au **courant**.
+2. **Le pont en H n'avait pas de masse du tout** : sa barre du bas était un
+   `RAILP4` nommé « MASSE », ce qui ne déclare aucun zéro. Résultat, le solveur
+   choisissait son zéro ailleurs et la barre affichait 11,7 V. Elle est
+   devenue une vraie `MASSE` — possible seulement depuis la v6.41, où la masse
+   a gagné ses bornes multiples. Les indices de broche sont les mêmes, le
+   câblage n'a pas bougé.
+
+**Décision de fond, à ne pas défaire** : on ne touche **PAS** aux câbles de
+signal. Le vert « allumé » / gris « éteint » est ce que l'appli a de plus
+parlant, et le repeindre par rôle brouillerait ce qu'elle enseigne. Les rôles
+ne concernent que l'atelier ⚡.
+
+La couleur n'est jamais le seul indice : chaque rôle a une **largeur** propre,
+la masse a sa **gaine hachurée**, et l'**infobulle du câble nomme le rôle** en
+toutes lettres. Le guide explique le code couleur dans la section ⚡.
 
 ### v6.42 — câblage ① et ② : l'écartement arrête de bavarder
 
@@ -1120,13 +1167,13 @@ CAO électronique (KiCad, Altium), plus la bibliothèque de référence **libavo
 
 **Défauts confirmés dans le code, à corriger dans cet ordre :**
 
-① **`spreadRoutes` écarte des fils qui ne se croisent pas.** Un segment vertical
+① ✅ **FAIT en v6.42.** `spreadRoutes` écartait des fils qui ne se croisent pas. Un segment vertical
    n'est retenu que par son `x` : ses deux bouts sont jetés. Deux segments à la
    même abscisse mais à 800 px l'un de l'autre sont traités comme colocataires.
    C'est très probablement la vraie cause du « ça bouge selon les distances ».
    Quelques heures. Tests à surveiller : T166, T192b.
 
-② **`spreadRoutes` ne revérifie rien après avoir bougé les fils.** Il décale de
+② ✅ **FAIT en v6.42.** `spreadRoutes` ne revérifiait rien après avoir bougé les fils. Il décale de
    11, 22, 33 px et s'arrête là : un fil soigneusement contourné peut être
    poussé DANS un boîtier. Quelques heures. À noter : T225 teste la
    non-traversée sur `route()`, pas sur le tracé écarté — il ne peut donc pas
@@ -1138,7 +1185,7 @@ CAO électronique (KiCad, Altium), plus la bibliothèque de référence **libavo
    version de `bouchons` qui découpe en bandes verticales. Une journée, et c'est
    le seul vrai chantier de moteur — à livrer seul.
 
-④ **Les couleurs par rôle**, demandées par l'auteur. Tous les marqueurs existent
+④ ✅ **FAIT en v6.43.** Les couleurs par rôle, demandées par l'auteur. Tous les marqueurs existent
    déjà : `masse:true` sur la masse, `pinInfo(pin)` rend l'unité d'une borne de
    mesure, `kind` donne le domaine. Manque un `source:true` sur les sources.
    **Avis retenu : ne PAS toucher aux fils de signal** — le vert « allumé » /

@@ -6730,6 +6730,84 @@ T('T263 l’écartement ne sépare que les câbles qui se voient, et n’en met 
   board();
 });
 
+T('T264 les câbles ⚡ ont un rôle : masse, alimentation, ou le reste', () => {
+  board();
+  const pi = mk('PILE', 0, 0), la = mk('LAMPE', 400, 0), ms = mk('MASSE', 800, 40);
+  pi.opt.e = 9; pi.opt.ri = .1;
+  link(pi, 0, la, 0);        // le + de la pile vers l’ampoule : alimentation
+  link(la, 0, ms, 0);        // le retour de l’ampoule vers la masse
+  link(ms, 0, pi, 0);        // et la masse vers le − de la pile
+  sim();
+  const wAlim = wires[0], wRet = wires[1], wMas = wires[2];
+  eq(wAlim.role, 'alim', 'le fil qui part du + d’une source est une alimentation');
+  eq(wRet.role, 'masse', 'celui qui rejoint la masse est un fil de masse');
+  eq(wMas.role, 'masse', 'et le retour au − aussi : c’est le même point');
+
+  // le rôle vient du POINT électrique, pas du composant au bout du fil
+  ok(wAlim.outPin.net >= 0, 'chaque borne connaît son point électrique');
+  eq(wRet.inPin.net, elecNetMasse, 'le retour est bien sur le point de la masse');
+  ok(elecNetsAlim.has(wAlim.outPin.net), 'et le + est bien sur un point alimenté');
+
+  // un consommateur au milieu d’une chaîne n’est ni l’un ni l’autre
+  board();
+  const p2 = mk('PILE', 0, 0), r1 = mk('RESIS', 300, 0), r2 = mk('RESIS', 600, 0),
+        m2 = mk('MASSE', 900, 40);
+  p2.opt.e = 9; p2.opt.ri = .1;
+  link(p2, 0, r1, 0); link(r1, 0, r2, 0); link(r2, 0, m2, 0); link(m2, 0, p2, 0);
+  sim();
+  eq(wires[0].role, 'alim', 'l’arrivée est une alimentation');
+  eq(wires[1].role, 'pui', 'entre les deux résistances, c’est de la puissance ordinaire');
+  eq(wires[2].role, 'masse', 'et le retour est une masse');
+
+  // sans masse posée, plus de rôle « masse » — mais l’alimentation tient
+  board();
+  const p3 = mk('PILE', 0, 0), l3 = mk('LAMPE', 400, 0);
+  p3.opt.e = 9; p3.opt.ri = .1;
+  link(p3, 0, l3, 0); link(l3, 0, p3, 0);
+  sim();
+  ok(wires.every(w => w.role !== 'masse') || elecNetMasse >= 0,
+     'pas de masse posée : aucun fil ne peut en porter le rôle');
+  eq(wires[0].role, 'alim', 'l’alimentation, elle, se reconnaît toujours');
+
+  // chaque rôle a bien DEUX indices, jamais la couleur seule
+  ['pui', 'alim', 'masse'].forEach(k => {
+    const R = ROLE_FIL[k];
+    ok(R && R.nom && R.c && R.w > 0, k + ' : une teinte et une largeur');
+    ok(typeof R.vif === 'function' && R.gaine && R.eteint, k + ' : un habillage complet');
+  });
+  ok(ROLE_FIL.masse.dash, 'la masse a en plus sa gaine hachurée');
+  ok(ROLE_FIL.masse.parCourant,
+     'et elle se juge au courant, pas à la tension — elle vaut 0 V par définition');
+  ok(ROLE_FIL.alim.w > ROLE_FIL.pui.w && ROLE_FIL.pui.w > ROLE_FIL.masse.w,
+     'les trois largeurs se distinguent');
+
+  // toutes les sources sont marquées : sans le drapeau, pas de rôle « alimentation »
+  const SOURCES = ['PILE','GENE','GENEAC','BOBINE','DYNAMO','TURBINE','SOLAIRE','SEEBECK'];
+  SOURCES.forEach(t => ok(REG[t] && REG[t].source, t + ' est marqué comme source'));
+  // et rien d’autre ne l’est par erreur
+  const trop = Object.keys(REG).filter(t => REG[t].source && !SOURCES.includes(t));
+  eq(trop.join(','), '', 'aucune source marquée par erreur : ' + trop.join(', '));
+
+  // l’infobulle nomme le rôle : la couleur n’est pas le seul indice
+  board();
+  const p4 = mk('PILE', 0, 0), l4 = mk('LAMPE', 400, 0), m4 = mk('MASSE', 800, 40);
+  p4.opt.e = 9; p4.opt.ri = .1;
+  link(p4, 0, l4, 0); link(l4, 0, m4, 0); link(m4, 0, p4, 0);
+  sim();
+  const tip = wireTipData(wires[0]);
+  ok(tip.lines.some(l => /alimentation/.test(l)), 'l’infobulle écrit « alimentation »');
+  ok(wireTipData(wires[1]).lines.some(l => /masse/.test(l)), 'et « masse » pour le retour');
+
+  // et un câble de SIGNAL n’a pas de rôle : on ne touche pas au vert/gris
+  board();
+  const sw = mk('SWITCH', 0, 0), le = mk('LED', 400, 0);
+  link(sw, 0, le, 0); sim();
+  eq(wires[0].role, null, 'un câble de signal n’a pas de rôle de puissance');
+  ok(!wireTipData(wires[0]).lines.some(l => /rôle/.test(l)),
+     'et son infobulle n’en parle pas');
+  board();
+});
+
 T('T258 poser un montage demande avant d’effacer', () => {
   loadMission(-1); clearBoard();
   const box = __el('ask-modal');
