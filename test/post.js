@@ -6361,9 +6361,14 @@ T('T256 les raccourcis ont leur page, et elle se filtre', () => {
   fermerRaccourcis();
 });
 
-T('T257 les huit portes ont leur fiche complète', () => {
-  const PORTES = ['NOT','AND','OR','XOR','NAND','NOR','XNOR','AND3'];
-  PORTES.forEach(t => {
+T('T257 les fiches écrites tiennent toutes le même niveau', () => {
+  const ECRITES = [
+    'NOT','AND','OR','XOR','NAND','NOR','XNOR','AND3',                    // les portes
+    'SWITCH','CLOCK','RANDOM','NIBBLE','KEY','SEQ','HIGH',                // les entrées
+    'DELAY','DFF','CNT4','CHIP',                                          // mémoire & temps
+    'LED','SEGMENT','OCTET','PROBE','RGB','MATRIX','SCOPE','BUZZER','TRAFFIC']; // les sorties
+  eq(Object.keys(FICHES).length, ECRITES.length, 'aucune fiche orpheline dans FICHES');
+  ECRITES.forEach(t => {
     const f = FICHES[t];
     ok(f, t + ' a sa fiche');
     ok(f.court && f.court.length > 60, t + ' : une phrase d’accroche');

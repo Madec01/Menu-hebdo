@@ -5,17 +5,40 @@ dans `CLAUDE.md`.
 
 ## Où en est le projet
 
-- **v6.35 — l'appli s'appelle maintenant NodeFlow.** La refonte de l'overlay
+- **v6.36 — l'appli s'appelle maintenant NodeFlow.** La refonte de l'overlay
   est **terminée** (lots 1 à 4), et le guide est devenu une page.
   Branche `claude/architecte-logique-v5-vntfkp`, **255 tests verts**
   (`npm test`, 260 tests).
 - `logicgates.html` : ~14 400 lignes, un seul `<script>`, aucune dépendance.
-- Copies figées dans `versions/` (v5.1 → v6.35), avec leur tableau dans
+- Copies figées dans `versions/` (v5.1 → v6.36), avec leur tableau dans
   `versions/README.md`.
 - Catalogue : **188 leçons en 36 chapitres** — 63 à table de vérité (dont 8
   boîtes noires), 85 libres, et 30 à **condition de réussite** (chapitres 31 à 34).
 
 ## Ce qui vient d'être fait
+
+### v6.36 — étape 3, suite : entrées, mémoire & temps, sorties
+
+Vingt fiches de plus, même gabarit, même niveau : **28 au total**.
+
+- **Les entrées** (7) : interrupteur/bouton, horloge, aléa/bruit, clavier 4 bits,
+  touche, séquenceur, constantes.
+- **Mémoire & temps** (4) : retard, bascule D, compteur, puces.
+- **Les sorties** (9) : ampoule, 7 segments, octet, sonde, LED RVB, matrice,
+  oscilloscope, buzzer, feu & barrière.
+
+Le fil rouge de l'écriture : **chaque fiche doit apprendre quelque chose qu'on
+ne devine pas en manipulant**. Le rebond de contact, le 32 768 Hz du quartz
+(2¹⁵), le mur de lampes à lave de Cloudflare, la métastabilité d'une bascule,
+la norme CEI 60073 des couleurs de voyants, le pourquoi de l'octet (IBM 1964),
+le bug du niveau 256 de Pac-Man, la sécurité câblée des feux de carrefour.
+
+T257 couvre les 28 et **vérifie qu'il n'y a pas de fiche orpheline** dans
+`FICHES` : ajouter une fiche sans l'inscrire dans la liste du test fait échouer.
+
+**Piège** : les « voir aussi » doivent pointer des types qui existent vraiment
+(`FR_NAME[x]`). `BUS`, `MERGE`, `CMP`, `LATCH` n'existent pas — c'est `GROUP`,
+`COMP`, `DFF`. Le test les attrape, mais autant le savoir avant.
 
 ### v6.35 — étape 3, premier lot : les huit portes
 
@@ -788,7 +811,8 @@ Maquette cliquable : **`maquettes/le-guide-en-pleine-page.html`** — s'y réfé
 pour la profondeur et le ton visés (deux fiches y sont écrites en entier, le ET
 et le condensateur).
 
-**Premier lot écrit en v6.35 : les 8 portes.** Reste 21 sections.
+**Écrit : 28 fiches** (v6.35 les 8 portes, v6.36 les entrées, mémoire & temps
+et les sorties). **Reste 18 sections**, essentiellement l'atelier ⚡ et le process.
 
 **Ce qui reste à faire, et c'est le gros morceau : écrire les fiches.**
 La page est prête et sait déjà afficher une fiche riche. Il suffit d'enrichir
