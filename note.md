@@ -5,17 +5,44 @@ dans `CLAUDE.md`.
 
 ## Où en est le projet
 
-- **v6.34 — l'appli s'appelle maintenant NodeFlow.** La refonte de l'overlay
+- **v6.35 — l'appli s'appelle maintenant NodeFlow.** La refonte de l'overlay
   est **terminée** (lots 1 à 4), et le guide est devenu une page.
   Branche `claude/architecte-logique-v5-vntfkp`, **255 tests verts**
-  (`npm test`, 259 tests).
+  (`npm test`, 260 tests).
 - `logicgates.html` : ~14 400 lignes, un seul `<script>`, aucune dépendance.
-- Copies figées dans `versions/` (v5.1 → v6.34), avec leur tableau dans
+- Copies figées dans `versions/` (v5.1 → v6.35), avec leur tableau dans
   `versions/README.md`.
 - Catalogue : **188 leçons en 36 chapitres** — 63 à table de vérité (dont 8
   boîtes noires), 85 libres, et 30 à **condition de réussite** (chapitres 31 à 34).
 
 ## Ce qui vient d'être fait
+
+### v6.35 — étape 3, premier lot : les huit portes
+
+**`FICHES`**, juste avant `buildGuide()`. Une table par type, avec les mêmes
+champs que ceux qu'un composant du registre peut poser dans son `guide` :
+`court`, `blocs`, `reel`, `ex`, `aussi`.
+`ficheHTML()` **fusionne** `REG[t].guide` et `FICHES[t]`, et ce qui est dans
+`FICHES` l'emporte.
+
+**Pourquoi une table à part et pas le registre** : les portes historiques
+(NOT, AND, OR, XOR, NAND, NOR, XNOR, AND3) **ne sont pas dans `REG`** — elles
+sont traitées par des `switch` dans le moteur. Elles n'avaient donc nulle part
+où poser leur contenu. `FICHES` sert aussi bien aux unes qu'aux autres : pour
+la suite, on peut écrire indifféremment dans `FICHES` ou dans `REG[id].guide`.
+
+Écrit : les 8 portes, 230 à 500 mots chacune, 2 à 4 applications réelles
+racontées (la règle des deux hommes, la presse à deux boutons, le RAID, le bit
+de parité, Apollo 11 et ses 5 600 NOR, le 7400 encore fabriqué, le masque
+jetable, la sélection d'une puce mémoire…).
+
+**T257 garde le niveau** : il vérifie que chaque porte a son accroche, ses
+blocs, au moins **deux** applications d'au moins 80 caractères, un « Essaie »,
+et que chaque « voir aussi » pointe un composant qui existe vraiment. Un
+contenu bâclé fait échouer le test.
+
+**Reste à écrire** : les 21 autres sections. Ordre proposé à l'auteur : les
+entrées, les sorties, mémoire & temps, puis l'atelier ⚡.
 
 ### v6.34 — le guide devient une page (étapes 1 et 2)
 
@@ -760,6 +787,8 @@ lot séparé.
 Maquette cliquable : **`maquettes/le-guide-en-pleine-page.html`** — s'y référer
 pour la profondeur et le ton visés (deux fiches y sont écrites en entier, le ET
 et le condensateur).
+
+**Premier lot écrit en v6.35 : les 8 portes.** Reste 21 sections.
 
 **Ce qui reste à faire, et c'est le gros morceau : écrire les fiches.**
 La page est prête et sait déjà afficher une fiche riche. Il suffit d'enrichir

@@ -6361,6 +6361,30 @@ T('T256 les raccourcis ont leur page, et elle se filtre', () => {
   fermerRaccourcis();
 });
 
+T('T257 les huit portes ont leur fiche complète', () => {
+  const PORTES = ['NOT','AND','OR','XOR','NAND','NOR','XNOR','AND3'];
+  PORTES.forEach(t => {
+    const f = FICHES[t];
+    ok(f, t + ' a sa fiche');
+    ok(f.court && f.court.length > 60, t + ' : une phrase d’accroche');
+    ok(f.blocs && f.blocs.length >= 1, t + ' : au moins un bloc d’explication');
+    ok(f.reel && f.reel.length >= 2, t + ' : au moins deux applications réelles');
+    f.reel.forEach(r => ok(r[0] && r[1] && r[1].length > 80,
+      t + ' : chaque application est racontée, pas juste nommée'));
+    ok(f.ex && f.ex.length > 60, t + ' : un « Essaie » concret');
+    (f.aussi || []).forEach(a2 => ok(FR_NAME[a2],
+      t + ' : « voir aussi » pointe un composant qui existe (' + a2 + ')'));
+  });
+  // le contenu riche arrive vraiment jusqu'à l'écran
+  buildGuide(); ouvrirGuide('XOR');
+  const h = __el('guide-body').innerHTML;
+  ok(h.includes('masque jetable'), 'la fiche affiche le contenu de FICHES');
+  ok(h.includes('Le RAID d’un serveur'), 'et ses applications réelles');
+  ok(!h.includes('Comment ça marche</div><p>Sortie à 1'),
+     'le texte court du résumé ne double pas le bloc détaillé');
+  fermerGuide();
+});
+
 /* ===================== bilan ===================== */
 console.log('\n' + (__fail ? '✗' : '✓') + ' ' + __pass + ' test(s) réussi(s), ' +
             __fail + ' échec(s)' + (__fail ? ' : ' + __failures.join(', ') : '') + '\n');
