@@ -6362,13 +6362,15 @@ T('T256 les raccourcis ont leur page, et elle se filtre', () => {
 });
 
 T('T257 les fiches écrites tiennent toutes le même niveau', () => {
-  const ECRITES = [
-    'NOT','AND','OR','XOR','NAND','NOR','XNOR','AND3',                    // les portes
-    'SWITCH','CLOCK','RANDOM','NIBBLE','KEY','SEQ','HIGH',                // les entrées
-    'DELAY','DFF','CNT4','CHIP',                                          // mémoire & temps
-    'LED','SEGMENT','OCTET','PROBE','RGB','MATRIX','SCOPE','BUZZER','TRAFFIC',  // les sorties
-    'MUX','DEMUX','ADD','SUB','COMP','ROM','GROUP','BLACKBOX'];                // calcul & données
-  eq(Object.keys(FICHES).length, ECRITES.length, 'aucune fiche orpheline dans FICHES');
+  // Le guide doit couvrir TOUT le catalogue : la liste attendue n'est plus
+  // écrite à la main, elle est celle du guide lui-même.
+  buildGuide();
+  const ECRITES = [];
+  GUIDE.forEach(sec => sec.items.forEach(it => ECRITES.push(it[0])));
+  const sans = ECRITES.filter(t => !FICHES[t]);
+  eq(sans.join(','), '', 'composants sans fiche complète : ' + sans.join(', '));
+  const orphelines = Object.keys(FICHES).filter(t => !ECRITES.includes(t));
+  eq(orphelines.join(','), '', 'fiches orphelines dans FICHES : ' + orphelines.join(', '));
   ECRITES.forEach(t => {
     const f = FICHES[t];
     ok(f, t + ' a sa fiche');

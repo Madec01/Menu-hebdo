@@ -5,17 +5,48 @@ dans `CLAUDE.md`.
 
 ## Où en est le projet
 
-- **v6.37 — l'appli s'appelle maintenant NodeFlow.** La refonte de l'overlay
-  est **terminée** (lots 1 à 4), et le guide est devenu une page.
-  Branche `claude/architecte-logique-v5-vntfkp`, **255 tests verts**
-  (`npm test`, 261 tests).
+- **v6.38 — l'appli s'appelle maintenant NodeFlow.** La refonte de l'overlay
+  est **terminée** (lots 1 à 4), le guide est devenu une page, et **les 136
+  composants du catalogue ont tous leur fiche complète**.
+  Branche `claude/architecte-logique-v5-vntfkp`, **261 tests verts** (`npm test`).
 - `logicgates.html` : ~14 400 lignes, un seul `<script>`, aucune dépendance.
-- Copies figées dans `versions/` (v5.1 → v6.37), avec leur tableau dans
+- Copies figées dans `versions/` (v5.1 → v6.38), avec leur tableau dans
   `versions/README.md`.
 - Catalogue : **188 leçons en 36 chapitres** — 63 à table de vérité (dont 8
   boîtes noires), 85 libres, et 30 à **condition de réussite** (chapitres 31 à 34).
 
 ## Ce qui vient d'être fait
+
+### v6.38 — le guide couvre TOUS les composants (136 fiches)
+
+Le guide est **terminé** : plus un seul composant du catalogue sans fiche
+complète. 100 fiches écrites d'un coup, en plus des 36 déjà faites.
+
+**Comment ça a été fait — à refaire pareil la prochaine fois.**
+Quatre sous-agents en parallèle, un par famille (⚡ énergie · 📡 radio ·
+🏭 process & automatisme · le reste). Règles qui ont rendu ça sûr :
+
+- **Les agents n'ouvrent JAMAIS `logicgates.html`.** Ils reçoivent une
+  consigne, deux fiches modèles extraites telles quelles (XOR et DFF), la
+  matière brute de leurs composants, et la liste des identifiants valides.
+  Ils écrivent dans un fichier à part (`scratchpad/fiches/lot-X.js`).
+  C'est la session principale qui recolle. Aucun risque de conflit d'écriture.
+- **Un script de validation avant de recoller** (`scratchpad/valide.js`) :
+  JS valide, identifiants attendus, pas d'apostrophe droite, premier bloc
+  toujours « Comment ça marche », au moins deux applications de 80 caractères,
+  balises autorisées seulement — et surtout **chaque « voir aussi » doit
+  pointer un composant qui existe** (les agents inventent `CMP`, `LATCH`,
+  `BUS`… qui n'existent pas). Les quatre lots sont passés au vert.
+- **Relire le contenu, pas seulement la forme** : un agent avait re-raconté
+  l'anecdote d'Apollo 11 déjà présente dans la fiche NOR. Supprimée à la main.
+
+**Le test T257 se garde tout seul maintenant** : il ne compare plus à une liste
+écrite en dur, il parcourt `GUIDE` et exige une fiche pour chaque composant qui
+y apparaît — **et l'inverse**, aucune fiche orpheline. Ajouter un composant au
+catalogue sans écrire sa fiche fait donc échouer les tests.
+
+Vérifié dans le vrai navigateur : les 136 fiches s'ouvrent, aucune erreur, la
+plus courte fait 213 mots (COMP).
 
 ### v6.37 — poser un montage demande avant d'effacer
 
@@ -81,8 +112,7 @@ blocs, au moins **deux** applications d'au moins 80 caractères, un « Essaie »
 et que chaque « voir aussi » pointe un composant qui existe vraiment. Un
 contenu bâclé fait échouer le test.
 
-**Reste à écrire** : les 21 autres sections. Ordre proposé à l'auteur : les
-entrées, les sorties, mémoire & temps, puis l'atelier ⚡.
+(Fini en v6.38 : voir plus haut, les 136 composants ont leur fiche.)
 
 ### v6.34 — le guide devient une page (étapes 1 et 2)
 
@@ -823,13 +853,15 @@ lot séparé.
 
 ## LES DEUX CHANTIERS SUIVANTS, demandés par l'auteur
 
-### A. Le guide — **étapes 1 et 2 FAITES en v6.34. Reste l'étape 3 : LE CONTENU.**
+### A. Le guide — **TERMINÉ en v6.38** (étapes 1 et 2 en v6.34, le contenu en v6.35 → v6.38).
+Ce qui suit reste ici comme mémoire de ce qui a été demandé et décidé.
 Maquette cliquable : **`maquettes/le-guide-en-pleine-page.html`** — s'y référer
 pour la profondeur et le ton visés (deux fiches y sont écrites en entier, le ET
 et le condensateur).
 
-**Écrit : 28 fiches** (v6.35 les 8 portes, v6.36 les entrées, mémoire & temps
-et les sorties). **Reste 18 sections**, essentiellement l'atelier ⚡ et le process.
+**Écrit : les 136 fiches**, c'est-à-dire tout le catalogue (v6.35 les portes,
+v6.36 les entrées / mémoire & temps / sorties, v6.37 le calcul & données,
+v6.38 tout le reste — ⚡, 📡, le process et l'automatisme).
 
 **Ce qui reste à faire, et c'est le gros morceau : écrire les fiches.**
 La page est prête et sait déjà afficher une fiche riche. Il suffit d'enrichir
