@@ -5,17 +5,59 @@ dans `CLAUDE.md`.
 
 ## Où en est le projet
 
-- **v6.38 — l'appli s'appelle maintenant NodeFlow.** La refonte de l'overlay
+- **v6.39 — l'appli s'appelle maintenant NodeFlow.** La refonte de l'overlay
   est **terminée** (lots 1 à 4), le guide est devenu une page, et **les 136
   composants du catalogue ont tous leur fiche complète**.
-  Branche `claude/architecte-logique-v5-vntfkp`, **261 tests verts** (`npm test`).
+  Branche `claude/architecte-logique-v5-vntfkp`, **263 tests verts** (`npm test`).
 - `logicgates.html` : ~14 400 lignes, un seul `<script>`, aucune dépendance.
-- Copies figées dans `versions/` (v5.1 → v6.38), avec leur tableau dans
+- Copies figées dans `versions/` (v5.1 → v6.39), avec leur tableau dans
   `versions/README.md`.
 - Catalogue : **188 leçons en 36 chapitres** — 63 à table de vérité (dont 8
   boîtes noires), 85 libres, et 30 à **condition de réussite** (chapitres 31 à 34).
 
 ## Ce qui vient d'être fait
+
+### v6.39 — le filigrane passe dessous, le guide se trouve, l'étoile se voit
+
+Trois demandes de l'auteur, livrées ensemble.
+
+**Le filigrane était PAR-DESSUS le plan.** `#marque` était un `position:fixed`
+avec `z-index:1` : les composants posés au même endroit le laissaient
+transparaître, et on lisait mal les deux. Il est maintenant **peint dans le
+canvas**, juste après la grille de points et avant le repère du monde — donc
+avant le moindre composant, qui le recouvre franchement.
+
+Deux pièges à retenir :
+- **une image SVG ne voit PAS la feuille de style de la page.** Les règles
+  `.mq-lettres path{fill:…}` doivent être recopiées dans un `<style>` *à
+  l'intérieur* du SVG, sinon on obtient un rectangle vide. C'est `MQ_STYLE`.
+- **le div `#marque` reste dans la page**, simplement rejeté hors écran
+  (`left:-9999px`). C'est `majMarque()` qui écrit son sous-titre, et c'est de
+  lui que le plan relit ce texte. Le supprimer = page blanche (règle T62).
+
+Le filigrane reste accroché au haut de la fenêtre : il est peint en pixels
+d'écran, pas en coordonnées du monde. Il part aussi dans le PNG exporté, parce
+que `peintMarque()` est à l'intérieur de `drawScene()`.
+
+**Le guide se trouve maintenant sans passer par le menu** : un bouton 📘 dans
+la boîte à outils (`btn-guide-out`, un élément **nouveau** — celui du menu,
+`btn-guide`, reste en place ; un même bouton ne peut pas être à deux endroits,
+puisque `rangerLeHaut()` DÉPLACE les éléments) et un bouton « Guide » dans la
+tête du panneau des objets, à côté de la recherche. Ce dernier reporte la
+recherche en cours : chercher « condens » dans les tuiles puis cliquer Guide
+ouvre le guide déjà filtré sur « condens ».
+
+**L'étoile des favoris se voit partout.** Elle était conditionnée à
+`fav && favPins.includes(t)` — donc visible seulement dans l'onglet des
+favoris, c'est-à-dire là où on le savait déjà. Elle suit maintenant l'épingle
+seule. Elle est passée **à gauche** de la tuile : à droite elle se cognait au
+cadenas des composants verrouillés. Et l'onglet ★ s'appelle **Favoris** et non
+plus « Rapide ».
+
+**Piège du harnais rencontré** : le stub d'élément ne vide pas `children` quand
+on fait `innerHTML = ''`. Un test qui rappelle `buildToolbar()` accumule donc
+les tuiles des appels précédents. Il faut remettre `__el('toolbar').children = []`
+à la main entre deux constructions.
 
 ### v6.38 — le guide couvre TOUS les composants (136 fiches)
 

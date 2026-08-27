@@ -2766,7 +2766,7 @@ T('T58 le guide documente les nouveautés v5 (inspecteur, analyseur, bus…)', (
 T('T60 le guide documente les ateliers, les unités, les seuils et la tuyauterie', () => {
   const html = texteGuide();
   [['Trois ateliers', 'les trois ateliers'],
-   ['L’onglet Rapide', 'l’onglet ★ Rapide qui a remplacé la barre de favoris'],
+   ['L’onglet Favoris', 'l’onglet ★ Favoris qui a remplacé la barre de favoris'],
    ['La gomme', 'la gomme'],
    ['unités réelles', 'les réglages en unité physique'],
    ['% de l’échelle', 'le repli en pourcentage'],
@@ -6391,6 +6391,67 @@ T('T257 les fiches écrites tiennent toutes le même niveau', () => {
   ok(!h.includes('Comment ça marche</div><p>Sortie à 1'),
      'le texte court du résumé ne double pas le bloc détaillé');
   fermerGuide();
+});
+
+T('T259 le guide s’ouvre de partout, et l’étoile des favoris se voit dans tous les onglets', () => {
+  // 1. le guide a un bouton dans la boîte à outils, en plus de celui du menu
+  ok(/id="btn-guide-out"/.test(__HTML), 'un bouton guide existe dans le balisage');
+  ok(OUTILS_ACTIONS.includes('btn-guide-out'), 'et il est rangé dans la boîte à outils');
+  ok(MENU_PLAN.some(([, l]) => l.some(([id]) => id === 'btn-guide')),
+     'celui du menu reste en place');
+
+  // 2. et un bouton dans la tête du panneau des objets
+  favOnglet = false; toolFilter = ''; barreRepliee = false;
+  const rebatir = () => { __el('toolbar').children = []; buildToolbar(); };
+  rebatir();
+  // le harnais ne rend rien : on parcourt l'arbre des éléments construits
+  const tout = el => [el].concat((el.children || []).reduce((a, c) => a.concat(tout(c)), []));
+  const noeuds = () => tout(__el('toolbar'));
+  const html = () => noeuds().map(e => (e.className || '') + ' ' + (e.innerHTML || '')).join(' ');
+
+  ok(noeuds().some(e => e.id === 'tool-guide-btn'),
+     'le panneau des objets porte son propre bouton guide');
+  ok(/\.tool-guide\{/.test(__HTML.replace(/\n\s*/g, '')), 'et il est habillé');
+
+  // 3. l’onglet ★ s’appelle Favoris, pas Rapide
+  ok(/>Favoris</.test(html()), 'l’onglet ★ s’appelle Favoris');
+  ok(!/>Rapide</.test(html()), 'plus de « Rapide »');
+
+  // 4. l’étoile suit l’épingle, y compris dans l’onglet d’un atelier
+  const avant = favPins.slice();
+  favPins = [];
+  setAppMode('elec'); toolbarTab = 0; toolFilter = ''; favOnglet = false;
+  rebatir();
+  const cible = modeTabs()[0].items[0];
+  ok(!/fav-star/.test(html()), 'rien d’épinglé : pas d’étoile');
+  favEpingle(cible);
+  favOnglet = false; setAppMode('elec'); toolbarTab = 0;
+  rebatir();
+  ok(/fav-star/.test(html()),
+     'une fois épinglé, l’étoile se voit dans l’onglet de l’atelier');
+  favPins = avant;
+});
+
+T('T260 le filigrane est peint DANS le plan, derrière les composants', () => {
+  const css = __HTML.replace(/\n\s*/g, '');
+  ok(/#marque\{position:absolute;left:-9999px/.test(css),
+     'le div de la marque ne se pose plus par-dessus le plan');
+  ok(!/#marque\{[^}]*z-index/.test(css), 'et il n’a plus de rang d’empilement');
+  ok(typeof peintMarque === 'function', 'c’est le plan qui la peint');
+  ok(typeof prepareMarque === 'function', 'à partir du SVG rasterisé une fois');
+
+  // le SVG doit emporter ses couleurs : une image SVG ne voit pas la feuille
+  // de style de la page, sinon on obtient un rectangle vide
+  ok(/MQ_STYLE/.test(__HTML) && /mq-lettres path\{fill:/.test(MQ_STYLE),
+     'les couleurs sont recopiées dans le SVG');
+
+  // et surtout : peinte AVANT le passage au repère du monde, donc avant
+  // le moindre composant
+  const src = __HTML.slice(__HTML.indexOf('function drawScene'));
+  const iM = src.indexOf('peintMarque(ctx)');
+  const iW = src.indexOf('// Monde');
+  ok(iM > 0 && iW > 0 && iM < iW,
+     'elle est peinte après la grille et avant les composants');
 });
 
 T('T258 poser un montage demande avant d’effacer', () => {
