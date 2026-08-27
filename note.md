@@ -5,17 +5,79 @@ dans `CLAUDE.md`.
 
 ## Où en est le projet
 
-- **v6.39 — l'appli s'appelle maintenant NodeFlow.** La refonte de l'overlay
+- **v6.40 — l'appli s'appelle maintenant NodeFlow.** La refonte de l'overlay
   est **terminée** (lots 1 à 4), le guide est devenu une page, et **les 136
   composants du catalogue ont tous leur fiche complète**.
-  Branche `claude/architecte-logique-v5-vntfkp`, **263 tests verts** (`npm test`).
+  Branche `claude/architecte-logique-v5-vntfkp`, **264 tests verts** (`npm test`).
 - `logicgates.html` : ~14 400 lignes, un seul `<script>`, aucune dépendance.
-- Copies figées dans `versions/` (v5.1 → v6.39), avec leur tableau dans
+- Copies figées dans `versions/` (v5.1 → v6.40), avec leur tableau dans
   `versions/README.md`.
-- Catalogue : **188 leçons en 36 chapitres** — 63 à table de vérité (dont 8
+- Catalogue : **191 leçons en 37 chapitres** — 63 à table de vérité (dont 8
   boîtes noires), 85 libres, et 30 à **condition de réussite** (chapitres 31 à 34).
 
 ## Ce qui vient d'être fait
+
+### v6.40 — ⚡ lot 1 : le pont en H
+
+Deux composants, un montage, trois leçons — et **aucune ligne touchée au
+solveur**. C'est le point important : tout est passé par les crochets qui
+existaient déjà.
+
+**MOTEUR À COURANT CONTINU (`MOTCC`).** Ce n'est pas une résistance : c'est
+une résistance ET une pile, et c'est lui qui fabrique la pile en tournant.
+Trois crochets suffisent :
+- `avant(c)` pose `c.emf = -ke * c.vit` juste avant le calcul du circuit —
+  le **signe moins** est tout le sujet, la contre-tension s'oppose au courant
+  qui la fabrique ;
+- `branche(c)` rend `{a, b, r, e:c.emf}`, comme la dynamo ;
+- `commit(c)` intègre la mécanique après le calcul, à partir de `c.i`.
+
+Conventions à ne pas perdre : le solveur donne `c.i` = courant de **a vers b**
+(signé) et `c.u` = Ua − Ub. Une vitesse positive = courant de A vers B. Le
+couple est normalisé par le **courant de calage** (`un / rb`), si bien que
+1 = couple de calage et que le régime établi tombe tout seul au bon endroit.
+Il y a un frottement visqueux (`MOT_FROT = .06`) sans lequel la vitesse partirait
+à l'infini, et un **frottement sec au démarrage** : tant que le couple ne
+dépasse pas la charge, il reste calé — immobile et traversé par tout le
+courant de calage. C'est ça, le moteur qu'on grille.
+
+Mesuré dans le navigateur, pile 12 V / induit 2 Ω / charge 20 % : pointe à
+4,4 A, régime établi 2 173 tr/min sous 1,5 A, contre-tension 8,7 V. Calé à
+100 % de charge : 5,36 A, vitesse nulle. Court-circuit de bras : la pile
+tombe à 2 V et débite 50 A.
+
+**INTERRUPTEUR COMMANDÉ (`INTERC`).** L'interrupteur ⚡, mais avec une entrée
+logique `CMD` au lieu du clic. Sa commande est relue dans `avant(c)` et pas
+seulement dans `eval(c)` : sinon le contact aurait toujours **une image de
+retard** sur son ordre.
+
+**Le montage « ⚡ Le pont en H »** (menu 📦) et le **chapitre 37 · Commander un
+moteur** : la pointe de démarrage, les deux sens, le moteur calé.
+
+**Trois pièges rencontrés :**
+1. **Deux sorties ne se raccordent pas entre elles.** Un moteur a une borne
+   d'entrée et une borne de sortie ; pour l'alimenter à l'envers il faut donc
+   une **barre de puissance** de chaque côté. C'est précisément pour cette
+   raison que le pont en H existe, et le test T261 le dit en toutes lettres.
+2. **`spawnGroup` retire les composants d'entrée** (SWITCH, BUTTON, CLOCK…)
+   quand une leçon est chargée : ils sont censés venir de la barre d'entrées
+   de la mission. Un montage de référence de leçon ne peut donc **pas**
+   contenir de SWITCH. D'où le pont de la leçon câblé en INTERRUPTEURS ⚡
+   cliquables, alors que le montage d'exemple, lui, utilise des interrupteurs
+   commandés.
+3. **`joueMontage()` fermait les quatre contacts ensemble** — c'est-à-dire
+   deux courts-circuits de bras. Il sait maintenant reconnaître un pont
+   (un `MOTCC` et au moins quatre `INTERP`) et manœuvre les **diagonales**.
+
+**La limite à connaître pour la suite (lots 3 et 4).** Le solveur fige la
+topologie **une fois par image** : `branche()` n'est appelé qu'au début du
+calcul, et les sous-pas ne font varier que les mémoires et les sources
+dynamiques. Un interrupteur ne peut donc pas s'ouvrir et se fermer *dans*
+une image. Conséquence directe : un hacheur à 20 kHz est hors de portée tel
+quel. Deux sorties possibles — faire découper lentement (quelques centaines
+de hertz, ce qui est d'ailleurs plus lisible), ou ajouter un crochet par
+sous-pas sur le modèle de `poseDiode()`, qui réécrit déjà `br.g` et `br.e` à
+chaque sous-pas. La deuxième voie est la bonne pour l'élévateur/abaisseur.
 
 ### v6.39 — le filigrane passe dessous, le guide se trouve, l'étoile se voit
 

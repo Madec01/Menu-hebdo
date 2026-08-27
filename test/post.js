@@ -4751,7 +4751,8 @@ T('T205 les chapitres ⚡ : à la fin du cours, et dans leur atelier', () => {
   eq(missions.filter(m => /Chapitre 34/.test(m.ch)).length, 4, 'quatre au chapitre 34');
   eq(missions.filter(m => /Chapitre 35/.test(m.ch)).length, 4, 'quatre au chapitre 35');
   eq(missions.filter(m => /Chapitre 36/.test(m.ch)).length, 6, 'six au chapitre 36');
-  eq(lec.length, 40, 'quarante leçons dans l’atelier ⚡ en tout');
+  eq(missions.filter(m => /Chapitre 37/.test(m.ch)).length, 3, 'trois au chapitre 37');
+  eq(lec.length, 43, 'quarante-trois leçons dans l’atelier ⚡ en tout');
   // toutes à la fin du catalogue, et groupées
   const prem = missions.findIndex(m => m.dom === 'phys');
   eq(prem + lec.length, missions.length, 'elles occupent la fin du catalogue');
@@ -4764,8 +4765,8 @@ T('T205 les chapitres ⚡ : à la fin du cours, et dans leur atelier', () => {
   });
   // les chapitres apparaissent dans la carte du cours, l’un après l’autre
   const noms = chapitres().map(c => c.ch || c.nom || c.name || '');
-  ['31','32','33','34','35','36'].forEach((n, i) =>
-    ok(new RegExp('Chapitre ' + n).test(noms[noms.length - 6 + i]),
+  ['31','32','33','34','35','36','37'].forEach((n, i) =>
+    ok(new RegExp('Chapitre ' + n).test(noms[noms.length - 7 + i]),
        'le chapitre ' + n + ' est à sa place dans la carte du cours'));
   // et charger une leçon bascule dans l’atelier ⚡
   setAppMode('elec');
@@ -4806,10 +4807,21 @@ function joueMontage(tours){
      interrupteur qu'on n'ouvre jamais n'apprend rien, et c'est l'ouverture
      qui décharge un condensateur. On rouvre puis on referme, et on laisse
      l'installation dans l'état où on l'a trouvée. */
-  const inters = components.filter(c => c.type === 'INTERP' && c.state);
+  /* Un pont en H ne s'observe pas non plus : il se MANŒUVRE, et surtout PAS
+     les quatre contacts ensemble — ce serait deux courts-circuits de bras.
+     Une diagonale, l'arrêt, puis l'autre diagonale. */
+  const tous = components.filter(c => c.type === 'INTERP');
+  const pont = (components.some(c => c.type === 'MOTCC') && tous.length >= 4) ? tous : [];
+  const inters = pont.length ? [] : components.filter(c => c.type === 'INTERP' && c.state);
   for (let k = 0; k < n; k++){
     const ouvert = k >= Math.floor(n * .4) && k < Math.floor(n * .75);
     inters.forEach(s => { s.state = ouvert ? 0 : 1; });
+    if (pont.length >= 4){
+      const t = k / n;
+      const d1 = t < .4, d2 = t >= .55;
+      pont[0].state = d1 ? 1 : 0; pont[3].state = d1 ? 1 : 0;
+      pont[1].state = d2 ? 1 : 0; pont[2].state = d2 ? 1 : 0;
+    }
     components.filter(c => c.type === 'AIMANT').forEach(a => {
       const b = components.find(c => c.type === 'BOBINE');
       if (!b) return;
@@ -6452,6 +6464,104 @@ T('T260 le filigrane est peint DANS le plan, derrière les composants', () => {
   const iW = src.indexOf('// Monde');
   ok(iM > 0 && iW > 0 && iM < iW,
      'elle est peinte après la grille et avant les composants');
+});
+
+T('T261 le moteur ⚡ : contre-tension, pointe de démarrage, calage et pont en H', () => {
+  const tourne = (n) => { for (let k = 0; k < (n || 40); k++){ __advance(60); sim(); } };
+  board();
+  const p1 = mk('PILE', 0, 0), s1 = mk('INTERP', 300, 0),
+        mo = mk('MOTCC', 600, 0), ms = mk('MASSE', 900, 0);
+  p1.opt.e = 12; p1.opt.ri = .2;
+  mo.opt.un = 12; mo.opt.vn = 3000; mo.opt.rb = 2; mo.opt.ch = 20; mo.opt.inert = .6;
+  link(p1, 0, s1, 0); link(s1, 0, mo, 0); link(mo, 0, ms, 0); link(ms, 0, p1, 0);
+  s1.state = 1; sim();
+
+  // à l'arrêt : pas de contre-tension, donc le courant maximal
+  const iDepart = Math.abs(mo.i);
+  near(mo.emf, 0, 1e-6, 'à l’arrêt, aucune contre-tension');
+  ok(iDepart > 4.5, 'la pointe de démarrage est proche du courant de calage : ' + iDepart.toFixed(2) + ' A');
+
+  tourne(60);
+  ok(mo.vit > 1800, 'il monte en vitesse : ' + Math.round(mo.vit) + ' tr/min');
+  ok(Math.abs(mo.i) < iDepart * .5,
+     'et le courant retombe une fois lancé : ' + Math.abs(mo.i).toFixed(2) + ' A');
+  ok(Math.abs(mo.emf) > 7, 'parce que la contre-tension a monté : ' + Math.abs(mo.emf).toFixed(1) + ' V');
+
+  // charger le moteur le RALENTIT et lui fait prendre PLUS de courant
+  const vLeger = mo.vit, iLeger = Math.abs(mo.i);
+  mo.opt.ch = 60; tourne(60);
+  ok(mo.vit < vLeger, 'chargé, il ralentit');
+  ok(Math.abs(mo.i) > iLeger, 'et il prend davantage de courant — le contraire de l’intuition');
+
+  // calé : immobile, et tout le courant de calage
+  mo.opt.ch = 100; mo.vit = 0; tourne(30);
+  eq(Math.round(mo.vit), 0, 'à 100 % de charge il ne démarre plus');
+  eq(mo.cale, 1, 'et il se signale calé');
+  ok(Math.abs(mo.i) > 4.5, 'en gardant tout le courant : ' + Math.abs(mo.i).toFixed(2) + ' A');
+
+  // le sens du courant fait le sens de rotation
+  board();
+  const p2 = mk('PILE', 0, 0), m2 = mk('MOTCC', 300, 0), g2 = mk('MASSE', 600, 0);
+  p2.opt.e = 12; p2.opt.ri = .2;
+  m2.opt.un = 12; m2.opt.vn = 3000; m2.opt.rb = 2; m2.opt.ch = 20; m2.opt.inert = .6;
+  link(p2, 0, m2, 0); link(m2, 0, g2, 0); link(g2, 0, p2, 0);
+  tourne(60);
+  ok(m2.vit > 1500, 'branché dans un sens, il tourne dans un sens');
+  const vDirect = m2.vit;
+  /* On inverse le moteur dans la boucle : son + reçoit ce qui sortait par son −.
+     Il faut deux barres pour ça — c'est justement parce qu'on ne peut PAS
+     retourner un moteur avec deux fils que le pont en H existe. */
+  board();
+  const p3 = mk('PILE', 0, 0), m3 = mk('MOTCC', 300, 0),
+        rp = mk('RAILP4', 0, 300), rm = mk('RAILP4', 0, 500);
+  p3.opt.e = 12; p3.opt.ri = .2;
+  m3.opt.un = 12; m3.opt.vn = 3000; m3.opt.rb = 2; m3.opt.ch = 20; m3.opt.inert = .6;
+  link(p3, 0, rp, 0);        // le + de la pile arrive sur la barre du haut…
+  link(m3, 0, rp, 1);        // …et le B du moteur aussi : B est donc au +
+  link(rm, 16, m3, 0);       // la barre du bas alimente le A du moteur…
+  link(rm, 17, p3, 0);       // …et repart au − de la pile
+  tourne(60);
+  ok(m3.vit < -1500, 'les deux fils inversés, il tourne à l’envers : ' + Math.round(m3.vit));
+  near(Math.abs(m3.vit), vDirect, 60, 'et à la même vitesse');
+
+  // le pont en H, en vrai : les deux diagonales, la roue libre et le freinage
+  const idx = missions.findIndex(m => m.id === 'm190');
+  loadMission(idx);
+  spawnGroup(missionDemo(missions[idx]), 0, 0, false);
+  sim();
+  const mp = components.find(c => c.type === 'MOTCC');
+  const k4 = components.filter(c => c.type === 'INTERP');
+  eq(k4.length, 4, 'le pont a bien quatre contacts');
+  const pose = (a, b, c2, d) => { k4[0].state = a; k4[1].state = b; k4[2].state = c2; k4[3].state = d; };
+
+  pose(1, 0, 0, 1); tourne(70);
+  ok(mp.vit > 1500, 'diagonale S1+S4 : il tourne dans un sens (' + Math.round(mp.vit) + ')');
+  const lance = mp.vit;
+
+  pose(0, 0, 0, 0); tourne(12);
+  near(mp.i, 0, 1e-3, 'tout ouvert : plus aucun courant');
+  const libre = mp.vit;
+  ok(libre > lance * .5, 'mais il continue sur son élan — la roue libre');
+
+  // on relance, puis on ferme les DEUX contacts du bas : il se freine sur lui-même
+  pose(1, 0, 0, 1); tourne(70);
+  const avantFrein = mp.vit;
+  pose(0, 0, 1, 1); tourne(12);
+  ok(mp.vit < avantFrein * .5,
+     'les deux contacts du bas : il se court-circuite et freine (' +
+     Math.round(avantFrein) + ' → ' + Math.round(mp.vit) + ')');
+
+  pose(0, 0, 0, 0); tourne(60);
+  pose(0, 1, 1, 0); tourne(70);
+  ok(mp.vit < -1500, 'l’autre diagonale : il tourne à l’envers (' + Math.round(mp.vit) + ')');
+
+  // et le court-circuit de bras : les deux du MÊME côté
+  pose(0, 0, 0, 0); tourne(40);
+  const pil = components.find(c => c.type === 'PILE');
+  pose(1, 0, 1, 0); tourne(6);
+  eq(pil.court, 1, 'les deux contacts du même côté : la pile est en court-circuit');
+  pose(0, 0, 0, 0);
+  loadMission(-1);
 });
 
 T('T258 poser un montage demande avant d’effacer', () => {
