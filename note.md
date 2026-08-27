@@ -5,17 +5,48 @@ dans `CLAUDE.md`.
 
 ## Où en est le projet
 
-- **v6.41 — l'appli s'appelle maintenant NodeFlow.** La refonte de l'overlay
+- **v6.42 — l'appli s'appelle maintenant NodeFlow.** La refonte de l'overlay
   est **terminée** (lots 1 à 4), le guide est devenu une page, et **les 136
   composants du catalogue ont tous leur fiche complète**.
-  Branche `claude/architecte-logique-v5-vntfkp`, **265 tests verts** (`npm test`).
+  Branche `claude/architecte-logique-v5-vntfkp`, **266 tests verts** (`npm test`).
 - `logicgates.html` : ~14 400 lignes, un seul `<script>`, aucune dépendance.
-- Copies figées dans `versions/` (v5.1 → v6.41), avec leur tableau dans
+- Copies figées dans `versions/` (v5.1 → v6.42), avec leur tableau dans
   `versions/README.md`.
 - Catalogue : **191 leçons en 37 chapitres** — 63 à table de vérité (dont 8
   boîtes noires), 85 libres, et 30 à **condition de réussite** (chapitres 31 à 34).
 
 ## Ce qui vient d'être fait
+
+### v6.42 — câblage ① et ② : l'écartement arrête de bavarder
+
+**① On n'écarte plus des fils qui ne se croisent jamais.** `spreadRoutes` ne
+retenait d'un segment vertical que son abscisse : deux segments à la même
+colonne mais à 800 px l'un de l'autre étaient traités comme colocataires. On
+retient maintenant AUSSI les deux bouts (`d0`/`d1`), et à l'intérieur d'un
+couloir on refait un second regroupement par **recouvrement réel** (tri par
+début, on ouvre un paquet dès qu'il y a un trou de plus de `ECART_MARGE = 6`).
+
+**② L'écartement vérifie ce qu'il fait.** Avant de décaler un segment, on
+demande à `barreH`/`barreV` si la nouvelle place est dans un boîtier. Si oui,
+on essaie l'autre côté, puis on renonce. Et le sens inverse est vrai aussi :
+si le segment est **déjà** dans un boîtier, on se sert du décalage pour l'en
+sortir (±11, ±22). Un fil droit (`fixe`) ne bouge sous aucun prétexte : c'est
+le point fixe de son couloir.
+
+**Mesuré sur les 295 câbles des montages d'exemple** (script
+`scratchpad/mesure.js`, comparaison v6.41 → v6.42) :
+- points déplacés sans raison : **644 → 461** (−28 %) ;
+- câbles qui traversent un boîtier **dans le tracé brut** : 14 → 14 (inchangé,
+  c'est le chantier ③, pas celui-ci) ;
+- **après** écartement : 12 → 13. La v6.41 en rattrapait deux **par accident** ;
+  la v6.42 n'en crée plus aucun par règle et en libère un. Honnêtement : un
+  câble d'écart sur 295, c'est du bruit, et le vrai gain est les 28 %.
+- coût : `spreadRoutes` passe de 0,376 à 0,559 ms sur un plan de 72 composants
+  et 90 fils. Une image dure 16,7 ms : c'est indolore.
+
+**T263** garde les deux règles, dont la générale : sur tous les montages
+d'exemple, l'écartement ne met **aucun** câble dans un boîtier où il n'était
+pas déjà.
 
 ### v6.41 — la masse en peigne, le tunnel en un clic, et un coude qui se cachait
 

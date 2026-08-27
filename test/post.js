@@ -6652,6 +6652,84 @@ T('T262 la masse est un peigne, et un fil se remplace par un tunnel dans les deu
      'et aucun tunnel n’est posé');
 });
 
+T('T263 l’écartement ne sépare que les câbles qui se voient, et n’en met aucun dans un boîtier', () => {
+  /* Deux paires de composants, à la MÊME abscisse mais très loin l'une de
+     l'autre en hauteur : leurs segments verticaux tombent dans la même
+     colonne sans jamais se croiser. Ils ne doivent pas bouger d'un pixel. */
+  board();
+  const a1 = mk('SWITCH', 0, 0),    b1 = mk('LED', 420, 190);
+  const a2 = mk('SWITCH', 0, 2400), b2 = mk('LED', 420, 2590);
+  link(a1, 0, b1, 0); link(a2, 0, b2, 0);
+  sim();
+  wires.forEach(w => w.route());
+  const colonne = w => {
+    for (let i = 1; i < w._raw.length - 2; i++){
+      const A = w._raw[i], B = w._raw[i+1];
+      if (Math.abs(A.x - B.x) < .5 && Math.abs(A.y - B.y) > 20) return { x:A.x, i };
+    }
+    return null;
+  };
+  const c1 = colonne(wires[0]), c2 = colonne(wires[1]);
+  ok(c1 && c2, 'les deux tracés ont bien un segment vertical');
+  near(c1.x, c2.x, 1, 'et ils tombent dans la même colonne');
+  spreadRoutes();
+  near(wires[0]._rp[c1.i].x, c1.x, .01, 'le premier ne bouge pas…');
+  near(wires[1]._rp[c2.i].x, c2.x, .01, '…et le second non plus : ils ne se voient pas');
+
+  /* Les mêmes, mais côte à côte : là ils se recouvrent vraiment, et ils
+     DOIVENT s'écarter. C'est la règle d'origine, elle reste vraie. */
+  board();
+  const d1 = mk('SWITCH', 0, 0),   e1 = mk('LED', 420, 190);
+  const d2 = mk('SWITCH', 0, 60),  e2 = mk('LED', 420, 250);
+  link(d1, 0, e1, 0); link(d2, 0, e2, 0);
+  sim();
+  wires.forEach(w => w.route());
+  const f1 = colonne(wires[0]), f2 = colonne(wires[1]);
+  ok(f1 && f2, 'les deux ont un segment vertical');
+  spreadRoutes();
+  const x1 = wires[0]._rp[f1.i].x, x2 = wires[1]._rp[f2.i].x;
+  ok(Math.abs(x1 - x2) >= WIRE_ECART - .5,
+     'deux segments qui se recouvrent sont bien séparés (' + Math.round(Math.abs(x1 - x2)) + ' px)');
+
+  /* Et la règle générale : après écartement, aucun câble ne doit se retrouver
+     DANS un boîtier s'il n'y était pas déjà. On la vérifie sur tous les
+     montages d'exemple d'un coup — c'est là que les vrais cas se trouvent. */
+  const traverse = w => {
+    const P = w._rp;
+    for (let k = 1; k < P.length; k++){
+      const A = P[k-1], C = P[k];
+      const dedans = components.some(c => {
+        if (c === w.outPin.comp || c === w.inPin.comp || DECOR.has(c.type)) return false;
+        const x0 = c.x + 3, x1 = c.x + c.bw - 3, y0 = c.y + 3, y1 = c.y + c.bh - 3;
+        if (Math.abs(A.y - C.y) < 1)
+          return A.y > y0 && A.y < y1 && Math.max(A.x, C.x) > x0 && Math.min(A.x, C.x) < x1;
+        if (Math.abs(A.x - C.x) < 1)
+          return A.x > x0 && A.x < x1 && Math.max(A.y, C.y) > y0 && Math.min(A.y, C.y) < y1;
+        return false;
+      });
+      if (dedans) return true;
+    }
+    return false;
+  };
+  let ajoutees = 0, avant = 0, apres = 0;
+  EXAMPLES.forEach((ex, i) => {
+    board(); loadExample(i); sim();
+    wires.forEach(w => w.route());
+    const brut = wires.map(w => w._rp);          // route() a déjà posé _rp = _raw
+    const etait = wires.map((w, n) => { w._rp = w._raw.map(q => ({x:q.x, y:q.y, leg:q.leg}));
+                                        return traverse(w); });
+    spreadRoutes();
+    wires.forEach((w, n) => {
+      if (etait[n]) avant++;
+      if (traverse(w)) apres++;
+      if (!etait[n] && traverse(w)) ajoutees++;
+    });
+  });
+  eq(ajoutees, 0, 'l’écartement ne met AUCUN câble dans un boîtier (' + ajoutees + ' cas)');
+  ok(apres <= avant, 'et il n’en aggrave pas le compte (' + avant + ' avant, ' + apres + ' après)');
+  board();
+});
+
 T('T258 poser un montage demande avant d’effacer', () => {
   loadMission(-1); clearBoard();
   const box = __el('ask-modal');
