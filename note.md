@@ -5,17 +5,52 @@ dans `CLAUDE.md`.
 
 ## Où en est le projet
 
-- **v6.40 — l'appli s'appelle maintenant NodeFlow.** La refonte de l'overlay
+- **v6.41 — l'appli s'appelle maintenant NodeFlow.** La refonte de l'overlay
   est **terminée** (lots 1 à 4), le guide est devenu une page, et **les 136
   composants du catalogue ont tous leur fiche complète**.
-  Branche `claude/architecte-logique-v5-vntfkp`, **264 tests verts** (`npm test`).
+  Branche `claude/architecte-logique-v5-vntfkp`, **265 tests verts** (`npm test`).
 - `logicgates.html` : ~14 400 lignes, un seul `<script>`, aucune dépendance.
-- Copies figées dans `versions/` (v5.1 → v6.40), avec leur tableau dans
+- Copies figées dans `versions/` (v5.1 → v6.41), avec leur tableau dans
   `versions/README.md`.
 - Catalogue : **191 leçons en 37 chapitres** — 63 à table de vérité (dont 8
   boîtes noires), 85 libres, et 30 à **condition de réussite** (chapitres 31 à 34).
 
 ## Ce qui vient d'être fait
+
+### v6.41 — la masse en peigne, le tunnel en un clic, et un coude qui se cachait
+
+**La masse est enfin un rail.** Elle porte de 2 à 8 bornes (réglage `n`, défaut
+4), alignées en peigne comme celles d'une barre de puissance, et toutes ses
+bornes sont le même point. Ses broches sont passées **en haut** du boîtier
+(`pinPos` maison + `pinDir` vers le haut) : le retour vient toujours d'au-dessus.
+Rappel qui n'était pas assez dit : **toutes les masses du plan étaient déjà LE
+MÊME point** (solveur, étape 3b) — on en pose une près de chaque retour au lieu
+de ramener un fil à l'autre bout du schéma.
+
+**Le fil et le tunnel, dans les deux sens.** Clic droit sur un câble →
+« Remplacer par un tunnel » : le fil disparaît, deux repères nommés se posent à
+ses deux bouts, le nom est choisi tout seul (A, B, C…). Clic droit sur un
+tunnel → « Remettre le fil ». On refuse si trois tunnels ou plus portent le même
+nom (là, le point sert de vrai nœud). Le type suit la nature de la borne :
+`TUNP` pour la puissance, `TUNNEL` pour le signal, et un raccord fluide est
+refusé avec une explication.
+Piège : le tunnel **logique** n'a pas de `noeudNom` (il passe par
+`TUN_NOW`/`TUN_PREV`), contrairement au tunnel de puissance. D'où le drapeau
+`tunnel:true` posé sur les deux, seul moyen fiable de les reconnaître.
+
+**Un coude qui se cachait sous le boîtier d'arrivée.** Quand UN SEUL des deux
+bouts sort verticalement (une barre, une masse), `buildRoute` avait deux coudes
+en L possibles et prenait toujours le même — celui dont l'angle tombe parfois
+**dans** le boîtier d'arrivée. Le fil disparaissait alors au bord de la boîte,
+comme s'il s'arrêtait là. Il essaie maintenant les deux et garde celui dont
+l'angle est hors des deux boîtiers.
+**À retenir : `barreH`/`barreV` ne peuvent PAS servir à ça** — elles excluent
+exprès les boîtiers des deux bouts du fil. Il fallait un test de « point dans
+la boîte » à part.
+
+**Repère chiffré** : sur les 295 câbles des montages d'exemple, **12
+traversent encore un boîtier**. C'est le reste du défaut connu, traité par les
+propositions ① ② ③ ci-dessous.
 
 ### v6.40 — ⚡ lot 1 : le pont en H
 
@@ -1028,6 +1063,69 @@ Ce que propose la maquette :
 en quelques heures ; **écrire 104 fiches à cette profondeur est un travail de
 longue haleine**, à faire par lots, section par section. Ne pas laisser croire
 que ça vient avec la mise en page.
+
+### LE CÂBLAGE — étude faite, plan retenu (agent, v6.41)
+
+Une étude a comparé le moteur de tracé de NodeFlow à ce que font les éditeurs de
+nœuds (Blender, Unreal Blueprints, Node-RED, React Flow, GoJS, JointJS) et la
+CAO électronique (KiCad, Altium), plus la bibliothèque de référence **libavoid**
+(Adaptagrams). Résumé de ce qui sert.
+
+**Ce qu'on a appris d'utile :**
+- Les éditeurs de nœuds **ne contournent rien** : Bézier au travers de tout.
+  Leur réponse au désordre est humaine — le point de passage posé à la main.
+  NodeFlow a déjà ça (la poignée ◆, double-clic sur un fil).
+- La CAO **ne trace pas** les masses et les alimentations : elle les **nomme**.
+  C'est le tunnel, et c'est pour ça qu'il fallait le rendre facile (fait en v6.41).
+- libavoid minimise d'abord le **nombre de coudes**, la longueur ensuite. Notre
+  moteur ne compte jamais ses coudes.
+- Son écartement décide d'un **ordre** (pour ne pas créer de croisement neuf),
+  pas seulement d'un décalage.
+- Les **faisceaux** (edge bundling) : à écarter — on ne peut plus suivre un fil,
+  c'est le contraire du but pédagogique.
+- Les **ponts aux croisements** : KiCad, GoJS et JointJS les proposent tous… et
+  tous éteints par défaut. À 6 fils de moyenne, le gain est faible.
+- Le **routage incrémental** : inutile ici (0,089 ms mesurés, cache déjà en place).
+
+**Défauts confirmés dans le code, à corriger dans cet ordre :**
+
+① **`spreadRoutes` écarte des fils qui ne se croisent pas.** Un segment vertical
+   n'est retenu que par son `x` : ses deux bouts sont jetés. Deux segments à la
+   même abscisse mais à 800 px l'un de l'autre sont traités comme colocataires.
+   C'est très probablement la vraie cause du « ça bouge selon les distances ».
+   Quelques heures. Tests à surveiller : T166, T192b.
+
+② **`spreadRoutes` ne revérifie rien après avoir bougé les fils.** Il décale de
+   11, 22, 33 px et s'arrête là : un fil soigneusement contourné peut être
+   poussé DANS un boîtier. Quelques heures. À noter : T225 teste la
+   non-traversée sur `route()`, pas sur le tracé écarté — il ne peut donc pas
+   attraper ce bug. Il faut ajouter un cas.
+
+③ **Les approches verticales ne testent aucun obstacle.** Dans `buildRoute`, dès
+   qu'un bout sort en haut ou en bas, on pose un coude sans jamais appeler
+   `barreH`/`barreV`. Il manque un `bypassX` symétrique de `bypassY`, et une
+   version de `bouchons` qui découpe en bandes verticales. Une journée, et c'est
+   le seul vrai chantier de moteur — à livrer seul.
+
+④ **Les couleurs par rôle**, demandées par l'auteur. Tous les marqueurs existent
+   déjà : `masse:true` sur la masse, `pinInfo(pin)` rend l'unité d'une borne de
+   mesure, `kind` donne le domaine. Manque un `source:true` sur les sources.
+   **Avis retenu : ne PAS toucher aux fils de signal** — le vert « allumé » /
+   gris « éteint » est ce que l'appli a de plus parlant, et le repeindre par
+   rôle brouillerait ce qu'elle enseigne. Le gisement est l'atelier ⚡, où TOUT
+   est violet aujourd'hui : masse, alimentation, mesure, même couleur, même
+   épaisseur. Donner **deux** indices par rôle (teinte + style de trait, comme
+   les classes de réseau de KiCad), jamais la couleur seule.
+
+⑤ **Le bouton 🪄 « Ranger les câbles » est un moteur à part** (`autoRoute`,
+   `insertDetour`) qui ignore les autres fils : deux câbles qui contournent le
+   même boîtier reçoivent le même détour et se superposent. Plusieurs jours.
+   Ne PAS toucher `bypassY` pour ça — elle sert au tracé vivant.
+
+**Déconseillé** : les faisceaux, le routage incrémental, remplacer le moteur par
+libavoid (le fichier est autonome, c'est une valeur du projet), colorer les fils
+de signal par rôle, et le placement automatique des composants (c'est un lot à
+part entière, pas une amélioration du tracé).
 
 ### B. Lâcher un câble dans le vide doit proposer les composants DÉJÀ POSÉS
 **Toujours à faire.**

@@ -5433,7 +5433,9 @@ T('T224 le contournement se faufile au lieu de survoler tout le plan', () => {
   // deux pièces à relier, à la même hauteur, la cible DERRIÈRE : il faut
   // contourner. Un obstacle au-dessus, un autre en dessous — et entre les
   // deux, toute la place voulue.
-  const g = mk('MASSE', 900, 140), pl = mk('PILE', 0, 140);
+  // la masse porte ses bornes en HAUT (c'est un peigne, pas deux bornes) :
+  // on la descend de ENER_Y pour que les deux bornes soient à la même hauteur
+  const g = mk('MASSE', 900, 180), pl = mk('PILE', 0, 140);
   const haut = mk('LAMPE', 450, -60), bas = mk('LAMPE', 450, 380);
   link(g, 0, pl, 0);
   sim();
@@ -6562,6 +6564,92 @@ T('T261 le moteur ⚡ : contre-tension, pointe de démarrage, calage et pont en 
   eq(pil.court, 1, 'les deux contacts du même côté : la pile est en court-circuit');
   pose(0, 0, 0, 0);
   loadMission(-1);
+});
+
+T('T262 la masse est un peigne, et un fil se remplace par un tunnel dans les deux sens', () => {
+  // ---- la masse porte de deux à huit bornes, et toutes sont le MÊME point ----
+  board();
+  const g = mk('MASSE', 0, 0);
+  eq(masseN(g), 4, 'quatre bornes par défaut, plus deux');
+  const l4 = g.w;
+  g.opt.n = 8; REG.MASSE.onOpt(g, 'n');
+  eq(masseN(g), 8, 'on peut monter à huit');
+  ok(g.w > l4, 'et la barre s’allonge avec');
+  // les bornes sont en haut, alignées, écartées d’un pas de vis
+  const y0 = g.inPins[0].y;
+  for (let k = 0; k < 8; k++){
+    near(g.inPins[k].y, y0, .01, 'borne ' + (k+1) + ' sur la même ligne');
+    near(g.inPins[k].x - g.inPins[0].x, k * RAIL_PAS, .01, 'borne ' + (k+1) + ' au bon pas');
+  }
+  ok(REG.MASSE.pinHidden(g, g.inPins[7]) === false, 'à huit, la huitième est visible');
+  g.opt.n = 3; REG.MASSE.onOpt(g, 'n');
+  ok(REG.MASSE.pinHidden(g, g.inPins[5]), 'à trois, la sixième est cachée');
+
+  // deux ampoules sur DEUX vis différentes : c’est bien un seul point
+  board();
+  const p1 = mk('PILE', 0, 0), a1 = mk('LAMPE', 300, 0), a2 = mk('LAMPE', 300, 200),
+        ms = mk('MASSE', 700, 0);
+  p1.opt.e = 6; p1.opt.ri = .05;
+  link(p1, 0, a1, 0); link(p1, 0, a2, 0);
+  link(a1, 0, ms, 0); link(a2, 0, ms, 2);      // deux vis différentes
+  link(ms, 0, p1, 0);
+  sim();
+  ok(a1.p > .3 && a2.p > .3, 'les deux ampoules éclairent par deux vis différentes');
+
+  // ---- un fil devient un tunnel, et redevient un fil ----
+  board();
+  const sw = mk('SWITCH', 0, 0), led = mk('LED', 600, 0);
+  sw.state = 1;
+  link(sw, 0, led, 0);
+  sim();
+  eq(led.inPins[0].state, 1, 'au départ, le fil transmet');
+  eq(wires.length, 1, 'un seul câble');
+
+  filVersTunnel(wires[0]);
+  sim(); sim();
+  const tuns = components.filter(c => c.type === 'TUNNEL');
+  eq(tuns.length, 2, 'deux tunnels sont posés');
+  eq(nomTunnel(tuns[0]), nomTunnel(tuns[1]), 'et ils portent le même nom');
+  ok(!wires.some(w => w.outPin.comp === sw && w.inPin.comp === led),
+     'le long câble a disparu');
+  eq(wires.length, 2, 'remplacé par deux moignons');
+  sim(); sim();
+  eq(led.inPins[0].state, 1, 'et le signal passe toujours — c’est le MÊME point');
+
+  tunnelVersFil(tuns[0]);
+  sim();
+  eq(components.filter(c => c.type === 'TUNNEL').length, 0, 'clic droit : les tunnels s’en vont');
+  eq(wires.length, 1, 'et le fil revient');
+  ok(wires[0].outPin.comp === sw && wires[0].inPin.comp === led, 'entre les deux mêmes bornes');
+  sim();
+  eq(led.inPins[0].state, 1, 'le circuit marche toujours');
+
+  // un fil de PUISSANCE donne un tunnel de puissance, pas un tunnel de signal
+  board();
+  const pp = mk('PILE', 0, 0), ll = mk('LAMPE', 600, 0), mm = mk('MASSE', 1200, 0);
+  pp.opt.e = 6; pp.opt.ri = .05;
+  link(pp, 0, ll, 0); link(ll, 0, mm, 0); link(mm, 0, pp, 0);
+  sim();
+  const avant = ll.p;
+  ok(avant > .3, 'l’ampoule éclaire avant');
+  filVersTunnel(wires.find(w => w.outPin.comp === pp));
+  sim(); sim();
+  eq(components.filter(c => c.type === 'TUNP').length, 2, 'deux tunnels DE PUISSANCE');
+  eq(components.filter(c => c.type === 'TUNNEL').length, 0, 'et aucun tunnel de signal');
+  near(ll.p, avant, avant * .1, 'et l’ampoule éclaire pareil : le point est le même');
+
+  // un raccord fluide n’a pas de tunnel : on refuse au lieu de poser n’importe quoi
+  board();
+  const pu = mk('PUMP', 0, 0), cu = mk('CUVE', 600, 0);
+  const kf = pu.outPins.findIndex(p => p.kind === 'flu');
+  const kc = cu.inPins.findIndex(p => p.kind === 'flu');
+  ok(kf >= 0 && kc >= 0, 'la pompe et la cuve ont bien des ports fluide');
+  link(pu, kf, cu, kc);
+  const nAvant = wires.length;
+  filVersTunnel(wires[wires.length - 1]);
+  eq(wires.length, nAvant, 'le raccord fluide est laissé tel quel');
+  eq(components.filter(c => c.type === 'TUNP' || c.type === 'TUNNEL').length, 0,
+     'et aucun tunnel n’est posé');
 });
 
 T('T258 poser un montage demande avant d’effacer', () => {
