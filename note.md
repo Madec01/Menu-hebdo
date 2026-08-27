@@ -5,17 +5,63 @@ dans `CLAUDE.md`.
 
 ## Où en est le projet
 
-- **v6.33 — l'appli s'appelle maintenant NodeFlow.** La refonte de l'overlay
-  est **terminée** (lots 1 à 4).
+- **v6.34 — l'appli s'appelle maintenant NodeFlow.** La refonte de l'overlay
+  est **terminée** (lots 1 à 4), et le guide est devenu une page.
   Branche `claude/architecte-logique-v5-vntfkp`, **255 tests verts**
-  (`npm test`).
+  (`npm test`, 259 tests).
 - `logicgates.html` : ~14 400 lignes, un seul `<script>`, aucune dépendance.
-- Copies figées dans `versions/` (v5.1 → v6.33), avec leur tableau dans
+- Copies figées dans `versions/` (v5.1 → v6.34), avec leur tableau dans
   `versions/README.md`.
 - Catalogue : **188 leçons en 36 chapitres** — 63 à table de vérité (dont 8
   boîtes noires), 85 libres, et 30 à **condition de réussite** (chapitres 31 à 34).
 
 ## Ce qui vient d'être fait
+
+### v6.34 — le guide devient une page (étapes 1 et 2)
+
+**Ce n'est plus une fenêtre** : `#guide-page` et `#rac-page` sont deux pages
+`position:fixed; inset:0` qui recouvrent le plan. Échap ou ✕ ferment, et on
+retombe où on était.
+
+**Deux niveaux.** La grille d'une section montre des **résumés** (les deux
+premières phrases du texte) ; un clic ouvre la **fiche complète**
+(`ficheHTML()`). C'est ce qui rend possible l'étape 3 : la fiche a de la place.
+
+**Trois chemins vers l'information** : la recherche (`guideCherche()` fouille
+nom + texte + essai + anecdote, pas seulement le nom), les filtres par atelier,
+le sommaire à gauche avec le compte par section.
+
+**Rien n'est écrit deux fois :**
+- `atelierDe(type)` retrouve l'atelier d'un composant **dans `TOOL_TABS`** —
+  pas de seconde liste à tenir à jour.
+- `montagesDe(type)` filtre **`EXAMPLES`** (ligne ~3401) sur les montages qui
+  emploient le composant. Les boutons « poser sur la grille » appellent
+  `loadExample()`, la fonction qui servait déjà à la fenêtre des exemples.
+
+**Les deux liens demandés :**
+- clic droit sur un composant → **« Ouvrir le guide ici »** → `ouvrirGuide(type)`,
+  qui cale aussi le sommaire sur la bonne section ;
+- depuis une fiche → **poser un montage sur la grille**, et le guide se referme.
+
+**Les touches et raccourcis ont leur page** (`RACCOURCIS`, six thèmes,
+~30 gestes), ouverte depuis Menu → Aide, avec sa propre recherche.
+
+**Deux pièges rencontrés :**
+- Sans `background:none`, le navigateur peint son fond gris par défaut sur un
+  `<button>` : le sommaire devenait une pile de cases grises.
+- Le conteneur des raccourcis et ses lignes portaient la **même classe**
+  (`gp-rac`) : les lignes héritaient du `display:grid` du conteneur et se
+  pliaient en deux. Les lignes s'appellent maintenant `gp-ligne`.
+
+**Les tests lisent maintenant la DONNÉE, pas le rendu.** Le guide n'affichant
+plus qu'une section à la fois, T57/T58/T59/T60 passent par `texteGuide()`, qui
+concatène `GUIDE`. C'est plus juste : le contenu ne dépend plus de la mise en
+page. Quatre tests nouveaux (T253 à T256) couvrent la page, les montages, la
+recherche et les raccourcis.
+
+**Le texte du guide a été remis à jour** au passage : il décrivait encore
+l'en-tête, la barre de favoris et le bandeau d'énoncé, tous disparus. Un guide
+qui décrit une interface qui n'existe plus est pire que pas de guide.
 
 ### v6.33 — lot 4 : la gomme (la refonte de l'overlay est terminée)
 
@@ -710,8 +756,22 @@ lot séparé.
 
 ## LES DEUX CHANTIERS SUIVANTS, demandés par l'auteur
 
-### A. Le guide est à refaire — **maquette faite, en attente de validation**
-Maquette cliquable : **`maquettes/le-guide-en-pleine-page.html`**.
+### A. Le guide — **étapes 1 et 2 FAITES en v6.34. Reste l'étape 3 : LE CONTENU.**
+Maquette cliquable : **`maquettes/le-guide-en-pleine-page.html`** — s'y référer
+pour la profondeur et le ton visés (deux fiches y sont écrites en entier, le ET
+et le condensateur).
+
+**Ce qui reste à faire, et c'est le gros morceau : écrire les fiches.**
+La page est prête et sait déjà afficher une fiche riche. Il suffit d'enrichir
+`REG[id].guide` avec les champs facultatifs que `ficheHTML()` sait déjà lire :
+- `court` : la phrase « en deux mots », affichée en tête ;
+- `blocs` : `[[titre, html], …]` pour « comment ça marche », « ce qui surprend
+  au début », etc. (`txt` reste le premier bloc) ;
+- `reel` : `[[titre, texte], …]` — plusieurs applications concrètes, chacune
+  racontée, au lieu de l'unique phrase actuelle ;
+- `ex` et `also` existent déjà.
+Aucun code à écrire : seulement du contenu. **À faire par section**, en montrant
+chaque lot à l'auteur avant de continuer.
 Verdict de l'auteur : « **trop complexe à utiliser et trop étroit** ».
 Aujourd'hui c'est une colonne unique de texte dense dans une fenêtre étroite,
 avec en prime tout le pavé des raccourcis clavier collé à la fin.
@@ -764,6 +824,7 @@ longue haleine**, à faire par lots, section par section. Ne pas laisser croire
 que ça vient avec la mise en page.
 
 ### B. Lâcher un câble dans le vide doit proposer les composants DÉJÀ POSÉS
+**Toujours à faire.**
 Aujourd'hui, quand on tire un câble et qu'on le lâche dans le vide, l'appli
 propose seulement de **créer un nouveau composant** à raccorder. Elle devrait
 d'abord proposer de le **raccorder à un composant déjà présent sur la grille** —

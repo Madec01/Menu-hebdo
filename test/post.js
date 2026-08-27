@@ -2739,13 +2739,17 @@ T('T146 hydraulique : la cuve se vide par gravité et déborde', () => {
 /* ===================== 7. Guide ===================== */
 console.log('— Guide —');
 
+const texteGuide = () => GUIDE.map(sec =>
+  sec.t + ' ' + sec.p + ' ' +
+  sec.items.map(it => it.slice(1, 5).filter(Boolean).join(' ')).join(' ')).join(' ');
+
 T('T57 le guide couvre tous les composants de la barre d’outils', () => {
   buildGuide();
-  const html = __el('guide-body').innerHTML;
-  ok(html.length > 4000, 'guide rendu');
+  ok(GUIDE.length > 5, 'le guide est construit en sections');
+  ok(texteGuide().length > 4000, 'et il a du contenu');
   const covered = new Set();
-  [...html.matchAll(/data-t="([^"]+)"/g)].forEach(m => m[1].split(' ').forEach(t => covered.add(t)));
-  ok(covered.size > 0, 'les entrées du guide déclarent les types couverts (data-t)');
+  GUIDE.forEach(sec => sec.items.forEach(it => (it[5] || [it[0]]).forEach(t => covered.add(t))));
+  ok(covered.size > 0, 'les entrées du guide déclarent les types couverts');
   const expected = TOOL_TABS.reduce((a, t) => a.concat(t.items), []).concat(['CHIP','BLACKBOX']);
   const missing = expected.filter(t => !covered.has(t));
   eq(missing.join(','), '', 'types non documentés : ' + missing.join(', '));
@@ -2753,16 +2757,17 @@ T('T57 le guide couvre tous les composants de la barre d’outils', () => {
 });
 
 T('T58 le guide documente les nouveautés v5 (inspecteur, analyseur, bus…)', () => {
-  const html = __el('guide-body').innerHTML;
+  const html = texteGuide();
   [['double-clic', 'inspecteur'], ['🔬', 'analyseur'], ['ROM', 'ROM'],
    ['bus', 'bus'], ['SONDE|Sonde|sonde', 'sonde'], ['octet', 'octet']]
     .forEach(([re, what]) => ok(new RegExp(re, 'i').test(html), 'le guide parle de ' + what));
 });
 
 T('T60 le guide documente les ateliers, les unités, les seuils et la tuyauterie', () => {
-  const html = __el('guide-body').innerHTML;
+  const html = texteGuide();
   [['Trois ateliers', 'les trois ateliers'],
-   ['Les favoris', 'la barre de favoris'],
+   ['L’onglet Rapide', 'l’onglet ★ Rapide qui a remplacé la barre de favoris'],
+   ['La gomme', 'la gomme'],
    ['unités réelles', 'les réglages en unité physique'],
    ['% de l’échelle', 'le repli en pourcentage'],
    ['seuil haut', 'le seuil haut des capteurs'],
@@ -2786,11 +2791,11 @@ T('T60 le guide documente les ateliers, les unités, les seuils et la tuyauterie
    ['Ctrl+F', 'la recherche sur le plan'],
    ['BRIDÉ', 'le bridage d’un tuyau trop étroit']]
     .forEach(([txt, what]) => ok(html.includes(txt), 'le guide parle de ' + what));
-  ok(/TUYAU/.test(__el('guide-body').innerHTML), 'et présente le tuyau lui-même');
+  ok(/TUYAU/.test(texteGuide()), 'et présente le tuyau lui-même');
 });
 
 T('T59 le guide ne mentionne plus les anciens déblocages de mission', () => {
-  const html = __el('guide-body').innerHTML;
+  const html = texteGuide();
   ok(!/récompense (de la )?mission/i.test(html), 'plus de « récompense mission » (déblocage total en v5)');
   ok(!/pour débloquer/i.test(html), 'plus de mention de déblocage');
 });
@@ -6280,6 +6285,80 @@ T('T252 la signature des tracés voit aussi la taille', () => {
   z.x += 32;
   __advance(16); sim();
   ok(compSig() !== b, 'le déplacer aussi, comme avant');
+});
+
+T('T253 le guide est une page, pas une fenêtre : sommaire, ateliers, deux niveaux', () => {
+  buildGuide();
+  ok(/#guide-page,#rac-page\{position:fixed;inset:0/.test(__HTML.replace(/\n\s*/g, '')),
+     'le guide et les raccourcis recouvrent le plan');
+  // le harnais ne lit pas les classes posées dans le HTML : on vérifie le balisage
+  ok(/<div id="guide-page" class="hidden">/.test(__HTML), 'fermé au démarrage');
+
+  ouvrirGuide();
+  ok(!__el('guide-page').classList.contains('hidden'), 'le menu l’ouvre');
+  ok(/gp-at/.test(__el('guide-ats').innerHTML), 'les ateliers sont là');
+  ok(/data-sec="/.test(__el('guide-som').innerHTML), 'le sommaire aussi');
+  // la première section est le texte d'introduction : les fiches viennent ensuite
+  guideSection = GUIDE.findIndex(sec => sec.items.length);
+  peindreGuide();
+  ok(/gp-fiche/.test(__el('guide-body').innerHTML), 'et la grille de résumés');
+
+  // deuxième niveau : la fiche complète
+  ouvrirGuide('XOR');
+  eq(guideFiche, 'XOR', 'un clic droit ouvre la fiche du composant');
+  const f = __el('guide-body').innerHTML;
+  ok(/gp-detail/.test(f), 'la fiche complète s’affiche');
+  ok(/gp-retour/.test(f), 'avec le retour au sommaire');
+  ok(f.includes('Comment ça marche'), 'et ses blocs');
+
+  // la section trouvée est bien celle qui contient le composant
+  ok(GUIDE[guideSection].items.some(it => it[0] === 'XOR'),
+     'le sommaire se cale sur la bonne section');
+
+  fermerGuide();
+  ok(__el('guide-page').classList.contains('hidden'), 'Échap ou ✕ le referme');
+});
+
+T('T254 le guide propose les montages qui emploient le composant', () => {
+  // la liste des montages n’est pas écrite à la main : elle sort des exemples
+  const m = montagesDe('NOT');
+  ok(m.length >= 3, 'le NON apparaît dans plusieurs montages (' + m.length + ')');
+  m.forEach(([i, ex]) => ok(ex.data.comps.some(c => c.t === 'NOT'),
+    'chaque montage proposé emploie vraiment le composant'));
+  // un composant absent des exemples n’en propose aucun, sans casser
+  const vide = montagesDe('MORSE');
+  eq(vide.length, 0, 'et rien n’est inventé pour les autres');
+
+  ouvrirGuide('NOT');
+  ok(/data-montage="/.test(__el('guide-body').innerHTML), 'la fiche affiche les boutons');
+  fermerGuide();
+});
+
+T('T255 la recherche du guide fouille les explications, pas seulement les noms', () => {
+  ouvrirGuide();
+  const parNom = guideCherche('bascule');
+  ok(parNom.length > 0, 'elle trouve par le nom');
+  // « universelle » n’est le nom d’aucun composant : il est dans le texte du NAND
+  const parTexte = guideCherche('universelle');
+  ok(parTexte.length > 0, 'et par le texte');
+  ok(parTexte.some(([, it]) => it[0] === 'NAND'), 'le NON-ET sort sur « universelle »');
+  eq(guideCherche('zzzzz').length, 0, 'et ne trouve rien quand il n’y a rien');
+  fermerGuide();
+});
+
+T('T256 les raccourcis ont leur page, et elle se filtre', () => {
+  ok(RACCOURCIS.length >= 5, 'les gestes sont rangés par thème');
+  const tous = RACCOURCIS.reduce((a, g) => a + g[1].length, 0);
+  ok(tous >= 25, tous + ' gestes documentés');
+  ouvrirRaccourcis();
+  ok(!__el('rac-page').classList.contains('hidden'), 'la page s’ouvre');
+  peindreRaccourcis('gomme');
+  const n = (__el('rac-body').innerHTML.match(/gp-ligne/g) || []).length;
+  eq(n, 1, 'chercher « gomme » ne laisse que le geste de la gomme');
+  peindreRaccourcis('');
+  ok((__el('rac-body').innerHTML.match(/gp-ligne/g) || []).length === tous,
+     'et vider la recherche les rend tous');
+  fermerRaccourcis();
 });
 
 /* ===================== bilan ===================== */
