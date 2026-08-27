@@ -136,6 +136,46 @@ kbd{font-family:var(--mono);font-size:.95cqw;color:#cfdcf0;background:rgba(255,2
   padding:.15cqw .55cqw;white-space:nowrap}
 .rac .d{font-size:1.05cqw;color:#a9bbd6;line-height:1.4}
 
+/* --- la fiche détaillée : le deuxième niveau du guide --- */
+.detail{max-width:64cqw}
+.retour{display:flex;align-items:center;gap:.6cqw;font-family:var(--mono);font-size:1cqw;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:1.2cqw}
+.retour:hover{color:var(--at)}
+.dh{display:flex;align-items:center;gap:1.2cqw;margin-bottom:1.4cqw}
+.dh .sym{width:5cqw;height:4.4cqw;border-radius:1cqw;display:flex;align-items:center;
+  justify-content:center;font-size:2.6cqw;color:var(--c);flex:none;
+  background:color-mix(in srgb,var(--c) 14%,transparent);
+  border:1px solid color-mix(in srgb,var(--c) 34%,transparent)}
+.dh h4{margin:0;font-size:2.1cqw;font-weight:700;letter-spacing:-.01em}
+.dh .ss{font-family:var(--mono);font-size:.95cqw;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--dim2)}
+.d2m{font-size:1.35cqw;line-height:1.55;color:#dbe6f5;padding-left:1cqw;
+  border-left:2px solid var(--c);margin-bottom:1.6cqw}
+.dbloc{margin-bottom:1.5cqw}
+.dbloc .cap{font-family:var(--mono);font-size:.92cqw;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--at);margin-bottom:.6cqw}
+.dbloc p{margin:0 0 .8cqw;font-size:1.13cqw;line-height:1.62;color:#b0c1da;max-width:none}
+.dbloc p:last-child{margin-bottom:0}
+.dbloc b{color:#fff}
+.reel{display:grid;gap:.7cqw;grid-template-columns:repeat(auto-fit,minmax(19cqw,1fr))}
+.reel div{border:1px solid rgba(255,194,61,.22);background:rgba(255,194,61,.05);
+  border-radius:.8cqw;padding:.85cqw 1cqw;font-size:1.05cqw;line-height:1.5;color:#cdbb8e}
+.reel b{color:var(--amber);display:block;margin-bottom:.2cqw}
+.essai{border:1px solid rgba(61,255,158,.28);background:rgba(61,255,158,.06);
+  border-radius:.8cqw;padding:.9cqw 1.1cqw;font-size:1.08cqw;line-height:1.5;color:#a5e8c6}
+.essai b{color:var(--green)}
+.montages{display:flex;flex-wrap:wrap;gap:.6cqw}
+.montages button{display:flex;align-items:center;gap:.6cqw;padding:.7cqw 1.1cqw;
+  border-radius:.8cqw;border:1px solid var(--border2);background:rgba(255,255,255,.04);
+  font-size:1.08cqw;color:#d5e0f2;transition:.15s}
+.montages button:hover{border-color:var(--at);background:color-mix(in srgb,var(--at) 10%,transparent)}
+.montages .go{font-family:var(--mono);font-size:.9cqw;color:var(--at)}
+.liens{display:flex;flex-wrap:wrap;gap:.5cqw}
+.liens button{padding:.45cqw .9cqw;border-radius:2cqw;border:1px solid var(--border);
+  font-family:var(--mono);font-size:.98cqw;color:#a9bbd6;transition:.15s}
+.liens button:hover{color:#fff;border-color:var(--at)}
+.vide{font-size:1.1cqw;color:var(--dim);font-style:italic}
+
 .tag{position:absolute;font-family:var(--mono);font-size:1cqw;letter-spacing:.04em;
   color:var(--amber);background:rgba(255,194,61,.12);border:1px solid rgba(255,194,61,.34);
   padding:.25cqw .7cqw;border-radius:.6cqw;pointer-events:none;white-space:nowrap}
@@ -313,7 +353,7 @@ const SECTIONS = [
        ['1','Vrai · 1','#ffc23d','Une source qui vaut toujours 1. Utile pour forcer une entrée.',null,null]] },
   { id:'portes', nom:'Les portes', ico:'&', at:['elec'], n:11,
     p:'Une porte lit ses entrées et applique sa règle, en permanence, instantanément. Toute l’informatique repose sur ces sept règles.',
-    f:[['&','ET','#ffc23d','La sortie vaut 1 seulement si TOUTES les entrées valent 1. C’est la double sécurité.','Une mise à feu à deux clés : il faut les deux, en même temps.',null],
+    f:[['&','ET','#ffc23d','La sortie vaut 1 seulement si TOUTES les entrées valent 1. C’est la double sécurité.','Une mise à feu à deux clés : il faut les deux, en même temps.',null,'ET'],
        ['≥1','OU','#ffc23d','La sortie vaut 1 dès qu’AU MOINS UNE entrée vaut 1.',null,'C’est l’alarme d’une maison : n’importe quelle fenêtre suffit.'],
        ['▷','NON','#ffc23d','Elle inverse : 0 devient 1, 1 devient 0. La plus simple, et pourtant indispensable.',null,null],
        ['⊕','XOR','#ff5c69','La sortie vaut 1 si les entrées sont DIFFÉRENTES. C’est le « ou bien ».','Le va-et-vient d’un couloir : deux interrupteurs, une lampe.','Deux interrupteurs d’escalier, c’est exactement un XOR.'],
@@ -336,7 +376,7 @@ const SECTIONS = [
     p:'Le courant, la tension, la résistance : ici les bornes sont hexagonales et le circuit est une boucle fermée.',
     f:[['⎓','Pile','#b18cff','Elle pousse le courant. Sa résistance interne explique pourquoi sa tension baisse quand on tire dessus.','Court-circuite-la et regarde le courant s’envoler : c’est pour ça qu’un fusible existe.',null],
        ['Ω','Résistance','#b18cff','Elle freine le courant. U = R × I, et c’est tout.',null,'Les anneaux de couleur ne sont pas décoratifs : ils donnent la valeur.'],
-       ['⊣⊢','Condensateur','#b18cff','Un réservoir de charge : il se remplit en courbe, garde sa tension, et se vide dans une ampoule qui s’éteint en fondu.','En série sur de l’alternatif : ça passe. En continu : ça bloque.',null]] },
+       ['⊣⊢','Condensateur','#b18cff','Un réservoir de charge : il se remplit en courbe, garde sa tension, et se vide dans une ampoule qui s’éteint en fondu.','En série sur de l’alternatif : ça passe. En continu : ça bloque.',null,'CONDO']] },
   { id:'alternatif', nom:'⚡ L’alternatif', ico:'∿', at:['phys'], n:6,
     p:'Ce qui a de la mémoire, et ce qui trie. Une tension qui monte, redescend, passe par zéro et repart en négatif.',
     f:[['∿','Générateur alternatif','#b18cff','Sa tension change de sens en permanence. C’est ce que fait toute prise de courant.','Au-delà de quelques hertz l’œil ne suit plus : prends le ralenti ×1 dans les outils.',null],
@@ -388,7 +428,51 @@ const RAC = [
   ]]
 ];
 
-let atCur = 'tout', secCur = 'outils';
+/* Deux fiches écrites à la profondeur visée, pour juger sur pièce :
+   une simple (le ET) et une riche (le condensateur). */
+const DETAIL = {
+'ET':{ sym:'&', nom:'Porte ET', c:'#ffc23d', ss:'⚡ Électronique · les portes',
+  deux:'Sa sortie ne vaut 1 que si <b>toutes</b> ses entrées valent 1. C’est la porte qui exige que plusieurs conditions soient réunies <b>en même temps</b>.',
+  bloc:[
+    ['Comment ça marche',
+     '<p>La porte lit ses entrées <b>en permanence</b> et applique sa règle instantanément. Il n’y a pas de calcul en plusieurs temps, pas d’ordre : à chaque instant, la sortie est le résultat de ce qui entre. Deux entrées à 1 donnent 1 ; dès qu’une seule retombe à 0, la sortie retombe à 0.</p>' +
+     '<p>Une façon de la retenir : le ET se comporte comme <b>deux interrupteurs en série</b>. Le courant doit traverser le premier <i>puis</i> le second ; il suffit que l’un soit ouvert pour que rien ne passe. Tu peux vérifier ça en trois composants dans l’atelier ⚡.</p>' +
+     '<p>Et une conséquence qui sert tout le temps : une entrée du ET forcée à 0 <b>bloque</b> la porte, une entrée forcée à 1 la rend <b>transparente</b>. C’est comme ça qu’on fabrique un interrupteur commandé — une « porte » au sens propre, qu’on ouvre et qu’on ferme pour laisser passer un signal.</p>'],
+    ['Ce qui surprend au début',
+     '<p>Le ET à trois entrées n’est pas un composant à part : c’est deux ET en cascade. La règle « tout le monde à 1 » ne dépend pas du nombre d’entrées, et on peut donc en enchaîner autant qu’on veut.</p>' +
+     '<p>Attention en revanche à une <b>entrée laissée en l’air</b> : elle ne vaut pas 1 par défaut. Le circuit se comporte alors comme si elle valait 0, et la porte reste éteinte quoi qu’on fasse — c’est la panne la plus fréquente des premières leçons.</p>']],
+  reel:[
+    ['La mise à feu à deux clés','Sur un lanceur nucléaire, deux officiers tournent leur clé simultanément. Deux contacts, une porte ET : une seule clé ne fait rien. Le principe s’appelle la règle des deux hommes.'],
+    ['La presse industrielle','Elle ne descend que si les <b>deux</b> boutons sont pressés — un dans chaque main. La porte ET garantit que les mains de l’opérateur ne sont pas sous l’outil.'],
+    ['Le micro-ondes','Il ne chauffe que si la porte est fermée ET que le minuteur tourne. Le contact de porte est une entrée du ET : l’ouvrir coupe tout, sans passer par le programme.']],
+  essai:'Pose deux <b>interrupteurs</b> et une <b>ampoule</b>, relie-les par un ET. Allume-en un seul : rien. Allume les deux : la lampe s’allume. Puis remplace le ET par un OU et refais le geste — c’est la meilleure façon de sentir la différence.',
+  montages:['La double sécurité','Le multiplexeur 2→1','L’additionneur 1 bit'],
+  lecons:['Chap. 1 · leçon 2 — La double sécurité','Chap. 3 · leçon 4 — Tout avec des NON-ET'],
+  aussi:['OU','NON','NON-ET','XOR'] },
+
+'CONDO':{ sym:'⊣⊢', nom:'Condensateur', c:'#b18cff', ss:'⚡ Énergie & ondes · l’alternatif',
+  deux:'Un <b>réservoir de charge électrique</b>. Il se remplit progressivement, garde sa tension quand on le débranche, et se vide quand on lui ouvre un chemin. C’est le premier composant de l’atelier qui a une <b>mémoire</b>.',
+  bloc:[
+    ['Comment ça marche',
+     '<p>Deux plaques métalliques face à face, séparées par un isolant. Le courant ne traverse jamais cet isolant — et pourtant il « passe » : les charges s’accumulent d’un côté et se retirent de l’autre. Tant que ça bouge, il y a du courant dans les fils ; quand c’est plein, tout s’arrête.</p>' +
+     '<p>Le remplissage n’est pas linéaire. Il est rapide au début, puis de plus en plus lent, parce que plus le condensateur est chargé, plus il s’oppose à ce qui arrive. C’est la fameuse courbe en exponentielle, et sa vitesse tient en un produit : <b>τ = R × C</b>. Une résistance de 1 kΩ avec un condensateur de 1 mF donne une seconde. Multiplie la résistance par dix, le remplissage dure dix fois plus.</p>' +
+     '<p>Débranche-le : il <b>garde</b> sa tension. Relie-le à une ampoule : il se vide dedans, et la lampe s’éteint en fondu au lieu de claquer. C’est exactement ce que tu vois dans l’atelier quand tu coupes l’alimentation d’un montage RC.</p>'],
+    ['Ce qu’il fait à l’alternatif',
+     '<p>Voilà le tour de force : mets un condensateur <b>en série</b> sur du continu, rien ne passe — il se remplit une fois et c’est fini. Mets-le en série sur de l’<b>alternatif</b>, et le courant circule sans arrêt : la tension change de sens en permanence, donc il se remplit et se vide sans jamais s’arrêter.</p>' +
+     '<p>La même pièce laisse donc passer l’un et bloque l’autre. Un condensateur ne laisse passer que ce qui <b>change</b>. Et plus ça change vite — plus la fréquence est haute — plus il laisse passer. C’est la brique de tous les filtres.</p>' +
+     '<p>Associe-le à une <b>bobine</b>, qui fait exactement l’inverse, et le couple ne laisse passer qu’<b>une seule fréquence</b> : c’est le circuit accordé, le bouton d’une radio.</p>']],
+  reel:[
+    ['Le flash d’un appareil photo','La pile ne peut pas fournir d’un coup l’énergie du flash. Elle charge lentement un gros condensateur pendant deux secondes — le petit sifflement qu’on entend — puis celui-ci se vide d’un seul coup dans le tube.'],
+    ['Le démarrage d’un moteur','Un moteur monophasé ne sait pas dans quel sens partir. Un condensateur décale le courant d’un de ses enroulements et lui donne le coup de pouce. C’est le gros cylindre noir sur les compresseurs et les climatiseurs.'],
+    ['L’alimentation de ton ordinateur','Après le redressement, la tension est une suite de bosses. Un condensateur les lisse en remplissant les creux. Sans lui, l’électronique verrait un courant qui s’effondre cent fois par seconde.'],
+    ['Le clavier tactile de ton téléphone','Ton doigt forme une des deux plaques. Approcher la main change la capacité, et le circuit le détecte. Pas de contact mécanique, donc rien à user.']],
+  essai:'Monte une <b>pile</b>, une <b>résistance</b> et un <b>condensateur</b> en série, avec une <b>ampoule</b> en parallèle sur le condensateur. Ferme l’interrupteur : la lampe monte en fondu. Ouvre-le : elle descend en fondu. Puis change la résistance et regarde la durée changer — tu viens de manipuler τ = R × C.',
+  montages:['Charge et décharge RC','Le redresseur double alternance','Le circuit accordé LC'],
+  lecons:['Chap. 33 · leçon 3 — Ce qui se remplit','Chap. 35 · leçon 1 — Choisir sa station'],
+  aussi:['BOBINE','RESIST','ACCORD','DIODE'] }
+};
+
+let atCur = 'tout', secCur = 'outils', fiche = null;
 
 function visibles(){
   return SECTIONS.filter(s => atCur === 'tout' || s.at.includes(atCur));
@@ -403,11 +487,12 @@ function peindre(){
     '<button data-sec="' + s.id + '" aria-current="' + (s.id === secCur) + '">' +
     '<span>' + s.nom + '</span><span class="b">' + s.n + '</span></button>').join('');
 
+  if (fiche){ peindreDetail(); return; }
   const s = vis.find(x => x.id === secCur);
   $('#m-fiches').innerHTML = s ? (
     '<div class="sec-t">' + s.nom + '</div><p class="sec-p">' + s.p + '</p><div class="grille">' +
-    s.f.map(([sym, nom, c, t, ex, re]) =>
-      '<div class="fiche" style="--c:' + c + '"><div class="tete">' +
+    s.f.map(([sym, nom, c, t, ex, re, id]) =>
+      '<div class="fiche" data-id="' + (id || '?') + '" style="--c:' + c + '"><div class="tete">' +
       '<span class="sym">' + sym + '</span><h4>' + nom + '</h4></div>' +
       '<p class="t">' + t + '</p>' +
       (ex ? '<div class="ex">💡 <b>Essaie :</b> ' + ex + '</div>' : '') +
@@ -418,13 +503,47 @@ function peindre(){
     b.setAttribute('aria-selected', b.dataset.at === atCur));
 }
 
+function peindreDetail(){
+  const d = DETAIL[fiche];
+  if (!d){
+    $('#m-fiches').innerHTML = '<button class="retour" data-retour>‹ Retour au sommaire</button>' +
+      '<p class="vide">Fiche à écrire — la maquette n’en détaille que deux, pour juger de la profondeur.</p>';
+    return;
+  }
+  $('#m-fiches').innerHTML =
+    '<div class="detail" style="--c:' + d.c + '">' +
+    '<button class="retour" data-retour>‹ Retour au sommaire</button>' +
+    '<div class="dh"><span class="sym">' + d.sym + '</span>' +
+    '<div><h4>' + d.nom + '</h4><div class="ss">' + d.ss + '</div></div></div>' +
+    '<div class="d2m">' + d.deux + '</div>' +
+    d.bloc.map(([t, p]) => '<div class="dbloc"><div class="cap">' + t + '</div>' + p + '</div>').join('') +
+    '<div class="dbloc"><div class="cap">Dans la vraie vie</div><div class="reel">' +
+      d.reel.map(([t, p]) => '<div><b>' + t + '</b>' + p + '</div>').join('') + '</div></div>' +
+    '<div class="dbloc"><div class="cap">Essaie</div>' +
+      '<div class="essai"><b>💡</b> ' + d.essai + '</div></div>' +
+    '<div class="dbloc"><div class="cap">Les montages où on le trouve</div><div class="montages">' +
+      d.montages.map(m => '<button>' + m + ' <span class="go">poser sur la grille ›</span></button>').join('') +
+      '</div></div>' +
+    '<div class="dbloc"><div class="cap">Les leçons qui en parlent</div><div class="montages">' +
+      d.lecons.map(m => '<button>' + m + ' <span class="go">ouvrir ›</span></button>').join('') +
+      '</div></div>' +
+    '<div class="dbloc"><div class="cap">Voir aussi</div><div class="liens">' +
+      d.aussi.map(a => '<button>' + a + '</button>').join('') + '</div></div>' +
+    '</div>';
+}
+
 $('#m-ats').addEventListener('click', e => {
   const b = e.target.closest('.at'); if (!b) return;
   atCur = b.dataset.at; peindre();
 });
 $('#m-som').addEventListener('click', e => {
   const b = e.target.closest('button[data-sec]'); if (!b) return;
-  secCur = b.dataset.sec; peindre();
+  secCur = b.dataset.sec; fiche = null; peindre();
+});
+$('#m-fiches').addEventListener('click', e => {
+  if (e.target.closest('[data-retour]')){ fiche = null; peindre(); return; }
+  const f = e.target.closest('.fiche');
+  if (f){ fiche = f.dataset.id || '?'; peindre(); }
 });
 
 $('#m-rac').innerHTML = RAC.map(([t, l]) =>

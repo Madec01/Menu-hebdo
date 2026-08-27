@@ -738,15 +738,55 @@ Ce que propose la maquette :
 - **les touches ont leur propre page**, rangées par geste (se déplacer,
   sélectionner, câbler, modifier, effacer, affichage).
 
-Proposition en plus, à valider : **clic droit sur un composant du plan →
-« Ouvrir le guide ici »**, qui ouvre le guide sur sa fiche. C'est ce qui fait
-passer le guide de « document qu'on lit une fois » à « chose qu'on consulte ».
+**VALIDÉ par l'auteur**, avec trois ajouts :
+
+1. **Les explications doivent être BEAUCOUP plus complètes** — « aussi
+   pédagogique que la partie schéma et leçon », avec les applications dans le
+   monde réel. C'est le gros du travail : ce n'est pas de la mise en page, c'est
+   de l'écriture. D'où un **deuxième niveau** dans le guide : la grille de
+   la section montre des résumés, un clic ouvre la **fiche complète**.
+   Gabarit d'une fiche complète (deux exemples écrits dans la maquette, le ET et
+   le condensateur — s'y référer pour la profondeur et le ton) :
+   *en deux mots* · *comment ça marche* (2-3 paragraphes) · *ce qui surprend au
+   début* ou *ce que ça fait à l'alternatif* · **dans la vraie vie** (2 à 4
+   applications concrètes, chacune racontée) · *essaie* · **les montages où on
+   le trouve** · *les leçons qui en parlent* · *voir aussi*.
+2. **Clic droit sur un composant du plan → « Ouvrir le guide ici »** : validé.
+3. **Et l'inverse** : depuis une fiche du guide, proposer des **montages à poser
+   directement sur la grille**. Faisable sans rien inventer — `EXAMPLES`
+   (ligne ~3401) contient déjà des montages complets sous forme
+   `{comps, wires}` ; il suffit de filtrer ceux qui emploient le composant
+   regardé.
+
+**Sur la taille du chantier, à dire franchement à l'auteur** : la page se livre
+en quelques heures ; **écrire 104 fiches à cette profondeur est un travail de
+longue haleine**, à faire par lots, section par section. Ne pas laisser croire
+que ça vient avec la mise en page.
 
 ### B. Lâcher un câble dans le vide doit proposer les composants DÉJÀ POSÉS
 Aujourd'hui, quand on tire un câble et qu'on le lâche dans le vide, l'appli
 propose seulement de **créer un nouveau composant** à raccorder. Elle devrait
 d'abord proposer de le **raccorder à un composant déjà présent sur la grille** —
 c'est le cas le plus fréquent, et c'est celui qu'elle n'offre pas.
+
+## ⚡ LA SUITE DU CATALOGUE ÉLECTRIQUE — demandé pour plus tard
+
+Mot de l'auteur : « je voudrais intégrer des circuits électriques type **pont en
+H**, **filtres**, **élévateur de tension**, **abaisseur**, **transformateur**,
+la totale, je veux que ce soit complet ».
+
+Ce que ça suppose, dans l'ordre de difficulté croissante :
+- **Transformateur** : deux bobines couplées. Le solveur nodal actuel ne connaît
+  pas le couplage mutuel — c'est le vrai morceau.
+- **Filtres** (passe-bas, passe-haut, passe-bande) : RC et RLC existent déjà
+  comme briques ; il manque surtout la **lecture** (courbe de réponse) et les
+  leçons.
+- **Pont en H** : quatre interrupteurs commandés autour d'un moteur. Faisable
+  avec l'existant ; demande un moteur ⚡ à deux sens.
+- **Élévateur / abaisseur (hacheurs)** : bobine + diode + interrupteur rapide.
+  Demande des pas de temps courts et une commande MLI — le moteur les a déjà.
+
+À chiffrer sérieusement avant de s'y engager.
 
 ## Ce qui reste
 
