@@ -5,17 +5,34 @@ dans `CLAUDE.md`.
 
 ## Où en est le projet
 
-- **v6.36 — l'appli s'appelle maintenant NodeFlow.** La refonte de l'overlay
+- **v6.37 — l'appli s'appelle maintenant NodeFlow.** La refonte de l'overlay
   est **terminée** (lots 1 à 4), et le guide est devenu une page.
   Branche `claude/architecte-logique-v5-vntfkp`, **255 tests verts**
-  (`npm test`, 260 tests).
+  (`npm test`, 261 tests).
 - `logicgates.html` : ~14 400 lignes, un seul `<script>`, aucune dépendance.
-- Copies figées dans `versions/` (v5.1 → v6.36), avec leur tableau dans
+- Copies figées dans `versions/` (v5.1 → v6.37), avec leur tableau dans
   `versions/README.md`.
 - Catalogue : **188 leçons en 36 chapitres** — 63 à table de vérité (dont 8
   boîtes noires), 85 libres, et 30 à **condition de réussite** (chapitres 31 à 34).
 
 ## Ce qui vient d'être fait
+
+### v6.37 — poser un montage demande avant d'effacer
+
+Un montage chargé depuis le guide ou depuis les exemples s'ajoutait au plan et
+atterrissait souvent **par-dessus** le circuit en cours. `poserMontage(i)`
+remplace les appels directs à `loadExample(i)` :
+- **plan vide** → on pose, sans question (sinon c'est du bruit) ;
+- **plan occupé** → trois choix : *Ajouter au plan*, *Remplacer tout*,
+  *Annuler*. Le remplacement passe par l'historique (`undoStack = [avant,
+  après]`, comme « Tout effacer »), donc Ctrl+Z ramène tout.
+
+`demander(titre, texte, choix)` est une petite fenêtre de question réutilisable
+(`#ask-modal`) : un titre, un texte, et autant de boutons qu'on veut, chacun
+avec sa classe et sa fonction. À réemployer partout où l'on va détruire.
+
+**Décision de l'auteur** : il ne voulait *que* la question — pas le placement
+automatique à côté du circuit existant que j'avais proposé en plus.
 
 ### v6.36 — étape 3, suite : entrées, mémoire & temps, sorties
 

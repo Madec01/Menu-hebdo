@@ -6391,6 +6391,42 @@ T('T257 les fiches écrites tiennent toutes le même niveau', () => {
   fermerGuide();
 });
 
+T('T258 poser un montage demande avant d’effacer', () => {
+  loadMission(-1); clearBoard();
+  const box = __el('ask-modal');
+
+  // plan vide : aucune question, on pose directement
+  poserMontage(0);
+  ok(!box.classList.contains('show'), 'sur un plan vide, pas de question');
+  const n1 = components.length;
+  ok(n1 > 0, 'et le montage est posé');
+
+  // plan occupé : la question apparaît, avec ses trois issues
+  poserMontage(1);
+  ok(box.classList.contains('show'), 'sur un plan occupé, la question s’affiche');
+  const b = [...__el('ask-actions').children];
+  eq(b.length, 3, 'trois choix : ajouter, remplacer, annuler');
+
+  // « Annuler » ne touche à rien
+  b[2].click();
+  eq(components.length, n1, 'annuler ne change rien');
+
+  // « Ajouter » cumule
+  poserMontage(1);
+  [...__el('ask-actions').children][0].click();
+  ok(components.length > n1, 'ajouter cumule les deux montages');
+  const n2 = components.length;
+
+  // « Remplacer » efface, et Ctrl+Z ramène
+  poserMontage(2);
+  [...__el('ask-actions').children][1].click();
+  ok(components.length < n2, 'remplacer repart d’un plan neuf');
+  undo();
+  eq(components.length, n2, 'et Ctrl+Z ramène ce qui était là');
+
+  clearBoard();
+});
+
 /* ===================== bilan ===================== */
 console.log('\n' + (__fail ? '✗' : '✓') + ' ' + __pass + ' test(s) réussi(s), ' +
             __fail + ' échec(s)' + (__fail ? ' : ' + __failures.join(', ') : '') + '\n');
