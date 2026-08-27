@@ -16600,6 +16600,130 @@ function drawConfetti(c, dt){
    ------------------------------------------------------------------ */
 const FICHES = {
 
+MUX:{
+  court:'Deux données, un sélecteur, une sortie : il <b>choisit</b> laquelle des deux passe. C’est l’aiguillage de l’électronique.',
+  blocs:[
+   ['Comment ça marche',
+    '<p>Trois entrées : les données <code>0</code> et <code>1</code>, et le sélecteur <code>S</code>. Si S vaut 0, la sortie recopie l’entrée 0 ; s’il vaut 1, elle recopie l’entrée 1. C’est tout.</p>' +
+    '<p>Derrière la boîte, il n’y a que trois portes : deux ET (chacun autorisé par S ou par son inverse) et un OU pour rassembler. Tu l’as construit à la main au chapitre 4 — le voici en un seul composant.</p>'],
+   ['Choisir, c’est calculer',
+    '<p>Un multiplexeur ne fait rien d’autre que choisir, et pourtant on peut lui faire calculer <b>n’importe quelle fonction</b>. Mets les valeurs de ta table de vérité sur les entrées de données et les variables sur les sélecteurs : la sortie donne la bonne réponse à chaque fois.</p>' +
+    '<p>Cette idée a une descendance énorme : les <b>FPGA</b>, ces puces qu’on reprogramme, sont des océans de minuscules tables et de multiplexeurs. On ne câble plus la logique, on la choisit.</p>']],
+  reel:[
+   ['Le cœur d’un processeur','C’est un multiplexeur qui décide quelle valeur entre dans l’unité de calcul : le registre, la mémoire, ou une constante écrite dans l’instruction. Chaque instruction bascule ces aiguillages.'],
+   ['Le sélecteur de ta télévision','Choisir une source — HDMI 1, HDMI 2, antenne — c’est un multiplexeur, en beaucoup plus large. Le principe ne change pas parce que le signal est plus rapide.'],
+   ['Le multiplexage téléphonique','Un seul câble transporte des milliers de conversations : on prend un échantillon de chacune à tour de rôle, très vite. Un multiplexeur d’un côté, un démultiplexeur de l’autre, et une horloge commune. C’est l’invention qui a rendu le téléphone longue distance abordable.']],
+  ex:'Deux interrupteurs sur les données, un troisième sur S, une ampoule en sortie. Bascule S et regarde la sortie <b>changer de source</b> sans que les données bougent.',
+  aussi:['DEMUX','MUX4','ROM','AND'] },
+
+DEMUX:{
+  court:'L’opération miroir du multiplexeur : une donnée entre, et le sélecteur décide <b>par quelle sortie</b> elle repart.',
+  blocs:[
+   ['Comment ça marche',
+    '<p>Une donnée <code>D</code>, un sélecteur <code>S</code>, deux sorties. La donnée part sur la sortie 0 si S vaut 0, sur la sortie 1 si S vaut 1 — et l’autre sortie reste à 0.</p>' +
+    '<p>Attention à cette dernière phrase : la sortie non choisie ne « garde » pas l’ancienne valeur, elle tombe à zéro. Un démultiplexeur ne mémorise rien.</p>'],
+   ['Le couple qui transporte tout',
+    '<p>Mets un multiplexeur d’un côté, un démultiplexeur de l’autre, et donne-leur <b>le même sélecteur</b>. Plusieurs voies entrent d’un côté, un seul fil les traverse, et elles ressortent chacune à sa place.</p>' +
+    '<p>C’est le <b>multiplexage temporel</b>, et c’est ce qui permet à un câble unique de transporter mille conversations. Toute la téléphonie moderne, tous les réseaux, reposent sur ce couple et sur une horloge partagée.</p>']],
+  reel:[
+   ['La sélection d’une puce mémoire','Un décodeur d’adresse est un démultiplexeur : l’adresse choisit quelle barrette recevra l’ordre, et les autres restent muettes.'],
+   ['Le balayage d’un afficheur','Choisir quelle ligne allumer, à chaque instant, c’est un démultiplexeur. La matrice 8×8 de l’appli en contient un dans son principe même.'],
+   ['Le réseau de la maison','Un routeur fait la même chose en plus intelligent : un flux entre, il décide vers quel appareil il repart. L’aiguillage est devenu logiciel, mais le geste est identique.']],
+  ex:'<b>MUX puis DEMUX</b> avec le même sélecteur : la donnée traverse un fil unique et ressort sur la bonne voie. Tu viens d’inventer le multiplexage temporel.',
+  aussi:['MUX','DMUX4','DEC24','GROUP'] },
+
+ADD:{
+  court:'La cellule d’addition : A + B + la retenue qui vient d’à côté, et ça sort une somme plus une nouvelle retenue.',
+  blocs:[
+   ['Comment ça marche',
+    '<p>Trois entrées, deux sorties. La <b>somme</b> est le XOR des trois entrées ; la <b>retenue sortante</b> vaut 1 dès que deux entrées au moins valent 1. Cinq portes, pas une de plus.</p>' +
+    '<p>Chaîne-les en mettant la retenue sortante de l’un sur la retenue entrante du suivant, et tu additionnes des nombres entiers. Quatre cellules pour quatre bits, soixante-quatre pour un processeur moderne.</p>'],
+   ['Le vrai problème : la retenue',
+    '<p>Additionner deux bits est trivial. Ce qui coûte cher, c’est que la retenue doit <b>traverser toute la chaîne</b> : le dernier bit ne peut pas être calculé avant que le premier ait fini. Sur 64 bits, cela ferait 64 traversées de porte à la file, et c’est beaucoup trop lent.</p>' +
+    '<p>Toute l’ingéniosité des processeurs porte là-dessus. On calcule les retenues <b>en avance</b>, en parallèle, avec des circuits plus gros mais plus rapides. Une addition 64 bits se fait aujourd’hui en quelques traversées, pas soixante-quatre.</p>']],
+  reel:[
+   ['Tout, absolument tout','Chaque calcul de ton ordinateur finit sur des cellules comme celle-ci. Les multiplications sont des additions répétées, les divisions des soustractions répétées, et les nombres à virgule des additions sur les exposants et les mantisses.'],
+   ['La course à la vitesse','Le circuit d’addition est le chemin le plus long d’un processeur, donc celui qui fixe sa fréquence maximale. C’est sur lui qu’on a le plus travaillé depuis soixante ans, pour gagner une traversée de porte à la fois.'],
+   ['L’adressage','Additionner ne sert pas qu’au calcul : à chaque accès mémoire, le processeur additionne une base et un décalage pour trouver l’adresse. C’est peut-être l’usage le plus fréquent de tous.']],
+  ex:'Deux <b>claviers 4 bits</b>, quatre additionneurs chaînés et des afficheurs : tu construis une vraie calculatrice 4 bits. Regarde la retenue se propager de droite à gauche.',
+  aussi:['SUB','ADD4','XOR','CNT4'] },
+
+SUB:{
+  court:'Le frère miroir de l’additionneur : A − B − l’emprunt qui vient d’à côté. L’emprunt, c’est le « je retiens » de la soustraction posée à l’école.',
+  blocs:[
+   ['Comment ça marche',
+    '<p>Trois entrées, deux sorties : la <b>différence</b>, et l’<b>emprunt sortant</b>, qui vaut 1 quand on a dû emprunter à la colonne suivante. Exactement le geste qu’on apprend à huit ans.</p>' +
+    '<p>Chaîne-les comme les additionneurs. Si l’emprunt final s’allume, c’est que le résultat est <b>négatif</b> — le circuit vient de te dire que la soustraction ne tombe pas juste.</p>'],
+   ['Pourquoi les vrais processeurs n’en ont pas',
+    '<p>Un processeur ne contient <b>aucun soustracteur</b>. Il inverse tous les bits du second nombre, ajoute 1, et additionne. Ce tour de passe-passe s’appelle le <b>complément à deux</b>, et il a une conséquence magnifique : un seul circuit fait l’addition et la soustraction.</p>' +
+    '<p>C’est aussi ce qui explique une bizarrerie que tu croiseras : avec 8 bits, on va de −128 à +127, et pas de −127 à +127. Le zéro n’a qu’une seule écriture, donc il reste une place de plus du côté négatif.</p>']],
+  reel:[
+   ['Le complément à deux, partout','Tous les nombres négatifs de tous les ordinateurs sont écrits ainsi. Ce n’est pas une convention arbitraire : c’est celle qui permet de n’avoir qu’un seul circuit d’addition.'],
+   ['Les comparaisons','Comparer deux nombres, c’est les soustraire et regarder le signe. Le <code>if (a &gt; b)</code> de tes programmes passe souvent par une soustraction dont on jette le résultat pour ne garder que les drapeaux.'],
+   ['Le débordement','Additionner deux grands positifs peut donner un négatif si le résultat ne tient plus. Les processeurs lèvent un drapeau pour le signaler ; les programmes qui ne le lisent pas produisent des bugs mémorables, y compris dans des fusées.']],
+  ex:'Chaîne quatre soustracteurs entre deux <b>claviers 4 bits</b> : si l’emprunt final s’allume, c’est que le résultat est négatif. Essaie 3 − 5.',
+  aussi:['ADD','COMP','NOT','ADD4'] },
+
+COMP:{
+  court:'Il compare deux bits et allume une seule de ses trois sorties : plus grand, égal, plus petit.',
+  blocs:[
+   ['Comment ça marche',
+    '<p>Trois sorties exclusives : <code>A&gt;B</code>, <code>A=B</code>, <code>A&lt;B</code>. Sur un seul bit, la table tient en quatre lignes et se lit d’un coup d’œil.</p>' +
+    '<p>Pour comparer des nombres de plusieurs bits, on chaîne les comparateurs <b>du poids fort vers le poids faible</b> : dès qu’une différence apparaît sur un bit, elle décide, et les bits suivants ne comptent plus. C’est exactement ainsi qu’on compare deux nombres écrits à la main.</p>']],
+  reel:[
+   ['Chaque « si » de tes programmes','Un <code>if (a &gt; b)</code> finit sur un circuit comme celui-ci, gravé dans le silicium. Il n’y a rien d’autre en dessous.'],
+   ['Le tri','Trier une liste, c’est comparer et échanger, des millions de fois. Toute la performance d’un tri se joue sur le nombre de comparaisons — et chacune est ce circuit.'],
+   ['Les seuils d’une machine','« La température dépasse-t-elle la consigne ? » Un comparateur, et une décision. C’est le cœur de tout thermostat, et le premier étage de toute régulation.']],
+  ex:'Deux interrupteurs → comparateur → trois ampoules étiquetées <b>&gt;</b>, <b>=</b>, <b>&lt;</b> : la table de vérité se lit d’un coup d’œil, et une seule lampe est allumée à la fois.',
+  aussi:['XNOR','SUB','THERMO','SCHMITT'] },
+
+ROM:{
+  court:'Une mémoire morte : l’adresse désigne une ligne, la ligne donne sa réponse. <b>Toute logique peut se remplacer par une table.</b>',
+  blocs:[
+   ['Comment ça marche',
+    '<p>Trois entrées d’adresse, de poids 4-2-1, désignent une des huit lignes ; la ligne renvoie ses deux bits sur les sorties. Un double-clic ouvre la table pour cocher case par case, et la ligne adressée est surlignée sur le boîtier.</p>'],
+   ['Câbler ou ranger : il faut choisir',
+    '<p>N’importe quelle fonction combinatoire peut s’écrire de deux façons : en <b>portes</b>, ou en <b>table</b>. Les portes coûtent de la logique ; la table coûte de la mémoire. Les deux marchent, et le bon choix dépend de ce qu’on a en trop.</p>' +
+    '<p>Cette équivalence n’est pas un détail : c’est la raison d’être des <b>FPGA</b>, ces puces qu’on reprogramme sans les refabriquer. Elles ne contiennent presque pas de portes — seulement des milliers de minuscules tables de vérité et des aiguillages entre elles.</p>']],
+  reel:[
+   ['Le microcode d’un processeur','Les instructions complexes d’un processeur ne sont pas câblées : elles sont rangées dans une ROM interne qui les décompose en micro-étapes. C’est ce qui permet de corriger certains bugs d’un processeur par une mise à jour.'],
+   ['Les tables de caractères','Chaque lettre d’un vieil afficheur était dessinée dans une ROM, ligne de pixels par ligne de pixels. Le mot « police de caractères » désigne encore aujourd’hui ce genre de table, en beaucoup plus riche.'],
+   ['Le BIOS','Le premier programme que lit ton ordinateur au démarrage vit dans une mémoire morte. Il faut bien que quelque chose sache démarrer avant que quoi que ce soit ait été chargé.']],
+  ex:'Programme la table d’un <b>additionneur</b> (A, B, retenue → somme, retenue) : ta ROM fait le travail de cinq portes. Puis compare le coût des deux solutions dans les compteurs.',
+  aussi:['MUX','ADD','RAM16','SEQ'] },
+
+GROUP:{
+  court:'Quatre fils deviennent un seul câble qui transporte une valeur. C’est un <b>bus</b> — et c’est ce qui rend un schéma lisible.',
+  blocs:[
+   ['Comment ça marche',
+    '<p><code>GROUPER</code> réunit quatre fils de poids 8-4-2-1 en un câble unique qui transporte la valeur 0-15. <code>DÉGROUPER</code> fait l’inverse et rend les quatre bits. Entre les deux, un seul trait au lieu de quatre.</p>' +
+    '<p><b>Attention</b> : un bus branché sur une porte logique ordinaire est vu comme un simple 1 dès que sa valeur n’est pas nulle. Les bus se parlent entre eux ; pour agir bit à bit, il faut dégrouper.</p>'],
+   ['Pourquoi les schémas professionnels sont lisibles',
+    '<p>Un schéma d’ordinateur qui tracerait chaque fil serait illisible : un bus de données 64 bits, c’est 64 traits parallèles sur toute la largeur de la feuille. Personne ne dessine ça.</p>' +
+    '<p>On trace <b>un seul trait épais, barré d’un chiffre</b> qui dit combien de bits il transporte, et on ne détaille qu’aux endroits où c’est nécessaire. Ce n’est pas de la paresse : c’est ce qui permet de voir la structure au lieu de compter les fils.</p>']],
+  reel:[
+   ['Les bus d’un ordinateur','Bus d’adresses, bus de données, bus de commande : les trois grands faisceaux qui relient le processeur au reste. Sur les schémas, ils sont dessinés exactement comme ici.'],
+   ['La nappe','Les vieux disques durs se raccordaient par une nappe de 40 fils plats. C’était un bus, rendu physique — et on voyait alors très bien pourquoi on préfère les regrouper.'],
+   ['Le passage au série','Les liaisons modernes — USB, PCIe, HDMI — ont abandonné les bus parallèles pour quelques paires très rapides. À grande vitesse, garder 64 fils synchronisés devient impossible : mieux vaut un seul fil qui va soixante fois plus vite.']],
+  ex:'Clavier 4 bits → <b>GROUPER</b> → un seul câble à travers tout l’écran → <b>DÉGROUPER</b> → afficheur décimal. Le montage devient lisible d’un coup.',
+  aussi:['UNGROUP','OCTET','NIBBLE','CHIP'] },
+
+BLACKBOX:{
+  court:'Le composant mystère des missions de rétro-ingénierie : verrouillé, câblé, et <b>impossible à ouvrir</b>. À toi de deviner ce qu’il y a dedans.',
+  blocs:[
+   ['Comment ça marche',
+    '<p>On ne la pose pas : elle apparaît dans les missions 🕵️, déjà branchée aux entrées, avec une ampoule <code>👁 OBS</code> pour l’observer. Sa table de vérité est masquée par des « ? » et l’analyseur est <b>brouillé</b> exprès.</p>' +
+    '<p>La seule méthode : essayer toutes les combinaisons, noter ce que fait 👁, dresser la table, et reconstruire la logique à côté. C’est lent, c’est méthodique, et c’est exactement ce qu’on te demande d’apprendre.</p>'],
+   ['Déduire le dedans en n’observant que le dehors',
+    '<p>Cette démarche a un nom : la <b>rétro-ingénierie</b>. Elle repose sur une idée simple et puissante : si deux circuits répondent pareil à toutes les entrées possibles, ils sont <b>équivalents</b>, quelle que soit leur construction interne.</p>' +
+    '<p>Tu n’as donc pas besoin de retrouver le circuit exact. Tu dois retrouver un circuit qui se comporte pareil — et ça, c’est toujours possible.</p>']],
+  reel:[
+   ['La sécurité informatique','Analyser un logiciel malveillant ou une puce dont on n’a pas la documentation, c’est ce métier. On observe, on essaie, on déduit — sans jamais voir le code source.'],
+   ['La réparation sans documentation','Des milliers de machines industrielles tournent encore avec des cartes dont le fabricant a disparu. Les réparer commence toujours par la même chose : mesurer les entrées, mesurer les sorties, deviner le reste.'],
+   ['Les neurosciences','Le cerveau est la boîte noire par excellence. On lui présente des stimuli, on mesure ses réponses, et on essaie d’en déduire le fonctionnement. Même méthode, autre échelle.']],
+  ex:'Sur une mission 🕵️, dresse la table en essayant les quatre combinaisons dans l’ordre, note les réponses de 👁, puis construis à côté un circuit qui fait pareil. La vérification comparera les deux.',
+  aussi:['ROM','COMP','XOR','CHIP'] },
+
 LED:{
   court:'Elle s’allume quand son entrée vaut 1. Le voyant universel — et le premier réflexe de tout dépannage : <b>où le signal s’arrête-t-il ?</b>',
   blocs:[

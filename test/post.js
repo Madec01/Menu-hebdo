@@ -6366,7 +6366,8 @@ T('T257 les fiches écrites tiennent toutes le même niveau', () => {
     'NOT','AND','OR','XOR','NAND','NOR','XNOR','AND3',                    // les portes
     'SWITCH','CLOCK','RANDOM','NIBBLE','KEY','SEQ','HIGH',                // les entrées
     'DELAY','DFF','CNT4','CHIP',                                          // mémoire & temps
-    'LED','SEGMENT','OCTET','PROBE','RGB','MATRIX','SCOPE','BUZZER','TRAFFIC']; // les sorties
+    'LED','SEGMENT','OCTET','PROBE','RGB','MATRIX','SCOPE','BUZZER','TRAFFIC',  // les sorties
+    'MUX','DEMUX','ADD','SUB','COMP','ROM','GROUP','BLACKBOX'];                // calcul & données
   eq(Object.keys(FICHES).length, ECRITES.length, 'aucune fiche orpheline dans FICHES');
   ECRITES.forEach(t => {
     const f = FICHES[t];
