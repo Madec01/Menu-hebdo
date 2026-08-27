@@ -6808,6 +6808,80 @@ T('T264 les câbles ⚡ ont un rôle : masse, alimentation, ou le reste', () => 
   board();
 });
 
+T('T265 un câble qui sort par le haut ou par le bas contourne, lui aussi', () => {
+  /* Le contournement n'existait qu'en HAUTEUR. Dès qu'une borne sortait
+     verticalement — une barre, une masse, un rail — on posait un coude sans
+     jamais demander si le chemin était libre. */
+  ok(typeof bypassX === 'function', 'le contournement existe aussi en abscisse');
+  ok(typeof bouchonsX === 'function', 'et les bandes bouchées aussi');
+
+  // les deux axes racontent la même chose, chacun dans son sens
+  board();
+  const ob = mk('LAMPE', 300, 300);
+  const A = { x:100, y:340 }, B = { x:700, y:340 };
+  const bY = bouchons(null, null, A, B, 20), bX = bouchonsX(null, null, A, B, 20);
+  ok(bY.length >= 1, 'en hauteur, l’ampoule bouche une bande');
+  ok(bX.length >= 0, 'en abscisse, la fonction répond aussi');
+
+  /* Le vrai cas : une masse (ses bornes sortent par le HAUT) avec un boîtier
+     posé pile sur le chemin. Avant, le câble le traversait. */
+  board();
+  const pi = mk('PILE', 0, 0), ms = mk('MASSE', 900, 400);
+  const gene = mk('RESIS', 420, 380);          // l’obstacle, entre les deux
+  pi.opt.e = 9; pi.opt.ri = .1;
+  link(pi, 0, ms, 0);
+  sim();
+  const w = wires[0];
+  const P = w.route();
+  const traverseUn = (P, w, c) => {
+    for (let k = 1; k < P.length; k++){
+      const a = P[k-1], b = P[k];
+      const x0 = c.x + 3, x1 = c.x + c.bw - 3, y0 = c.y + 3, y1 = c.y + c.bh - 3;
+      if (Math.abs(a.y - b.y) < 1 && a.y > y0 && a.y < y1 &&
+          Math.max(a.x, b.x) > x0 && Math.min(a.x, b.x) < x1) return true;
+      if (Math.abs(a.x - b.x) < 1 && a.x > x0 && a.x < x1 &&
+          Math.max(a.y, b.y) > y0 && Math.min(a.y, b.y) < y1) return true;
+    }
+    return false;
+  };
+  ok(!traverseUn(P, w, gene), 'le câble contourne l’obstacle au lieu de le traverser');
+  // et il reste orthogonal
+  for (let k = 1; k < P.length; k++)
+    ok(Math.abs(P[k].x - P[k-1].x) < .5 || Math.abs(P[k].y - P[k-1].y) < .5,
+       'segment ' + k + ' : horizontal ou vertical, jamais oblique');
+
+  /* La preuve d'ensemble : sur TOUS les montages d'exemple, plus un seul câble
+     ne traverse un boîtier — ni dans le tracé, ni après écartement. */
+  const traverse = (P, w) => {
+    for (let k = 1; k < P.length; k++){
+      const a = P[k-1], b = P[k];
+      const dedans = components.some(c => {
+        if (c === w.outPin.comp || c === w.inPin.comp || DECOR.has(c.type)) return false;
+        const x0 = c.x + 3, x1 = c.x + c.bw - 3, y0 = c.y + 3, y1 = c.y + c.bh - 3;
+        if (Math.abs(a.y - b.y) < 1)
+          return a.y > y0 && a.y < y1 && Math.max(a.x, b.x) > x0 && Math.min(a.x, b.x) < x1;
+        if (Math.abs(a.x - b.x) < 1)
+          return a.x > x0 && a.x < x1 && Math.max(a.y, b.y) > y0 && Math.min(a.y, b.y) < y1;
+        return false;
+      });
+      if (dedans) return true;
+    }
+    return false;
+  };
+  let brut = 0, etale = 0, total = 0, coupables = [];
+  EXAMPLES.forEach((ex, i) => {
+    board(); loadExample(i); sim();
+    wires.forEach(x => x.route());
+    wires.forEach(x => { total++; if (traverse(x._raw, x)){ brut++; coupables.push(ex.name); } });
+    spreadRoutes();
+    wires.forEach(x => { if (traverse(x._rp, x)) etale++; });
+  });
+  eq(brut, 0, 'aucun câble ne traverse un boîtier sur ' + total + ' (montages : ' +
+     [...new Set(coupables)].join(', ') + ')');
+  eq(etale, 0, 'et l’écartement n’en remet aucun dedans');
+  board();
+});
+
 T('T258 poser un montage demande avant d’effacer', () => {
   loadMission(-1); clearBoard();
   const box = __el('ask-modal');

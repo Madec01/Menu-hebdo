@@ -5,17 +5,59 @@ dans `CLAUDE.md`.
 
 ## Où en est le projet
 
-- **v6.43 — l'appli s'appelle maintenant NodeFlow.** La refonte de l'overlay
+- **v6.44 — l'appli s'appelle maintenant NodeFlow.** La refonte de l'overlay
   est **terminée** (lots 1 à 4), le guide est devenu une page, et **les 136
   composants du catalogue ont tous leur fiche complète**.
-  Branche `claude/architecte-logique-v5-vntfkp`, **267 tests verts** (`npm test`).
+  Branche `claude/architecte-logique-v5-vntfkp`, **268 tests verts** (`npm test`).
 - `logicgates.html` : ~14 400 lignes, un seul `<script>`, aucune dépendance.
-- Copies figées dans `versions/` (v5.1 → v6.43), avec leur tableau dans
+- Copies figées dans `versions/` (v5.1 → v6.44), avec leur tableau dans
   `versions/README.md`.
 - Catalogue : **191 leçons en 37 chapitres** — 63 à table de vérité (dont 8
   boîtes noires), 85 libres, et 30 à **condition de réussite** (chapitres 31 à 34).
 
 ## Ce qui vient d'être fait
+
+### v6.44 — câblage ③ : plus un seul câble ne traverse un boîtier
+
+**Le contournement n'existait qu'en HAUTEUR.** `bouchons` empilait les bandes
+de hauteur occupées, `bypassY` y cherchait un couloir — et rien n'existait sur
+l'autre axe. Dès qu'une borne sortait **verticalement** (une barre, une masse,
+un rail), `buildRoute` posait un coude en L ou en Z **sans jamais appeler
+`barreH`/`barreV`**. Le câble traversait donc les boîtiers sans le savoir.
+
+Deux changements :
+
+1. **Le contournement marche sur les deux axes.** `bandesPrises(ax, …)` et
+   `contourne(ax, …)` portent le raisonnement une seule fois ; `bouchons`,
+   `bouchonsX`, `bypassY` et `bypassX` n'en sont plus que des raccourcis. Le
+   code est le même, seuls les rôles de x et de y s'échangent.
+2. **Le dernier coude essaie plusieurs chemins.** Au lieu d'un coude imposé, on
+   propose : les deux coudes en L (ou le Z par le milieu), puis le couloir
+   libre en hauteur, puis le couloir libre en abscisse. On garde le premier
+   dégagé ; à égalité, **celui qui a le moins de coudes** — c'est ce qui rend
+   un schéma lisible, bien plus que sa longueur.
+
+**Deux contrôles différents, à ne pas confondre** (c'est le piège de ce
+chantier) :
+- `barreH`/`barreV` disent si un segment traverse un boîtier, **mais elles
+  excluent exprès les deux boîtiers du fil lui-même** ;
+- `dedans` rattrape justement ce cas : un coude qui tombe DANS la pièce
+  d'arrivée fait disparaître le câble sous elle (le bug de la v6.41).
+Il faut les deux.
+
+**Mesuré** (`scratchpad/mesure.js`, v6.43 → v6.44, 295 câbles de tous les
+montages d'exemple) :
+- câbles traversant un boîtier : **14 → 0** dans le tracé brut, **13 → 0**
+  après écartement ;
+- points déplacés par l'écartement : 461 → 455 ;
+- recalcul complet de 90 câbles : 1,61 → **1,46 ms**. C'est plus rapide : moins
+  de fils finissent par réclamer le contournement coûteux.
+
+**T265** garde la propriété d'ensemble : sur tous les montages d'exemple, zéro
+traversée, avant comme après écartement.
+
+Le défaut « ~10 câbles/722 traversent un boîtier » de la section « Défauts
+connus » est donc **fermé**.
 
 ### v6.43 — câblage ④ : les câbles ⚡ disent leur rôle
 
@@ -735,15 +777,14 @@ fichier lui-même.)*
 
 ## Défauts connus, à corriger plus tard
 
-- **Il reste 10 câbles qui traversent un boîtier** (sur 722) et 339 avec un
-  demi-tour, dont la plupart sont légitimes (une cible derrière soi impose un
-  contournement). Les cas restants viennent des approches VERTICALES (broches
-  en haut ou en bas d'un boîtier), que `barreH`/`barreV` ne couvrent pas
-  encore. Script de mesure : `mesure.js` dans le bac à sable de la session —
-  à réécrire si besoin, il compare deux versions du fichier.
-- **`spreadRoutes` écarte dès que deux câbles se frôlent en un point.** Un
-  écartement qui ne tiendrait compte que des recouvrements sur la LONGUEUR
-  serait moins bavard. Non fait, c'était le troisième point du lot câbles.
+- ~~Des câbles qui traversent un boîtier~~ — **corrigé en v6.44** : zéro sur les
+  295 câbles des montages d'exemple, et T265 le garde. Reste 339 demi-tours,
+  dont la plupart sont légitimes (une cible derrière soi impose un
+  contournement). Script de mesure : `mesure.js` dans le bac à sable de la
+  session — à réécrire si besoin, il compare deux versions du fichier.
+- ~~`spreadRoutes` écarte dès que deux câbles se frôlent en un point~~ —
+  **corrigé en v6.42** : l'écartement ne regroupe plus que les segments qui se
+  recouvrent vraiment.
 - **Le routage A\* proposé pour le bouton « Ranger les câbles »** : bonne idée,
   mais il faudrait une carte d'occupation (router séquentiellement en
   pénalisant les cases déjà prises), sinon tous les fils prennent le même
@@ -1179,7 +1220,7 @@ CAO électronique (KiCad, Altium), plus la bibliothèque de référence **libavo
    non-traversée sur `route()`, pas sur le tracé écarté — il ne peut donc pas
    attraper ce bug. Il faut ajouter un cas.
 
-③ **Les approches verticales ne testent aucun obstacle.** Dans `buildRoute`, dès
+③ ✅ **FAIT en v6.44.** Les approches verticales ne testaient aucun obstacle. Dans `buildRoute`, dès
    qu'un bout sort en haut ou en bas, on pose un coude sans jamais appeler
    `barreH`/`barreV`. Il manque un `bypassX` symétrique de `bypassY`, et une
    version de `bouchons` qui découpe en bandes verticales. Une journée, et c'est
