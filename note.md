@@ -5,19 +5,40 @@ dans `CLAUDE.md`.
 
 ## Où en est le projet
 
-- **v6.47 — l'appli s'appelle maintenant NodeFlow.** La refonte de l'overlay
+- **v6.48 — l'appli s'appelle maintenant NodeFlow.** La refonte de l'overlay
   est **terminée** (lots 1 à 4), le guide est devenu une page, et **les 136
   composants du catalogue ont tous leur fiche complète**.
-  Branche `claude/architecte-logique-v5-vntfkp`, **270 tests verts** (`npm test`).
+  Branche `claude/architecte-logique-v5-vntfkp`, **271 tests verts** (`npm test`).
 - `logicgates.html` : ~14 400 lignes, un seul `<script>`, aucune dépendance.
-- Copies figées dans `versions/` (v5.1 → v6.47), avec leur tableau dans
+- Copies figées dans `versions/` (v5.1 → v6.48), avec leur tableau dans
   `versions/README.md`.
 - Catalogue : **191 leçons en 37 chapitres** — 63 à table de vérité (dont 8
   boîtes noires), 85 libres, et 30 à **condition de réussite** (chapitres 31 à 34).
 
 ## Ce qui vient d'être fait
 
-### v6.47 — le numéro de version, enfin visible
+### v6.48 — un câble lâché dans le vide propose les objets DÉJÀ POSÉS
+
+Le panneau « Relier à… » ne proposait que de **créer** un composant de plus.
+Neuf fois sur dix on veut rejoindre quelque chose qui est déjà là, deux écrans
+plus loin. Il a maintenant deux parts : **ce qui est posé** (en lignes pleine
+largeur, du plus proche au plus loin, avec la borne visée), puis le catalogue.
+
+`quickExistants(pin)` décide qui est offert, et les règles comptent :
+- même **nature** de borne, et la borne ne doit pas être rangée (`pinCache`) ;
+- une **entrée de logique déjà servie** sort de la liste : la raccorder
+  effacerait l'ancien fil sans le dire. Une borne de **puissance**, non : c'est
+  une borne à vis, tout ce qui s'y visse est le même point ;
+- le crochet `refuse()` du composant est respecté (un rail déjà alimenté) ;
+- **une seule offre par composant** — la première borne libre ;
+- le composant **d'où part le fil** est renvoyé en dernier (pénalité de
+  distance) : se reboucler est permis, mais il est forcément le plus proche et
+  ce n'est presque jamais ce qu'on veut.
+
+La fenêtre est passée à 274 px de large et se pose 470 px au-dessus du bas de
+l'écran, sinon les deux sections n'y tenaient pas.
+
+### v6.47 — le numéro de version, enfin visible — le numéro de version, enfin visible
 
 L'auteur a signalé « je ne vois pas le changement sur les tunnels ». Vérifié au
 navigateur : le changement **était** bien dans le fichier livré. Il regardait
@@ -840,6 +861,22 @@ de travail est nu, avec le logo pour seul repère.
   baisse d'éclat quand on ajoute des ampoules en parallèle passe sous le seuil
   de perception. La couleur va du rouge-orangé au blanc chaud (`filColor`) :
   c'est le levier visuel le plus efficace, et il est physiquement juste.
+
+## LIVRER : toujours le fichier NOMMÉ AVEC SA VERSION
+
+Neuf fichiers livrés dans une session, tous appelés `logicgates.html` : le
+navigateur les enregistre en `logicgates(1).html`, `logicgates(2).html`… et
+l'auteur rouvre toujours le premier. Il a passé trois versions à chercher un
+changement qui était bien là, dans un fichier qu'il n'ouvrait pas.
+
+**Livrer `versions/logicgates-vX.Y.html`, jamais `logicgates.html`.** La copie
+figée est identique au fichier de travail et porte son numéro : impossible de
+la confondre, et le navigateur ne peut pas servir un ancien à sa place.
+
+Et quand l'auteur dit qu'il ne voit pas un changement : **vérifier d'abord au
+navigateur que le fichier livré le contient**, avant de chercher un bug qui
+n'existe pas. Une capture comparant les versions côte à côte règle la question
+en un message.
 
 ## Pièges du fichier (durement acquis)
 

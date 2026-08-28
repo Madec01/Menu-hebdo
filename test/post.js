@@ -7000,6 +7000,75 @@ T('T267 la version se lit dans l’onglet et dans le menu', () => {
   ok(/id="menu-ver"/.test(__HTML), 'la ligne existe dans le balisage');
 });
 
+T('T268 un câble lâché dans le vide propose d’abord les objets DÉJÀ POSÉS', () => {
+  board();
+  const sw = mk('SWITCH', 0, 0);
+  const et = mk('AND', 400, 0), ou = mk('OR', 400, 300), la = mk('LED', 900, 0);
+  sim();
+  // on simule le geste : un fil part de la sortie de l'interrupteur et se perd
+  quickFrom = sw.outPins[0];
+  quickAt = { x:400, y:120 };
+  let l = quickExistants(quickFrom);
+  const noms = l.map(o => o.c.type);
+  ok(noms.includes('AND') && noms.includes('OR') && noms.includes('LED'),
+     'les trois objets compatibles sont proposés (' + noms.join(', ') + ')');
+  eq(noms[0], 'AND', 'et le plus proche vient en tête');
+  ok(l.every(o => o.p.kind === quickFrom.kind), 'aucune borne d’une autre nature');
+
+  // une entrée logique DÉJÀ servie n'est plus proposée…
+  link(sw, 0, et, 0);
+  link(sw, 0, et, 1);            // les deux entrées du ET sont prises
+  sim();
+  l = quickExistants(quickFrom);
+  ok(!l.some(o => o.c === et), 'un objet dont toutes les entrées sont prises sort de la liste');
+
+  // …mais une borne de PUISSANCE accepte plusieurs fils : elle reste offerte
+  board();
+  const pi = mk('PILE', 0, 0), l1 = mk('LAMPE', 400, 0), ms = mk('MASSE', 800, 40);
+  pi.opt.e = 9; pi.opt.ri = .1;
+  link(l1, 0, ms, 0);            // une première arrivée sur la masse
+  sim();
+  quickFrom = pi.inPins[0];      // le − de la pile cherche une source de puissance
+  quickAt = { x:400, y:200 };
+  l = quickExistants(quickFrom);
+  ok(l.some(o => o.c === ms), 'la masse reste offerte : c’est une borne à vis');
+
+  // le composant d'où part le fil vient EN DERNIER : se reboucler est permis,
+  // mais ce n'est presque jamais ce qu'on veut, et il est forcément le plus proche
+  board();
+  const d1 = mk('DFF', 0, 0), g1 = mk('NOT', 400, 0);
+  sim();
+  quickFrom = d1.outPins[0];
+  quickAt = { x:60, y:40 };
+  l = quickExistants(quickFrom);
+  ok(l.length >= 2, 'les deux objets sont proposés');
+  eq(l[l.length - 1].c, d1, 'et le composant de départ ferme la marche');
+
+  // un clic RELIE, il ne crée rien
+  board();
+  const s2 = mk('SWITCH', 0, 0), le = mk('LED', 600, 0);
+  sim();
+  const avantC = components.length, avantF = wires.length;
+  quickFrom = s2.outPins[0]; quickAt = { x:300, y:40 };
+  quickPlan = quickExistants(quickFrom);
+  eq(quickPlan.length, 1, 'une seule cible possible');
+  quickRelie(0);
+  eq(components.length, avantC, 'aucun composant n’a été créé');
+  eq(wires.length, avantF + 1, 'et le fil est posé');
+  ok(wires[0].outPin.comp === s2 && wires[0].inPin.comp === le, 'entre les deux bons objets');
+  sim();
+  s2.state = 1; sim();
+  eq(le.inPins[0].state, 1, 'et le signal passe');
+
+  // le balisage et l'habillage sont là
+  ok(/id="quick-plan"/.test(__HTML), 'la liste des objets du plan existe');
+  ok(/id="quick-sep"/.test(__HTML), 'et le séparateur avec le catalogue');
+  ok(/#quick-plan\.vide/.test(__HTML.replace(/\n\s*/g, '')),
+     'quand il n’y a rien à proposer, la section se range');
+  closeQuick();
+  board();
+});
+
 T('T258 poser un montage demande avant d’effacer', () => {
   loadMission(-1); clearBoard();
   const box = __el('ask-modal');
