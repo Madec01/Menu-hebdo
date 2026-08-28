@@ -841,7 +841,9 @@ T('T66 registre : chaque composant déclaré est complet et publié', () => {
     eq(SHORT[id], d.short, id + ' : publié dans SHORT');
     ok(ICO[id] && /svg/.test(ICO[id]), id + ' : icône');
     ok(GATE_STYLE[id] && GATE_STYLE[id].c, id + ' : couleur');
-    ok(d.w >= 40 && d.h >= 40, id + ' : dimensions plausibles');
+    // le tunnel est volontairement minuscule : c'est un repère, pas un boîtier
+    const mini = d.tunnel ? 24 : 40;
+    ok(d.w >= mini && d.h >= mini, id + ' : dimensions plausibles');
     ok(Array.isArray(d.ins) && Array.isArray(d.outs), id + ' : pins déclarés');
     // une variante peut renvoyer à l'entrée de guide d'une autre (rails 4/8/12)
     const couvert = d.guide || Object.keys(REG).some(o =>
@@ -6886,20 +6888,43 @@ T('T266 le tunnel n’est plus qu’un rond, et les câbles s’enjambent aux cr
   // ---- le tunnel est rond, et petit ----
   board();
   const t1 = mk('TUNNEL', 0, 0), t2 = mk('TUNP', 300, 0);
-  eq(t1.w, TUN_D, 'le tunnel de signal est carré…');
-  eq(t1.h, TUN_D, '…donc rond une fois dessiné');
-  eq(t2.w, TUN_D, 'le tunnel de puissance aussi');
-  ok(TUN_D <= 60, 'et il tient en moins de soixante pixels (' + TUN_D + ')');
+  eq(t1.w, TUN_W, 'le tunnel de signal fait la taille prévue…');
+  eq(t1.h, TUN_H, '…et il est rond une fois dessiné');
+  eq(t2.w, TUN_W, 'le tunnel de puissance aussi');
+  ok(TUN_W * TUN_H < 112 * 74 / 5,
+     'il occupe moins du cinquième de l’ancien boîtier (' + (TUN_W * TUN_H) + ' px²)');
   ok(REG.TUNNEL.forme && REG.TUNP.forme, 'les deux donnent leur propre forme au cadre');
   // les deux bornes sont à mi-hauteur, l’une à gauche l’autre à droite
   near(t1.inPins[0].y, t1.y + t1.h / 2, .01, 'l’entrée est à mi-hauteur');
   near(t1.outPins[0].y, t1.y + t1.h / 2, .01, 'la sortie aussi');
   near(t1.inPins[0].x, t1.x, .01, 'l’entrée est à gauche');
   near(t1.outPins[0].x, t1.x + t1.w, .01, 'la sortie à droite');
-  // l’étiquette sous le rond ne doit pas être un roman
-  ok(FR_NAME.TUNNEL.length <= 10, 'le nom affiché reste court : « ' + FR_NAME.TUNNEL + ' »');
+  // l’étiquette sous le rond ne doit pas être un roman : c'est le NOM DU NŒUD
+  // qui s'écrit là, pas « TUNNEL », et c'est le tunnel qui le dessine lui-même
+  ok(REG.TUNNEL.sansNom && REG.TUNP.sansNom,
+     'le tunnel n’affiche pas l’étiquette générique du composant');
   ok(REG.TUNNEL.guideTitle && REG.TUNNEL.guideTitle.length > FR_NAME.TUNNEL.length,
      'le nom complet vit dans le guide');
+
+  // ---- la borne qui ne sert pas disparaît ----
+  board();
+  const sr = mk('SWITCH', 0, 0), te = mk('TUNNEL', 300, 0);
+  const ts = mk('TUNNEL', 600, 0), lr = mk('LED', 900, 0);
+  const tl = mk('TUNNEL', 300, 300);           // celui-là ne sert à rien encore
+  link(sr, 0, te, 0);                          // un fil ARRIVE : c'est une entrée
+  link(ts, 0, lr, 0);                          // un fil PART : c'est une sortie
+  sim();
+  eq(tunSens(te), 'in', 'un fil qui arrive fait une entrée');
+  eq(tunSens(ts), 'out', 'un fil qui part fait une sortie');
+  eq(tunSens(tl), null, 'et tant que rien n’est branché, on ne décide pas');
+  ok(REG.TUNNEL.pinHidden(te, te.outPins[0]), 'sur une entrée, la sortie est rangée');
+  ok(!REG.TUNNEL.pinHidden(te, te.inPins[0]), 'mais pas l’entrée, elle sert');
+  ok(REG.TUNNEL.pinHidden(ts, ts.inPins[0]), 'sur une sortie, l’entrée est rangée');
+  ok(!REG.TUNNEL.pinHidden(ts, ts.outPins[0]), 'mais pas la sortie');
+  ok(!REG.TUNNEL.pinHidden(tl, tl.inPins[0]) && !REG.TUNNEL.pinHidden(tl, tl.outPins[0]),
+     'un tunnel libre garde ses deux bornes : on ne sait pas encore ce qu’on en fera');
+  // et une borne rangée n'est plus attrapable
+  ok(pinCache(te.outPins[0]), 'la borne rangée sort du viseur');
 
   // ---- deux bornes très proches ne font plus de détour ----
   board();

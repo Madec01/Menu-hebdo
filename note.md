@@ -5,17 +5,43 @@ dans `CLAUDE.md`.
 
 ## Où en est le projet
 
-- **v6.45 — l'appli s'appelle maintenant NodeFlow.** La refonte de l'overlay
+- **v6.46 — l'appli s'appelle maintenant NodeFlow.** La refonte de l'overlay
   est **terminée** (lots 1 à 4), le guide est devenu une page, et **les 136
   composants du catalogue ont tous leur fiche complète**.
   Branche `claude/architecte-logique-v5-vntfkp`, **269 tests verts** (`npm test`).
 - `logicgates.html` : ~14 400 lignes, un seul `<script>`, aucune dépendance.
-- Copies figées dans `versions/` (v5.1 → v6.45), avec leur tableau dans
+- Copies figées dans `versions/` (v5.1 → v6.46), avec leur tableau dans
   `versions/README.md`.
 - Catalogue : **191 leçons en 37 chapitres** — 63 à table de vérité (dont 8
   boîtes noires), 85 libres, et 30 à **condition de réussite** (chapitres 31 à 34).
 
 ## Ce qui vient d'être fait
+
+### v6.46 — le tunnel devient un point, et perd la borne qui ne sert pas
+
+**38 × 30 au lieu de 112 × 74** : un dixième de la surface. Le nom ne tient plus
+dans le rond, il s'écrit **dessous** — à la place de l'étiquette du composant,
+que le tunnel n'affiche donc pas. D'où un nouveau drapeau de registre,
+**`sansNom:true`** : « TUNNEL » sous chaque rond ne dirait rien et cacherait ce
+qui compte, le nom du nœud. Le nom est dessiné en permanence, pas seulement
+quand les étiquettes sont allumées : sans lui on ne distinguerait plus un
+tunnel A d'un tunnel B.
+
+La boîte est un peu plus large que haute (38 × 30) pour laisser un moignon de
+fil de chaque côté du rond : sans ça, les deux pastilles de broche mordaient
+sur l'anneau.
+
+**Un tunnel sert dans UN SENS à la fois.** Un fil y arrive → c'est une entrée,
+et la borne de sortie ne sert plus à rien. Un fil en part → c'est une sortie, et
+c'est l'entrée qui ne sert plus. `tunSens(c)` le décide, `tunPinHidden` range la
+borne inutile — elle n'est plus dessinée ni attrapable (`pinCache` s'appuie sur
+`pinHidden`) — et `tunBody` ne dessine que le moignon du côté qui sert. Tant que
+rien n'est branché, les deux bornes restent offertes : on ne sait pas encore ce
+que l'utilisateur veut en faire.
+
+**Piège de test** : T66 exige `w >= 40 && h >= 40` pour tout composant du
+registre. Le tunnel est volontairement en dessous ; le test accepte maintenant
+24 px pour un composant marqué `tunnel:true`.
 
 ### v6.45 — le tunnel devient un rond, et les câbles s'enjambent
 
