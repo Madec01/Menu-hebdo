@@ -4756,7 +4756,8 @@ T('T205 les chapitres ⚡ : à la fin du cours, et dans leur atelier', () => {
   eq(missions.filter(m => /Chapitre 37/.test(m.ch)).length, 3, 'trois au chapitre 37');
   eq(missions.filter(m => /Chapitre 38/.test(m.ch)).length, 3, 'trois au chapitre 38');
   eq(missions.filter(m => /Chapitre 39/.test(m.ch)).length, 3, 'trois au chapitre 39');
-  eq(lec.length, 49, 'quarante-neuf leçons dans l’atelier ⚡ en tout');
+  eq(missions.filter(m => /Chapitre 40/.test(m.ch)).length, 3, 'trois au chapitre 40');
+  eq(lec.length, 52, 'cinquante-deux leçons dans l’atelier ⚡ en tout');
   // toutes à la fin du catalogue, et groupées
   const prem = missions.findIndex(m => m.dom === 'phys');
   eq(prem + lec.length, missions.length, 'elles occupent la fin du catalogue');
@@ -4769,8 +4770,8 @@ T('T205 les chapitres ⚡ : à la fin du cours, et dans leur atelier', () => {
   });
   // les chapitres apparaissent dans la carte du cours, l’un après l’autre
   const noms = chapitres().map(c => c.ch || c.nom || c.name || '');
-  ['31','32','33','34','35','36','37','38','39'].forEach((n, i) =>
-    ok(new RegExp('Chapitre ' + n).test(noms[noms.length - 9 + i]),
+  ['31','32','33','34','35','36','37','38','39','40'].forEach((n, i) =>
+    ok(new RegExp('Chapitre ' + n).test(noms[noms.length - 10 + i]),
        'le chapitre ' + n + ' est à sa place dans la carte du cours'));
   // et charger une leçon bascule dans l’atelier ⚡
   setAppMode('elec');
@@ -7239,6 +7240,81 @@ T('T270 le hacheur découpe DANS l’image, et fait un abaisseur puis un éléva
   ['abaisseur', 'élévateur'].forEach(k =>
     ok(EXAMPLES.some(e => noAccent(e.name).includes(noAccent(k))),
        'le montage « ' + k + ' » est au catalogue'));
+  board();
+});
+
+T('T271 le transformateur : deux bobines résolues ENSEMBLE', () => {
+  ok(typeof xfoPose === 'function' && typeof xfoRetiens === 'function',
+     'les paires couplées ont leur propre modèle');
+  const proto = new Component(0, 0, 'TRANSFO');
+  const br = REG.TRANSFO.branche(proto);
+  eq(br.length, 2, 'un transformateur déclare DEUX branches');
+  ok(br[0].mem === 'T' && br[1].mem === 'T', 'et elles se disent couplées');
+  ok(br[0].M > 0 && Math.abs(br[0].M - br[1].M) < 1e-9,
+     'elles partagent la même inductance mutuelle');
+  ok(br[0].M < Math.sqrt(br[0].L * br[1].L),
+     'qui reste sous la limite physique : aucun noyau ne couple à 100 %');
+
+  /* Le montage de référence : générateur alternatif au primaire, résistance au
+     secondaire. On mesure la CRÊTE, pas l'instant — une sinusoïde passe par
+     zéro cent fois par seconde. */
+  const essai = (n1, n2) => {
+    board();
+    const g = mk('GENEAC', 0, 120), t = mk('TRANSFO', 420, 120),
+          r = mk('RESIS', 800, 120), m = mk('MASSE', 560, 480);
+    g.opt = { amp:12, hz:50, forme:'sinus', ri:.5 };
+    t.opt = { n1:n1, n2:n2, k:98, rs:1 };
+    r.opt.r = 200; m.opt.n = 6;
+    link(g, 0, t, 0); link(t, 0, m, 0); link(m, 1, g, 0);
+    link(t, 1, r, 0); link(r, 0, m, 2); link(m, 3, t, 1);
+    sim();
+    for (let k = 0; k < 150; k++){ __advance(20); sim(); }
+    return { up:t.up || 0, us:t.us || 0, ip:t.ip || 0, is:t.is || 0, r };
+  };
+
+  // abaisseur 2:1
+  let e = essai(200, 100);
+  ok(e.up > 8, 'le primaire reçoit bien la tension du générateur : ' + e.up.toFixed(1) + ' V');
+  const r1 = e.us / e.up;
+  ok(Math.abs(r1 - .5) < .15,
+     '200 spires contre 100 : le secondaire est à la moitié (' +
+     (r1 * 100).toFixed(0) + ' %)');
+  ok(e.is > e.ip,
+     'et il y passe PLUS de courant : ' + (e.is * 1000).toFixed(0) + ' mA contre ' +
+     (e.ip * 1000).toFixed(0) + ' — un transformateur ne crée rien');
+
+  // élévateur 1:2 — les mêmes pièces, les deux nombres échangés
+  e = essai(100, 200);
+  const r2 = e.us / e.up;
+  ok(r2 > 1.5, 'les deux nombres échangés, il ÉLÈVE : ' + (r2 * 100).toFixed(0) + ' %');
+
+  // 4:1
+  e = essai(200, 50);
+  ok(Math.abs(e.us / e.up - .25) < .1,
+     '200 contre 50 : le quart (' + ((e.us / e.up) * 100).toFixed(0) + ' %)');
+
+  /* Et la leçon du chapitre : en CONTINU, il ne transmet rien. Ce qui fabrique
+     la tension du secondaire n'est pas le champ mais sa VARIATION. */
+  board();
+  const p2 = mk('PILE', 0, 120), t2 = mk('TRANSFO', 420, 120),
+        r2b = mk('RESIS', 800, 120), m2 = mk('MASSE', 560, 480);
+  p2.opt.e = 12; p2.opt.ri = .5;
+  t2.opt = { n1:200, n2:100, k:98, rs:1 };
+  r2b.opt.r = 200; m2.opt.n = 6;
+  link(p2, 0, t2, 0); link(t2, 0, m2, 0); link(m2, 1, p2, 0);
+  link(t2, 1, r2b, 0); link(r2b, 0, m2, 2); link(m2, 3, t2, 1);
+  sim();
+  for (let k = 0; k < 30; k++){ __advance(20); sim(); }
+  const tot = t2.us || 0;                       // l'impulsion du branchement
+  for (let k = 0; k < 900; k++){ __advance(20); sim(); }
+  ok(t2.up > 4, 'le primaire est toujours alimenté : ' + t2.up.toFixed(1) + ' V');
+  ok((t2.us || 0) < .3,
+     'mais le secondaire s’est éteint : ' + (t2.us || 0).toFixed(3) + ' V');
+  ok(tot > (t2.us || 0),
+     'après une impulsion au branchement (' + tot.toFixed(2) + ' V), qui retombe');
+
+  ok(EXAMPLES.some(e2 => noAccent(e2.name).includes(noAccent('transformateur'))),
+     'le montage d’exemple est au catalogue');
   board();
 });
 

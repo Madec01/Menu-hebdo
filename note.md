@@ -5,17 +5,73 @@ dans `CLAUDE.md`.
 
 ## Où en est le projet
 
-- **v6.50 — l'appli s'appelle maintenant NodeFlow.** La refonte de l'overlay
-  est **terminée** (lots 1 à 4), le guide est devenu une page, et **les 136
-  composants du catalogue ont tous leur fiche complète**.
-  Branche `claude/architecte-logique-v5-vntfkp`, **273 tests verts** (`npm test`).
+- **v6.51 — l'appli s'appelle maintenant NodeFlow.** La refonte de l'overlay
+  est **terminée** (lots 1 à 4), le guide est devenu une page, **les 136
+  composants du catalogue ont tous leur fiche complète**, et **les quatre lots
+  ⚡ demandés par l'auteur sont livrés** (pont en H, filtres, convertisseurs,
+  transformateur).
+  Branche `claude/architecte-logique-v5-vntfkp`, **274 tests verts** (`npm test`).
 - `logicgates.html` : ~14 400 lignes, un seul `<script>`, aucune dépendance.
-- Copies figées dans `versions/` (v5.1 → v6.50), avec leur tableau dans
+- Copies figées dans `versions/` (v5.1 → v6.51), avec leur tableau dans
   `versions/README.md`.
-- Catalogue : **197 leçons en 39 chapitres** — 63 à table de vérité (dont 8
+- Catalogue : **200 leçons en 40 chapitres** — 63 à table de vérité (dont 8
   boîtes noires), 85 libres, et 30 à **condition de réussite** (chapitres 31 à 34).
 
 ## Ce qui vient d'être fait
+
+### v6.51 — ⚡ lot 4 : le transformateur (le seul qui a demandé d'ouvrir le moteur)
+
+**`TRANSFO` — deux bobines sur le même noyau.** Il abaisse, il élève, et en
+continu il ne transmet rien. Réglages : nombre de spires au primaire et au
+secondaire, couplage `k` (98 % par défaut, jamais 100 : aucun noyau réel n'y
+arrive), et résistance des fils.
+
+**Le carnet annonçait ce lot comme « le vrai morceau » — c'était juste.** Tous
+les autres composants ⚡ se sont posés sur le solveur existant. Celui-là non :
+deux bobines couplées ne se calculent pas l'une après l'autre, elles se
+calculent **ensemble**. Ce qui a été ajouté :
+
+- `xfoPose(brs, dt)` : regroupe les branches `mem:'T'` par composant, puis pour
+  chaque paire résout à la main le système 2×2 d'Euler implicite. Ça donne trois
+  nombres par branche : sa conductance propre `g`, la **conductance croisée**
+  `gm` (l'influence de l'autre bobine), et l'histoire `ih`.
+- Dans le montage de la matrice, quatre termes **hors diagonale** de plus quand
+  `br.mem === 'T'` : c'est là, et nulle part ailleurs, que le couplage existe.
+- `brCourant(br, tension)` : le courant d'une branche couplée dépend des DEUX
+  tensions ; `xfoRetiens` le mémorise pour le pas suivant.
+
+**Le raccourci qu'il ne faut pas prendre.** On peut être tenté de traiter la
+mutuelle « en explicite » : calculer l'influence de l'autre bobine avec la
+valeur du pas précédent, et garder le solveur intact. Essayé : **ça diverge**
+dès que le couplage passe 0,8. La mutuelle doit être dans la matrice.
+
+**Le piège de la mesure — celui qui coûte le plus cher.** Un transformateur
+n'existe qu'en alternatif : lire `c.u` donne l'**instant**, et une sinusoïde
+passe par zéro cent fois par seconde. Trois rapports sur quatre lisaient
+« presque zéro » avec un montage parfaitement juste. Il a fallu publier la
+**crête** par branche (`uc` / `ic`, calculées par `br.upk` / `br.ipk`) — et le
+test T271 le dit en toutes lettres pour que personne ne recommence.
+
+**Mesuré au navigateur, contre la théorie :**
+
+| spires | primaire | secondaire | attendu |
+| --- | --- | --- | --- |
+| 200 → 100 | 12,0 V | 5,8 V | 6,0 |
+| 100 → 200 | 12,0 V | 23,2 V | 24,0 |
+| 200 → 50 | 12,0 V | 2,9 V | 3,0 |
+
+L'écart vient de la résistance des fils et du couplage à 98 % — c'est-à-dire
+d'un vrai transformateur.
+
+**En continu** (une PILE au primaire) : le secondaire donne une impulsion au
+branchement puis **s'éteint** — 2,81 V qui retombent à 0,007 V en dix secondes,
+pendant que le primaire reste à 8 V. C'est la leçon m199, et c'est la raison
+pour laquelle le réseau électrique mondial est en alternatif.
+
+**Livré aussi** : le montage « ⚡ Le transformateur » (menu 📦), la fiche du
+guide, et le **chapitre 40 · Le transformateur** (m198 « Deux bobines qui se
+parlent », m199 « Pourquoi il refuse le continu », m200 « Élever pour
+transporter »).
 
 ### v6.50 — ⚡ lot 3 : le hacheur, l'abaisseur et l'élévateur
 
@@ -1465,6 +1521,10 @@ Mot de l'auteur : « je voudrais intégrer des circuits électriques type **pont
 H**, **filtres**, **élévateur de tension**, **abaisseur**, **transformateur**,
 la totale, je veux que ce soit complet ».
 
+**➡️ LES QUATRE LOTS SONT LIVRÉS** : pont en H (v6.40), filtres et analyseur
+de fréquence (v6.49), hacheur et convertisseurs (v6.50), transformateur
+(v6.51). Ce qui suit est le chiffrage d'origine, gardé pour mémoire.
+
 Ce que ça suppose, dans l'ordre de difficulté croissante :
 - **Transformateur** : deux bobines couplées. Le solveur nodal actuel ne connaît
   pas le couplage mutuel — c'est le vrai morceau.
@@ -1482,26 +1542,35 @@ Ce que ça suppose, dans l'ordre de difficulté croissante :
 
 Découpage validé avec l'auteur. Un lot, on livre, il teste, il valide.
 
-**Phase 1 — le continu : TERMINÉE.**
-→ le lot 3 devra ajouter **une vraie condition de réussite** : aujourd'hui une
-leçon sans table de vérité est gagnée dès qu'on clique sur « Vérifier »
-(`logicgates.html`, gestionnaire de `btn-verify`, la ligne `if (!m.tt.length)`).
-Prévoir un champ `m.check(components, wires)`.
+**Tout ce qui était planifié est livré** : les quatre phases ⚡ (le continu,
+produire, l'alternatif, l'éther), la refonte de l'overlay (lots 1 à 4), les 136
+fiches du guide, le programme câblage ①②③④, et les quatre lots ⚡ demandés
+ensuite (pont en H, filtres, convertisseurs, transformateur).
 
-**Phase 2 — produire : TERMINÉE.**
+**Ce qui est encore sur la liste, dans l'ordre convenu :**
 
-**Phase 3 — l'alternatif : TERMINÉE** (lots 6 et 7, v6.20 et v6.22).
-→ il manque encore des **montages d'exemple ⚡ pour l'alternatif** dans le
-menu 📦 (les quatre existants ne couvrent que le continu).
+1. **⑤ Le bouton 🪄 « Ranger les câbles »** — le seul point du programme
+   câblage qui n'est pas fait. Aujourd'hui chaque câble est tracé **sans
+   regarder les autres** : deux câbles qui contournent le même boîtier prennent
+   le même détour et se superposent. Le vrai correctif est un tracé global (on
+   pose les câbles l'un après l'autre en tenant compte de ceux déjà posés) —
+   **plusieurs jours de travail**, à ne lancer que quand l'auteur le décide.
+2. **Plusieurs schémas ouverts en même temps** (onglets ou fenêtres), demandé
+   par l'auteur, jamais chiffré.
+3. Les **défauts connus** listés plus haut : le câble impossible entre deux
+   composants posés dans un même cadre ZONE, et la leçon « sur le plan » qui
+   affiche tous les composants d'un coup au lieu d'y aller progressivement.
 
-**Phase 4 — l'éther : TERMINÉE.** Lot 8 (distance et obstacles) v6.24,
-lot 9 (accord, bande passante, AM/FM, bruit) v6.26, lot 10 (Morse, trame
-numérique, haut-parleur, chapitre final) v6.28.
+**Rappel de la règle de livraison** : on envoie toujours
+`versions/logicgates-vX.Y.html`, jamais `logicgates.html` (voir la section
+« LIVRER » ci-dessus).
 
-**➡️ LA FEUILLE DE ROUTE ⚡ EST TERMINÉE.** La suite du travail est dans
-« Chantiers demandés » et « L'audit du moteur » ci-dessus. L'ordre convenu avec
-l'auteur : le **lot A** de l'audit (petit, sans risque, gain immédiat), puis la
-**refonte de l'overlay et des menus**.
-→ **Un audit UI/UX complet de l'overlay a été demandé** pendant le lot 8
-(hiérarchie visuelle, ergonomie, accessibilité/responsive, technique). Son
-rapport alimentera la refonte de l'overlay prévue après la phase 4.
+### Pour mémoire — l'historique des phases
+
+- **Phase 1 (le continu), phase 2 (produire) : terminées.**
+- **Phase 3 (l'alternatif) : terminée** (v6.20, v6.22).
+- **Phase 4 (l'éther) : terminée** (v6.24, v6.26, v6.28).
+- Reste un petit manque hérité de la phase 1 : une leçon sans table de vérité
+  est gagnée dès qu'on clique sur « Vérifier » (`btn-verify`, la ligne
+  `if (!m.tt.length)`). Un champ `m.check(components, wires)` le corrigerait ;
+  les chapitres 31 à 34 ont depuis leur propre condition de réussite.
