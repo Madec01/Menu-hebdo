@@ -5,17 +5,58 @@ dans `CLAUDE.md`.
 
 ## Où en est le projet
 
-- **v6.48 — l'appli s'appelle maintenant NodeFlow.** La refonte de l'overlay
+- **v6.49 — l'appli s'appelle maintenant NodeFlow.** La refonte de l'overlay
   est **terminée** (lots 1 à 4), le guide est devenu une page, et **les 136
   composants du catalogue ont tous leur fiche complète**.
-  Branche `claude/architecte-logique-v5-vntfkp`, **271 tests verts** (`npm test`).
+  Branche `claude/architecte-logique-v5-vntfkp`, **272 tests verts** (`npm test`).
 - `logicgates.html` : ~14 400 lignes, un seul `<script>`, aucune dépendance.
-- Copies figées dans `versions/` (v5.1 → v6.48), avec leur tableau dans
+- Copies figées dans `versions/` (v5.1 → v6.49), avec leur tableau dans
   `versions/README.md`.
-- Catalogue : **191 leçons en 37 chapitres** — 63 à table de vérité (dont 8
+- Catalogue : **194 leçons en 38 chapitres** — 63 à table de vérité (dont 8
   boîtes noires), 85 libres, et 30 à **condition de réussite** (chapitres 31 à 34).
 
 ## Ce qui vient d'être fait
+
+### v6.49 — ⚡ lot 2 : l'analyseur de fréquence, et les filtres
+
+Un filtre **ne se voit pas** : son effet dépend de la fréquence, et on n'en voit
+jamais qu'une à la fois. C'est pour ça que les briques (R, C, L) existaient
+depuis longtemps sans qu'on puisse rien en faire de parlant. L'instrument qui
+manquait n'était pas un composant de plus, c'était un **regard**.
+
+**`ANAF` — l'analyseur ne calcule rien, il MESURE.** Il envoie une sinusoïde,
+monte sa fréquence palier par palier (56 paliers, logarithmiques), et note la
+crête vue sur sa borne `MES`. Au bout, `anafLecture(c)` **nomme** le filtre —
+passe-bas, passe-haut, passe-bande — et donne la ou les coupures, interpolées
+au croisement des 70 %.
+
+**Vérifié au navigateur contre le calcul** (R = 1 kΩ, C = 10 µF → 15,92 Hz) :
+passe-bas **15,79**, passe-haut **16,1**, passe-bande L = 1 H / C = 100 µF pic
+à **16,2** (théorie 15,92). Moins de 2 % d'écart. T269 le garde.
+
+**Deux ajouts au moteur, petits mais nécessaires :**
+1. **`sousV(c, dt, volt)`** — n'importe quel instrument peut voir CHAQUE
+   sous-pas, plus seulement l'oscilloscope. Sans ça, une mesure par image ne
+   voit qu'un repliement au-delà de la trentaine de hertz.
+2. **`nMax` sur une branche** relève le plafond de sous-pas
+   (`ELEC_NSOUS_MAX = 256`). À 200 Hz il faut ~134 sous-pas par image pour que
+   la sinusoïde reste une sinusoïde. Le surcoût est linéaire et un circuit de
+   filtre compte quatre points : c'est payable.
+
+**Deux détails qui font la justesse de la mesure**, à ne pas défaire :
+- on jette la **première période** de chaque palier — le circuit y est encore
+  en train de s'installer et sa crête ne veut rien dire ;
+- le balayage est **logarithmique**, parce que ce qui compte entre deux
+  fréquences est leur rapport, pas leur écart.
+
+**Trois montages d'exemple** (passe-bas, passe-haut, passe-bande) et le
+**chapitre 38 « Filtrer »**, trois leçons. Le passe-haut est le même montage
+que le passe-bas avec les deux pièces interverties : la leçon porte là-dessus —
+un montage n'a pas *une* fonction, il en a autant qu'il a de points de mesure.
+
+**Piège de test** : `joueMontage()` tournait 90 images (5,4 s de circuit). Un
+balayage en demande une dizaine de secondes. Il lance maintenant l'analyseur et
+se donne 400 images quand il en voit un. La suite reste à 7 s.
 
 ### v6.48 — un câble lâché dans le vide propose les objets DÉJÀ POSÉS
 

@@ -4754,7 +4754,8 @@ T('T205 les chapitres ⚡ : à la fin du cours, et dans leur atelier', () => {
   eq(missions.filter(m => /Chapitre 35/.test(m.ch)).length, 4, 'quatre au chapitre 35');
   eq(missions.filter(m => /Chapitre 36/.test(m.ch)).length, 6, 'six au chapitre 36');
   eq(missions.filter(m => /Chapitre 37/.test(m.ch)).length, 3, 'trois au chapitre 37');
-  eq(lec.length, 43, 'quarante-trois leçons dans l’atelier ⚡ en tout');
+  eq(missions.filter(m => /Chapitre 38/.test(m.ch)).length, 3, 'trois au chapitre 38');
+  eq(lec.length, 46, 'quarante-six leçons dans l’atelier ⚡ en tout');
   // toutes à la fin du catalogue, et groupées
   const prem = missions.findIndex(m => m.dom === 'phys');
   eq(prem + lec.length, missions.length, 'elles occupent la fin du catalogue');
@@ -4767,8 +4768,8 @@ T('T205 les chapitres ⚡ : à la fin du cours, et dans leur atelier', () => {
   });
   // les chapitres apparaissent dans la carte du cours, l’un après l’autre
   const noms = chapitres().map(c => c.ch || c.nom || c.name || '');
-  ['31','32','33','34','35','36','37'].forEach((n, i) =>
-    ok(new RegExp('Chapitre ' + n).test(noms[noms.length - 7 + i]),
+  ['31','32','33','34','35','36','37','38'].forEach((n, i) =>
+    ok(new RegExp('Chapitre ' + n).test(noms[noms.length - 8 + i]),
        'le chapitre ' + n + ' est à sa place dans la carte du cours'));
   // et charger une leçon bascule dans l’atelier ⚡
   setAppMode('elec');
@@ -4804,7 +4805,12 @@ function joueMontage(tours){
   /* 90 tours de 60 ms = 5,4 s de temps de circuit. Il en faut autant depuis
      le chapitre 36 : un message en Morse à 10 mots par minute met quatre
      secondes à partir, et le décodeur ne peut rien affirmer avant. */
-  const n = tours || 90;
+  /* L'analyseur de fréquence MESURE : son balayage dure plusieurs secondes de
+     temps de circuit, et il ne démarre que si on le lance. On le lance donc, et
+     on se donne de quoi le laisser finir. */
+  const ana = components.filter(c => c.type === 'ANAF');
+  ana.forEach(a => { if (a.k < 0 && !a.fini) REG.ANAF.click(a); });
+  const n = tours || (ana.length ? 400 : 90);
   /* On MANŒUVRE le montage, on ne le regarde pas seulement tourner : un
      interrupteur qu'on n'ouvre jamais n'apprend rien, et c'est l'ouverture
      qui décharge un condensateur. On rouvre puis on referme, et on laisse
@@ -6784,7 +6790,7 @@ T('T264 les câbles ⚡ ont un rôle : masse, alimentation, ou le reste', () => 
      'les trois largeurs se distinguent');
 
   // toutes les sources sont marquées : sans le drapeau, pas de rôle « alimentation »
-  const SOURCES = ['PILE','GENE','GENEAC','BOBINE','DYNAMO','TURBINE','SOLAIRE','SEEBECK'];
+  const SOURCES = ['PILE','GENE','GENEAC','BOBINE','DYNAMO','TURBINE','SOLAIRE','SEEBECK','ANAF'];
   SOURCES.forEach(t => ok(REG[t] && REG[t].source, t + ' est marqué comme source'));
   // et rien d’autre ne l’est par erreur
   const trop = Object.keys(REG).filter(t => REG[t].source && !SOURCES.includes(t));
@@ -7066,6 +7072,85 @@ T('T268 un câble lâché dans le vide propose d’abord les objets DÉJÀ POSÉ
   ok(/#quick-plan\.vide/.test(__HTML.replace(/\n\s*/g, '')),
      'quand il n’y a rien à proposer, la section se range');
   closeQuick();
+  board();
+});
+
+T('T269 l’analyseur de fréquence MESURE vraiment un filtre', () => {
+  ok(REG.ANAF && REG.ANAF.source, 'l’analyseur est une source : c’est lui qui attaque le circuit');
+  ok(typeof REG.ANAF.sousV === 'function',
+     'et il voit chaque sous-pas — une mesure par image ne verrait qu’un repliement');
+  ok(ANAF_N >= 40, 'le balayage a assez de paliers pour dessiner une courbe (' + ANAF_N + ')');
+
+  /* Le balayage prend du temps de CIRCUIT : c'est une mesure, pas un calcul.
+     On le laisse tourner comme le ferait l'utilisateur. */
+  const balaye = (a, max) => {
+    REG.ANAF.click(a);
+    for (let k = 0; k < (max || 500) && a.k >= 0; k++){ __advance(60); sim(); }
+    return anafLecture(a);
+  };
+
+  // ---- passe-bas RC : R = 1 kΩ, C = 10 µF → coupure théorique 15,92 Hz ----
+  board();
+  const a1 = mk('ANAF', 0, 0), r1 = mk('RESIS', 400, 200),
+        c1 = mk('CONDO', 700, 200), m1 = mk('MASSE', 1000, 260);
+  a1.opt = { f1:6, f2:120, amp:10, per:1 };
+  r1.opt.r = 1000; c1.opt.cap = 10;
+  link(a1, 0, r1, 0); link(r1, 0, c1, 0); link(c1, 0, m1, 0);
+  link(m1, 1, a1, 0); link(r1, 0, a1, 1);        // MES au point du milieu
+  sim();
+  let l = balaye(a1);
+  ok(l, 'le balayage est allé au bout');
+  eq(l.nom, 'passe-bas', 'l’analyseur nomme un passe-bas');
+  eq(l.coupes.length, 1, 'et il trouve une seule coupure');
+  const fth = 1 / (2 * Math.PI * 1000 * 10e-6);   // 15,92 Hz
+  ok(Math.abs(l.coupes[0] - fth) < fth * .12,
+     'coupure mesurée ' + l.coupes[0].toFixed(1) + ' Hz contre ' + fth.toFixed(1) +
+     ' Hz au calcul — moins de 12 % d’écart');
+
+  // ---- le même, à l'envers : passe-haut, même fréquence ----
+  board();
+  const a2 = mk('ANAF', 0, 0), c2 = mk('CONDO', 400, 200),
+        r2 = mk('RESIS', 700, 200), m2 = mk('MASSE', 1000, 260);
+  a2.opt = { f1:6, f2:120, amp:10, per:1 };
+  c2.opt.cap = 10; r2.opt.r = 1000;
+  link(a2, 0, c2, 0); link(c2, 0, r2, 0); link(r2, 0, m2, 0);
+  link(m2, 1, a2, 0); link(c2, 0, a2, 1);
+  sim();
+  l = balaye(a2);
+  ok(l, 'le second balayage aussi');
+  eq(l.nom, 'passe-haut', 'intervertir les deux pièces retourne le filtre');
+  ok(Math.abs(l.coupes[0] - fth) < fth * .12,
+     'et la coupure ne bouge pas : ' + l.coupes[0].toFixed(1) + ' Hz');
+
+  // ---- le plafond de sous-pas se relève pendant le balayage ----
+  board();
+  const a3 = mk('ANAF', 0, 0), r3 = mk('RESIS', 400, 200), m3 = mk('MASSE', 800, 260);
+  a3.opt = { f1:100, f2:200, amp:10, per:1 };
+  link(a3, 0, r3, 0); link(r3, 0, m3, 0); link(m3, 1, a3, 0); link(r3, 0, a3, 1);
+  sim();
+  REG.ANAF.click(a3);
+  /* On regarde PENDANT le balayage : à cent hertz et une période par palier,
+     il expédie les cinquante-six paliers en une vingtaine d'images. */
+  __advance(60); sim(); __advance(60); sim();
+  ok(a3.k >= 0, 'le balayage est bien en cours');
+  ok(elecSous > ELEC_NSOUS,
+     'à cent hertz, il réclame plus que les trente-deux sous-pas ordinaires (' +
+     elecSous + ')');
+  ok(elecSous <= ELEC_NSOUS_MAX, 'sans dépasser le plafond absolu');
+
+  // ---- un clic lance, un second arrête ----
+  board();
+  const a4 = mk('ANAF', 0, 0);
+  eq(a4.k, -1, 'au repos au départ');
+  REG.ANAF.click(a4);
+  eq(a4.k, 0, 'un clic lance le balayage');
+  REG.ANAF.click(a4);
+  eq(a4.k, -1, 'un second l’arrête');
+  near(a4.emf, 0, 1e-9, 'et il ne pousse plus rien');
+
+  // ---- les trois montages d'exemple existent et disent leur filtre ----
+  ['passe-bas', 'passe-haut', 'passe-bande'].forEach(k =>
+    ok(EXAMPLES.some(e => e.name.includes(k)), 'le montage « ' + k + ' » est au catalogue'));
   board();
 });
 
