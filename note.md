@@ -5,17 +5,55 @@ dans `CLAUDE.md`.
 
 ## Où en est le projet
 
-- **v6.49 — l'appli s'appelle maintenant NodeFlow.** La refonte de l'overlay
+- **v6.50 — l'appli s'appelle maintenant NodeFlow.** La refonte de l'overlay
   est **terminée** (lots 1 à 4), le guide est devenu une page, et **les 136
   composants du catalogue ont tous leur fiche complète**.
-  Branche `claude/architecte-logique-v5-vntfkp`, **272 tests verts** (`npm test`).
+  Branche `claude/architecte-logique-v5-vntfkp`, **273 tests verts** (`npm test`).
 - `logicgates.html` : ~14 400 lignes, un seul `<script>`, aucune dépendance.
-- Copies figées dans `versions/` (v5.1 → v6.49), avec leur tableau dans
+- Copies figées dans `versions/` (v5.1 → v6.50), avec leur tableau dans
   `versions/README.md`.
-- Catalogue : **194 leçons en 38 chapitres** — 63 à table de vérité (dont 8
+- Catalogue : **197 leçons en 39 chapitres** — 63 à table de vérité (dont 8
   boîtes noires), 85 libres, et 30 à **condition de réussite** (chapitres 31 à 34).
 
 ## Ce qui vient d'être fait
+
+### v6.50 — ⚡ lot 3 : le hacheur, l'abaisseur et l'élévateur
+
+**`HACHE` — un interrupteur qui s'ouvre et se ferme des centaines de fois par
+seconde.** Seul il ne fait rien ; avec une BOBINE, une DIODE et un
+CONDENSATEUR, il devient un abaisseur ou un élévateur de tension. Les quatre
+mêmes pièces dans deux ordres différents.
+
+**Le verrou levé, et c'est celui que le carnet annonçait comme bloquant.** La
+topologie est figée **une fois par image** (`branche()` n'est appelé qu'au
+début du calcul) : on ne peut donc pas retirer la branche d'un contact au
+milieu. La solution était déjà dans le fichier, appliquée à la diode : on garde
+sa résistance passante de côté (`r0`) et on **rebascule sa conductance à chaque
+sous-pas** selon `c.on`, que `pas(c, dt)` met à jour au rythme du découpage.
+Un contact qui s'ouvre et se ferme dans l'image, sans toucher au solveur.
+
+**Mesuré au navigateur, contre la théorie :**
+
+| | 25 % | 50 % | 75 % |
+| --- | --- | --- | --- |
+| abaisseur mesuré | 2,34 V | 5,58 V | 8,95 V |
+| théorie | 3,00 | 6,00 | 9,00 |
+
+L'écart n'est **pas** une imprécision : c'est la **diode**, qui garde 0,7 V pour
+elle pendant tout le temps où le hacheur est ouvert — d'où un manque
+proportionnellement plus gros à faible rapport cyclique. C'est exactement ce que
+fait un vrai convertisseur, et c'est devenu un point de la leçon.
+
+Élévateur : 11,24 / 16,92 / 22,78 V pour 0 / 33 / 50 % (théorie 12 / 17,9 / 24).
+
+**Deux montages d'exemple** et le **chapitre 39 « Changer la tension »**, trois
+leçons : l'abaisseur, l'élévateur, et « fabriquer du 5 volts » — où le réglage
+juste (45 %) n'est pas celui du calcul (42 %), justement à cause de la diode.
+
+**Piège de test** : à 200 Hz, un hacheur fait douze allers-retours complets dans
+une image de 60 ms. Le regarder **une fois par image** ne montre donc qu'un
+repliement — toujours la même phase, toujours le même état. T270 l'observe au
+rythme des sous-pas.
 
 ### v6.49 — ⚡ lot 2 : l'analyseur de fréquence, et les filtres
 

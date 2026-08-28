@@ -4755,7 +4755,8 @@ T('T205 les chapitres ⚡ : à la fin du cours, et dans leur atelier', () => {
   eq(missions.filter(m => /Chapitre 36/.test(m.ch)).length, 6, 'six au chapitre 36');
   eq(missions.filter(m => /Chapitre 37/.test(m.ch)).length, 3, 'trois au chapitre 37');
   eq(missions.filter(m => /Chapitre 38/.test(m.ch)).length, 3, 'trois au chapitre 38');
-  eq(lec.length, 46, 'quarante-six leçons dans l’atelier ⚡ en tout');
+  eq(missions.filter(m => /Chapitre 39/.test(m.ch)).length, 3, 'trois au chapitre 39');
+  eq(lec.length, 49, 'quarante-neuf leçons dans l’atelier ⚡ en tout');
   // toutes à la fin du catalogue, et groupées
   const prem = missions.findIndex(m => m.dom === 'phys');
   eq(prem + lec.length, missions.length, 'elles occupent la fin du catalogue');
@@ -4768,8 +4769,8 @@ T('T205 les chapitres ⚡ : à la fin du cours, et dans leur atelier', () => {
   });
   // les chapitres apparaissent dans la carte du cours, l’un après l’autre
   const noms = chapitres().map(c => c.ch || c.nom || c.name || '');
-  ['31','32','33','34','35','36','37','38'].forEach((n, i) =>
-    ok(new RegExp('Chapitre ' + n).test(noms[noms.length - 8 + i]),
+  ['31','32','33','34','35','36','37','38','39'].forEach((n, i) =>
+    ok(new RegExp('Chapitre ' + n).test(noms[noms.length - 9 + i]),
        'le chapitre ' + n + ' est à sa place dans la carte du cours'));
   // et charger une leçon bascule dans l’atelier ⚡
   setAppMode('elec');
@@ -7151,6 +7152,93 @@ T('T269 l’analyseur de fréquence MESURE vraiment un filtre', () => {
   // ---- les trois montages d'exemple existent et disent leur filtre ----
   ['passe-bas', 'passe-haut', 'passe-bande'].forEach(k =>
     ok(EXAMPLES.some(e => e.name.includes(k)), 'le montage « ' + k + ' » est au catalogue'));
+  board();
+});
+
+T('T270 le hacheur découpe DANS l’image, et fait un abaisseur puis un élévateur', () => {
+  ok(REG.HACHE && typeof REG.HACHE.pas === 'function',
+     'le hacheur vit au rythme des sous-pas');
+  ok(REG.HACHE.branche(new Component(0, 0, 'HACHE')).hache,
+     'et sa branche se déclare comme hachée');
+
+  /* Le point délicat : la topologie est figée une fois par image, mais un
+     hacheur à 200 Hz doit s'ouvrir et se fermer trois fois dans une image de
+     60 ms. C'est la conductance de sa branche qu'on rebascule à chaque
+     sous-pas — le procédé de la diode, appliqué à un contact. */
+  board();
+  const h = mk('HACHE', 0, 0), pl = mk('PILE', 300, 0),
+        r0 = mk('RESIS', 600, 0), m0 = mk('MASSE', 900, 40);
+  pl.opt.e = 12; pl.opt.ri = .1; r0.opt.r = 100;
+  h.opt = { rc:50, f:200, r:.05 };
+  link(pl, 0, h, 0); link(h, 0, r0, 0); link(r0, 0, m0, 0); link(m0, 1, pl, 0);
+  sim();
+  /* On le regarde au rythme des SOUS-pas, pas des images : à 200 Hz il fait
+     douze allers-retours complets dans une image de 60 ms, et le regarder une
+     fois par image ne montrerait qu'un repliement — toujours la même phase. */
+  let ouvert = 0, ferme = 0;
+  const dtSous = 1 / (200 * 30);
+  for (let k = 0; k < 90; k++){ REG.HACHE.pas(h, dtSous); h.on ? ferme++ : ouvert++; }
+  ok(ouvert > 0 && ferme > 0,
+     'sur trois périodes de découpage, il est tantôt ouvert tantôt fermé (' +
+     ferme + ' fermé / ' + ouvert + ' ouvert)');
+  ok(Math.abs(ferme - ouvert) < 12,
+     'et à 50 % de rapport cyclique, les deux moitiés s’équilibrent');
+  for (let k = 0; k < 40; k++){ __advance(60); sim(); }
+  ok(elecSous > ELEC_NSOUS,
+     'il réclame plus de sous-pas que d’ordinaire pour se découper proprement (' +
+     elecSous + ')');
+
+  /* L'abaisseur : quatre pièces, et la sortie vaut l'entrée MULTIPLIÉE par le
+     rapport cyclique — à la diode près, qui garde 0,7 V pour elle. */
+  const buck = rc => {
+    board();
+    const p1 = mk('PILE', 0, 120), h1 = mk('HACHE', 340, 120), d1 = mk('DIODE', 340, 420),
+          b1 = mk('INDUC', 660, 120), c1 = mk('CONDO', 960, 300),
+          l1 = mk('RESIS', 1180, 120), g1 = mk('MASSE', 820, 600);
+    p1.opt.e = 12; p1.opt.ri = .1;
+    h1.opt = { rc:rc, f:200, r:.05 };
+    b1.opt.ind = 500; b1.opt.rs = .5; c1.opt.cap = 1000; l1.opt.r = 100; g1.opt.n = 6;
+    link(p1, 0, h1, 0); link(h1, 0, b1, 0); link(d1, 0, b1, 0);
+    link(b1, 0, c1, 0); link(b1, 0, l1, 0);
+    link(c1, 0, g1, 0); link(l1, 0, g1, 1); link(g1, 2, d1, 0); link(g1, 3, p1, 0);
+    sim();
+    for (let k = 0; k < 90; k++){ __advance(60); sim(); }
+    return Math.abs(l1.u);
+  };
+  const u25 = buck(25), u50 = buck(50), u75 = buck(75);
+  ok(u25 < u50 && u50 < u75,
+     'la sortie suit le rapport cyclique (' + u25.toFixed(2) + ' < ' +
+     u50.toFixed(2) + ' < ' + u75.toFixed(2) + ' V)');
+  ok(Math.abs(u50 - 6) < 1,
+     'à 50 % d’un 12 V, la sortie vaut environ 6 V : ' + u50.toFixed(2));
+  ok(u50 < 6,
+     'un peu moins, jamais plus : la diode garde 0,7 V pour elle à chaque tour');
+  ok(u75 > 8 && u75 < 9.5, 'et à 75 %, autour de 9 V : ' + u75.toFixed(2));
+
+  /* L'élévateur : les MÊMES pièces dans un autre ordre, et la sortie DÉPASSE
+     l'entrée. C'est la bobine qui refuse de lâcher son courant. */
+  board();
+  const p2 = mk('PILE', 0, 120), b2 = mk('INDUC', 320, 120), h2 = mk('HACHE', 600, 400),
+        d2 = mk('DIODE', 640, 120), c2 = mk('CONDO', 940, 300),
+        l2 = mk('RESIS', 1160, 120), g2 = mk('MASSE', 820, 620);
+  p2.opt.e = 12; p2.opt.ri = .1;
+  b2.opt.ind = 500; b2.opt.rs = .5;
+  h2.opt = { rc:50, f:200, r:.05 };
+  c2.opt.cap = 1000; l2.opt.r = 200; g2.opt.n = 6;
+  link(p2, 0, b2, 0); link(b2, 0, h2, 0); link(b2, 0, d2, 0); link(h2, 0, g2, 0);
+  link(d2, 0, c2, 0); link(d2, 0, l2, 0);
+  link(c2, 0, g2, 1); link(l2, 0, g2, 2); link(g2, 3, p2, 0);
+  sim();
+  for (let k = 0; k < 90; k++){ __advance(60); sim(); }
+  const uh = Math.abs(l2.u);
+  ok(uh > 12, 'la sortie DÉPASSE l’entrée : ' + uh.toFixed(2) + ' V pour 12 V');
+  ok(uh > 18 && uh < 26,
+     'à 50 %, elle double à peu près (théorie 24 V) : ' + uh.toFixed(2));
+
+  // les deux montages d'exemple sont au catalogue
+  ['abaisseur', 'élévateur'].forEach(k =>
+    ok(EXAMPLES.some(e => noAccent(e.name).includes(noAccent(k))),
+       'le montage « ' + k + ' » est au catalogue'));
   board();
 });
 
