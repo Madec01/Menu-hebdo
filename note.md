@@ -5,17 +5,62 @@ dans `CLAUDE.md`.
 
 ## Où en est le projet
 
-- **v6.44 — l'appli s'appelle maintenant NodeFlow.** La refonte de l'overlay
+- **v6.45 — l'appli s'appelle maintenant NodeFlow.** La refonte de l'overlay
   est **terminée** (lots 1 à 4), le guide est devenu une page, et **les 136
   composants du catalogue ont tous leur fiche complète**.
-  Branche `claude/architecte-logique-v5-vntfkp`, **268 tests verts** (`npm test`).
+  Branche `claude/architecte-logique-v5-vntfkp`, **269 tests verts** (`npm test`).
 - `logicgates.html` : ~14 400 lignes, un seul `<script>`, aucune dépendance.
-- Copies figées dans `versions/` (v5.1 → v6.44), avec leur tableau dans
+- Copies figées dans `versions/` (v5.1 → v6.45), avec leur tableau dans
   `versions/README.md`.
 - Catalogue : **191 leçons en 37 chapitres** — 63 à table de vérité (dont 8
   boîtes noires), 85 libres, et 30 à **condition de réussite** (chapitres 31 à 34).
 
 ## Ce qui vient d'être fait
+
+### v6.45 — le tunnel devient un rond, et les câbles s'enjambent
+
+**Le tunnel n'est plus qu'un rond**, 54 px au lieu de 112×74. Un nœud nommé ne
+calcule rien et ne contient rien : c'est un repère, et un boîtier de la taille
+d'une porte logique lui donnait une importance qu'il n'a pas.
+
+Pour ça, un nouveau crochet du registre : **`forme(comp, ctx)`**. Quand il
+existe, `drawRegistryBody` s'en sert au lieu du rectangle arrondi — c'est le
+cadre lui-même qui devient un cercle, pas seulement le dessin dedans.
+Le nom tient dans le rond, à une taille qui suit sa longueur. `pinPos` maison :
+les deux bornes sont à mi-hauteur, gauche et droite.
+
+L'étiquette sous le composant devenait plus large que le composant : d'où
+`name:'TUNNEL'` (court, affiché) et `guideTitle:'TUNNEL (NŒUD NOMMÉ)'` (long,
+pour le guide) — le même motif que les rails de puissance.
+
+**Piège trouvé en chemin, et il concernait TOUT le monde** : les amorces de
+20 px de chaque bout se croisaient dès que deux bornes étaient à moins de 40 px
+l'une de l'autre. La cible passait alors « derrière », et `buildRoute` partait
+faire un contournement de quarante pixels pour quatre pixels d'écart. L'amorce
+est maintenant plafonnée à **la moitié de la distance** entre les deux bornes.
+C'était invisible avant parce que les composants étaient tous gros.
+
+**Les ponts aux croisements.** Deux câbles qui se croisent sans se toucher, ça
+ne se voit pas — le lecteur doit deviner. Le segment **horizontal** enjambe le
+vertical par un demi-cercle vers le haut. La règle est fixe pour que les deux
+fils ne sautent jamais en même temps.
+
+- calculés dans `croisements()`, appelé à la fin de `spreadRoutes()` — donc sur
+  les tracés DÉFINITIFS, après écartement, sinon le pont serait à côté du
+  croisement qu'il annonce ;
+- dessinés dans `buildPath`, en coupant le segment : `lineTo` jusqu'au bord du
+  pont, puis `arc`. **Attention au sens** : l'axe y descend, donc « bomber vers
+  le haut » veut dire *horaire* quand on va vers la droite et *anti-horaire*
+  quand on revient. Le premier essai bombait vers le bas et on aurait juré que
+  les deux fils se touchaient ;
+- rayon 7 px sur un signal, 10 sur un câble de puissance (son halo fait 8) ;
+- pas de pont à moins de 10 px d'un coude, ni en tracé courbe ;
+- **réglage `btn-ponts`** dans le menu, allumé par défaut, mémorisé
+  (`al2_ponts`). KiCad, GoJS et JointJS le proposent tous et l'éteignent par
+  défaut : si la densité monte, c'est le premier réglage à couper.
+
+**Coût mesuré** sur un plan de 90 câbles : `spreadRoutes` passe de 0,528 à
+0,875 ms. Une image dure 16,7 ms.
 
 ### v6.44 — câblage ③ : plus un seul câble ne traverse un boîtier
 

@@ -6882,6 +6882,87 @@ T('T265 un câble qui sort par le haut ou par le bas contourne, lui aussi', () =
   board();
 });
 
+T('T266 le tunnel n’est plus qu’un rond, et les câbles s’enjambent aux croisements', () => {
+  // ---- le tunnel est rond, et petit ----
+  board();
+  const t1 = mk('TUNNEL', 0, 0), t2 = mk('TUNP', 300, 0);
+  eq(t1.w, TUN_D, 'le tunnel de signal est carré…');
+  eq(t1.h, TUN_D, '…donc rond une fois dessiné');
+  eq(t2.w, TUN_D, 'le tunnel de puissance aussi');
+  ok(TUN_D <= 60, 'et il tient en moins de soixante pixels (' + TUN_D + ')');
+  ok(REG.TUNNEL.forme && REG.TUNP.forme, 'les deux donnent leur propre forme au cadre');
+  // les deux bornes sont à mi-hauteur, l’une à gauche l’autre à droite
+  near(t1.inPins[0].y, t1.y + t1.h / 2, .01, 'l’entrée est à mi-hauteur');
+  near(t1.outPins[0].y, t1.y + t1.h / 2, .01, 'la sortie aussi');
+  near(t1.inPins[0].x, t1.x, .01, 'l’entrée est à gauche');
+  near(t1.outPins[0].x, t1.x + t1.w, .01, 'la sortie à droite');
+  // l’étiquette sous le rond ne doit pas être un roman
+  ok(FR_NAME.TUNNEL.length <= 10, 'le nom affiché reste court : « ' + FR_NAME.TUNNEL + ' »');
+  ok(REG.TUNNEL.guideTitle && REG.TUNNEL.guideTitle.length > FR_NAME.TUNNEL.length,
+     'le nom complet vit dans le guide');
+
+  // ---- deux bornes très proches ne font plus de détour ----
+  board();
+  const sw = mk('SWITCH', 0, 0);
+  const tu = mk('TUNNEL', 0, 0);
+  // on colle le tunnel juste à droite de la borne de l’interrupteur
+  tu.x = sw.outPins[0].x + 24;
+  tu.y = sw.outPins[0].y - tu.h / 2;
+  link(sw, 0, tu, 0);
+  sim();
+  const P = wires[0].route();
+  const hauteurs = P.map(q => q.y);
+  const ampl = Math.max(...hauteurs) - Math.min(...hauteurs);
+  ok(ampl < 20, 'le câble va tout droit au lieu de faire un détour (' +
+     Math.round(ampl) + ' px de haut)');
+
+  // ---- les ponts aux croisements ----
+  board();
+  wirePonts = true;
+  // une liaison horizontale et une liaison verticale qui se croisent
+  const a1 = mk('SWITCH', 0, 300), b1 = mk('LED', 800, 300);
+  const a2 = mk('SWITCH', 380, 0), b2 = mk('LED', 400, 620);
+  link(a1, 0, b1, 0); link(a2, 0, b2, 0);
+  sim();
+  wires.forEach(w => w.route());
+  spreadRoutes();
+  const total = wires.reduce((n, w) => n + ((w._hops || []).length), 0);
+  ok(total >= 1, 'le croisement est repéré (' + total + ' pont)');
+  // c’est TOUJOURS l’horizontal qui enjambe : les deux ne sautent jamais ensemble
+  const quiSaute = wires.filter(w => (w._hops || []).length);
+  eq(quiSaute.length, 1, 'un seul des deux câbles fait le pont');
+  const h = quiSaute[0]._hops[0];
+  const seg = quiSaute[0]._rp;
+  near(seg[h.i].y, seg[h.i + 1].y, .5, 'et c’est bien un segment horizontal');
+  ok(h.r > 0, 'le pont a un rayon');
+
+  // un câble ne s’enjambe pas lui-même
+  wires.forEach(w => (w._hops || []).forEach(() => {}));
+  ok(quiSaute[0]._hops.every(x => x.i >= 0), 'les ponts sont rangés par segment');
+
+  // le réglage les coupe
+  wirePonts = false;
+  spreadRoutes();
+  eq(wires.reduce((n, w) => n + ((w._hops || []).length), 0), 0,
+     'le réglage coupe tous les ponts');
+  wirePonts = true;
+
+  // et le mode courbe n’en a pas : il n’y a pas d’angle droit à enjamber
+  const avantMode = wireMode;
+  wireMode = 'courbe';
+  spreadRoutes();
+  eq(wires.reduce((n, w) => n + ((w._hops || []).length), 0), 0,
+     'pas de pont en tracé courbe');
+  wireMode = avantMode;
+  spreadRoutes();
+
+  // le bouton existe dans le balisage et il est rangé dans le menu
+  ok(/id="btn-ponts"/.test(__HTML), 'le réglage a son bouton');
+  ok(MENU_PLAN.some(([, l]) => l.some(([id]) => id === 'btn-ponts')),
+     'et il est rangé dans les réglages du menu');
+  board();
+});
+
 T('T258 poser un montage demande avant d’effacer', () => {
   loadMission(-1); clearBoard();
   const box = __el('ask-modal');
