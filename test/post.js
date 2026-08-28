@@ -6988,6 +6988,18 @@ T('T266 le tunnel n’est plus qu’un rond, et les câbles s’enjambent aux cr
   board();
 });
 
+T('T267 la version se lit dans l’onglet et dans le menu', () => {
+  ok(/^v\d+\.\d+$/.test(APP_VER), 'le numéro de version a la bonne forme : ' + APP_VER);
+  // le titre écrit dans le fichier et la constante doivent dire la même chose,
+  // sinon l’onglet ment tant que le script n’a pas tourné
+  const t = (__HTML.match(/<title>([^<]*)<\/title>/) || [])[1] || '';
+  ok(t.includes(APP_VER), 'le <title> du fichier porte la version (« ' + t + ' »)');
+  majVersion();
+  ok(document.title.includes(APP_VER), 'et le script la republie au démarrage');
+  eq(__el('menu-ver').textContent, 'NodeFlow ' + APP_VER, 'le menu l’affiche aussi');
+  ok(/id="menu-ver"/.test(__HTML), 'la ligne existe dans le balisage');
+});
+
 T('T258 poser un montage demande avant d’effacer', () => {
   loadMission(-1); clearBoard();
   const box = __el('ask-modal');

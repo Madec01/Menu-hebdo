@@ -5,17 +5,36 @@ dans `CLAUDE.md`.
 
 ## Où en est le projet
 
-- **v6.46 — l'appli s'appelle maintenant NodeFlow.** La refonte de l'overlay
+- **v6.47 — l'appli s'appelle maintenant NodeFlow.** La refonte de l'overlay
   est **terminée** (lots 1 à 4), le guide est devenu une page, et **les 136
   composants du catalogue ont tous leur fiche complète**.
-  Branche `claude/architecte-logique-v5-vntfkp`, **269 tests verts** (`npm test`).
+  Branche `claude/architecte-logique-v5-vntfkp`, **270 tests verts** (`npm test`).
 - `logicgates.html` : ~14 400 lignes, un seul `<script>`, aucune dépendance.
-- Copies figées dans `versions/` (v5.1 → v6.46), avec leur tableau dans
+- Copies figées dans `versions/` (v5.1 → v6.47), avec leur tableau dans
   `versions/README.md`.
 - Catalogue : **191 leçons en 37 chapitres** — 63 à table de vérité (dont 8
   boîtes noires), 85 libres, et 30 à **condition de réussite** (chapitres 31 à 34).
 
 ## Ce qui vient d'être fait
+
+### v6.47 — le numéro de version, enfin visible
+
+L'auteur a signalé « je ne vois pas le changement sur les tunnels ». Vérifié au
+navigateur : le changement **était** bien dans le fichier livré. Il regardait
+une copie plus ancienne — et rien, nulle part, ne permettait de s'en rendre
+compte. Huit fichiers livrés en une session, tous appelés `logicgates.html`.
+
+**`APP_VER`** est maintenant la seule source du numéro, et deux endroits le
+lisent : le **titre de l'onglet** du navigateur et une ligne en bas du
+**menu**. Le `<title>` écrit dans le fichier le porte aussi, pour qu'il soit
+juste même avant que le script ait tourné — T267 vérifie que les deux
+concordent.
+
+**À monter à chaque livraison** : `APP_VER`, le `<title>`, et rien d'autre.
+
+**Réflexe à garder** : quand l'auteur dit qu'il ne voit pas un changement,
+vérifier d'abord au navigateur que le fichier livré le contient — avant de
+chercher un bug qui n'existe pas.
 
 ### v6.46 — le tunnel devient un point, et perd la borne qui ne sert pas
 
