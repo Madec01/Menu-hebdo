@@ -19,7 +19,9 @@ sécurité de vos données. Voir la section 7.
 ## 2. Les trois zones de l'écran
 
 **Le bandeau rouge « Urgent »**, tout en haut, traverse la semaine entière. Ce qui est là
-n'appartient à aucun jour : c'est ce qui doit être fait maintenant.
+n'appartient à aucun jour : c'est ce qui doit être fait maintenant. Il ne dépasse jamais deux
+lignes ; au-delà, un bouton `+ n` déplie le reste. Si vous avez besoin de ce bouton toutes les
+semaines, c'est le signe que trop de choses sont marquées urgentes.
 
 **La grille des sept jours.** Chaque jour a deux étages :
 - en haut, le bac **« À faire »** : des tâches sans heure, qu'on coche ;
@@ -33,6 +35,34 @@ tâche que vous y avez glissée.
 **Le bas de page.** Vos notes de la semaine à gauche, le parking à droite.
 Attrapez la fine barre au-dessus pour l'agrandir ou le réduire.
 
+### Vous décidez du partage entre les tâches et les heures
+
+Une barre grise sépare le bac « À faire » de la grille horaire.
+
+- **Par défaut, l'agenda s'ajuste tout seul** : le bac prend la hauteur de ses tâches, et tout
+  ce qu'il n'utilise pas revient aux heures. Une semaine légère laisse donc plus de place au
+  calendrier, une semaine chargée en prend davantage pour les tâches.
+- **Attrapez cette barre** pour arbitrer vous-même. À partir de là, c'est votre hauteur qui
+  s'applique, et elle est mémorisée.
+- **Double-cliquez dessus** pour rendre la main à l'ajustement automatique.
+
+### Samedi et dimanche sont repliés
+
+Cinq colonnes au lieu de sept, c'est **40 % de largeur en plus** pour chaque jour de travail :
+vos titres tiennent sur une ligne ou deux au lieu de quatre.
+
+Le petit bouton `‹‹` en haut à gauche de la grille les rouvre d'un clic. **Quand quelque chose
+vous attend le week-end, il porte une pastille orange avec le nombre** : rien n'est jamais caché
+sans être annoncé. Le même bouton les replie.
+
+### La grille n'affiche que vos heures
+
+Plutôt que de réserver 8 h – 19 h toute l'année, la grille se resserre sur la plage où vous avez
+réellement des rendez-vous, plus une heure de marge de chaque côté. L'espace ainsi gagné revient
+à vos tâches. Elle ne descend jamais sous quatre heures, et l'heure actuelle y figure toujours.
+
+Si ce recadrage vous déroute, décochez **Réglages → Replier la grille sur les heures occupées**.
+
 ---
 
 ## 3. Écrire dans l'agenda
@@ -44,6 +74,14 @@ Attrapez la fine barre au-dessus pour l'agrandir ou le réduire.
 - **Étirez le bas d'un rendez-vous** pour changer sa durée.
 - **Attrapez la poignée** à gauche d'une tâche (elle apparaît au survol) pour la déplacer
   vers un autre jour, un créneau, le bandeau urgent ou le parking.
+
+**Les commandes d'une tâche n'apparaissent qu'au survol** : poignée à gauche, pastille de
+priorité et croix de suppression à droite. Ce n'est pas de la coquetterie. Affichées en
+permanence, elles consommaient la moitié de la largeur d'une tâche sur un écran de portable, et
+il ne restait que treize caractères par ligne. Passez la souris sur une tâche et tout revient.
+
+La priorité, elle, reste toujours lisible sans rien survoler : c'est la **bordure colorée à
+gauche** et la teinte du fond qui la portent.
 
 ---
 
@@ -206,8 +244,19 @@ Une restauration jamais testée est une restauration qui ne marche pas.
 
 Bouton engrenage, en haut à droite. Tout est modifiable à tout moment, rien n'y touche
 à vos tâches. Vous y trouverez le thème clair ou sombre, la couleur d'accent, la taille du
-texte, la plage horaire affichée, l'affichage du week-end, le comportement du report,
-l'heure du point de fin de journée et la fréquence des sauvegardes.
+texte, la plage horaire affichée, le repli de la grille sur les heures occupées, l'affichage du
+week-end, le comportement du report, l'heure du point de fin de journée et la fréquence des
+sauvegardes.
+
+## 9 bis. Imprimer
+
+`Ctrl` + `P`, en paysage. Sur le papier, aucun plafond ne s'applique : **tout ce que contient la
+semaine s'imprime**, y compris ce qui demandait un défilement à l'écran. Les créneaux horaires
+sont resserrés, puisqu'on ne clique pas sur une feuille.
+
+Une semaine ordinaire tient sur une page. Une semaine très chargée — une vingtaine de tâches sur
+une même journée — déborde sur une seconde page. C'est normal : ce volume ne tient pas sur une
+feuille, et mieux vaut une deuxième page qu'une tâche absente.
 
 ---
 
@@ -241,6 +290,16 @@ et autorisez-les pour cette page.
 Exportez une sauvegarde, puis envoyez au parking ou abandonnez ce dont vous n'avez plus besoin.
 L'agenda ne supprime jamais rien de lui-même. Vous avez le temps : l'avertissement arrive
 largement avant la panne.
+
+**Mon agenda s'est ouvert sans samedi ni dimanche.**
+C'est voulu : cinq colonnes au lieu de sept élargissent chaque jour de 40 %. Le bouton `‹‹` en
+haut à gauche de la grille les rouvre. Rien n'a été perdu, et s'il y a quelque chose ce
+week-end-là, le bouton porte une pastille orange avec le nombre.
+
+**La grille horaire ne commence plus à 8 h.**
+Elle se resserre sur les heures où vous avez des rendez-vous, pour rendre la place à vos tâches.
+Posez un rendez-vous plus tôt et elle s'étendra d'elle-même. Pour une grille toujours identique :
+**Réglages → Replier la grille sur les heures occupées**, à décocher.
 
 **Un bandeau dit que cet onglet n'enregistre plus.**
 L'agenda est ouvert dans un autre onglet, qui a enregistré depuis. Pour ne pas écraser ce qui y

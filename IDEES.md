@@ -44,22 +44,31 @@ Issues des trois audits de septembre 2026 (rapports complets dans `audits/`).
 
 ---
 
+## Retenues et faites (version 1.2.0)
+
+| Idée | D'où elle vient |
+|---|---|
+| Supprimer le plafond du bac et le rendre proportionnel | Les trois audits, priorité haute numéro un |
+| Bac dimensionné sur son contenu, sans dépasser sa part | Constaté en corrigeant : une part fixe est presque aussi rigide qu'un plafond fixe |
+| Poignée d'arbitrage entre tâches et heures | Audit interface, disposition B |
+| Hauteur imposée dès qu'on tire la poignée, double-clic pour revenir à l'automatique | Constaté en vérifiant : sinon la poignée ne répond que dans un sens |
+| Décoration en superposition, révélée au survol | Audits interface et ergonomie. Les 84 pixels constants étaient la cause racine des trois reproches. |
+| Week-end replié par défaut, avec bouton qui annonce son contenu | Votre décision |
+| Grille repliée sur les heures occupées | Votre décision, recommandée par les audits |
+| Bandeau urgent borné à deux lignes | Audit ergonomie. Au-delà, « urgent » ne veut plus rien dire. |
+| Créneaux resserrés à l'impression | Constaté en mesurant : c'était le seul poste réductible sans perdre de contenu |
+
+---
+
 ## En réserve — vague suivante
 
 Classées par ce que j'estime être le meilleur rapport entre l'utilité au quotidien et le travail nécessaire.
 
 ### Priorité haute
 
-**La répartition de l'espace entre le bac « À faire » et la grille horaire** — *nouveau, prioritaire*
-C'est le cœur du reproche « la partie chose à faire est trop petite », et les trois audits le
-placent en tête. Le bac reste plafonné à 190 pixels sur tout écran : à 1920×1080 il occupe
-17,7 % de la hauteur pendant que la grille horaire, vide à 80 %, en prend 48,4 %. Il faut aussi
-récupérer les 84 pixels de décoration constants sur chaque tâche — la cause racine des trois
-reproches — en ne montrant les commandes qu'au survol, comme le font tous les outils du métier.
-À faire **avant** l'horizon glissant : celui-ci change la notion de semaine affichée, et le
-construire d'abord reviendrait à le refaire deux fois.
+**L'horizon glissant sur 10 jours** — *vous l'aviez retenu ; c'est maintenant la prochaine étape*
+La répartition de l'espace étant faite, plus rien ne le retarde.
 
-**L'horizon glissant sur 10 jours** — *vous l'aviez retenu, reporté après la répartition de l'espace*
 Une vue montrant la fin de la semaine en cours plus le début de la suivante. À partir du mercredi,
 la vraie question n'est plus « que fait-on cette semaine » mais « qu'est-ce qui bascule sur la
 semaine prochaine ». Un semainier strict coupe la pensée là où elle continue.
@@ -90,6 +99,15 @@ cinq fois en une semaine. Une seule instance vivante par récurrence.
 
 **Champ échéance** — deux cas distincts : à faire *le* jour J (n'apparaît pas avant), et à faire
 *avant* J (bascule automatiquement en urgent à J-1, reste visible « en retard » au-delà).
+
+**La disposition « jour au centre, semaine en rail »** — *à ne faire que si l'usage le réclame*
+Étape 4 des audits : le jour courant en pleine largeur, la semaine réduite à un rail latéral.
+Environ 90 caractères par ligne au lieu de 38. Mais c'est une semaine de travail, la
+comparaison horaire entre jours disparaît, et c'est un changement d'identité : ce n'est plus un
+semainier, c'est un planificateur de journée avec contexte hebdomadaire.
+**À ne lancer qu'après avoir vécu avec la version 1.2.0.** Si les tâches sont redevenues
+lisibles et que le bac respire, cette étape devient inutile — et ce serait le meilleur
+résultat possible.
 
 ### Priorité basse
 

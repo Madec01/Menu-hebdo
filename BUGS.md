@@ -5,6 +5,74 @@ Ce fichier sert de mémoire : un problème consigné ici ne sera pas re-découve
 
 ---
 
+## Version 1.2.0 — 2 septembre 2026
+
+### B-015 — Le plafond du bac était à l'envers du besoin
+**Symptôme.** « La partie chose à faire est trop petite. »
+**Cause.** Le bac « À faire » était plafonné à 190 pixels sur **tout** écran, alors que la
+grille horaire, elle, n'était pas plafonnée du tout. Mesure : à 1920×1080, le bac recevait
+25 % de la zone centrale et la grille 75 %, pour 81 % et 19 % du contenu respectivement.
+**Ce qui rendait le défaut pervers.** Plus l'écran est étroit, plus les titres passent à la
+ligne, donc plus le bac aurait besoin de hauteur. Le contenu réel d'un jour chargé mesurait
+264 pixels à 1920 mais **431 à 1280**, toujours dans le même cadre de 190. Le plafond serrait
+d'autant plus fort qu'il fallait qu'il cède.
+**Correction.** Le bac prend la hauteur de son contenu sans dépasser sa part, et ce qu'il
+n'utilise pas revient aux heures. Une poignée arbitre entre les deux zones.
+**Piège rencontré en corrigeant.** Une part *fixe* de 60 % s'est révélée presque aussi rigide
+qu'un plafond fixe : un lundi à six tâches occupait 230 pixels dans un bac de 350, et les
+120 pixels perdus manquaient à la grille, qui coupait le déjeuner de midi. C'est la mesure sur
+capture d'écran qui l'a montré, pas le raisonnement.
+
+### B-016 — Quatre-vingt-quatre pixels de décoration sur chaque tâche
+**Symptôme.** « Les affichages ne se font pas bien dans les cases. »
+**Cause.** Poignée, case à cocher, pastille de priorité et croix occupaient 84 pixels par
+tâche, valeur **constante quelle que soit la largeur de l'écran** : 33 % de la largeur utile à
+1920, 45 % à 1440, 51 % à 1280. Il restait treize caractères par ligne sur un portable.
+**Correction.** Les commandes passent dans une barre superposée qui ne paraît qu'au survol.
+La pastille peut disparaître au repos sans rien coûter en information : la priorité est déjà
+portée par la bordure gauche colorée et par la teinte de fond. Décor : 84 pixels avant, 34
+après ; texte par tâche multiplié par 2,5 sur un portable.
+**Leçon.** Un coût constant dans une largeur variable est un défaut de conception, pas un
+détail de style : sa part grandit exactement là où la place manque.
+
+### B-017 — Pastille et croix se recouvraient sur une tâche d'une seule ligne
+**Symptôme.** Le clic destiné à la pastille de priorité tombait sur la croix de suppression.
+**Cause.** En superposant les commandes, la pastille avait été placée en bas à droite et la
+croix en haut à droite. Sur une tâche de vingt pixels de haut, deux éléments de treize pixels
+placés ainsi se recouvrent, et c'est le dernier du document qui reçoit le clic.
+**Correction.** Les deux voyagent côte à côte dans la même barre, jamais l'une sur l'autre.
+**Détection.** La suite de vérification, dès la première exécution. C'est exactement le
+scénario du faux problème F-001, mais cette fois le défaut était réel.
+
+### B-018 — Le repère « + n autres » recouvrait la dernière tâche
+**Cause.** Collé en bas du bac sur toute la largeur, il interceptait les clics destinés à la
+tâche située dessous.
+**Correction.** Une pastille étroite calée à droite.
+
+### B-019 — Un rendez-vous hors de la plage réglée disparaissait
+**Symptôme.** Un rendez-vous à 7 h, avec une journée réglée à partir de 8 h, n'apparaissait
+nulle part.
+**Cause.** Le rendu écartait purement et simplement les éléments dont la ligne tombait hors
+de la grille.
+**Correction.** Le repli de la grille sur les heures occupées **étend** la plage pour inclure
+ces rendez-vous. Un défaut ancien corrigé par un chemin détourné.
+
+### B-020 — L'impression demandait près de trois pages
+**Symptôme.** 2 088 pixels pour 734 disponibles, alors que le README promet une page.
+**Cause.** Aucun plafond n'était neutralisé à l'impression, et les créneaux gardaient leur
+hauteur d'écran de 22 pixels alors qu'on ne clique pas sur du papier.
+**Correction.** Plafonds et replis neutralisés — une tâche hors du cadre à l'écran aurait été
+absente de la feuille — et créneaux resserrés à 14 pixels le temps de la photographie.
+**Fausse piste écartée.** Le faire en CSS, par `--slot-h` dans `@media print`, ne fonctionne
+pas : la hauteur des créneaux est calculée en JavaScript et posée en pixels sur la gouttière
+comme sur chaque rendez-vous. Une règle de style aurait déplacé la grille sans déplacer les
+rendez-vous. C'est le procédé du bug B-005 qui a été repris : préparer la page, laisser le
+navigateur la photographier, tout remettre en place.
+**Résultat honnête.** Une semaine normale tient sur une page (680 pixels). Une semaine très
+chargée en demande 991 et déborde encore. Le mode d'emploi le dit désormais.
+
+---
+
 ## Version 1.1.0 — 2 septembre 2026
 
 Défauts trouvés par les trois audits (rapports complets dans `audits/`). Tous ont été

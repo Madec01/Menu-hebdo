@@ -4,6 +4,100 @@ Journal daté de tout ce qui a été fait, dans l'ordre. La version la plus réc
 
 ---
 
+## Version 1.2.0 — 2 septembre 2026
+
+La réponse au reproche d'origine : « la partie chose à faire est trop petite ».
+
+### Le chiffre qui explique tout
+
+Sur chaque tâche, **quatre-vingt-quatre pixels étaient consommés par la décoration** —
+poignée de glissement, case à cocher, pastille de priorité, croix de suppression — et cette
+valeur ne bougeait pas d'un écran à l'autre.
+
+| Écran | Largeur d'une tâche | Texte | Décor | Caractères par ligne |
+|---|---|---|---|---|
+| 1920 | 257 px | 173 px | 84 px (33 %) | 28 |
+| 1440 | 188 px | 105 px | 84 px (45 %) | 17 |
+| 1280 | 166 px | 82 px | 84 px (**51 %**) | **13** |
+
+Sur un portable, plus de la moitié de la place d'une tâche servait à montrer des commandes
+dont aucune n'est utilisée en lisant.
+
+### Et le plafond était à l'envers du besoin
+
+Le bac « À faire » était plafonné à 190 pixels sur **tout** écran. Or plus l'écran est étroit,
+plus les titres passent à la ligne, donc plus le bac aurait besoin de hauteur. Le contenu réel
+d'un jour chargé mesurait 264 pixels à 1920 mais **431 à 1280** — toujours dans le même cadre
+de 190. Le plafond grandissait en importance exactement quand il fallait qu'il cède.
+
+Pendant ce temps, la grille horaire, elle, n'était pas plafonnée : à 1920×1080 elle prenait
+75 % de la zone centrale pour 19 % du contenu.
+
+### Ce qui a été fait
+
+**Les 84 pixels sont rendus au texte.** Les commandes vivent maintenant dans une petite barre
+superposée qui ne paraît qu'au survol. La pastille de priorité peut disparaître au repos sans
+rien coûter en information : la priorité est déjà portée par la bordure gauche colorée et par
+la teinte de fond. Décor : **84 pixels avant, 34 après**.
+
+**Le plafond a disparu.** Le bac prend la hauteur de son contenu sans dépasser sa part, et ce
+qu'il n'utilise pas revient aux heures. Une part fixe aurait été presque aussi rigide qu'un
+plafond fixe — un lundi à six tâches occupait 230 pixels dans un bac de 350, et les 120 pixels
+perdus manquaient à la grille, qui coupait le déjeuner de midi.
+
+**Une poignée arbitre entre les deux zones.** Elle agit dans les deux sens, se mémorise, et
+un double-clic rend la main à l'ajustement automatique.
+
+**Le week-end est replié par défaut** : cinq colonnes au lieu de sept élargissent chaque jour
+de 40 %. Le bouton, logé dans la case vide au-dessus de « À FAIRE » — le seul endroit qui ne
+coûte aucune largeur aux jours — annonce ce qui attend le samedi et le dimanche.
+
+**La grille horaire ne montre plus que les heures occupées**, avec une heure de marge, jamais
+moins de quatre heures, et l'heure courante toujours incluse. Un rendez-vous posé hors de la
+plage réglée étend la plage au lieu d'être masqué — il disparaissait purement et simplement
+auparavant.
+
+**Le bandeau urgent est borné à deux lignes.** Il pouvait s'étaler sur trois rangées et
+138 pixels pris sur la zone de travail.
+
+### Le résultat, mesuré
+
+| Écran | Texte par tâche | Caractères par ligne |
+|---|---|---|
+| 1920 | 173 → **329 px** | 28 → **54** |
+| 1440 | 105 → **233 px** | 17 → **38** |
+| 1280 | 82 → **201 px** | 13 → **33** |
+
+Sur un portable, une tâche affiche deux fois et demie plus de texte qu'avant.
+
+### L'impression
+
+Elle demandait 2 088 pixels pour 734 disponibles, soit près de trois pages. Sur le papier,
+plus aucun plafond ni repli ne s'applique — une tâche hors du cadre à l'écran aurait été
+absente de la feuille — et les créneaux sont resserrés de 22 à 14 pixels le temps de la
+photographie, puis restaurés.
+
+**Une semaine normale tient maintenant sur une page : 680 pixels.** Une semaine très chargée —
+vingt tâches sur un jour, neuf urgences — en demande 991 et déborde encore. Ce volume ne tient
+pas sur une page, et il vaut mieux le dire que le prétendre.
+
+### Vérification
+
+**130 contrôles automatiques**, contre 100, tous verts, aucune erreur JavaScript. Trente
+ajoutés, dont l'absence de plafond, la poignée dans les deux sens et sa mémorisation, le
+double-clic, le repli de la grille et ses garde-fous, le bouton du week-end, le bandeau urgent
+borné puis déplié, et huit contrôles d'impression là où il n'y en avait que deux.
+
+### Ce qui reste
+
+C'est maintenant à l'usage de trancher. Si les tâches sont redevenues lisibles et que le bac
+respire, la nouvelle disposition « jour au centre, semaine en rail » — étape 4 des audits,
+une semaine de travail et un changement d'identité de l'outil — devient inutile.
+**Ce serait le meilleur résultat possible.**
+L'horizon glissant sur dix jours vient ensuite, quelle que soit l'issue.
+
+---
+
 ## Version 1.1.0 — 2 septembre 2026
 
 Trois audits, puis la réparation de ce qu'ils ont trouvé de plus grave.
