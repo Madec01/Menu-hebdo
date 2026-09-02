@@ -1,0 +1,2254 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Luciole</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: #06070f;
+    color: #efe7d8;
+    overflow: hidden;
+    font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    touch-action: none;
+  }
+  #game {
+    display: block;
+    width: 100vw;
+    height: 100vh;
+    background: #06070f;
+  }
+  body.playing { cursor: none; }
+  #noscript {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    text-align: center; font-size: 18px; padding: 24px; line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<canvas id="game" aria-label="Luciole, jeu d'arcade nocturne"></canvas>
+<noscript><div id="noscript">Luciole a besoin de JavaScript pour s'allumer.</div></noscript>
+<script>
+// === STORY BEGIN ===
+const STORY = {
+  title: "Luciole",
+  tagline: "Une enfant, une luciole, et une nuit qui refuse de finir.",
+  howToPlay: [
+    "ZQSD, WASD ou les flèches déplacent Ilo. La souris guide Nim, la seule lumière.",
+    "Clic gauche ou Espace : éclat. L'onde repousse les Mornes et coûte de la lumière.",
+    "Reste sur une pierre de veille, Nim tout près, jusqu'à ce qu'elle s'allume.",
+    "Toutes les pierres allumées, l'arche s'ouvre. Échap ou P : pause. M : son."
+  ],
+  intro: [
+    "Un matin, à Brume-sur-Aube, le soleil n'est pas revenu.",
+    "Dans la lanterne éteinte de sa mère, Ilo a trouvé Nim : la dernière luciole.",
+    "Les anciens disent que les pierres de veille, rallumées, font remonter l'aube."
+  ],
+  nights: {
+    1: {
+      title: "La lisière",
+      before: [
+        "Ilo pousse la barrière du jardin.",
+        "La forêt commence là où le village s'arrête de respirer."
+      ],
+      after: [
+        "Trois pierres tiennent. Le noir recule d'un pas."
+      ],
+      hint: "Garde Nim entre Ilo et ce qui bouge."
+    },
+    2: {
+      title: "Le sentier bas",
+      before: [
+        "Des pas dans la mousse. Ils ne sont pas à elle.",
+        "Ilo serre la lanterne froide contre son ventre."
+      ],
+      after: [
+        "Les Mornes ne crient pas. C'est le pire."
+      ],
+      hint: "Un éclat coûte cher : garde-le pour les moments serrés."
+    },
+    3: {
+      title: "Les veilleurs",
+      before: [
+        "Certaines ombres ne chassent plus.",
+        "Elles tournent autour des pierres, comme si elles attendaient quelqu'un."
+      ],
+      after: [
+        "Ilo croit reconnaître une démarche. Elle ne le dit pas."
+      ],
+      hint: "Les veilleuses gardent les pierres : dégage la place avant de te poser."
+    },
+    4: {
+      title: "Le vieux pont",
+      before: [
+        "L'eau coule sous le pont sans reflet.",
+        "Nim faiblit plus vite ici."
+      ],
+      after: [
+        "La lumière tient. Les mains d'Ilo tremblent un peu."
+      ],
+      hint: "Allume vite : chaque pierre rend de la lumière à Nim."
+    },
+    5: {
+      title: "Les fausses lueurs",
+      before: [
+        "Des lumières bleues flottent entre les troncs.",
+        "Elles ressemblent à Nim. Elles ne le sont pas."
+      ],
+      after: [
+        "Ne pas suivre. C'est aussi une manière d'avancer."
+      ],
+      hint: "Éloigne Nim des lueurs bleues : elles réveillent les Mornes."
+    },
+    6: {
+      title: "La clairière creuse",
+      before: [
+        "Ici, le village venait chercher l'aube.",
+        "Il reste des lanternes par terre, toutes éteintes."
+      ],
+      after: [
+        "Encore une nuit. Puis la dernière."
+      ],
+      hint: "La laisse est courte : bouge Ilo pour que Nim puisse suivre."
+    },
+    7: {
+      title: "La dernière pierre",
+      before: [
+        "Au bout du chemin, une pierre n'est pas une pierre.",
+        "C'est une lanterne. Celle qui est partie chercher l'aube.",
+        "Une ombre l'attend, immobile."
+      ],
+      after: [
+        "L'ombre se penche vers Ilo, puis s'ouvre comme une fumée.",
+        "À l'est, quelque chose de pâle monte."
+      ],
+      hint: "Tiens bon. C'est presque le matin."
+    }
+  },
+  endless: {
+    title: "Veille éternelle",
+    before: [
+      "D'autres villages attendent encore leur matin.",
+      "Ilo remet la lanterne allumée à sa ceinture, et repart."
+    ]
+  },
+  gameOver: [
+    "La nuit t'a pris.",
+    "Nim s'éteint dans le creux de ta main.",
+    "Le noir s'est refermé, sans bruit.",
+    "Il fallait tenir la lumière un peu plus haut."
+  ],
+  beaconLit: [
+    "une de moins",
+    "elle se souvient",
+    "la pierre respire",
+    "un peu de matin",
+    "ça tient"
+  ],
+  epilogue: [
+    "L'aube monte lentement sur Brume-sur-Aube.",
+    "Nim tourne trois fois autour d'Ilo, puis s'en va vers le soleil.",
+    "Ilo garde la lanterne. Allumée."
+  ]
+};
+// === STORY END ===
+
+(function () {
+'use strict';
+
+/* ============================================================
+   CONFIG
+   ============================================================ */
+const CFG = {
+  ILO_SPEED: 150,
+  ILO_ACCEL: 1500,
+  ILO_R: 11,
+  NIM_LERP: 14,
+  TETHER: 180,
+  HALO_MAX: 110,
+  HALO_MIN: 35,
+  LIGHT_MAX: 100,
+  LIGHT_DRAIN: 100 / 45,          // 100 -> 0 en 45 s
+  BURST_COST: 18,
+  BURST_RADIUS: 190,
+  BURST_COOLDOWN: 0.35,
+  BURST_DAMAGE: 0.55,
+  SHADOW_SPEED_DARK: 105,
+  SHADOW_SPEED_LIGHT: 40,
+  SHADOW_BURN_TIME: 1.2,          // temps pour se dissiper dans le halo
+  SHADOW_R: 15,
+  BEACON_HOLD: 1.2,
+  BEACON_NIM_RANGE: 60,
+  BEACON_STAND_RANGE: 34,
+  BEACON_LIGHT_R: 80,
+  BEACON_LIGHT_GAIN: 45,
+  DOOR_LIGHT_R: 130,
+  DOOR_REACH: 42,
+  HEARTS_MAX: 3,
+  IFRAMES: 1.5,
+  TRAP_RANGE: 40,
+  TRAP_COOLDOWN: 6,
+  GRID: 40,
+  DARKNESS: 0.96,
+  SCORE_NIGHT: 1000,
+  SCORE_BEACON: 150,
+  SCORE_SHADOW: 25,
+  SCORE_TIME_BONUS: 300,
+  TIME_BONUS_LIMIT: 90,
+  NO_DAMAGE_MULT: 1.5,
+  STORY_NIGHTS: 7,
+  SAVE_KEY: 'luciole.save'
+};
+
+const COL = {
+  bg: '#06070f',
+  ground: '#0a0c17',
+  groundSpeck: '#141a29',
+  trunk: '#171420',
+  crownA: '#11241c',
+  crownB: '#0d1b18',
+  ilo: '#2b2436',
+  iloHood: '#3a3048',
+  warm: '#ffb765',
+  warmSoft: '#ffd9a0',
+  nim: '#fff4cf',
+  tether: '#ffce8a',
+  tetherTaut: '#ff7a4d',
+  shadow: '#05060a',
+  eye: '#cfe3ff',
+  stone: '#2a2b38',
+  stoneLit: '#ffcf8d',
+  trap: '#7fb6ff',
+  text: '#efe7d8',
+  dim: '#9a93a8'
+};
+
+const TAU = Math.PI * 2;
+
+/* ============================================================
+   UTILS + PRNG
+   ============================================================ */
+function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+function lerp(a, b, t) { return a + (b - a) * t; }
+function approach(cur, target, rate, dt) { return cur + (target - cur) * (1 - Math.exp(-rate * dt)); }
+function dist2(ax, ay, bx, by) { const dx = ax - bx, dy = ay - by; return dx * dx + dy * dy; }
+function dist(ax, ay, bx, by) { return Math.sqrt(dist2(ax, ay, bx, by)); }
+function smoothstep(e0, e1, x) { const t = clamp((x - e0) / (e1 - e0), 0, 1); return t * t * (3 - 2 * t); }
+
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/* --- accès tolérant au contenu narratif --- */
+function sArr(v, fb) { return (Array.isArray(v) && v.length) ? v.slice() : (fb || []); }
+function sStr(v, fb) { return (typeof v === 'string' && v.length) ? v : (fb || ''); }
+function pick(rng, arr, fb) { const a = sArr(arr, fb ? [fb] : []); return a.length ? a[Math.floor(rng() * a.length)] : ''; }
+
+function nightStory(n) {
+  const S = (typeof STORY === 'object' && STORY) ? STORY : {};
+  const raw = (S.nights && S.nights[n]) ? S.nights[n] : null;
+  if (raw) {
+    return {
+      title: sStr(raw.title, 'Nuit ' + n),
+      before: sArr(raw.before, ['La nuit s\'ouvre.']),
+      after: sArr(raw.after, ['Encore une nuit derrière toi.']),
+      hint: sStr(raw.hint, '')
+    };
+  }
+  const e = S.endless || {};
+  return {
+    title: sStr(e.title, 'Veille éternelle'),
+    before: sArr(e.before, ['La veille continue.']),
+    after: ['La veille continue.'],
+    hint: ''
+  };
+}
+
+/* ============================================================
+   SAUVEGARDE
+   ============================================================ */
+const save = { bestScore: 0, bestNight: 0, unlockedNight: 1, muted: false };
+
+function loadSave() {
+  try {
+    const raw = localStorage.getItem(CFG.SAVE_KEY);
+    if (!raw) return;
+    const o = JSON.parse(raw);
+    if (o && typeof o === 'object') {
+      save.bestScore = Math.max(0, Number(o.bestScore) || 0);
+      save.bestNight = Math.max(0, Number(o.bestNight) || 0);
+      save.unlockedNight = Math.max(1, Number(o.unlockedNight) || 1);
+      save.muted = !!o.muted;
+    }
+  } catch (e) { /* stockage indisponible : on joue sans sauvegarde */ }
+}
+function writeSave() {
+  try { localStorage.setItem(CFG.SAVE_KEY, JSON.stringify(save)); } catch (e) { /* ignoré */ }
+}
+loadSave();
+
+/* ============================================================
+   AUDIO (WebAudio synthétisé, aucun fichier)
+   ============================================================ */
+const Audio_ = {
+  ac: null, master: null, noise: null, humOsc: null, humGain: null, ready: false
+};
+
+function audioInit() {
+  if (Audio_.ready) {
+    if (Audio_.ac && Audio_.ac.state === 'suspended') Audio_.ac.resume();
+    return;
+  }
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return;
+  try {
+    const ac = new AC();
+    const master = ac.createGain();
+    master.gain.value = save.muted ? 0 : 0.32;
+    master.connect(ac.destination);
+
+    const len = Math.floor(ac.sampleRate * 0.5);
+    const buf = ac.createBuffer(1, len, ac.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+
+    const humGain = ac.createGain(); humGain.gain.value = 0; humGain.connect(master);
+    const humOsc = ac.createOscillator(); humOsc.type = 'sine'; humOsc.frequency.value = 116;
+    const lfo = ac.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = 5.2;
+    const lfoG = ac.createGain(); lfoG.gain.value = 4.5;
+    lfo.connect(lfoG); lfoG.connect(humOsc.frequency);
+    humOsc.connect(humGain);
+    humOsc.start(); lfo.start();
+
+    Audio_.ac = ac; Audio_.master = master; Audio_.noise = buf;
+    Audio_.humOsc = humOsc; Audio_.humGain = humGain; Audio_.ready = true;
+  } catch (e) { /* audio indisponible */ }
+}
+
+function audioMuteApply() {
+  if (!Audio_.ready) return;
+  Audio_.master.gain.setTargetAtTime(save.muted ? 0 : 0.32, Audio_.ac.currentTime, 0.05);
+}
+
+function setHum(v) {
+  if (!Audio_.ready) return;
+  Audio_.humGain.gain.setTargetAtTime(v, Audio_.ac.currentTime, 0.18);
+}
+
+function blip(f, dur, type, vol, slideTo, delay) {
+  if (!Audio_.ready) return;
+  const ac = Audio_.ac, t = ac.currentTime + (delay || 0);
+  const o = ac.createOscillator();
+  o.type = type || 'sine';
+  o.frequency.setValueAtTime(f, t);
+  if (slideTo) o.frequency.exponentialRampToValueAtTime(Math.max(20, slideTo), t + dur);
+  const g = ac.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(Math.max(0.0002, vol), t + Math.min(0.03, dur * 0.25));
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); g.connect(Audio_.master);
+  o.start(t); o.stop(t + dur + 0.05);
+}
+
+function noiseBurst(dur, filter, f0, f1, vol) {
+  if (!Audio_.ready) return;
+  const ac = Audio_.ac, t = ac.currentTime;
+  const s = ac.createBufferSource(); s.buffer = Audio_.noise; s.loop = true;
+  const bp = ac.createBiquadFilter(); bp.type = filter; bp.Q.value = 1.1;
+  bp.frequency.setValueAtTime(f0, t);
+  bp.frequency.exponentialRampToValueAtTime(Math.max(30, f1), t + dur);
+  const g = ac.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  s.connect(bp); bp.connect(g); g.connect(Audio_.master);
+  s.start(t); s.stop(t + dur + 0.05);
+}
+
+const SFX = {
+  burst() { noiseBurst(0.3, 'bandpass', 2600, 320, 0.22); blip(560, 0.26, 'triangle', 0.07, 190); },
+  deny() { blip(190, 0.12, 'sawtooth', 0.05, 130); },
+  beacon() {
+    [392, 493.9, 587.3, 784].forEach((f, i) => blip(f, 0.95, 'triangle', 0.085, null, i * 0.07));
+  },
+  hurt() { blip(112, 0.42, 'sine', 0.28, 46); noiseBurst(0.2, 'lowpass', 700, 120, 0.13); },
+  puff() { noiseBurst(0.17, 'highpass', 950, 2700, 0.05); },
+  chime() {
+    [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((f, i) => blip(f, 1.15, 'triangle', 0.095, null, i * 0.13));
+  },
+  ui() { blip(680, 0.07, 'square', 0.045); },
+  door() { blip(220, 1.4, 'sine', 0.09, 440); blip(330, 1.4, 'triangle', 0.05, 660); }
+};
+
+/* ============================================================
+   ENTRÉES
+   ============================================================ */
+const keys = Object.create(null);
+const input = {
+  mx: 0, my: 0, hasMouse: false,
+  burstQueued: false,
+  anyUsed: false
+};
+
+const KEY_LEFT = ['KeyA', 'KeyQ', 'ArrowLeft'];
+const KEY_RIGHT = ['KeyD', 'ArrowRight'];
+const KEY_UP = ['KeyW', 'KeyZ', 'ArrowUp'];
+const KEY_DOWN = ['KeyS', 'ArrowDown'];
+const PREVENT = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space']);
+
+function held(list) { for (let i = 0; i < list.length; i++) if (keys[list[i]]) return true; return false; }
+
+window.addEventListener('keydown', (e) => {
+  if (e.repeat) { if (PREVENT.has(e.code)) e.preventDefault(); return; }
+  keys[e.code] = true;
+  if (PREVENT.has(e.code)) e.preventDefault();
+  audioInit();
+  onKeyPress(e.code);
+}, { passive: false });
+
+window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+
+window.addEventListener('blur', () => {
+  for (const k in keys) keys[k] = false;
+  if (G.state === 'playing' && !G.paused) togglePause(true);
+});
+
+/* ============================================================
+   CANVAS
+   ============================================================ */
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d', { alpha: false });
+const maskCanvas = document.createElement('canvas');
+const mctx = maskCanvas.getContext('2d');
+let VW = 1280, VH = 720, DPR = 1, uiScale = 1;
+
+function resize() {
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  VW = Math.max(320, window.innerWidth);
+  VH = Math.max(240, window.innerHeight);
+  canvas.width = Math.round(VW * DPR);
+  canvas.height = Math.round(VH * DPR);
+  canvas.style.width = VW + 'px';
+  canvas.style.height = VH + 'px';
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  // Le masque d'obscurité n'est fait que de dégradés doux : résolution 1x suffit et coûte moins cher.
+  maskCanvas.width = VW;
+  maskCanvas.height = VH;
+  uiScale = clamp(Math.min(VW / 1280, VH / 720), 0.72, 1.7);
+  if (!input.hasMouse) { input.mx = VW * 0.5; input.my = VH * 0.5; }
+}
+window.addEventListener('resize', resize);
+
+canvas.addEventListener('mousemove', (e) => {
+  const r = canvas.getBoundingClientRect();
+  input.mx = e.clientX - r.left;
+  input.my = e.clientY - r.top;
+  input.hasMouse = true;
+});
+canvas.addEventListener('mouseleave', () => {
+  if (G.state === 'playing' && !G.paused) togglePause(true);
+});
+canvas.addEventListener('mousedown', (e) => {
+  if (e.button !== 0) return;
+  e.preventDefault();
+  audioInit();
+  onPointerDown();
+}, { passive: false });
+canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+/* Motif de sol généré une fois (aucun asset externe) */
+const groundPattern = (function () {
+  const c = document.createElement('canvas');
+  c.width = c.height = 96;
+  const g = c.getContext('2d');
+  g.fillStyle = COL.ground;
+  g.fillRect(0, 0, 96, 96);
+  const r = mulberry32(20260902);
+  for (let i = 0; i < 150; i++) {
+    const x = r() * 96, y = r() * 96, s = 0.5 + r() * 1.6;
+    g.globalAlpha = 0.18 + r() * 0.4;
+    g.fillStyle = r() < 0.72 ? COL.groundSpeck : '#1c2233';
+    g.beginPath(); g.arc(x, y, s, 0, TAU); g.fill();
+  }
+  g.globalAlpha = 1;
+  return ctx.createPattern(c, 'repeat');
+})();
+
+/* ============================================================
+   GÉNÉRATION DU MONDE
+   ============================================================ */
+function nightParams(n) {
+  return {
+    beacons: Math.min(6, 3 + Math.floor(n / 2)),
+    w: Math.min(2200, 1400 + 120 * (n - 1)),
+    h: Math.min(1600, 1000 + 120 * (n - 1)),
+    spawnInterval: Math.max(0.85, 3.4 - 0.25 * (n - 1)),
+    maxShadows: Math.min(40, 8 + 3 * (n - 1)),
+    speedMul: Math.min(1.35, 1 + 0.04 * (n - 1)),
+    watchers: n >= 3 ? Math.min(4, n - 2) : 0,
+    traps: n >= 5 ? Math.min(4, n - 4) : 0,
+    startShadows: Math.min(10, 2 + Math.floor(n * 0.9))
+  };
+}
+
+function buildGrid(w, h, trees) {
+  const cs = CFG.GRID;
+  const gw = Math.ceil(w / cs), gh = Math.ceil(h / cs);
+  const blocked = new Uint8Array(gw * gh);
+  for (let i = 0; i < trees.length; i++) {
+    const t = trees[i];
+    const rr = t.r + CFG.ILO_R + 3;
+    const x0 = Math.max(0, Math.floor((t.x - rr) / cs)), x1 = Math.min(gw - 1, Math.floor((t.x + rr) / cs));
+    const y0 = Math.max(0, Math.floor((t.y - rr) / cs)), y1 = Math.min(gh - 1, Math.floor((t.y + rr) / cs));
+    for (let gy = y0; gy <= y1; gy++) {
+      for (let gx = x0; gx <= x1; gx++) {
+        const cx = gx * cs + cs / 2, cy = gy * cs + cs / 2;
+        if (dist2(cx, cy, t.x, t.y) < rr * rr) blocked[gy * gw + gx] = 1;
+      }
+    }
+  }
+  return { cs, gw, gh, blocked };
+}
+
+function floodFill(grid, sx, sy) {
+  const { cs, gw, gh, blocked } = grid;
+  const seen = new Uint8Array(gw * gh);
+  const start = clamp(Math.floor(sy / cs), 0, gh - 1) * gw + clamp(Math.floor(sx / cs), 0, gw - 1);
+  if (blocked[start]) return seen;
+  const stack = [start];
+  seen[start] = 1;
+  while (stack.length) {
+    const i = stack.pop();
+    const gx = i % gw, gy = (i / gw) | 0;
+    if (gx > 0) { const j = i - 1; if (!seen[j] && !blocked[j]) { seen[j] = 1; stack.push(j); } }
+    if (gx < gw - 1) { const j = i + 1; if (!seen[j] && !blocked[j]) { seen[j] = 1; stack.push(j); } }
+    if (gy > 0) { const j = i - gw; if (!seen[j] && !blocked[j]) { seen[j] = 1; stack.push(j); } }
+    if (gy < gh - 1) { const j = i + gw; if (!seen[j] && !blocked[j]) { seen[j] = 1; stack.push(j); } }
+  }
+  return seen;
+}
+
+function cellReachable(grid, seen, x, y) {
+  const gx = clamp(Math.floor(x / grid.cs), 0, grid.gw - 1);
+  const gy = clamp(Math.floor(y / grid.cs), 0, grid.gh - 1);
+  return !!seen[gy * grid.gw + gx];
+}
+
+function generateWorld(night, seed) {
+  const P = nightParams(night);
+  const margin = 70;
+  const treeTarget = clamp(Math.round((P.w * P.h) / 13000), 80, 180);
+
+  for (let attempt = 0; attempt < 16; attempt++) {
+    const rng = mulberry32((seed + attempt * 7919) >>> 0);
+    const start = {
+      x: margin + rng() * (P.w - margin * 2),
+      y: margin + rng() * (P.h - margin * 2)
+    };
+
+    // Balises : échantillonnage par rejet
+    const beacons = [];
+    let guard = 0;
+    while (beacons.length < P.beacons && guard++ < 4000) {
+      const bx = margin + rng() * (P.w - margin * 2);
+      const by = margin + rng() * (P.h - margin * 2);
+      if (dist2(bx, by, start.x, start.y) < 230 * 230) continue;
+      let ok = true;
+      for (const b of beacons) if (dist2(bx, by, b.x, b.y) < 250 * 250) { ok = false; break; }
+      if (!ok) continue;
+      beacons.push({ x: bx, y: by, lit: false, prog: 0, phase: rng() * TAU });
+    }
+    if (beacons.length < P.beacons) continue;
+
+    // Porte : le point le plus éloigné du départ parmi des candidats
+    let door = null, bestD = -1;
+    for (let i = 0; i < 80; i++) {
+      const dx = margin + rng() * (P.w - margin * 2);
+      const dy = margin + rng() * (P.h - margin * 2);
+      const d = dist2(dx, dy, start.x, start.y);
+      if (d > bestD) { bestD = d; door = { x: dx, y: dy }; }
+    }
+    if (Math.sqrt(bestD) < 380) continue;
+
+    // Arbres, en épargnant les zones utiles
+    const clears = [{ x: start.x, y: start.y, r: 130 }, { x: door.x, y: door.y, r: 120 }];
+    for (const b of beacons) clears.push({ x: b.x, y: b.y, r: 115 });
+    const trees = [];
+    guard = 0;
+    while (trees.length < treeTarget && guard++ < treeTarget * 40) {
+      const tx = 20 + rng() * (P.w - 40);
+      const ty = 20 + rng() * (P.h - 40);
+      const tr = 13 + rng() * 13;
+      let ok = true;
+      for (const c of clears) if (dist2(tx, ty, c.x, c.y) < (c.r + tr) * (c.r + tr)) { ok = false; break; }
+      if (ok) for (const t of trees) if (dist2(tx, ty, t.x, t.y) < (t.r + tr + 10) * (t.r + tr + 10)) { ok = false; break; }
+      if (!ok) continue;
+      const crowns = [];
+      const nc = 3 + Math.floor(rng() * 3);
+      for (let k = 0; k < nc; k++) {
+        crowns.push({
+          dx: (rng() - 0.5) * tr * 1.5,
+          dy: (rng() - 0.5) * tr * 1.5 - tr * 0.35,
+          r: tr * (0.62 + rng() * 0.55),
+          c: rng() < 0.5 ? COL.crownA : COL.crownB
+        });
+      }
+      trees.push({ x: tx, y: ty, r: tr, crowns, lean: (rng() - 0.5) * 0.35 });
+    }
+
+    // Accessibilité : flood-fill sur grille 40 px
+    const grid = buildGrid(P.w, P.h, trees);
+    const seen = floodFill(grid, start.x, start.y);
+    let allOk = cellReachable(grid, seen, door.x, door.y);
+    if (allOk) for (const b of beacons) if (!cellReachable(grid, seen, b.x, b.y)) { allOk = false; break; }
+    if (!allOk) continue;
+
+    // Pièges lumineux (nuit 5+) et postes de veilleuses
+    const traps = [];
+    guard = 0;
+    while (traps.length < P.traps && guard++ < 900) {
+      const tx = margin + rng() * (P.w - margin * 2);
+      const ty = margin + rng() * (P.h - margin * 2);
+      if (dist2(tx, ty, start.x, start.y) < 300 * 300) continue;
+      let ok = true;
+      for (const b of beacons) if (dist2(tx, ty, b.x, b.y) < 150 * 150) { ok = false; break; }
+      if (!ok) continue;
+      traps.push({ x: tx, y: ty, cd: 0, phase: rng() * TAU });
+    }
+
+    return {
+      w: P.w, h: P.h, params: P, rng,
+      start, beacons, door, trees, traps,
+      motes: makeMotes(rng, P.w, P.h)
+    };
+  }
+
+  // Repli : forêt clairsemée garantie praticable
+  const rng = mulberry32((seed + 4242) >>> 0);
+  const beacons = [];
+  for (let i = 0; i < P.beacons; i++) {
+    const a = (i / P.beacons) * TAU;
+    beacons.push({
+      x: P.w / 2 + Math.cos(a) * P.w * 0.32,
+      y: P.h / 2 + Math.sin(a) * P.h * 0.32,
+      lit: false, prog: 0, phase: rng() * TAU
+    });
+  }
+  return {
+    w: P.w, h: P.h, params: P, rng,
+    start: { x: P.w / 2, y: P.h / 2 },
+    beacons,
+    door: { x: P.w - 120, y: P.h - 120 },
+    trees: [], traps: [],
+    motes: makeMotes(rng, P.w, P.h)
+  };
+}
+
+function makeMotes(rng, w, h) {
+  const n = 90, out = [];
+  for (let i = 0; i < n; i++) out.push({ x: rng() * w, y: rng() * h, p: rng() * TAU, s: 0.4 + rng() * 0.8 });
+  return out;
+}
+
+/* ============================================================
+   ENTITÉS + ÉTAT DE JEU
+   ============================================================ */
+const G = {
+  state: 'title',           // title | help | intro | nightBefore | playing | nightAfter | epilogue | gameOver
+  paused: false,
+  night: 1,
+  score: 0,
+  scoreAtNightStart: 0,
+  nightPoints: 0,
+  hearts: CFG.HEARTS_MAX,
+  seed: 1,
+  world: null,
+  time: 0,
+  nightTime: 0,
+  tookDamage: false,
+  doorOpen: false,
+  ilo: null, nim: null,
+  shadows: [], particles: [], floats: [], bursts: [],
+  cam: { x: 0, y: 0 },
+  shake: 0,
+  flash: 0,
+  spawnTimer: 0,
+  light: CFG.LIGHT_MAX,
+  burstCd: 0,
+  lastResult: null,
+  menuIndex: 0,
+  menuItems: [],
+  menuHit: [],
+  story: null,
+  gameOverLine: '',
+  uiT: 0
+};
+
+function makeIlo(x, y) {
+  return { x, y, vx: 0, vy: 0, r: CFG.ILO_R, face: 1, walk: 0, iframes: 0 };
+}
+function makeNim(x, y) {
+  return { x, y, trailT: 0 };
+}
+function makeShadow(x, y, type, rng) {
+  return {
+    x, y, vx: 0, vy: 0,
+    hp: 1, type: type || 'hunter',
+    r: CFG.SHADOW_R * (0.85 + rng() * 0.4),
+    phase: rng() * TAU,
+    wob: 0.6 + rng() * 0.8,
+    orbit: rng() * TAU,
+    orbitDir: rng() < 0.5 ? -1 : 1,
+    target: null,
+    hesitate: 0
+  };
+}
+
+function addParticles(x, y, n, color, speed, life, size) {
+  const rng = Math.random;
+  for (let i = 0; i < n; i++) {
+    if (G.particles.length > 420) break;
+    const a = rng() * TAU, s = speed * (0.35 + rng() * 0.9);
+    G.particles.push({
+      x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s,
+      life: life * (0.6 + rng() * 0.7), max: life, color,
+      size: size * (0.6 + rng() * 0.8), drag: 2.2
+    });
+  }
+}
+
+function addFloat(x, y, text, color, size) {
+  G.floats.push({ x, y, text, color: color || COL.warmSoft, size: size || 18, life: 1.5, max: 1.5 });
+}
+
+/* ============================================================
+   LUMIÈRE
+   ============================================================ */
+function haloRadius() {
+  return CFG.HALO_MIN + (CFG.HALO_MAX - CFG.HALO_MIN) * (G.light / CFG.LIGHT_MAX);
+}
+
+/** Quantité de lumière (0..1) en un point du monde. */
+function lightAmount(x, y) {
+  let a = 0;
+  const hr = haloRadius();
+  const dn = dist(x, y, G.nim.x, G.nim.y);
+  if (dn < hr) a = 1 - dn / hr;
+  const W = G.world;
+  for (let i = 0; i < W.beacons.length; i++) {
+    const b = W.beacons[i];
+    if (!b.lit) continue;
+    const d = dist(x, y, b.x, b.y);
+    if (d < CFG.BEACON_LIGHT_R) a = Math.max(a, 1 - d / CFG.BEACON_LIGHT_R);
+  }
+  if (G.doorOpen) {
+    const d = dist(x, y, W.door.x, W.door.y);
+    if (d < CFG.DOOR_LIGHT_R) a = Math.max(a, 1 - d / CFG.DOOR_LIGHT_R);
+  }
+  for (let i = 0; i < G.bursts.length; i++) {
+    const bu = G.bursts[i];
+    const d = dist(x, y, bu.x, bu.y);
+    if (d < bu.r) a = Math.max(a, (1 - d / bu.r) * (1 - bu.t / bu.dur));
+  }
+  return a;
+}
+
+/* ============================================================
+   DÉMARRAGE D'UNE NUIT / PARTIE
+   ============================================================ */
+function startRun(fromNight) {
+  G.seed = (Math.floor(Math.random() * 0x7fffffff)) >>> 0;
+  G.score = 0;
+  G.hearts = CFG.HEARTS_MAX;
+  G.night = Math.max(1, fromNight || 1);
+  G.lastResult = null;
+}
+
+function startNight(n) {
+  G.night = n;
+  G.world = generateWorld(n, (G.seed + n * 104729) >>> 0);
+  const W = G.world;
+  G.ilo = makeIlo(W.start.x, W.start.y);
+  G.nim = makeNim(W.start.x + 40, W.start.y - 20);
+  G.shadows = []; G.particles = []; G.floats = []; G.bursts = [];
+  G.light = CFG.LIGHT_MAX;
+  G.burstCd = 0;
+  G.doorOpen = false;
+  G.nightTime = 0;
+  G.tookDamage = false;
+  G.nightPoints = 0;
+  G.scoreAtNightStart = G.score;
+  G.shake = 0; G.flash = 0;
+  G.spawnTimer = W.params.spawnInterval * 1.4;
+  G.hearts = Math.min(CFG.HEARTS_MAX, G.hearts + 1);
+  G.cam.x = clamp(G.ilo.x - VW / 2, 0, Math.max(0, W.w - VW));
+  G.cam.y = clamp(G.ilo.y - VH / 2, 0, Math.max(0, W.h - VH));
+
+  // Veilleuses en poste autour des balises non allumées
+  for (let i = 0; i < W.params.watchers; i++) {
+    const b = W.beacons[i % W.beacons.length];
+    const s = makeShadow(b.x + Math.cos(i) * 70, b.y + Math.sin(i) * 70, 'watcher', W.rng);
+    s.target = b;
+    G.shadows.push(s);
+  }
+  // Quelques chasseuses déjà présentes, loin d'Ilo
+  for (let i = 0; i < W.params.startShadows; i++) spawnShadow(true);
+
+  save.unlockedNight = Math.max(save.unlockedNight, n);
+  writeSave();
+
+  const st = nightStory(n);
+  if (st.hint) addFloat(G.ilo.x, G.ilo.y - 46, st.hint, COL.dim, 16);
+
+  G.state = 'playing';
+  G.paused = false;
+}
+
+function spawnShadow(initial) {
+  const W = G.world;
+  if (G.shadows.length >= W.params.maxShadows) return;
+  const rng = W.rng;
+  for (let i = 0; i < 30; i++) {
+    const a = rng() * TAU;
+    const d = initial ? (420 + rng() * 400) : (380 + rng() * 320);
+    const x = clamp(G.ilo.x + Math.cos(a) * d, 20, W.w - 20);
+    const y = clamp(G.ilo.y + Math.sin(a) * d, 20, W.h - 20);
+    if (dist2(x, y, G.ilo.x, G.ilo.y) < 300 * 300) continue;
+    if (lightAmount(x, y) > 0.1) continue;
+    G.shadows.push(makeShadow(x, y, 'hunter', rng));
+    return;
+  }
+}
+
+/* ============================================================
+   MISE À JOUR
+   ============================================================ */
+function updatePlaying(dt) {
+  const W = G.world;
+  G.nightTime += dt;
+
+  /* --- Ilo (clavier) --- */
+  const ilo = G.ilo;
+  let dx = 0, dy = 0;
+  if (held(KEY_LEFT)) dx -= 1;
+  if (held(KEY_RIGHT)) dx += 1;
+  if (held(KEY_UP)) dy -= 1;
+  if (held(KEY_DOWN)) dy += 1;
+  const dl = Math.hypot(dx, dy);
+  if (dl > 0) { dx /= dl; dy /= dl; ilo.face = dx !== 0 ? Math.sign(dx) : ilo.face; }
+  const tvx = dx * CFG.ILO_SPEED, tvy = dy * CFG.ILO_SPEED;
+  const acc = dl > 0 ? CFG.ILO_ACCEL : CFG.ILO_ACCEL * 1.6;
+  ilo.vx += clamp(tvx - ilo.vx, -acc * dt, acc * dt);
+  ilo.vy += clamp(tvy - ilo.vy, -acc * dt, acc * dt);
+  ilo.x += ilo.vx * dt;
+  ilo.y += ilo.vy * dt;
+  ilo.walk += Math.hypot(ilo.vx, ilo.vy) * dt * 0.055;
+  if (ilo.iframes > 0) ilo.iframes -= dt;
+
+  // Collisions arbres + bords
+  for (let i = 0; i < W.trees.length; i++) {
+    const t = W.trees[i];
+    const rr = t.r + ilo.r;
+    const d2 = dist2(ilo.x, ilo.y, t.x, t.y);
+    if (d2 < rr * rr && d2 > 0.0001) {
+      const d = Math.sqrt(d2);
+      const nx = (ilo.x - t.x) / d, ny = (ilo.y - t.y) / d;
+      ilo.x = t.x + nx * rr; ilo.y = t.y + ny * rr;
+      const dot = ilo.vx * nx + ilo.vy * ny;
+      if (dot < 0) { ilo.vx -= nx * dot; ilo.vy -= ny * dot; }
+    }
+  }
+  ilo.x = clamp(ilo.x, ilo.r + 4, W.w - ilo.r - 4);
+  ilo.y = clamp(ilo.y, ilo.r + 4, W.h - ilo.r - 4);
+
+  /* --- Nim (souris, inertie + laisse) --- */
+  const nim = G.nim;
+  const tx = G.cam.x + input.mx, ty = G.cam.y + input.my;
+  nim.x = approach(nim.x, tx, CFG.NIM_LERP, dt);
+  nim.y = approach(nim.y, ty, CFG.NIM_LERP, dt);
+  let tdx = nim.x - ilo.x, tdy = nim.y - ilo.y;
+  const td = Math.hypot(tdx, tdy);
+  if (td > CFG.TETHER) {
+    nim.x = ilo.x + tdx / td * CFG.TETHER;
+    nim.y = ilo.y + tdy / td * CFG.TETHER;
+  }
+  G.tension = clamp((td - CFG.TETHER * 0.72) / (CFG.TETHER * 0.28), 0, 1);
+
+  // Traînée de Nim
+  nim.trailT -= dt;
+  if (nim.trailT <= 0) {
+    nim.trailT = 0.022;
+    if (G.particles.length < 420) {
+      G.particles.push({
+        x: nim.x + (Math.random() - 0.5) * 3, y: nim.y + (Math.random() - 0.5) * 3,
+        vx: (Math.random() - 0.5) * 12, vy: (Math.random() - 0.5) * 12 - 6,
+        life: 0.55, max: 0.55, color: COL.warmSoft, size: 1.6, drag: 1.2
+      });
+    }
+  }
+
+  /* --- Lumière --- */
+  G.light = clamp(G.light - CFG.LIGHT_DRAIN * dt, 0, CFG.LIGHT_MAX);
+  if (G.burstCd > 0) G.burstCd -= dt;
+  if (input.burstQueued) { input.burstQueued = false; doBurst(); }
+
+  /* --- Balises --- */
+  let litCount = 0;
+  for (let i = 0; i < W.beacons.length; i++) {
+    const b = W.beacons[i];
+    if (b.lit) { litCount++; continue; }
+    const onIt = dist2(ilo.x, ilo.y, b.x, b.y) < CFG.BEACON_STAND_RANGE * CFG.BEACON_STAND_RANGE;
+    const nimNear = dist2(nim.x, nim.y, b.x, b.y) < CFG.BEACON_NIM_RANGE * CFG.BEACON_NIM_RANGE;
+    if (onIt && nimNear) {
+      b.prog += dt / CFG.BEACON_HOLD;
+      if (b.prog >= 1) {
+        b.lit = true; b.prog = 1; litCount++;
+        G.light = clamp(G.light + CFG.BEACON_LIGHT_GAIN, 0, CFG.LIGHT_MAX);
+        addScore(CFG.SCORE_BEACON);
+        addFloat(b.x, b.y - 26, '+' + CFG.SCORE_BEACON, COL.warm, 20);
+        const frag = pick(Math.random, STORY && STORY.beaconLit, 'une de moins');
+        if (frag) addFloat(b.x, b.y - 50, frag, COL.warmSoft, 16);
+        addParticles(b.x, b.y, 34, COL.warm, 130, 0.9, 2.6);
+        G.flash = Math.max(G.flash, 0.18);
+        SFX.beacon();
+      }
+    } else {
+      b.prog = Math.max(0, b.prog - dt * 0.5);
+    }
+  }
+  if (!G.doorOpen && litCount === W.beacons.length) {
+    G.doorOpen = true;
+    addFloat(W.door.x, W.door.y - 60, 'L\'arche s\'éveille', COL.warm, 20);
+    addParticles(W.door.x, W.door.y, 40, COL.warm, 90, 1.4, 3);
+    G.flash = Math.max(G.flash, 0.22);
+    SFX.door();
+  }
+
+  /* --- Pièges lumineux --- */
+  for (let i = 0; i < W.traps.length; i++) {
+    const tp = W.traps[i];
+    if (tp.cd > 0) { tp.cd -= dt; continue; }
+    if (dist2(nim.x, nim.y, tp.x, tp.y) < CFG.TRAP_RANGE * CFG.TRAP_RANGE) {
+      tp.cd = CFG.TRAP_COOLDOWN;
+      for (let k = 0; k < 2; k++) {
+        if (G.shadows.length >= W.params.maxShadows + 4) break;
+        const a = Math.random() * TAU;
+        G.shadows.push(makeShadow(tp.x + Math.cos(a) * 26, tp.y + Math.sin(a) * 26, 'hunter', W.rng));
+      }
+      addParticles(tp.x, tp.y, 20, COL.trap, 110, 0.8, 2.4);
+      addFloat(tp.x, tp.y - 24, 'piège !', '#9ec7ff', 16);
+      SFX.deny();
+    }
+  }
+
+  /* --- Apparition d'ombres --- */
+  G.spawnTimer -= dt;
+  if (G.spawnTimer <= 0) {
+    G.spawnTimer = W.params.spawnInterval * (0.75 + Math.random() * 0.5);
+    spawnShadow(false);
+  }
+
+  /* --- Ombres --- */
+  updateShadows(dt);
+
+  /* --- Éclats --- */
+  for (let i = G.bursts.length - 1; i >= 0; i--) {
+    const b = G.bursts[i];
+    b.t += dt;
+    b.r = CFG.BURST_RADIUS * smoothstep(0, 1, b.t / b.dur);
+    if (b.t >= b.dur) G.bursts.splice(i, 1);
+  }
+
+  /* --- Particules et textes flottants --- */
+  updateEphemera(dt);
+
+  /* --- Caméra + secousse --- */
+  const camTX = clamp(ilo.x - VW / 2, 0, Math.max(0, W.w - VW));
+  const camTY = clamp(ilo.y - VH / 2, 0, Math.max(0, W.h - VH));
+  G.cam.x = approach(G.cam.x, camTX, 6.5, dt);
+  G.cam.y = approach(G.cam.y, camTY, 6.5, dt);
+  if (W.w < VW) G.cam.x = (W.w - VW) / 2;
+  if (W.h < VH) G.cam.y = (W.h - VH) / 2;
+  G.shake = Math.max(0, G.shake - dt * 34);
+  G.flash = Math.max(0, G.flash - dt * 2.4);
+
+  /* --- Bourdonnement de Nim --- */
+  setHum(0.012 + 0.02 * (G.light / CFG.LIGHT_MAX));
+
+  /* --- Fin de nuit --- */
+  if (G.doorOpen && dist2(ilo.x, ilo.y, W.door.x, W.door.y) < CFG.DOOR_REACH * CFG.DOOR_REACH) {
+    finishNight();
+  }
+}
+
+function updateShadows(dt) {
+  const W = G.world;
+  const ilo = G.ilo;
+  const list = G.shadows;
+
+  for (let i = list.length - 1; i >= 0; i--) {
+    const s = list[i];
+    s.phase += dt * (1.4 + s.wob);
+    const amt = lightAmount(s.x, s.y);
+    const inLight = amt > 0.15;
+
+    // Brûlure : ~1.2 s au cœur du halo
+    if (inLight) {
+      s.hp -= dt * (0.55 + amt * 0.95) / CFG.SHADOW_BURN_TIME;
+      if (s.hp <= 0) {
+        addParticles(s.x, s.y, 16, '#7d8ba6', 110, 0.7, 2.4);
+        addScore(CFG.SCORE_SHADOW);
+        addFloat(s.x, s.y - 14, '+' + CFG.SCORE_SHADOW, '#b9c6df', 15);
+        SFX.puff();
+        list.splice(i, 1);
+        continue;
+      }
+    }
+
+    // Cible
+    let tx, ty;
+    if (s.type === 'watcher') {
+      let b = s.target;
+      if (!b || b.lit) {
+        b = null;
+        for (let k = 0; k < W.beacons.length; k++) if (!W.beacons[k].lit) { b = W.beacons[k]; break; }
+        s.target = b;
+      }
+      if (b) {
+        s.orbit += dt * 0.85 * s.orbitDir;
+        tx = b.x + Math.cos(s.orbit) * 72;
+        ty = b.y + Math.sin(s.orbit) * 72;
+      } else {
+        s.type = 'hunter'; // plus rien à garder : elles chassent
+        tx = ilo.x; ty = ilo.y;
+      }
+    } else {
+      tx = ilo.x; ty = ilo.y;
+    }
+
+    let ax = tx - s.x, ay = ty - s.y;
+    const ad = Math.hypot(ax, ay) || 1;
+    ax /= ad; ay /= ad;
+
+    // Hésitation au bord de la lumière : léger recul + dérive latérale
+    if (amt > 0.02 && amt < 0.32) {
+      const e = 9;
+      const gx = lightAmount(s.x + e, s.y) - lightAmount(s.x - e, s.y);
+      const gy = lightAmount(s.x, s.y + e) - lightAmount(s.x, s.y - e);
+      const gl = Math.hypot(gx, gy) || 1;
+      const push = 0.9 * (1 - amt / 0.32);
+      ax -= (gx / gl) * push;
+      ay -= (gy / gl) * push;
+      ax += -(ay) * 0.35 * Math.sin(s.phase * 1.7);
+      ay += (ax) * 0.35 * Math.sin(s.phase * 1.7);
+      s.hesitate = approach(s.hesitate, 1, 8, dt);
+    } else {
+      s.hesitate = approach(s.hesitate, 0, 5, dt);
+    }
+    const al = Math.hypot(ax, ay) || 1;
+    ax /= al; ay /= al;
+
+    const base = inLight ? CFG.SHADOW_SPEED_LIGHT : CFG.SHADOW_SPEED_DARK * W.params.speedMul;
+    const speed = base * (1 - 0.45 * s.hesitate);
+    const wob = Math.sin(s.phase * 0.8 + s.orbit) * 0.22;
+    const cs = Math.cos(wob), sn = Math.sin(wob);
+    const dirx = ax * cs - ay * sn, diry = ax * sn + ay * cs;
+
+    s.vx = approach(s.vx, dirx * speed, 6, dt);
+    s.vy = approach(s.vy, diry * speed, 6, dt);
+    s.x += s.vx * dt;
+    s.y += s.vy * dt;
+    s.x = clamp(s.x, 8, W.w - 8);
+    s.y = clamp(s.y, 8, W.h - 8);
+
+    // Séparation légère, pour rester lisible
+    for (let j = i - 1; j >= 0; j--) {
+      const o = list[j];
+      const dd2 = dist2(s.x, s.y, o.x, o.y);
+      const minD = s.r + o.r;
+      if (dd2 < minD * minD && dd2 > 0.001) {
+        const d = Math.sqrt(dd2);
+        const push = (minD - d) * 0.5;
+        const nx = (s.x - o.x) / d, ny = (s.y - o.y) / d;
+        s.x += nx * push; s.y += ny * push;
+        o.x -= nx * push; o.y -= ny * push;
+      }
+    }
+
+    // Contact avec Ilo
+    if (ilo.iframes <= 0) {
+      const hitR = ilo.r + s.r * 0.6;
+      if (dist2(s.x, s.y, ilo.x, ilo.y) < hitR * hitR) hurtIlo(s);
+    }
+  }
+}
+
+function updateEphemera(dt) {
+  for (let i = G.particles.length - 1; i >= 0; i--) {
+    const p = G.particles[i];
+    p.life -= dt;
+    if (p.life <= 0) { G.particles.splice(i, 1); continue; }
+    const k = Math.exp(-p.drag * dt);
+    p.vx *= k; p.vy *= k;
+    p.x += p.vx * dt; p.y += p.vy * dt;
+  }
+  for (let i = G.floats.length - 1; i >= 0; i--) {
+    const f = G.floats[i];
+    f.life -= dt;
+    f.y -= dt * 26;
+    if (f.life <= 0) G.floats.splice(i, 1);
+  }
+}
+
+function addScore(n) {
+  G.nightPoints += n;
+  G.score = G.scoreAtNightStart + G.nightPoints;
+}
+
+function doBurst() {
+  if (G.burstCd > 0) return;
+  if (G.light < CFG.BURST_COST) {
+    SFX.deny();
+    G.lightWarn = 0.5;
+    return;
+  }
+  G.light -= CFG.BURST_COST;
+  G.burstCd = CFG.BURST_COOLDOWN;
+  G.bursts.push({ x: G.nim.x, y: G.nim.y, r: 0, t: 0, dur: 0.38 });
+  G.flash = Math.max(G.flash, 0.28);
+  G.shake = Math.max(G.shake, 4);
+  addParticles(G.nim.x, G.nim.y, 22, COL.warmSoft, 210, 0.5, 2.2);
+  SFX.burst();
+
+  for (const s of G.shadows) {
+    const d = dist(s.x, s.y, G.nim.x, G.nim.y);
+    if (d < CFG.BURST_RADIUS) {
+      const f = 1 - d / CFG.BURST_RADIUS;
+      const nx = d > 0.01 ? (s.x - G.nim.x) / d : 1;
+      const ny = d > 0.01 ? (s.y - G.nim.y) / d : 0;
+      s.vx += nx * 460 * f;
+      s.vy += ny * 460 * f;
+      s.hp -= CFG.BURST_DAMAGE * f;
+      s.hesitate = 1;
+    }
+  }
+  // Dissipation immédiate de celles achevées par l'onde
+  for (let i = G.shadows.length - 1; i >= 0; i--) {
+    if (G.shadows[i].hp <= 0) {
+      const s = G.shadows[i];
+      addParticles(s.x, s.y, 16, '#7d8ba6', 120, 0.7, 2.4);
+      addScore(CFG.SCORE_SHADOW);
+      addFloat(s.x, s.y - 14, '+' + CFG.SCORE_SHADOW, '#b9c6df', 15);
+      SFX.puff();
+      G.shadows.splice(i, 1);
+    }
+  }
+}
+
+function hurtIlo(s) {
+  const ilo = G.ilo;
+  G.hearts -= 1;
+  G.tookDamage = true;
+  ilo.iframes = CFG.IFRAMES;
+  const d = dist(ilo.x, ilo.y, s.x, s.y) || 1;
+  const nx = (ilo.x - s.x) / d, ny = (ilo.y - s.y) / d;
+  ilo.vx = nx * 300; ilo.vy = ny * 300;
+  s.vx = -nx * 220; s.vy = -ny * 220;
+  G.shake = Math.max(G.shake, 15);
+  addParticles(ilo.x, ilo.y, 18, '#6b5570', 150, 0.6, 2.4);
+  SFX.hurt();
+  if (G.hearts <= 0) gameOver();
+}
+
+function finishNight() {
+  const W = G.world;
+  const timeBonus = G.nightTime < CFG.TIME_BONUS_LIMIT ? CFG.SCORE_TIME_BONUS : 0;
+  const nightBonus = CFG.SCORE_NIGHT * G.night;
+  const beaconPts = W.beacons.length * CFG.SCORE_BEACON;
+  const shadowPts = Math.max(0, G.nightPoints - beaconPts);
+  let total = G.nightPoints + nightBonus + timeBonus;
+  const mult = G.tookDamage ? 1 : CFG.NO_DAMAGE_MULT;
+  total = Math.round(total * mult);
+  G.score = G.scoreAtNightStart + total;
+
+  G.lastResult = {
+    night: G.night,
+    time: G.nightTime,
+    beacons: beaconPts,
+    shadows: shadowPts,
+    nightBonus, timeBonus, mult, total,
+    score: G.score
+  };
+
+  save.bestNight = Math.max(save.bestNight, G.night);
+  save.unlockedNight = Math.max(save.unlockedNight, G.night + 1);
+  save.bestScore = Math.max(save.bestScore, G.score);
+  writeSave();
+
+  SFX.chime();
+  setHum(0);
+  const st = nightStory(G.night);
+  beginStory('nightAfter', 'Nuit ' + G.night + ' — ' + st.title, st.after, '');
+}
+
+function gameOver() {
+  setHum(0);
+  save.bestScore = Math.max(save.bestScore, G.score);
+  save.bestNight = Math.max(save.bestNight, Math.max(0, G.night - 1));
+  writeSave();
+  G.gameOverLine = pick(Math.random, STORY && STORY.gameOver, 'La nuit t\'a pris.');
+  G.state = 'gameOver';
+  G.paused = false;
+  G.uiT = 0;
+}
+
+/* ============================================================
+   ÉCRANS NARRATIFS (machine à écrire)
+   ============================================================ */
+function beginStory(state, heading, paragraphs, hint) {
+  const text = sArr(paragraphs, ['…']).join('\n\n');
+  G.story = { heading: heading || '', text, shown: 0, done: false, hint: hint || '', speed: 46 };
+  G.state = state;
+  G.paused = false;
+  G.uiT = 0;
+}
+
+function advanceStory() {
+  if (!G.story) return;
+  if (!G.story.done) { G.story.shown = G.story.text.length; G.story.done = true; return; }
+  SFX.ui();
+  const s = G.state;
+  if (s === 'intro') {
+    const st = nightStory(1);
+    beginStory('nightBefore', 'Nuit 1 — ' + st.title, st.before, st.hint);
+  } else if (s === 'nightBefore') {
+    startNight(G.night);
+  } else if (s === 'nightAfter') {
+    const ep = sArr(STORY && STORY.epilogue, []);
+    if (G.night === CFG.STORY_NIGHTS && ep.length) {
+      beginStory('epilogue', 'Aube', ep, '');
+    } else {
+      goToNightBefore(G.night + 1);
+    }
+  } else if (s === 'epilogue') {
+    goToNightBefore(G.night + 1);
+  }
+}
+
+function goToNightBefore(n) {
+  G.night = n;
+  const st = nightStory(n);
+  beginStory('nightBefore', 'Nuit ' + n + ' — ' + st.title, st.before, st.hint);
+}
+
+/* ============================================================
+   MENUS ET NAVIGATION
+   ============================================================ */
+function buildMenu() {
+  const items = [{ id: 'new', label: 'Nouvelle nuit' }];
+  if (save.unlockedNight > 1) items.push({ id: 'continue', label: 'Continuer la nuit ' + save.unlockedNight });
+  items.push({ id: 'help', label: 'Comment jouer' });
+  G.menuItems = items;
+  G.menuIndex = clamp(G.menuIndex, 0, items.length - 1);
+}
+
+function activateMenu() {
+  const it = G.menuItems[G.menuIndex];
+  if (!it) return;
+  SFX.ui();
+  if (it.id === 'new') {
+    startRun(1);
+    const intro = sArr(STORY && STORY.intro, []);
+    if (intro.length) beginStory('intro', sStr(STORY && STORY.title, 'Luciole'), intro, '');
+    else { const st = nightStory(1); beginStory('nightBefore', 'Nuit 1 — ' + st.title, st.before, st.hint); }
+  } else if (it.id === 'continue') {
+    startRun(save.unlockedNight);
+    goToNightBefore(save.unlockedNight);
+  } else if (it.id === 'help') {
+    G.state = 'help';
+    G.uiT = 0;
+  }
+}
+
+function togglePause(force) {
+  if (G.state !== 'playing') return;
+  const v = (typeof force === 'boolean') ? force : !G.paused;
+  if (v === G.paused) return;
+  G.paused = v;
+  if (G.paused) setHum(0);
+  SFX.ui();
+}
+
+function toTitle() {
+  G.state = 'title';
+  G.paused = false;
+  setHum(0);
+  buildMenu();
+}
+
+function onKeyPress(code) {
+  const s = G.state;
+  if (code === 'KeyM') {
+    save.muted = !save.muted;
+    writeSave();
+    audioMuteApply();
+    return;
+  }
+  if (s === 'title') {
+    if (code === 'ArrowUp' || code === 'KeyW' || code === 'KeyZ') { G.menuIndex = (G.menuIndex + G.menuItems.length - 1) % G.menuItems.length; SFX.ui(); }
+    else if (code === 'ArrowDown' || code === 'KeyS') { G.menuIndex = (G.menuIndex + 1) % G.menuItems.length; SFX.ui(); }
+    else if (code === 'Enter' || code === 'NumpadEnter' || code === 'Space') activateMenu();
+    return;
+  }
+  if (s === 'help') {
+    if (code === 'Escape' || code === 'Enter' || code === 'NumpadEnter' || code === 'Space') { SFX.ui(); toTitle(); }
+    return;
+  }
+  if (s === 'intro' || s === 'nightBefore' || s === 'nightAfter' || s === 'epilogue') {
+    if (code === 'Enter' || code === 'NumpadEnter' || code === 'Space') advanceStory();
+    else if (code === 'Escape') toTitle();
+    return;
+  }
+  if (s === 'playing') {
+    if (code === 'Escape' || code === 'KeyP') { togglePause(); return; }
+    if (G.paused) {
+      if (code === 'KeyT') { toTitle(); }
+      return;
+    }
+    if (code === 'Space') input.burstQueued = true;
+    return;
+  }
+  if (s === 'gameOver') {
+    if (code === 'Enter' || code === 'NumpadEnter' || code === 'Space') {
+      SFX.ui();
+      startRun(1);
+      goToNightBefore(1);
+    } else if (code === 'Escape') toTitle();
+  }
+}
+
+function onPointerDown() {
+  const s = G.state;
+  if (s === 'title') {
+    for (let i = 0; i < G.menuHit.length; i++) {
+      const h = G.menuHit[i];
+      if (input.mx >= h.x && input.mx <= h.x + h.w && input.my >= h.y && input.my <= h.y + h.h) {
+        G.menuIndex = i;
+        activateMenu();
+        return;
+      }
+    }
+    return;
+  }
+  if (s === 'help') { SFX.ui(); toTitle(); return; }
+  if (s === 'intro' || s === 'nightBefore' || s === 'nightAfter' || s === 'epilogue') { advanceStory(); return; }
+  if (s === 'playing') {
+    if (G.paused) { togglePause(false); return; }   // le clic qui reprend ne déclenche pas d'éclat
+    input.burstQueued = true;
+    return;
+  }
+  if (s === 'gameOver') { SFX.ui(); startRun(1); goToNightBefore(1); }
+}
+
+/* ============================================================
+   RENDU — monde
+   ============================================================ */
+let camX = 0, camY = 0;
+
+function sx(x) { return x - camX; }
+function sy(y) { return y - camY; }
+
+function drawWorld() {
+  const W = G.world;
+  const m = 90;
+  const x0 = camX - m, x1 = camX + VW + m, y0 = camY - m, y1 = camY + VH + m;
+
+  // Sol
+  ctx.save();
+  ctx.fillStyle = COL.bg;
+  ctx.fillRect(0, 0, VW, VH);
+  ctx.translate(-camX % 96, -camY % 96);
+  ctx.fillStyle = groundPattern;
+  ctx.fillRect(0, 0, VW + 96, VH + 96);
+  ctx.restore();
+
+  // Limites du monde : bordure d'obscurité plus dense
+  ctx.save();
+  ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+  ctx.lineWidth = 26;
+  ctx.strokeRect(sx(0) - 13, sy(0) - 13, W.w + 26, W.h + 26);
+  ctx.restore();
+
+  // Poussières lumineuses (ambiance)
+  ctx.save();
+  ctx.fillStyle = 'rgba(150,170,210,0.5)';
+  for (let i = 0; i < W.motes.length; i++) {
+    const mo = W.motes[i];
+    const mx = mo.x + Math.cos(G.time * 0.3 + mo.p) * 16;
+    const my = mo.y + Math.sin(G.time * 0.24 + mo.p * 1.7) * 14;
+    if (mx < x0 || mx > x1 || my < y0 || my > y1) continue;
+    ctx.globalAlpha = 0.12 + 0.1 * Math.sin(G.time * 1.2 + mo.p);
+    ctx.beginPath(); ctx.arc(sx(mx), sy(my), mo.s, 0, TAU); ctx.fill();
+  }
+  ctx.restore();
+
+  drawBeacons(x0, x1, y0, y1);
+  drawDoor();
+  drawTrees(x0, x1, y0, y1);
+  drawShadowBodies(x0, x1, y0, y1);
+  drawIlo();
+}
+
+function drawTrees(x0, x1, y0, y1) {
+  const W = G.world;
+  for (let i = 0; i < W.trees.length; i++) {
+    const t = W.trees[i];
+    if (t.x < x0 || t.x > x1 || t.y < y0 || t.y > y1) continue;
+    const X = sx(t.x), Y = sy(t.y);
+    // Ombre portée au sol
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.beginPath(); ctx.ellipse(X, Y + t.r * 0.35, t.r * 1.15, t.r * 0.5, 0, 0, TAU); ctx.fill();
+    // Tronc
+    ctx.fillStyle = COL.trunk;
+    ctx.beginPath();
+    ctx.moveTo(X - t.r * 0.32, Y + t.r * 0.3);
+    ctx.lineTo(X - t.r * 0.2 + t.lean * t.r, Y - t.r * 0.9);
+    ctx.lineTo(X + t.r * 0.2 + t.lean * t.r, Y - t.r * 0.9);
+    ctx.lineTo(X + t.r * 0.32, Y + t.r * 0.3);
+    ctx.closePath(); ctx.fill();
+    // Couronne
+    for (let k = 0; k < t.crowns.length; k++) {
+      const c = t.crowns[k];
+      ctx.fillStyle = c.c;
+      ctx.beginPath();
+      ctx.arc(X + c.dx + t.lean * t.r, Y + c.dy - t.r * 0.75, c.r, 0, TAU);
+      ctx.fill();
+    }
+    // Reflet froid sur la couronne
+    ctx.fillStyle = 'rgba(120,160,150,0.07)';
+    ctx.beginPath();
+    ctx.arc(X - t.r * 0.3 + t.lean * t.r, Y - t.r * 1.15, t.r * 0.5, 0, TAU);
+    ctx.fill();
+  }
+}
+
+function drawBeacons(x0, x1, y0, y1) {
+  const W = G.world;
+  for (let i = 0; i < W.beacons.length; i++) {
+    const b = W.beacons[i];
+    if (b.x < x0 || b.x > x1 || b.y < y0 || b.y > y1) continue;
+    const X = sx(b.x), Y = sy(b.y);
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.beginPath(); ctx.ellipse(X, Y + 12, 26, 10, 0, 0, TAU); ctx.fill();
+    // Socle
+    ctx.fillStyle = b.lit ? '#4a3b33' : COL.stone;
+    ctx.beginPath();
+    ctx.moveTo(X - 17, Y + 12);
+    ctx.lineTo(X - 11, Y - 22);
+    ctx.lineTo(X + 11, Y - 22);
+    ctx.lineTo(X + 17, Y + 12);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = b.lit ? '#6b5040' : '#353646';
+    ctx.fillRect(X - 13, Y - 26, 26, 6);
+    // Rune
+    const pulse = 0.5 + 0.5 * Math.sin(G.time * 2 + b.phase);
+    ctx.fillStyle = b.lit ? COL.stoneLit : 'rgba(150,170,210,' + (0.12 + 0.1 * pulse) + ')';
+    ctx.beginPath(); ctx.arc(X, Y - 6, 5, 0, TAU); ctx.fill();
+    // Jauge circulaire d'allumage
+    if (!b.lit && b.prog > 0.001) {
+      ctx.strokeStyle = 'rgba(255,183,101,0.85)';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(X, Y - 4, 28, -Math.PI / 2, -Math.PI / 2 + TAU * clamp(b.prog, 0, 1));
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+      ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.arc(X, Y - 4, 28, 0, TAU); ctx.stroke();
+    }
+  }
+}
+
+function drawDoor() {
+  const W = G.world;
+  const X = sx(W.door.x), Y = sy(W.door.y);
+  if (X < -140 || X > VW + 140 || Y < -160 || Y > VH + 160) return;
+  const open = G.doorOpen;
+  ctx.save();
+  ctx.strokeStyle = open ? '#8a6a44' : '#20212c';
+  ctx.lineWidth = 12;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(X - 34, Y + 16);
+  ctx.lineTo(X - 34, Y - 30);
+  ctx.quadraticCurveTo(X, Y - 66, X + 34, Y - 30);
+  ctx.lineTo(X + 34, Y + 16);
+  ctx.stroke();
+  if (open) {
+    const p = 0.5 + 0.5 * Math.sin(G.time * 2.2);
+    ctx.globalAlpha = 0.25 + 0.2 * p;
+    ctx.fillStyle = COL.warm;
+    ctx.beginPath();
+    ctx.moveTo(X - 28, Y + 16);
+    ctx.lineTo(X - 28, Y - 28);
+    ctx.quadraticCurveTo(X, Y - 58, X + 28, Y - 28);
+    ctx.lineTo(X + 28, Y + 16);
+    ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawShadowBodies(x0, x1, y0, y1) {
+  for (let i = 0; i < G.shadows.length; i++) {
+    const s = G.shadows[i];
+    if (s.x < x0 || s.x > x1 || s.y < y0 || s.y > y1) continue;
+    const amt = lightAmount(s.x, s.y);
+    const vis = clamp(amt * 1.9, 0, 1);
+    if (vis < 0.03) continue;
+    const X = sx(s.x), Y = sy(s.y);
+    ctx.save();
+    ctx.globalAlpha = 0.25 + 0.7 * vis;
+    // Corps fumeux : plusieurs lobes qui ondulent
+    for (let k = 0; k < 4; k++) {
+      const a = s.phase + k * (TAU / 4);
+      const rr = s.r * (0.72 + 0.3 * Math.sin(s.phase * 1.6 + k));
+      ctx.fillStyle = k === 0 ? '#0a0b12' : COL.shadow;
+      ctx.beginPath();
+      ctx.arc(X + Math.cos(a) * s.r * 0.32, Y + Math.sin(a) * s.r * 0.32, rr, 0, TAU);
+      ctx.fill();
+    }
+    // Liseré violacé quand elle brûle
+    if (amt > 0.2) {
+      ctx.globalAlpha = 0.35 * vis * (1 - s.hp * 0.5);
+      ctx.strokeStyle = '#6d4f7a';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(X, Y, s.r * 1.05, 0, TAU); ctx.stroke();
+    }
+    ctx.restore();
+  }
+}
+
+function drawIlo() {
+  const ilo = G.ilo;
+  const X = sx(ilo.x), Y = sy(ilo.y);
+  const bob = Math.sin(ilo.walk * 6) * 1.8;
+  const blink = ilo.iframes > 0 && (Math.floor(G.time * 14) % 2 === 0);
+  ctx.save();
+  if (blink) ctx.globalAlpha = 0.35;
+  // Ombre au sol
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.beginPath(); ctx.ellipse(X, Y + 10, 11, 4.5, 0, 0, TAU); ctx.fill();
+  // Corps
+  ctx.fillStyle = COL.ilo;
+  ctx.beginPath();
+  ctx.moveTo(X - 8, Y + 10);
+  ctx.quadraticCurveTo(X - 9, Y - 6 + bob, X, Y - 10 + bob);
+  ctx.quadraticCurveTo(X + 9, Y - 6 + bob, X + 8, Y + 10);
+  ctx.closePath(); ctx.fill();
+  // Capuche
+  ctx.fillStyle = COL.iloHood;
+  ctx.beginPath();
+  ctx.arc(X, Y - 11 + bob, 7.2, Math.PI * 0.9, Math.PI * 2.1);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(X - 7, Y - 10 + bob);
+  ctx.quadraticCurveTo(X + ilo.face * 2, Y - 22 + bob, X + ilo.face * 7, Y - 9 + bob);
+  ctx.closePath(); ctx.fill();
+  // Visage à peine suggéré
+  ctx.fillStyle = 'rgba(230,215,190,0.5)';
+  ctx.beginPath(); ctx.ellipse(X + ilo.face * 2.2, Y - 10 + bob, 2.6, 3.1, 0, 0, TAU); ctx.fill();
+  // Lanterne éteinte
+  const lx = X - ilo.face * 8, ly = Y + 2 + bob * 0.5;
+  ctx.strokeStyle = '#4a4152'; ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.moveTo(lx, ly - 5); ctx.lineTo(lx, ly - 8); ctx.stroke();
+  ctx.fillStyle = '#3b3446';
+  ctx.fillRect(lx - 3, ly - 5, 6, 7);
+  ctx.restore();
+}
+
+/* ============================================================
+   RENDU — masque d'obscurité et lumières
+   ============================================================ */
+function hole(x, y, r, strength) {
+  if (r <= 1) return;
+  if (x + r < 0 || x - r > VW || y + r < 0 || y - r > VH) return;
+  const g = mctx.createRadialGradient(x, y, 0, x, y, r);
+  g.addColorStop(0, 'rgba(0,0,0,' + strength + ')');
+  g.addColorStop(0.55, 'rgba(0,0,0,' + (strength * 0.72) + ')');
+  g.addColorStop(0.82, 'rgba(0,0,0,' + (strength * 0.28) + ')');
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  mctx.fillStyle = g;
+  mctx.beginPath(); mctx.arc(x, y, r, 0, TAU); mctx.fill();
+}
+
+function drawDarkness() {
+  const W = G.world;
+  mctx.setTransform(1, 0, 0, 1, 0, 0);
+  mctx.globalCompositeOperation = 'source-over';
+  mctx.clearRect(0, 0, VW, VH);
+  mctx.globalAlpha = CFG.DARKNESS;
+  mctx.fillStyle = '#000';
+  mctx.fillRect(0, 0, VW, VH);
+  mctx.globalAlpha = 1;
+  mctx.globalCompositeOperation = 'destination-out';
+
+  // Halo de Nim
+  const hr = haloRadius();
+  const flick = 1 + 0.03 * Math.sin(G.time * 9.3) + (G.light < 20 ? 0.07 * Math.sin(G.time * 22) : 0);
+  hole(sx(G.nim.x), sy(G.nim.y), hr * flick, 1);
+  // Très faible souvenir autour d'Ilo
+  hole(sx(G.ilo.x), sy(G.ilo.y), 26, 0.38);
+  // Balises allumées
+  for (let i = 0; i < W.beacons.length; i++) {
+    const b = W.beacons[i];
+    if (!b.lit) continue;
+    hole(sx(b.x), sy(b.y), CFG.BEACON_LIGHT_R * (1 + 0.02 * Math.sin(G.time * 3 + b.phase)), 0.98);
+  }
+  // Porte
+  if (G.doorOpen) hole(sx(W.door.x), sy(W.door.y), CFG.DOOR_LIGHT_R * (1 + 0.03 * Math.sin(G.time * 2.2)), 1);
+  // Pièges : la lueur bleue perce aussi le noir, c'est ce qui les rend tentants
+  for (let i = 0; i < W.traps.length; i++) {
+    const tp = W.traps[i];
+    hole(sx(tp.x), sy(tp.y), 34 + 4 * Math.sin(G.time * 3 + tp.phase), tp.cd > 0 ? 0.3 : 0.72);
+  }
+  // Éclats
+  for (let i = 0; i < G.bursts.length; i++) {
+    const b = G.bursts[i];
+    hole(sx(b.x), sy(b.y), b.r, 1 - b.t / b.dur);
+  }
+
+  mctx.globalCompositeOperation = 'source-over';
+  ctx.drawImage(maskCanvas, 0, 0, VW, VH);
+}
+
+function radialGlow(x, y, r, color, alpha) {
+  if (x + r < 0 || x - r > VW || y + r < 0 || y - r > VH) return;
+  const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+  g.addColorStop(0, color);
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+}
+
+function drawLights() {
+  const W = G.world;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+
+  const hr = haloRadius();
+  radialGlow(sx(G.nim.x), sy(G.nim.y), hr * 1.12, 'rgba(255,168,86,0.34)', 1);
+  radialGlow(sx(G.nim.x), sy(G.nim.y), hr * 0.42, 'rgba(255,224,170,0.30)', 1);
+
+  for (let i = 0; i < W.beacons.length; i++) {
+    const b = W.beacons[i];
+    if (b.lit) {
+      radialGlow(sx(b.x), sy(b.y), CFG.BEACON_LIGHT_R * 1.1, 'rgba(255,176,92,0.26)', 1);
+    } else {
+      // Souvenir de lueur : à peine perceptible, juste de quoi deviner la direction
+      const pulse = 0.5 + 0.5 * Math.sin(G.time * 1.6 + b.phase);
+      radialGlow(sx(b.x), sy(b.y), 46, 'rgba(150,180,220,0.16)', 0.20 + 0.14 * pulse);
+    }
+  }
+  if (G.doorOpen) {
+    radialGlow(sx(W.door.x), sy(W.door.y), CFG.DOOR_LIGHT_R * 1.15, 'rgba(255,190,110,0.30)', 1);
+  }
+  for (let i = 0; i < W.traps.length; i++) {
+    const tp = W.traps[i];
+    const a = tp.cd > 0 ? 0.25 : 0.7;
+    radialGlow(sx(tp.x), sy(tp.y), 44, 'rgba(110,170,255,0.30)', a);
+    ctx.globalAlpha = a;
+    ctx.fillStyle = COL.trap;
+    ctx.beginPath(); ctx.arc(sx(tp.x), sy(tp.y), 2.4 + Math.sin(G.time * 4 + tp.phase) * 0.7, 0, TAU); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Éclats : anneau blanc en expansion
+  for (let i = 0; i < G.bursts.length; i++) {
+    const b = G.bursts[i];
+    const k = 1 - b.t / b.dur;
+    ctx.globalAlpha = k * 0.75;
+    ctx.strokeStyle = 'rgba(255,240,214,1)';
+    ctx.lineWidth = 2 + 6 * k;
+    ctx.beginPath(); ctx.arc(sx(b.x), sy(b.y), b.r, 0, TAU); ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  // Yeux des Mornes : visibles de près même dans le noir
+  for (let i = 0; i < G.shadows.length; i++) {
+    const s = G.shadows[i];
+    const X = sx(s.x), Y = sy(s.y);
+    if (X < -40 || X > VW + 40 || Y < -40 || Y > VH + 40) continue;
+    const amt = lightAmount(s.x, s.y);
+    const d = dist(s.x, s.y, G.ilo.x, G.ilo.y);
+    const near = 1 - clamp((d - 45) / 105, 0, 1);
+    const a = Math.max(clamp(amt * 1.6, 0, 1) * 0.55, near * 0.4);
+    if (a < 0.02) continue;
+    const dirx = s.vx, diry = s.vy;
+    const dl = Math.hypot(dirx, diry) || 1;
+    const px = -diry / dl, py = dirx / dl;
+    ctx.globalAlpha = a;
+    ctx.fillStyle = COL.eye;
+    const off = s.r * 0.3;
+    ctx.beginPath(); ctx.arc(X + px * off + dirx / dl * 3, Y + py * off + diry / dl * 3, 1.7, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(X - px * off + dirx / dl * 3, Y - py * off + diry / dl * 3, 1.7, 0, TAU); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  // Fil Ilo <-> Nim
+  drawTether();
+
+  // Particules
+  for (let i = 0; i < G.particles.length; i++) {
+    const p = G.particles[i];
+    const X = sx(p.x), Y = sy(p.y);
+    if (X < -20 || X > VW + 20 || Y < -20 || Y > VH + 20) continue;
+    ctx.globalAlpha = clamp(p.life / p.max, 0, 1) * 0.85;
+    ctx.fillStyle = p.color;
+    ctx.beginPath(); ctx.arc(X, Y, p.size, 0, TAU); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Nim
+  const nx = sx(G.nim.x), ny = sy(G.nim.y);
+  radialGlow(nx, ny, 22, 'rgba(255,246,214,0.8)', 1);
+  ctx.fillStyle = COL.nim;
+  ctx.beginPath(); ctx.arc(nx, ny, 3.1 + 0.5 * Math.sin(G.time * 12), 0, TAU); ctx.fill();
+
+  // Rappel très discret d'Ilo, pour ne jamais le perdre
+  radialGlow(sx(G.ilo.x), sy(G.ilo.y), 20, 'rgba(255,200,140,0.16)', 1);
+
+  ctx.restore();
+}
+
+function drawTether() {
+  const ilo = G.ilo, nim = G.nim;
+  const t = G.tension || 0;
+  const ax = sx(ilo.x), ay = sy(ilo.y - 4);
+  const bx = sx(nim.x), by = sy(nim.y);
+  const mx = (ax + bx) / 2, my = (ay + by) / 2 + (1 - t) * 16;
+  ctx.globalAlpha = 0.20 + 0.55 * t;
+  ctx.strokeStyle = t > 0.6 ? COL.tetherTaut : COL.tether;
+  ctx.lineWidth = 1 + t * 1.6;
+  ctx.beginPath();
+  ctx.moveTo(ax, ay);
+  ctx.quadraticCurveTo(mx, my, bx, by);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+
+/* ============================================================
+   RENDU — HUD
+   ============================================================ */
+function font(size, weight, serif) {
+  const s = Math.max(14, Math.round(size * uiScale));
+  return (weight ? weight + ' ' : '') + s + 'px ' + (serif ? 'Georgia, "Times New Roman", serif' : '"Segoe UI", Roboto, Helvetica, Arial, sans-serif');
+}
+
+function shadowText(text, x, y, align, color) {
+  ctx.textAlign = align || 'left';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = 'rgba(0,0,0,0.75)';
+  ctx.fillText(text, x + 1, y + 2);
+  ctx.fillStyle = color || COL.text;
+  ctx.fillText(text, x, y);
+}
+
+function drawHeart(x, y, s, filled) {
+  ctx.beginPath();
+  ctx.moveTo(x, y + s * 0.32);
+  ctx.bezierCurveTo(x, y - s * 0.12, x - s * 0.55, y - s * 0.12, x - s * 0.55, y + s * 0.16);
+  ctx.bezierCurveTo(x - s * 0.55, y + s * 0.52, x, y + s * 0.72, x, y + s * 0.98);
+  ctx.bezierCurveTo(x, y + s * 0.72, x + s * 0.55, y + s * 0.52, x + s * 0.55, y + s * 0.16);
+  ctx.bezierCurveTo(x + s * 0.55, y - s * 0.12, x, y - s * 0.12, x, y + s * 0.32);
+  ctx.closePath();
+  if (filled) { ctx.fillStyle = '#e2586b'; ctx.fill(); }
+  else { ctx.strokeStyle = 'rgba(226,88,107,0.42)'; ctx.lineWidth = 2; ctx.stroke(); }
+}
+
+function drawHUD() {
+  const W = G.world;
+  const pad = Math.round(20 * uiScale);
+  const top = Math.round(18 * uiScale);
+
+  // Voile de lisibilité en haut
+  const grad = ctx.createLinearGradient(0, 0, 0, 86 * uiScale);
+  grad.addColorStop(0, 'rgba(4,5,10,0.78)');
+  grad.addColorStop(1, 'rgba(4,5,10,0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, VW, 86 * uiScale);
+
+  // Cœurs
+  const hs = 20 * uiScale;
+  for (let i = 0; i < CFG.HEARTS_MAX; i++) {
+    drawHeart(pad + i * hs * 1.35 + hs * 0.55, top, hs, i < G.hearts);
+  }
+
+  // Jauge de lumière
+  const gx = pad + CFG.HEARTS_MAX * hs * 1.35 + 22 * uiScale;
+  const gw = 170 * uiScale, gh = 12 * uiScale;
+  const gy = top + hs * 0.18;
+  ctx.fillStyle = 'rgba(255,255,255,0.10)';
+  ctx.fillRect(gx, gy, gw, gh);
+  const lt = G.light / CFG.LIGHT_MAX;
+  const lg = ctx.createLinearGradient(gx, 0, gx + gw, 0);
+  lg.addColorStop(0, '#ff9d4d');
+  lg.addColorStop(1, '#ffe6b0');
+  ctx.fillStyle = lg;
+  ctx.fillRect(gx, gy, gw * lt, gh);
+  if (G.lightWarn > 0) {
+    ctx.globalAlpha = G.lightWarn;
+    ctx.strokeStyle = '#ff6a5a'; ctx.lineWidth = 2;
+    ctx.strokeRect(gx - 1, gy - 1, gw + 2, gh + 2);
+    ctx.globalAlpha = 1;
+  }
+  ctx.strokeStyle = 'rgba(255,255,255,0.22)'; ctx.lineWidth = 1;
+  ctx.strokeRect(gx + 0.5, gy + 0.5, gw, gh);
+  ctx.font = font(14, '600');
+  shadowText('Lumière', gx, gy + gh + 16 * uiScale, 'left', COL.dim);
+
+  // Balises
+  let lit = 0;
+  for (const b of W.beacons) if (b.lit) lit++;
+  ctx.font = font(17, '600');
+  const bx = gx + gw + 26 * uiScale;
+  shadowText('Balises ' + lit + '/' + W.beacons.length, bx, top + hs * 0.75, 'left',
+    lit === W.beacons.length ? COL.warm : COL.text);
+
+  // Nuit + score
+  ctx.font = font(17, '600');
+  const nightLabel = G.night > CFG.STORY_NIGHTS
+    ? 'Veille ' + G.night
+    : 'Nuit ' + G.night;
+  shadowText(nightLabel, VW - pad, top + hs * 0.4, 'right', COL.text);
+  ctx.font = font(15);
+  shadowText('Score ' + G.score, VW - pad, top + hs * 1.25, 'right', COL.dim);
+
+  if (save.muted) {
+    ctx.font = font(14);
+    shadowText('son coupé (M)', VW - pad, top + hs * 2.1, 'right', COL.dim);
+  }
+
+  // Boussole vers l'objectif quand il est hors champ
+  drawObjectiveHint();
+
+  // Textes flottants
+  ctx.textAlign = 'center';
+  for (let i = 0; i < G.floats.length; i++) {
+    const f = G.floats[i];
+    const a = clamp(f.life / f.max, 0, 1);
+    ctx.globalAlpha = a * a;
+    ctx.font = font(f.size, '600');
+    const X = sx(f.x), Y = sy(f.y);
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillText(f.text, X + 1, Y + 2);
+    ctx.fillStyle = f.color;
+    ctx.fillText(f.text, X, Y);
+    ctx.globalAlpha = 1;
+  }
+  ctx.textAlign = 'left';
+}
+
+function drawObjectiveHint() {
+  const W = G.world;
+  let tx = null, ty = null;
+  if (G.doorOpen) { tx = W.door.x; ty = W.door.y; }
+  else {
+    let best = Infinity;
+    for (const b of W.beacons) {
+      if (b.lit) continue;
+      const d = dist2(b.x, b.y, G.ilo.x, G.ilo.y);
+      if (d < best) { best = d; tx = b.x; ty = b.y; }
+    }
+  }
+  if (tx === null) return;
+  const X = sx(tx), Y = sy(ty);
+  const m = 40;
+  if (X > m && X < VW - m && Y > m && Y < VH - m) return;
+  const cx = VW / 2, cy = VH / 2;
+  let ax = X - cx, ay = Y - cy;
+  const al = Math.hypot(ax, ay) || 1;
+  ax /= al; ay /= al;
+  const rx = Math.min(VW / 2 - 34, VH / 2 - 34);
+  const px = cx + ax * rx, py = cy + ay * rx;
+  ctx.save();
+  ctx.translate(px, py);
+  ctx.rotate(Math.atan2(ay, ax));
+  ctx.globalAlpha = 0.35 + 0.15 * Math.sin(G.time * 3);
+  ctx.fillStyle = G.doorOpen ? COL.warm : '#93a9cc';
+  ctx.beginPath();
+  ctx.moveTo(9, 0); ctx.lineTo(-6, 6); ctx.lineTo(-6, -6);
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+/* ============================================================
+   RENDU — écrans
+   ============================================================ */
+function wrap(text, maxW) {
+  const words = text.split(' ');
+  const lines = [];
+  let cur = '';
+  for (let i = 0; i < words.length; i++) {
+    const test = cur ? cur + ' ' + words[i] : words[i];
+    if (ctx.measureText(test).width > maxW && cur) { lines.push(cur); cur = words[i]; }
+    else cur = test;
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+
+function screenBackdrop() {
+  ctx.fillStyle = COL.bg;
+  ctx.fillRect(0, 0, VW, VH);
+  // Quelques lucioles lointaines pour l'ambiance
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 26; i++) {
+    const p = i * 1.7;
+    const x = (VW * 0.5) + Math.cos(G.uiT * 0.24 + p) * (VW * 0.42) * (0.35 + (i % 7) / 9);
+    const y = (VH * 0.5) + Math.sin(G.uiT * 0.19 + p * 1.4) * (VH * 0.42) * (0.35 + (i % 5) / 7);
+    const a = 0.10 + 0.10 * Math.sin(G.uiT * 1.4 + p);
+    radialGlow(x, y, 26, 'rgba(255,190,110,0.5)', a);
+    ctx.globalAlpha = a * 2.4;
+    ctx.fillStyle = COL.nim;
+    ctx.beginPath(); ctx.arc(x, y, 1.5, 0, TAU); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
+  // Vignette
+  const g = ctx.createRadialGradient(VW / 2, VH / 2, Math.min(VW, VH) * 0.2, VW / 2, VH / 2, Math.max(VW, VH) * 0.72);
+  g.addColorStop(0, 'rgba(0,0,0,0)');
+  g.addColorStop(1, 'rgba(0,0,0,0.72)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, VW, VH);
+}
+
+function drawTitleScreen() {
+  screenBackdrop();
+  const cx = VW / 2;
+  let y = VH * 0.26;
+
+  ctx.font = font(64, '700', true);
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(0,0,0,0.8)';
+  ctx.fillText(sStr(STORY && STORY.title, 'Luciole'), cx + 2, y + 3);
+  const tg = ctx.createLinearGradient(0, y - 50 * uiScale, 0, y + 10 * uiScale);
+  tg.addColorStop(0, '#fff0cd');
+  tg.addColorStop(1, '#ffb765');
+  ctx.fillStyle = tg;
+  ctx.fillText(sStr(STORY && STORY.title, 'Luciole'), cx, y);
+
+  y += 34 * uiScale;
+  ctx.font = font(18, '', true);
+  shadowText(sStr(STORY && STORY.tagline, ''), cx, y, 'center', '#c9c0d2');
+
+  // Menu
+  y += 62 * uiScale;
+  G.menuHit = [];
+  const iw = 320 * uiScale, ih = 44 * uiScale;
+  for (let i = 0; i < G.menuItems.length; i++) {
+    const it = G.menuItems[i];
+    const bx = cx - iw / 2, by = y + i * (ih + 10 * uiScale);
+    const hover = input.mx >= bx && input.mx <= bx + iw && input.my >= by && input.my <= by + ih;
+    if (hover && G.menuIndex !== i) G.menuIndex = i;
+    const sel = G.menuIndex === i;
+    ctx.fillStyle = sel ? 'rgba(255,183,101,0.14)' : 'rgba(255,255,255,0.045)';
+    ctx.fillRect(bx, by, iw, ih);
+    ctx.strokeStyle = sel ? 'rgba(255,183,101,0.75)' : 'rgba(255,255,255,0.16)';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(bx + 0.5, by + 0.5, iw, ih);
+    ctx.font = font(19, sel ? '700' : '500');
+    shadowText(it.label, cx, by + ih * 0.66, 'center', sel ? '#ffe0b0' : COL.text);
+    G.menuHit.push({ x: bx, y: by, w: iw, h: ih });
+  }
+
+  y += G.menuItems.length * (ih + 10 * uiScale) + 34 * uiScale;
+  ctx.font = font(16, '600');
+  if (save.bestScore > 0 || save.bestNight > 0) {
+    shadowText('Meilleur score : ' + save.bestScore + '   •   Meilleure nuit : ' + save.bestNight, cx, y, 'center', '#b9b0c4');
+    y += 26 * uiScale;
+  }
+  ctx.font = font(14);
+  shadowText('Flèches / ZQSD pour choisir, Entrée pour valider. M coupe le son.', cx, VH - 26 * uiScale, 'center', COL.dim);
+  ctx.textAlign = 'left';
+}
+
+function drawHelpScreen() {
+  screenBackdrop();
+  const cx = VW / 2;
+  let y = VH * 0.18;
+  ctx.textAlign = 'center';
+  ctx.font = font(34, '700', true);
+  shadowText('Comment jouer', cx, y, 'center', '#ffd9a0');
+  y += 42 * uiScale;
+
+  const lines = sArr(STORY && STORY.howToPlay, [
+    'ZQSD / WASD / flèches : déplacer Ilo.',
+    'Souris : guider Nim, la seule lumière.',
+    'Clic gauche ou Espace : éclat de lumière.'
+  ]);
+  ctx.font = font(17);
+  const maxW = Math.min(720 * uiScale, VW - 80);
+  for (let i = 0; i < lines.length; i++) {
+    const ls = wrap(lines[i], maxW);
+    for (const l of ls) { shadowText(l, cx, y, 'center', COL.text); y += 26 * uiScale; }
+    y += 6 * uiScale;
+  }
+
+  // Schéma : main gauche -> Ilo, main droite -> Nim
+  y += 18 * uiScale;
+  const sxp = cx - 150 * uiScale, sxn = cx + 150 * uiScale;
+  const sy0 = y + 42 * uiScale;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  radialGlow(sxn, sy0, 70 * uiScale, 'rgba(255,168,86,0.5)', 1);
+  ctx.restore();
+
+  // Clavier stylisé
+  ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 1.5;
+  const kw = 20 * uiScale;
+  const keysDraw = [[0, -1, 'Z'], [-1, 0, 'Q'], [0, 0, 'S'], [1, 0, 'D']];
+  ctx.font = font(14, '700');
+  for (const k of keysDraw) {
+    const kx = sxp + k[0] * (kw + 4 * uiScale) - kw / 2;
+    const ky = sy0 + k[1] * (kw + 4 * uiScale) - kw / 2 - 6 * uiScale;
+    ctx.strokeRect(kx, ky, kw, kw);
+    shadowText(k[2], kx + kw / 2, ky + kw * 0.72, 'center', COL.text);
+  }
+  ctx.font = font(15, '600');
+  shadowText('Ilo', sxp, sy0 + 52 * uiScale, 'center', '#d8cfe0');
+
+  // Souris stylisée + Nim
+  ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+  ctx.beginPath();
+  const mw = 26 * uiScale, mh = 38 * uiScale;
+  ctx.roundRect
+    ? ctx.roundRect(sxn - mw / 2, sy0 - mh / 2 - 6 * uiScale, mw, mh, 10 * uiScale)
+    : ctx.rect(sxn - mw / 2, sy0 - mh / 2 - 6 * uiScale, mw, mh);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(sxn, sy0 - mh / 2 - 6 * uiScale);
+  ctx.lineTo(sxn, sy0 - 6 * uiScale);
+  ctx.stroke();
+  ctx.fillStyle = COL.nim;
+  ctx.beginPath(); ctx.arc(sxn, sy0 - 6 * uiScale, 3, 0, TAU); ctx.fill();
+  ctx.font = font(15, '600');
+  shadowText('Nim', sxn, sy0 + 52 * uiScale, 'center', '#ffd9a0');
+
+  ctx.font = font(15);
+  shadowText('Entrée, clic ou Échap pour revenir', cx, VH - 30 * uiScale, 'center', COL.dim);
+  ctx.textAlign = 'left';
+}
+
+function drawStoryScreen() {
+  screenBackdrop();
+  const st = G.story;
+  if (!st) return;
+  const maxW = Math.min(680 * uiScale, VW - 72);
+  const cx = VW / 2;
+  ctx.textAlign = 'center';
+
+  ctx.font = font(15, '700');
+  shadowText(st.heading.toUpperCase(), cx, VH * 0.20, 'center', '#e2a45f');
+
+  const shown = st.text.slice(0, Math.floor(st.shown));
+  const paras = shown.split('\n\n');
+  ctx.font = font(21, '', true);
+  const lineH = Math.max(20, 32 * uiScale);
+  let y = VH * 0.20 + 56 * uiScale;
+  for (let i = 0; i < paras.length; i++) {
+    const ls = wrap(paras[i], maxW);
+    for (const l of ls) { shadowText(l, cx, y, 'center', '#f0e8da'); y += lineH; }
+    y += lineH * 0.45;
+  }
+
+  if (st.done) {
+    if (st.hint) {
+      ctx.font = font(16, '', true);
+      shadowText('« ' + st.hint + ' »', cx, Math.min(VH - 90 * uiScale, y + 24 * uiScale), 'center', '#9fb3c9');
+    }
+    const a = 0.45 + 0.35 * Math.sin(G.uiT * 3.2);
+    ctx.globalAlpha = a;
+    ctx.font = font(15, '600');
+    shadowText('Entrée ou clic pour continuer', cx, VH - 40 * uiScale, 'center', COL.dim);
+    ctx.globalAlpha = 1;
+  } else {
+    ctx.font = font(14);
+    shadowText('clic pour accélérer', cx, VH - 40 * uiScale, 'center', 'rgba(154,147,168,0.65)');
+  }
+
+  // Récapitulatif de score après une nuit réussie
+  if (G.state === 'nightAfter' && G.lastResult && st.done) drawScorePanel();
+
+  ctx.textAlign = 'left';
+}
+
+function drawScorePanel() {
+  const r = G.lastResult;
+  const cx = VW / 2;
+  const w = Math.min(420 * uiScale, VW - 60);
+  const h = 150 * uiScale;
+  const x = cx - w / 2, y = VH - h - 74 * uiScale;
+  if (y < VH * 0.42) return;
+  ctx.fillStyle = 'rgba(10,12,22,0.72)';
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = 'rgba(255,183,101,0.35)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x + 0.5, y + 0.5, w, h);
+
+  const rows = [
+    ['Balises', '+' + r.beacons],
+    ['Mornes dissipés', '+' + r.shadows],
+    ['Nuit ' + r.night, '+' + r.nightBonus],
+    [r.timeBonus ? 'Bonus temps (' + r.time.toFixed(0) + ' s)' : 'Temps (' + r.time.toFixed(0) + ' s)', r.timeBonus ? '+' + r.timeBonus : '—'],
+    ['Sans dégât', r.mult > 1 ? '×' + r.mult : '—']
+  ];
+  ctx.font = font(15);
+  let ry = y + 26 * uiScale;
+  for (const row of rows) {
+    shadowText(row[0], x + 16 * uiScale, ry, 'left', COL.dim);
+    shadowText(row[1], x + w - 16 * uiScale, ry, 'right', COL.text);
+    ry += 21 * uiScale;
+  }
+  ctx.font = font(18, '700');
+  shadowText('Score', x + 16 * uiScale, ry + 8 * uiScale, 'left', COL.warm);
+  shadowText(String(r.score), x + w - 16 * uiScale, ry + 8 * uiScale, 'right', COL.warm);
+}
+
+function drawGameOverScreen() {
+  // On garde la dernière image du monde, assombrie
+  ctx.fillStyle = 'rgba(4,5,10,0.82)';
+  ctx.fillRect(0, 0, VW, VH);
+  const cx = VW / 2;
+  let y = VH * 0.32;
+  ctx.textAlign = 'center';
+  ctx.font = font(40, '700', true);
+  shadowText(G.gameOverLine, cx, y, 'center', '#e9d6c4');
+  y += 52 * uiScale;
+  ctx.font = font(19, '600');
+  shadowText('Score : ' + G.score, cx, y, 'center', COL.warm);
+  y += 28 * uiScale;
+  ctx.font = font(16);
+  shadowText('Nuit atteinte : ' + G.night, cx, y, 'center', COL.text);
+  y += 24 * uiScale;
+  shadowText('Meilleur : ' + save.bestScore + ' (nuit ' + save.bestNight + ')', cx, y, 'center', COL.dim);
+  y += 46 * uiScale;
+  const a = 0.5 + 0.35 * Math.sin(G.uiT * 3.2);
+  ctx.globalAlpha = a;
+  ctx.font = font(17, '600');
+  shadowText('Entrée ou clic pour rejouer', cx, y, 'center', '#ffd9a0');
+  ctx.globalAlpha = 1;
+  ctx.font = font(14);
+  shadowText('Échap : retour au titre', cx, y + 26 * uiScale, 'center', COL.dim);
+  ctx.textAlign = 'left';
+}
+
+function drawPauseOverlay() {
+  ctx.fillStyle = 'rgba(4,5,10,0.78)';
+  ctx.fillRect(0, 0, VW, VH);
+  const cx = VW / 2;
+  let y = VH * 0.40;
+  ctx.textAlign = 'center';
+  ctx.font = font(38, '700', true);
+  shadowText('Pause', cx, y, 'center', '#ffd9a0');
+  y += 42 * uiScale;
+  ctx.font = font(16);
+  shadowText('Échap, P ou clic : reprendre', cx, y, 'center', COL.text);
+  y += 24 * uiScale;
+  shadowText('T : retour au titre', cx, y, 'center', COL.dim);
+  y += 24 * uiScale;
+  shadowText('M : son ' + (save.muted ? '(coupé)' : '(activé)'), cx, y, 'center', COL.dim);
+  ctx.textAlign = 'left';
+}
+
+/* ============================================================
+   BOUCLE PRINCIPALE
+   ============================================================ */
+function render() {
+  const s = G.state;
+  if (s === 'playing') {
+    const sh = G.shake;
+    const ox = sh ? (Math.random() - 0.5) * sh : 0;
+    const oy = sh ? (Math.random() - 0.5) * sh : 0;
+    camX = G.cam.x + ox;
+    camY = G.cam.y + oy;
+    drawWorld();
+    drawDarkness();
+    drawLights();
+    if (G.flash > 0.001) {
+      ctx.fillStyle = 'rgba(255,240,214,' + (G.flash * 0.4) + ')';
+      ctx.fillRect(0, 0, VW, VH);
+    }
+    drawHUD();
+    if (G.paused) drawPauseOverlay();
+  } else if (s === 'title') {
+    drawTitleScreen();
+  } else if (s === 'help') {
+    drawHelpScreen();
+  } else if (s === 'gameOver') {
+    drawGameOverScreen();
+  } else {
+    drawStoryScreen();
+  }
+}
+
+let lastT = 0;
+function frame(now) {
+  requestAnimationFrame(frame);
+  if (!lastT) lastT = now;
+  let dt = (now - lastT) / 1000;
+  lastT = now;
+  if (dt > 0.05) dt = 0.05;   // plafond après un onglet en arrière-plan
+  if (dt < 0) dt = 0;
+
+  G.time += dt;
+  G.uiT += dt;
+  if (G.lightWarn > 0) G.lightWarn = Math.max(0, G.lightWarn - dt * 1.6);
+
+  const playing = G.state === 'playing' && !G.paused;
+  document.body.classList.toggle('playing', playing);
+
+  if (playing) {
+    updatePlaying(dt);
+  } else {
+    setHum(0);
+    if (G.story && !G.story.done) {
+      G.story.shown += G.story.speed * dt;
+      if (G.story.shown >= G.story.text.length) {
+        G.story.shown = G.story.text.length;
+        G.story.done = true;
+      }
+    }
+  }
+
+  render();
+}
+
+/* ============================================================
+   AMORÇAGE
+   ============================================================ */
+function boot() {
+  resize();
+  G.lightWarn = 0;
+  G.tension = 0;
+  buildMenu();
+  toTitle();
+  requestAnimationFrame(frame);
+}
+boot();
+
+})();
+</script>
+</body>
+</html>
