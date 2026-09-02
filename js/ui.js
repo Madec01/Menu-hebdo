@@ -733,6 +733,10 @@ window.BP = window.BP || {};
       (level.type === 'performance' ? '<button type="button" class="btn primary curtain-btn" data-curtain>' +
         '<span class="bi">' + I.curtain + '</span><span>Commencer la représentation</span></button>' : '') +
       views +
+      (isTouchDevice() ? '<div class="nudge" role="group" aria-label="Déplacer d’un cran">' +
+        [['0,-1', '▲', 'Monter d’un cran'], ['-1,0', '◀', 'Vers la gauche d’un cran'], ['1,0', '▶', 'Vers la droite d’un cran'], ['0,1', '▼', 'Descendre d’un cran']].map(function (n) {
+          return '<button type="button" class="nbtn needs-sel n' + n[0].replace(/[-,]/g, '_') + '" data-nudge="' + n[0] + '" aria-label="' + n[2] + '" title="' + n[2] + '">' + n[1] + '</button>';
+        }).join('') + '<span class="nudge-lab">cran</span></div>' : '') +
       '<div class="pad">' + acts.map(function (a) {
         return '<button type="button" class="pbtn' + (a[4] ? ' needs-sel' : '') + '" data-act="' + a[0] + '" title="' + esc(a[3]) + '" aria-label="' + esc(a[3]) + '">' +
           '<span class="bi">' + a[2] + '</span><span class="pl">' + esc(a[1]) + '</span></button>';
@@ -749,6 +753,13 @@ window.BP = window.BP || {};
       (function (b) {
         b.addEventListener('click', function () { onPad(b.getAttribute('data-act'), b); });
       })(pb[i]);
+    }
+    var nb = hud.querySelectorAll('.nbtn');
+    for (var k = 0; k < nb.length; k++) {
+      (function (b) {
+        var d = b.getAttribute('data-nudge').split(',');
+        b.addEventListener('click', function () { E('nudge', { dx: +d[0], dy: +d[1] }); });
+      })(nb[k]);
     }
     var vb = hud.querySelectorAll('.vbtn');
     for (var j = 0; j < vb.length; j++) {
@@ -780,6 +791,10 @@ window.BP = window.BP || {};
   }
 
   var targetOn = true;
+  function isTouchDevice() {
+    try { return ('ontouchstart' in window) || (navigator.maxTouchPoints > 0); } catch (e) { return false; }
+  }
+
   function onPad(name, node) {
     if (!name) return;
     // Le moteur émet déjà le son de la manipulation : l'UI ne sonne que ses propres boutons.

@@ -38,7 +38,7 @@ window.BP = window.BP || {};
   /** Coût minimal en manipulations d'une pièce : pose, glisser, profondeurs, rotations, etc. */
   function pieceCost(pc) {
     var c = 1;                                            // pose depuis le coffre
-    if (pc.sx !== 200 || pc.sy !== 150) c += 1;           // un glisser suffit
+    // (le glisser depuis le coffre dépose déjà la pièce à sa place : pas de coût supplémentaire)
     c += pc.depth;                                        // profondeur+ répétée
     var steps = (((pc.rot % 360) + 360) % 360) / 15;
     c += Math.min(steps, 24 - steps);                     // rotation dans le sens le plus court

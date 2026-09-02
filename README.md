@@ -53,7 +53,7 @@ Plus une découpe est près de la lampe, plus son ombre est grande. Tout le rest
 | Action | Souris / clavier | Tactile |
 |---|---|---|
 | Poser une découpe | glisser depuis le coffre | glisser depuis le coffre |
-| Déplacer | glisser l'ombre, ou flèches | glisser l'ombre |
+| Déplacer | glisser l'ombre, ou flèches | glisser l'ombre (elle flotte au-dessus du doigt), croix « cran » pour l'ajustement fin |
 | Profondeur | molette, `W` / `S` | boutons Grandir / Rétrécir |
 | Rotation | `Q` / `E` | boutons |
 | Basculer / miroir | `T` / `F` | boutons |

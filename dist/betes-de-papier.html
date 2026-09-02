@@ -54,6 +54,9 @@ html, body {
 body {
   overflow: hidden;
   -webkit-tap-highlight-color: transparent;
+  /* Interface de jeu : un appui long ne doit ni sélectionner du texte ni ouvrir le menu système. */
+  -webkit-user-select: none; user-select: none;
+  -webkit-touch-callout: none;
 }
 button, input, output { font-family: inherit; color: inherit; }
 h1, h2, h3, h4, p, ul, li { margin: 0; }
@@ -92,7 +95,7 @@ svg { width: 1em; height: 1em; display: block; fill: none; stroke: currentColor;
 #tuto { position: fixed; inset: 0; z-index: 60; }
 #tuto[hidden] { display: none; }
 
-#toast { position: fixed; top: calc(var(--pad-t) + 8px); left: 0; right: 0; z-index: 70; pointer-events: none; display: flex; justify-content: center; }
+#toast { position: fixed; top: calc(var(--pad-t) + 64px); left: 0; right: 0; z-index: 70; pointer-events: none; display: flex; justify-content: center; }
 
 /* ------------------------------------------------------------- HUD : haut */
 
@@ -118,6 +121,12 @@ svg { width: 1em; height: 1em; display: block; fill: none; stroke: currentColor;
 .hud-moves small { font-size: 11px; letter-spacing: .04em; opacity: .6; margin-left: 3px; }
 
 .gauge { grid-area: gauge; display: flex; align-items: center; gap: 9px; margin-top: 3px; }
+/* Sans étiquette, la barre ne dit pas ce qu'elle mesure. */
+.gauge-lab {
+  flex: 0 0 auto; font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--ink-dim); white-space: nowrap;
+}
+@media (max-width: 340px) { .gauge-lab { display: none; } }
 .gauge-track {
   position: relative; flex: 1 1 auto; height: 11px; border-radius: 6px;
   background: rgba(0, 0, 0, .45);
@@ -185,6 +194,20 @@ svg { width: 1em; height: 1em; display: block; fill: none; stroke: currentColor;
 .pbtn[data-act="menu"] { border-color: rgba(240, 228, 203, .22); }
 
 .views { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-bottom: 7px; }
+/* Croix de déplacement fin (écrans tactiles) : un cran de grille par pression. */
+.nudge { position: relative; display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 44px 44px; gap: 4px; width: 148px; margin: 0 auto 7px; }
+.nbtn {
+  -webkit-appearance: none; appearance: none; min-width: 44px; min-height: 44px;
+  border: 1px solid rgba(180, 130, 58, .38); border-radius: 7px; color: var(--ink-light, #f1e6cf);
+  background: linear-gradient(180deg, rgba(74, 48, 24, .55), rgba(35, 23, 12, .55)); font-size: 14px;
+}
+.nbtn:active { background: rgba(128, 88, 34, .75); }
+.nbtn.n0__1 { grid-column: 2; grid-row: 1; }
+.nbtn.n_1_0 { grid-column: 1; grid-row: 2; }
+.nbtn.n1_0 { grid-column: 3; grid-row: 2; }
+.nbtn.n0_1 { grid-column: 2; grid-row: 2; }
+.nudge-lab { grid-column: 1; grid-row: 1; align-self: center; justify-self: center; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; opacity: .55; }
+.nudge .needs-sel[disabled] { opacity: .35; }
 .vbtn { min-height: 46px; font-size: 10.5px; }
 .vbtn.on { border-color: var(--amber); color: var(--gold); background: linear-gradient(180deg, rgba(128, 88, 34, .75), rgba(60, 40, 18, .75)); }
 .vbtn.v-red { color: #e8a49c; }
@@ -222,13 +245,13 @@ svg { width: 1em; height: 1em; display: block; fill: none; stroke: currentColor;
   backdrop-filter: blur(2px);
 }
 .sc-head h2 { flex: 1 1 auto; font-size: 20px; font-weight: normal; letter-spacing: .04em; color: var(--paper); }
-.head-sp { width: 40px; }
+.head-sp { width: 44px; }
 .head-count { font-size: 13px; color: var(--ink-dim); font-variant-numeric: tabular-nums; }
 .sc-body { flex: 1 1 auto; padding: 14px 12px 28px; width: 100%; max-width: 860px; margin: 0 auto; }
 
 .icon-btn {
   flex: 0 0 auto;
-  width: 40px; height: 40px; display: grid; place-items: center;
+  width: 44px; height: 44px; display: grid; place-items: center;   /* cible tactile minimale */
   border: 1px solid var(--rule); border-radius: 8px;
   background: rgba(255, 255, 255, .03); color: var(--ink-soft);
   cursor: pointer; transition: background .18s ease, color .18s ease;
@@ -261,7 +284,7 @@ svg { width: 1em; height: 1em; display: block; fill: none; stroke: currentColor;
 }
 .btn.primary:hover { background: linear-gradient(180deg, rgba(184, 128, 48, .68), rgba(96, 62, 24, .7)); }
 .btn.ghost { border-color: var(--rule); background: transparent; color: var(--ink-soft); }
-.btn.small { min-height: 38px; padding: 7px 13px; font-size: 14px; }
+.btn.small { min-height: 44px; padding: 7px 13px; font-size: 14px; }
 .btn.armed { border-color: var(--carmin); color: #f0c4bd; background: rgba(160, 47, 38, .3); }
 
 .row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
@@ -421,7 +444,8 @@ svg { width: 1em; height: 1em; display: block; fill: none; stroke: currentColor;
 .carnet .game-title { color: #3a2412; text-shadow: none; }
 .result-card .result-figures, .result-card .record-box { justify-content: center; }
 .big-stars { display: flex; justify-content: center; gap: 12px; margin: 14px 0 6px; }
-.bstar { color: rgba(90, 58, 24, .22); }
+/* Les étoiles éteintes disent « une sur trois » : à 22 % elles disparaissaient sur le carnet. */
+.bstar { color: rgba(90, 58, 24, .34); }
 .bstar svg { width: 42px; height: 42px; stroke-width: 1.2; }
 .bstar.on { color: #cf9c22; animation: pop .5s cubic-bezier(.2, 1.5, .4, 1); }
 .bstar.on svg { fill: #e5b73a; }
@@ -567,7 +591,7 @@ input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border-radius
   .game-title { grid-column: 2; font-size: clamp(28px, 5.2vw, 40px); }
   .tagline { grid-column: 2; margin: 8px 0 14px; font-size: 14px; }
   .menu-col { grid-column: 2; margin: 0; max-width: none; gap: 7px; }
-  .menu-col .btn { min-height: 44px; font-size: 15px; padding: 8px 16px; }
+  .menu-col .btn { min-height: 46px; font-size: 15px; padding: 8px 16px; }
   .version { grid-column: 2; text-align: left; margin-top: 11px; }
 }
 
@@ -582,7 +606,7 @@ input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border-radius
   .views { grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 5px; }
   .pbtn { min-height: 46px; font-size: 10px; }
   .pbtn .bi svg, .vbtn .bi svg { width: 18px; height: 18px; }
-  .vbtn { min-height: 40px; font-size: 9.5px; }
+  .vbtn { min-height: 44px; font-size: 9.5px; }
   .carnet { padding: 16px 18px; }
   .carnet h2, .brief-title { font-size: 21px; }
   .para { font-size: 14.5px; margin-bottom: 8px; }
@@ -590,7 +614,7 @@ input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border-radius
   .game-title { font-size: clamp(25px, 4.4vw, 34px); }
   .tagline { margin: 6px 0 10px; font-size: 13.5px; }
   .menu-col { gap: 6px; }
-  .menu-col .btn { min-height: 42px; font-size: 14.5px; }
+  .menu-col .btn { min-height: 44px; font-size: 14.5px; }
   .version { margin-top: 8px; }
 }
 
@@ -1310,7 +1334,7 @@ window.BP = window.BP || {};
   /** Coût minimal en manipulations d'une pièce : pose, glisser, profondeurs, rotations, etc. */
   function pieceCost(pc) {
     var c = 1;                                            // pose depuis le coffre
-    if (pc.sx !== 200 || pc.sy !== 150) c += 1;           // un glisser suffit
+    // (le glisser depuis le coffre dépose déjà la pièce à sa place : pas de coût supplémentaire)
     c += pc.depth;                                        // profondeur+ répétée
     var steps = (((pc.rot % 360) + 360) % 360) / 15;
     c += Math.min(steps, 24 - steps);                     // rotation dans le sens le plus court
@@ -1509,6 +1533,9 @@ window.BP = window.BP || {};
       'a refermé son carnet. Il s\'appelle Delcour. Nous partons cette nuit.',
     hint: 'Anticipe : la couronne glisse d\'abord, puis se change en deux longues oreilles.',
     lamps: warmLamps(), readings: ['main'], unlocks: ['performance'],
+    // Durée des frappes : il faut au moins deux secondes pour lire la nouvelle cible, puis
+    // environ deux secondes par manipulation demandée. La dernière frappe change de pièces
+    // (sept manipulations) : huit secondes la rendaient injouable à la main.
     beats: [
       {
         seconds: 12, solution: [
@@ -1525,7 +1552,7 @@ window.BP = window.BP || {};
         ]
       },
       {
-        seconds: 8, solution: [
+        seconds: 15, solution: [
           p('disc', 200, 124, { d: 1 }),
           p('leaf', 172, 68, { d: 1, r: 345 }),
           p('leaf', 228, 68, { d: 1, r: 15 }),
@@ -1680,7 +1707,7 @@ window.BP = window.BP || {};
         ]
       },
       {
-        seconds: 8, solution: [
+        seconds: 12, solution: [
           p('blob', 200, 192),
           p('head', 236, 156, { d: 4, r: 330 }),
           p('wing', 172, 108, { d: 1, r: 345 })
@@ -1810,7 +1837,7 @@ window.BP = window.BP || {};
         ]
       },
       {
-        seconds: 8, solution: [
+        seconds: 15, solution: [
           p('blob', 200, 184, { d: 1 }),
           p('key', 268, 152, { d: 3, r: 15 }),
           p('claw', 168, 100, { d: 1, r: 330 }),
@@ -4621,7 +4648,7 @@ window.BP = window.BP || {};
       if (phase === 'fill') {
         // Remplissage très léger, en multiplication : la teinte du papier est préservée.
         c.globalCompositeOperation = 'multiply';
-        c.globalAlpha = lamps.length > 1 ? 0.13 : 0.16;
+        c.globalAlpha = lamps.length > 1 ? 0.18 : 0.24;
         c.fillStyle = 'rgb(' + col + ')';
         c.fill(tp.path, 'evenodd');
         c.globalCompositeOperation = 'source-over';
@@ -4629,7 +4656,7 @@ window.BP = window.BP || {};
         c.globalAlpha = 0.9;
         c.setLineDash(DASH);
         c.lineDashOffset = -clock * 8;
-        c.lineWidth = 1.6;
+        c.lineWidth = L.scale < 1 ? 2 : 1.6;   // trait plus épais sur petit écran
         c.strokeStyle = lamps.length > 1 ? 'rgba(' + col + ',0.85)' : COL.chalk;
         c.stroke(tp.path);
         c.setLineDash(EMPTY_DASH);
@@ -4943,7 +4970,7 @@ window.BP = window.BP || {};
     var s = L.scale;
     c.save();
     c.globalAlpha = 0.55;
-    c.translate(drag.px, drag.py);
+    c.translate(drag.px, drag.py - (drag.lift || 0));
     c.scale(s, s);
     c.translate(-ext.cx, -ext.cy);
     c.fillStyle = entry.material === 'oiled' ? 'rgba(40,28,16,0.5)' : 'rgba(40,28,16,0.85)';
@@ -4991,6 +5018,7 @@ window.BP = window.BP || {};
         canvas.clientWidth > 0 && canvas.clientHeight > 0) resize();
     updateFlicker(clock);
     tickPerformance(dt);
+    tickCurtain(dt);
     render();
     rafId = window.requestAnimationFrame(frame);
   }
@@ -5036,11 +5064,32 @@ window.BP = window.BP || {};
     return (par && moves <= par) ? 3 : 2;
   }
 
+  // Temps d'attente avant que le rideau ne tombe quand le seuil de réussite est franchi mais
+  // que l'ombre peut encore être améliorée : le monteur doit pouvoir finir son geste (poser la
+  // dernière pièce, la tourner) et viser l'ovation sans être interrompu. Toute manipulation
+  // relance le compte ; l'ovation, elle, fait tomber le rideau tout de suite.
+  var CURTAIN_SETTLE = 5;
+  var curtainWait = 0;
+
   function checkWin() {
     if (!S.level || S.level.type === 'performance') return;
-    if (S.score < BP.PASS) return;
+    if (S.status === 'won') return;
+    if (S.score < BP.PASS) { curtainWait = 0; return; }
+    if (S.score >= BP.GOLD) { finishTableau(); return; }
+    curtainWait = CURTAIN_SETTLE;
+  }
+
+  /** Décompte du rideau (appelé par la boucle ; la pause le suspend d'elle-même). */
+  function tickCurtain(dt) {
+    if (curtainWait <= 0) return;
+    curtainWait -= dt;
+    if (curtainWait <= 0) { curtainWait = 0; finishTableau(); }
+  }
+
+  function finishTableau() {
+    curtainWait = 0;
+    if (!S.level || S.status === 'won') return;
     var stars = starsFor(S.score, S.moves, S.level.par);
-    if (stars <= S.bestStars) { S.status = 'won'; return; }
     S.bestStars = stars;
     S.status = 'won';
     saveResult(S.score, stars, S.moves);
@@ -5114,6 +5163,7 @@ window.BP = window.BP || {};
     S.undo.length = 0;
     S.status = 'playing';
     S.bestStars = 0;
+    curtainWait = 0;
     S.view = 'all';
     S.showTarget = true;
     S.beat = null;
@@ -5486,6 +5536,8 @@ window.BP = window.BP || {};
     return { x: ev.clientX - r.left, y: ev.clientY - r.top };
   }
 
+  var TOUCH_LIFT = 34;   // px CSS : hauteur à laquelle flotte la pièce au-dessus du doigt
+
   function onPointerDown(ev) {
     if (paused || !S.level) return;
     if (ev.button !== undefined && ev.button !== 0 && ev.pointerType === 'mouse') return;
@@ -5495,6 +5547,9 @@ window.BP = window.BP || {};
     drag.startX = pt.x; drag.startY = pt.y; drag.moved = false;
     drag.px = pt.x; drag.py = pt.y;
     drag.id = ev.pointerId;
+
+    // Au doigt, ce que l'on tient flotte un peu au-dessus du point de contact pour rester visible.
+    drag.lift = ev.pointerType === 'touch' ? TOUCH_LIFT : 0;
 
     var si = slotAt(pt.x, pt.y);
     if (si >= 0) {
@@ -5507,14 +5562,18 @@ window.BP = window.BP || {};
       return;
     }
 
-    if (!inDrap(pt.x, pt.y)) { return; }
+    // Hors du drap et hors du coffre (les coulisses) : on désélectionne, comme dans le vide du drap.
+    if (!inDrap(pt.x, pt.y)) {
+      if (S.selected) { setSelected(null); sfx('ui'); }
+      return;
+    }
 
     var wx = screenToWorldX(pt.x), wy = screenToWorldY(pt.y);
     var p = pickPieceAt(wx, wy);
     if (p) {
       if (S.selected !== p.uid) { setSelected(p.uid); sfx('select'); }
       drag.active = true; drag.kind = 'piece'; drag.uid = p.uid;
-      drag.offx = p.sx - wx; drag.offy = p.sy - wy;
+      drag.offx = p.sx - wx; drag.offy = p.sy - wy - drag.lift / L.scale;
       drag.latx = latticeOf(p.sx); drag.laty = latticeOf(p.sy);
       drag.snapshotTaken = false;
       E.emit('pick', { from: 'drap', uid: p.uid, shape: p.shape });
@@ -5555,25 +5614,26 @@ window.BP = window.BP || {};
       var idx = drag.coffreIndex;
       endDrag();
       if (!drag.movedLast || inDrap(pt.x, pt.y)) {
-        if (inDrap(pt.x, pt.y)) placeFromCoffre(idx, screenToWorldX(pt.x), screenToWorldY(pt.y));
+        if (inDrap(pt.x, pt.y)) placeFromCoffre(idx, screenToWorldX(pt.x), screenToWorldY(pt.y - drag.lift));
         else placeFromCoffre(idx);       // tap simple : pose au centre
       }
       return;
     }
 
     if (drag.kind === 'piece') {
-      var moved = drag.moved, changedPos = drag.snapshotTaken;
+      var changedPos = drag.snapshotTaken;
       var uid = drag.uid;
       endDrag();
-      if (moved && changedPos) {
+      // Seule la position après aimantation décide : sur un petit écran, un pas de grille ne
+      // représente que trois ou quatre pixels — exiger un « vrai » glisser rendrait la
+      // correction fine impossible au doigt. Un simple tap laisse la pièce à sa case : rien
+      // n'est compté.
+      if (changedPos) {
         var sn = S.undo[S.undo.length - 1];
         var p = pieceByUid(uid);
         var same = sn && sameAtUid(sn, p);
         if (same) { S.undo.pop(); }
         else { countMove(); sfx('place'); E.emit('place', { uid: uid }); recompute(); }
-      } else if (changedPos) {
-        var sn2 = S.undo.pop();
-        if (sn2) restoreSnapshot(sn2);
       }
       return;
     }
@@ -6517,7 +6577,7 @@ window.BP = window.BP || {};
   function startLevel(level) {
     ctx.level = level; ctx.playing = true; ctx.lastResult = null;
     ctx.extra = []; ctx.curtainUp = false; ctx.score = 0; ctx.scores = {};
-    targetOn = false;
+    targetOn = true;          // le moteur affiche le fantôme de la cible par défaut
     hideScreens();
     hudBuild(level);
     hudShow();
@@ -6526,8 +6586,7 @@ window.BP = window.BP || {};
     }
     if (BP.engine && BP.engine.setPaused) BP.engine.setPaused(false);
     if (BP.engine && BP.engine.setOptions) {
-      var st = S().settings;
-      try { BP.engine.setOptions({ reduceMotion: !!st.reduceMotion, showSideView: !!st.sideView }); } catch (e) { }
+      try { BP.engine.setOptions({ reduceMotion: reduceMotion(), showSideView: sideViewOn() }); } catch (e) { }
     }
     kickResize();
     if (level.type === 'performance') A('playMusic', 'performance');
@@ -6609,7 +6668,8 @@ window.BP = window.BP || {};
       '<div class="hud-top">' +
       '  <div class="hud-line">' +
       '    <span class="hud-title">' + esc(level.title || '') + '</span>' +
-      '    <span class="gauge">' +
+      '    <span class="gauge" title="Ressemblance de l’ombre à la cible">' +
+      '      <span class="gauge-lab">ressemblance</span>' +
       '      <span class="gauge-track"><i class="gauge-fill" data-fill></i>' +
       '        <i class="tick pass" style="left:' + ((BP.PASS || 0.9) * 100) + '%"></i>' +
       '        <i class="tick gold" style="left:' + ((BP.GOLD || 0.97) * 100) + '%"></i>' +
@@ -6624,6 +6684,10 @@ window.BP = window.BP || {};
       (level.type === 'performance' ? '<button type="button" class="btn primary curtain-btn" data-curtain>' +
         '<span class="bi">' + I.curtain + '</span><span>Commencer la représentation</span></button>' : '') +
       views +
+      (isTouchDevice() ? '<div class="nudge" role="group" aria-label="Déplacer d’un cran">' +
+        [['0,-1', '▲', 'Monter d’un cran'], ['-1,0', '◀', 'Vers la gauche d’un cran'], ['1,0', '▶', 'Vers la droite d’un cran'], ['0,1', '▼', 'Descendre d’un cran']].map(function (n) {
+          return '<button type="button" class="nbtn needs-sel n' + n[0].replace(/[-,]/g, '_') + '" data-nudge="' + n[0] + '" aria-label="' + n[2] + '" title="' + n[2] + '">' + n[1] + '</button>';
+        }).join('') + '<span class="nudge-lab">cran</span></div>' : '') +
       '<div class="pad">' + acts.map(function (a) {
         return '<button type="button" class="pbtn' + (a[4] ? ' needs-sel' : '') + '" data-act="' + a[0] + '" title="' + esc(a[3]) + '" aria-label="' + esc(a[3]) + '">' +
           '<span class="bi">' + a[2] + '</span><span class="pl">' + esc(a[1]) + '</span></button>';
@@ -6640,6 +6704,13 @@ window.BP = window.BP || {};
       (function (b) {
         b.addEventListener('click', function () { onPad(b.getAttribute('data-act'), b); });
       })(pb[i]);
+    }
+    var nb = hud.querySelectorAll('.nbtn');
+    for (var k = 0; k < nb.length; k++) {
+      (function (b) {
+        var d = b.getAttribute('data-nudge').split(',');
+        b.addEventListener('click', function () { E('nudge', { dx: +d[0], dy: +d[1] }); });
+      })(nb[k]);
     }
     var vb = hud.querySelectorAll('.vbtn');
     for (var j = 0; j < vb.length; j++) {
@@ -6670,19 +6741,26 @@ window.BP = window.BP || {};
     return { main: 'Ombre', red: 'Rouge', blue: 'Bleu', umbra: 'Œil nu' }[r] || r;
   }
 
-  var targetOn = false;
+  var targetOn = true;
+  function isTouchDevice() {
+    try { return ('ontouchstart' in window) || (navigator.maxTouchPoints > 0); } catch (e) { return false; }
+  }
+
   function onPad(name, node) {
     if (!name) return;
-    sfx('ui');
-    if (name === 'menu') { screenPause(); return; }
-    if (name === 'hint') { showHint(); return; }
-    if (name === 'target') {
-      targetOn = !targetOn;
-      node.classList.toggle('on', targetOn);
-      E('showTarget', targetOn);
-      return;
-    }
+    // Le moteur émet déjà le son de la manipulation : l'UI ne sonne que ses propres boutons.
+    if (name === 'menu') { sfx('ui'); screenPause(); return; }
+    if (name === 'hint') { sfx('ui'); showHint(); return; }
+    if (name === 'target') { E('showTarget', !targetOn); return; }   // syncTarget() suivra l'événement
     E(name);
+  }
+
+  /** Aligne le bouton « Cible » sur l'état réel du moteur (clic, touche H, chargement). */
+  function syncTarget(on) {
+    targetOn = !!on;
+    if (!hud || hud.hidden) return;
+    var b = hud.querySelector('[data-act="target"]');
+    if (b) b.classList.toggle('on', targetOn);
   }
 
   function showHint() {
@@ -6801,7 +6879,24 @@ window.BP = window.BP || {};
       twolamps: '.views', umbra: '.vbtn.v-umbra'
     };
     if (m[name]) { var n = hud.querySelector(m[name]); if (n && n.offsetParent !== null) return n; }
+    // « Poser une découpe » et « papier huilé » désignent le coffre, qui est dessiné dans le
+    // canvas : on fabrique une ancre sur sa première carte.
+    if (name === 'move' || name === 'oiled') { var c = coffreCardAnchor(); if (c) return c; }
     return null;   // bulle centrée : le conseil porte sur le drap lui-même
+  }
+
+  /** Fausse ancre (rectangle) sur la première carte du coffre, dans le repère de la fenêtre. */
+  function coffreCardAnchor() {
+    if (!stageCanvas || !(BP.engine && BP.engine._coffreRects)) return null;
+    var r;
+    try { r = BP.engine._coffreRects()[0]; } catch (e) { return null; }
+    if (!r || !r.w || !r.h) return null;
+    var b = stageCanvas.getBoundingClientRect();
+    var box = {
+      left: b.left + r.x, top: b.top + r.y, width: r.w, height: r.h,
+      right: b.left + r.x + r.w, bottom: b.top + r.y + r.h
+    };
+    return { getBoundingClientRect: function () { return box; } };
   }
 
   var bubbleOpts = null;
@@ -7117,13 +7212,19 @@ window.BP = window.BP || {};
     if (S().settings.reduceMotion) return true;
     try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; }
   }
+  /** La vue de côté (échelle des profondeurs) n'a de sens qu'une fois la profondeur introduite. */
+  function sideViewOn() {
+    if (!S().settings.sideView) return false;
+    if (ctx.playing && ctx.level) return !!unlockedSet(ctx.level).depth;
+    return true;
+  }
   function applySettings() {
     var st = S().settings;
     document.body.classList.toggle('reduce-motion', reduceMotion());
     A('setVolumes', { music: st.music, sfx: st.sfx });
     A('setMuted', !!st.muted);
     if (BP.engine && BP.engine.setOptions) {
-      try { BP.engine.setOptions({ reduceMotion: reduceMotion(), showSideView: !!st.sideView }); } catch (e) { }
+      try { BP.engine.setOptions({ reduceMotion: reduceMotion(), showSideView: sideViewOn() }); } catch (e) { }
     }
   }
 
@@ -7300,8 +7401,9 @@ window.BP = window.BP || {};
     BP.engine.on('score', function (d) {
       d = d || {};
       setGauge(d.score !== undefined ? d.score : 0, d.scores || {});
-      A('setIntensity', d.score || 0);
+      // L'intensité musicale est déjà pilotée par le moteur à chaque recalcul : pas de doublon.
     });
+    BP.engine.on('showTarget', syncTarget);
     BP.engine.on('won', onWon);
     BP.engine.on('lost', onLost);
     BP.engine.on('unlock', function (name) {

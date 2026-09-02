@@ -917,7 +917,7 @@ window.BP = window.BP || {};
       if (phase === 'fill') {
         // Remplissage très léger, en multiplication : la teinte du papier est préservée.
         c.globalCompositeOperation = 'multiply';
-        c.globalAlpha = lamps.length > 1 ? 0.13 : 0.16;
+        c.globalAlpha = lamps.length > 1 ? 0.18 : 0.24;
         c.fillStyle = 'rgb(' + col + ')';
         c.fill(tp.path, 'evenodd');
         c.globalCompositeOperation = 'source-over';
@@ -925,7 +925,7 @@ window.BP = window.BP || {};
         c.globalAlpha = 0.9;
         c.setLineDash(DASH);
         c.lineDashOffset = -clock * 8;
-        c.lineWidth = 1.6;
+        c.lineWidth = L.scale < 1 ? 2 : 1.6;   // trait plus épais sur petit écran
         c.strokeStyle = lamps.length > 1 ? 'rgba(' + col + ',0.85)' : COL.chalk;
         c.stroke(tp.path);
         c.setLineDash(EMPTY_DASH);
@@ -1239,7 +1239,7 @@ window.BP = window.BP || {};
     var s = L.scale;
     c.save();
     c.globalAlpha = 0.55;
-    c.translate(drag.px, drag.py);
+    c.translate(drag.px, drag.py - (drag.lift || 0));
     c.scale(s, s);
     c.translate(-ext.cx, -ext.cy);
     c.fillStyle = entry.material === 'oiled' ? 'rgba(40,28,16,0.5)' : 'rgba(40,28,16,0.85)';
@@ -1805,6 +1805,8 @@ window.BP = window.BP || {};
     return { x: ev.clientX - r.left, y: ev.clientY - r.top };
   }
 
+  var TOUCH_LIFT = 34;   // px CSS : hauteur à laquelle flotte la pièce au-dessus du doigt
+
   function onPointerDown(ev) {
     if (paused || !S.level) return;
     if (ev.button !== undefined && ev.button !== 0 && ev.pointerType === 'mouse') return;
@@ -1814,6 +1816,9 @@ window.BP = window.BP || {};
     drag.startX = pt.x; drag.startY = pt.y; drag.moved = false;
     drag.px = pt.x; drag.py = pt.y;
     drag.id = ev.pointerId;
+
+    // Au doigt, ce que l'on tient flotte un peu au-dessus du point de contact pour rester visible.
+    drag.lift = ev.pointerType === 'touch' ? TOUCH_LIFT : 0;
 
     var si = slotAt(pt.x, pt.y);
     if (si >= 0) {
@@ -1837,7 +1842,7 @@ window.BP = window.BP || {};
     if (p) {
       if (S.selected !== p.uid) { setSelected(p.uid); sfx('select'); }
       drag.active = true; drag.kind = 'piece'; drag.uid = p.uid;
-      drag.offx = p.sx - wx; drag.offy = p.sy - wy;
+      drag.offx = p.sx - wx; drag.offy = p.sy - wy - drag.lift / L.scale;
       drag.latx = latticeOf(p.sx); drag.laty = latticeOf(p.sy);
       drag.snapshotTaken = false;
       E.emit('pick', { from: 'drap', uid: p.uid, shape: p.shape });
@@ -1878,7 +1883,7 @@ window.BP = window.BP || {};
       var idx = drag.coffreIndex;
       endDrag();
       if (!drag.movedLast || inDrap(pt.x, pt.y)) {
-        if (inDrap(pt.x, pt.y)) placeFromCoffre(idx, screenToWorldX(pt.x), screenToWorldY(pt.y));
+        if (inDrap(pt.x, pt.y)) placeFromCoffre(idx, screenToWorldX(pt.x), screenToWorldY(pt.y - drag.lift));
         else placeFromCoffre(idx);       // tap simple : pose au centre
       }
       return;
