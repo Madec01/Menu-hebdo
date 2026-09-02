@@ -37,123 +37,132 @@
 // === STORY BEGIN ===
 const STORY = {
   title: "Luciole",
-  tagline: "Une enfant, une luciole, et une nuit qui refuse de finir.",
+  tagline: "La dernière luciole contre la nuit sans fin.",
   howToPlay: [
-    "ZQSD, WASD ou les flèches déplacent Ilo. La souris guide Nim, la seule lumière.",
-    "Clic gauche ou Espace : éclat. L'onde repousse les Mornes et coûte de la lumière.",
-    "Reste sur une pierre de veille, Nim tout près, jusqu'à ce qu'elle s'allume.",
-    "Toutes les pierres allumées, l'arche s'ouvre. Échap ou P : pause. M : son."
+    "Clavier : ZQSD, WASD ou les flèches déplacent Ilo dans la forêt.",
+    "Souris : le curseur guide Nim, la luciole. Elle seule fait de la lumière, et elle ne s'éloigne jamais beaucoup d'Ilo.",
+    "Clic / Espace : Nim jette un éclat qui repousse les ombres autour d'elle. Ça coûte de la lumière.",
+    "But : allumer toutes les pierres de veille, puis rejoindre l'arche avant que la lumière s'épuise."
   ],
   intro: [
-    "Un matin, à Brume-sur-Aube, le soleil n'est pas revenu.",
-    "Dans la lanterne éteinte de sa mère, Ilo a trouvé Nim : la dernière luciole.",
-    "Les anciens disent que les pierres de veille, rallumées, font remonter l'aube."
+    "Un matin, à Brume-sur-Aube, le soleil n'est pas revenu. On a attendu midi. On a attendu le lendemain. Le ciel est resté noir.",
+    "La mère d'Ilo a pris sa lanterne et elle est partie chercher l'aube. Elle n'est jamais rentrée.",
+    "Dans la lanterne éteinte qu'elle a laissée, Ilo a trouvé une luciole vivante. La dernière. Ilo l'a appelée Nim.",
+    "Les anciens parlent des pierres de veille, au fond de la forêt. Rallumez-les toutes, disent-ils, et l'aube remontera."
   ],
   nights: {
     1: {
-      title: "La lisière",
+      title: "Nuit I — La lisière",
       before: [
-        "Ilo pousse la barrière du jardin.",
-        "La forêt commence là où le village s'arrête de respirer."
+        "Ilo pousse la barrière du jardin. Derrière, la forêt commence tout de suite. Plus personne au village ne va si loin.",
+        "Nim s'étire dans le noir. Sa lumière tient dans deux mains. C'est peu. C'est tout ce qu'il y a."
       ],
       after: [
-        "Trois pierres tiennent. Le noir recule d'un pas."
+        "Trois pierres brillent derrière Ilo, comme des fenêtres allumées. Le ciel, lui, n'a pas bougé d'un pouce.",
+        "Nim bourdonne doucement. Demain, il faudra aller plus loin."
       ],
-      hint: "Garde Nim entre Ilo et ce qui bouge."
+      hint: "Les Mornes brûlent dans le halo de Nim : garde la lumière entre eux et Ilo au lieu de fuir en ligne droite."
     },
     2: {
-      title: "Le sentier bas",
+      title: "Nuit II — Le chemin creux",
       before: [
-        "Des pas dans la mousse. Ils ne sont pas à elle.",
-        "Ilo serre la lanterne froide contre son ventre."
+        "Le village s'est éteint derrière les arbres. Ilo compte ses pas, pour ne pas compter autre chose.",
+        "Les ombres viennent plus vite ici. Elles n'ont pas de visage. Seulement deux yeux pâles, très bas sur le sol."
       ],
       after: [
-        "Les Mornes ne crient pas. C'est le pire."
+        "Ilo pose la main sur la dernière pierre. Elle est tiède. Quelqu'un l'a allumée, autrefois, très longtemps."
       ],
-      hint: "Un éclat coûte cher : garde-le pour les moments serrés."
+      hint: "L'éclat coûte cher en lumière : garde-le pour les Mornes déjà collés à Ilo, pas pour ceux qui arrivent encore."
     },
     3: {
-      title: "Les veilleurs",
+      title: "Nuit III — Les veilleuses",
       before: [
-        "Certaines ombres ne chassent plus.",
-        "Elles tournent autour des pierres, comme si elles attendaient quelqu'un."
+        "Ce soir, certaines ombres ne chassent pas. Elles tournent autour des pierres éteintes, lentement, comme on tourne autour d'un lit.",
+        "Ilo s'arrête. Elles ne veulent pas d'Ilo. Elles veulent seulement que rien ne se rallume."
       ],
       after: [
-        "Ilo croit reconnaître une démarche. Elle ne le dit pas."
+        "Une veilleuse s'est dissoute sans un bruit. Il est resté un peu de froid à l'endroit exact, un long moment."
       ],
-      hint: "Les veilleuses gardent les pierres : dégage la place avant de te poser."
+      hint: "Les veilleuses gardent les pierres éteintes : dissipe-les d'abord, sinon la jauge d'allumage n'aura jamais le temps de se remplir."
     },
     4: {
-      title: "Le vieux pont",
+      title: "Nuit IV — Ce qu'ils étaient",
       before: [
-        "L'eau coule sous le pont sans reflet.",
-        "Nim faiblit plus vite ici."
+        "Au pied d'une pierre, Ilo trouve un soulier. Plus loin, un panier, une écharpe. Des affaires de gens du village.",
+        "Nim frôle un Morne. Un instant, dans la lumière, la tache prend une forme. Des épaules. Une nuque penchée.",
+        "Les Mornes ne viennent pas du dehors. Ce sont les ombres de ceux qui ont cessé d'espérer."
       ],
       after: [
-        "La lumière tient. Les mains d'Ilo tremblent un peu."
+        "Ilo n'en parle pas à Nim. Nim a compris quand même : elle vole plus près, maintenant."
       ],
-      hint: "Allume vite : chaque pierre rend de la lumière à Nim."
+      hint: "Une pierre allumée reste une zone sûre : les Mornes y brûlent tout seuls, sers-t'en pour souffler entre deux traversées."
     },
     5: {
-      title: "Les fausses lueurs",
+      title: "Nuit V — Les fausses lueurs",
       before: [
-        "Des lumières bleues flottent entre les troncs.",
-        "Elles ressemblent à Nim. Elles ne le sont pas."
+        "De petites lumières bleues flottent entre les troncs. De loin, on dirait des pierres de veille. De près, elles s'ouvrent.",
+        "Ilo en reconnaît une. Sa mère nouait un ruban bleu à sa lanterne, pour la retrouver dans le brouillard."
       ],
       after: [
-        "Ne pas suivre. C'est aussi une manière d'avancer."
+        "Ilo se tait longtemps. Puis : « Nim. Est-ce qu'on peut perdre l'espoir et continuer à marcher quand même ? »"
       ],
-      hint: "Éloigne Nim des lueurs bleues : elles réveillent les Mornes."
+      hint: "Les lueurs bleutées sont des pièges : si Nim passe à moins de quelques pas, elles crachent des Mornes."
     },
     6: {
-      title: "La clairière creuse",
+      title: "Nuit VI — La voix basse",
       before: [
-        "Ici, le village venait chercher l'aube.",
-        "Il reste des lanternes par terre, toutes éteintes."
+        "Un Morne, cette nuit, n'a pas attaqué. Il a suivi de loin, comme on suit un enfant qu'on n'ose plus appeler.",
+        "Il s'est arrêté à la lisière du halo. Il est resté là tout le temps que la pierre a mis à s'allumer.",
+        "Ilo a serré la lanterne éteinte contre soi. Elle sentait encore la fumée."
       ],
       after: [
-        "Encore une nuit. Puis la dernière."
+        "Quand la lumière est repartie, l'ombre n'était plus là. Ilo a marché jusqu'à l'arche sans se retourner."
       ],
-      hint: "La laisse est courte : bouge Ilo pour que Nim puisse suivre."
+      hint: "Les Mornes traversent les arbres, pas Ilo : ne compte pas sur un tronc pour t'abriter, compte sur la lumière."
     },
     7: {
-      title: "La dernière pierre",
+      title: "Nuit VII — La dernière pierre",
       before: [
-        "Au bout du chemin, une pierre n'est pas une pierre.",
-        "C'est une lanterne. Celle qui est partie chercher l'aube.",
-        "Une ombre l'attend, immobile."
+        "Les anciens se sont trompés sur un point. La dernière pierre de veille n'est pas une pierre.",
+        "C'est une lanterne, posée au bout du chemin, au creux des racines. Un ruban bleu pend encore à son anneau.",
+        "Ilo sait à qui elle appartient. Nim s'échauffe déjà. Il reste une flamme à rendre."
       ],
       after: [
-        "L'ombre se penche vers Ilo, puis s'ouvre comme une fumée.",
-        "À l'est, quelque chose de pâle monte."
+        "L'ombre s'est penchée vers Ilo, une dernière fois. Puis elle s'est défaite, tout doucement, comme une buée qu'on essuie.",
+        "À l'est, une ligne pâle. Ilo n'avait jamais vu cette couleur."
       ],
-      hint: "Tiens bon. C'est presque le matin."
+      hint: "Allume d'abord les pierres les plus proches de l'arche : elles feront ton chemin de retour quand la lumière baissera."
     }
   },
   endless: {
     title: "Veille éternelle",
     before: [
-      "D'autres villages attendent encore leur matin.",
-      "Ilo remet la lanterne allumée à sa ceinture, et repart."
+      "L'aube est revenue sur Brume-sur-Aube. Elle n'est pas revenue partout. D'autres villages attendent encore, plus loin que la forêt.",
+      "Ilo referme la lanterne, siffle une fois, et une petite lumière vient se poser sur l'anneau. On repart. Il n'y a pas de dernière nuit."
     ]
   },
   gameOver: [
     "La nuit t'a pris.",
-    "Nim s'éteint dans le creux de ta main.",
-    "Le noir s'est refermé, sans bruit.",
-    "Il fallait tenir la lumière un peu plus haut."
+    "La lumière s'est refermée.",
+    "Nim a bourdonné, puis plus rien.",
+    "Les pierres sont restées froides.",
+    "Il faisait trop noir, cette fois.",
+    "Le chemin s'arrête ici. Pour cette fois."
   ],
   beaconLit: [
-    "une de moins",
-    "elle se souvient",
-    "la pierre respire",
-    "un peu de matin",
-    "ça tient"
+    "Une pierre veille.",
+    "Tiens bon, Ilo.",
+    "Encore un peu.",
+    "La forêt respire.",
+    "Quelqu'un se souvient.",
+    "Un peu moins noir.",
+    "Nim est contente.",
+    "L'aube écoute."
   ],
   epilogue: [
-    "L'aube monte lentement sur Brume-sur-Aube.",
-    "Nim tourne trois fois autour d'Ilo, puis s'en va vers le soleil.",
-    "Ilo garde la lanterne. Allumée."
+    "L'aube est montée lentement, comme quelqu'un qui n'ose pas entrer. Les gens de Brume-sur-Aube sont sortis dans l'herbe grise, puis verte.",
+    "Nim a fait trois tours au-dessus d'Ilo. Puis elle est montée droit vers le soleil, et on ne l'a plus distinguée de lui.",
+    "Ilo garde la lanterne au côté. Elle est allumée. Ilo ne l'éteint pas, même en plein jour : on ne sait jamais de quel côté la nuit revient."
   ]
 };
 // === STORY END ===
@@ -194,7 +203,7 @@ const CFG = {
   TRAP_RANGE: 40,
   TRAP_COOLDOWN: 6,
   GRID: 40,
-  DARKNESS: 0.96,
+  DARKNESS: 0.965,
   SCORE_NIGHT: 1000,
   SCORE_BEACON: 150,
   SCORE_SHADOW: 25,
@@ -207,13 +216,13 @@ const CFG = {
 
 const COL = {
   bg: '#06070f',
-  ground: '#0a0c17',
-  groundSpeck: '#141a29',
-  trunk: '#171420',
-  crownA: '#11241c',
-  crownB: '#0d1b18',
-  ilo: '#2b2436',
-  iloHood: '#3a3048',
+  ground: '#101425',
+  groundSpeck: '#1d2540',
+  trunk: '#241d2e',
+  crownA: '#1a3a2c',
+  crownB: '#143026',
+  ilo: '#4a3f58',
+  iloHood: '#615371',
   warm: '#ffb765',
   warmSoft: '#ffd9a0',
   nim: '#fff4cf',
@@ -234,7 +243,6 @@ const TAU = Math.PI * 2;
    UTILS + PRNG
    ============================================================ */
 function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
-function lerp(a, b, t) { return a + (b - a) * t; }
 function approach(cur, target, rate, dt) { return cur + (target - cur) * (1 - Math.exp(-rate * dt)); }
 function dist2(ax, ay, bx, by) { const dx = ax - bx, dy = ay - by; return dx * dx + dy * dy; }
 function dist(ax, ay, bx, by) { return Math.sqrt(dist2(ax, ay, bx, by)); }
@@ -397,8 +405,8 @@ const SFX = {
 const keys = Object.create(null);
 const input = {
   mx: 0, my: 0, hasMouse: false,
-  burstQueued: false,
-  anyUsed: false
+  moved: false,          // vrai seulement sur les frames où la souris a bougé
+  burstQueued: false
 };
 
 const KEY_LEFT = ['KeyA', 'KeyQ', 'ArrowLeft'];
@@ -452,8 +460,10 @@ window.addEventListener('resize', resize);
 
 canvas.addEventListener('mousemove', (e) => {
   const r = canvas.getBoundingClientRect();
-  input.mx = e.clientX - r.left;
-  input.my = e.clientY - r.top;
+  const nx = e.clientX - r.left, ny = e.clientY - r.top;
+  if (nx !== input.mx || ny !== input.my) input.moved = true;
+  input.mx = nx;
+  input.my = ny;
   input.hasMouse = true;
 });
 canvas.addEventListener('mouseleave', () => {
@@ -493,12 +503,12 @@ function nightParams(n) {
     beacons: Math.min(6, 3 + Math.floor(n / 2)),
     w: Math.min(2200, 1400 + 120 * (n - 1)),
     h: Math.min(1600, 1000 + 120 * (n - 1)),
-    spawnInterval: Math.max(0.85, 3.4 - 0.25 * (n - 1)),
-    maxShadows: Math.min(40, 8 + 3 * (n - 1)),
-    speedMul: Math.min(1.35, 1 + 0.04 * (n - 1)),
+    spawnInterval: Math.max(0.9, 4.2 - 0.34 * (n - 1)),
+    maxShadows: Math.min(40, Math.round(4 + 3.5 * (n - 1))),
+    speedMul: Math.min(1.4, 1 + 0.05 * (n - 1)),
     watchers: n >= 3 ? Math.min(4, n - 2) : 0,
     traps: n >= 5 ? Math.min(4, n - 4) : 0,
-    startShadows: Math.min(10, 2 + Math.floor(n * 0.9))
+    startShadows: Math.min(10, 1 + Math.floor(n * 0.8))
   };
 }
 
@@ -592,7 +602,9 @@ function generateWorld(night, seed) {
       const tr = 13 + rng() * 13;
       let ok = true;
       for (const c of clears) if (dist2(tx, ty, c.x, c.y) < (c.r + tr) * (c.r + tr)) { ok = false; break; }
-      if (ok) for (const t of trees) if (dist2(tx, ty, t.x, t.y) < (t.r + tr + 10) * (t.r + tr + 10)) { ok = false; break; }
+      // Écart minimal entre troncs : toujours plus large qu'Ilo, pour qu'aucun passage ne le coince.
+      const gap = CFG.ILO_R * 2 + 14;
+      if (ok) for (const t of trees) if (dist2(tx, ty, t.x, t.y) < (t.r + tr + gap) * (t.r + tr + gap)) { ok = false; break; }
       if (!ok) continue;
       const crowns = [];
       const nc = 3 + Math.floor(rng() * 3);
@@ -671,6 +683,8 @@ const G = {
   score: 0,
   scoreAtNightStart: 0,
   nightPoints: 0,
+  beaconPts: 0,
+  shadowPts: 0,
   hearts: CFG.HEARTS_MAX,
   seed: 1,
   world: null,
@@ -788,6 +802,8 @@ function startNight(n) {
   G.nightTime = 0;
   G.tookDamage = false;
   G.nightPoints = 0;
+  G.beaconPts = 0;
+  G.shadowPts = 0;
   G.scoreAtNightStart = G.score;
   G.shake = 0; G.flash = 0;
   G.spawnTimer = W.params.spawnInterval * 1.4;
@@ -866,7 +882,16 @@ function updatePlaying(dt) {
       const nx = (ilo.x - t.x) / d, ny = (ilo.y - t.y) / d;
       ilo.x = t.x + nx * rr; ilo.y = t.y + ny * rr;
       const dot = ilo.vx * nx + ilo.vy * ny;
-      if (dot < 0) { ilo.vx -= nx * dot; ilo.vy -= ny * dot; }
+      if (dot < 0) {
+        ilo.vx -= nx * dot; ilo.vy -= ny * dot;
+        // Poussée de face : on dévie doucement d'un côté plutôt que de rester collé au tronc.
+        const tan = ilo.vx * -ny + ilo.vy * nx;
+        if (dl > 0 && Math.abs(tan) < 24) {
+          const cross = dx * -ny + dy * nx;
+          const side = cross !== 0 ? Math.sign(cross) : 1;
+          ilo.vx += -ny * side * 70; ilo.vy += nx * side * 70;
+        }
+      }
     }
   }
   ilo.x = clamp(ilo.x, ilo.r + 4, W.w - ilo.r - 4);
@@ -916,9 +941,10 @@ function updatePlaying(dt) {
         b.lit = true; b.prog = 1; litCount++;
         G.light = clamp(G.light + CFG.BEACON_LIGHT_GAIN, 0, CFG.LIGHT_MAX);
         addScore(CFG.SCORE_BEACON);
+        G.beaconPts += CFG.SCORE_BEACON;
         addFloat(b.x, b.y - 26, '+' + CFG.SCORE_BEACON, COL.warm, 20);
         const frag = pick(Math.random, STORY && STORY.beaconLit, 'une de moins');
-        if (frag) addFloat(b.x, b.y - 50, frag, COL.warmSoft, 16);
+        if (frag) addFloat(b.x, b.y - 62, frag, COL.warmSoft, 16);
         addParticles(b.x, b.y, 34, COL.warm, 130, 0.9, 2.6);
         G.flash = Math.max(G.flash, 0.18);
         SFX.beacon();
@@ -1009,6 +1035,7 @@ function updateShadows(dt) {
       if (s.hp <= 0) {
         addParticles(s.x, s.y, 16, '#7d8ba6', 110, 0.7, 2.4);
         addScore(CFG.SCORE_SHADOW);
+        G.shadowPts += CFG.SCORE_SHADOW;
         addFloat(s.x, s.y - 14, '+' + CFG.SCORE_SHADOW, '#b9c6df', 15);
         SFX.puff();
         list.splice(i, 1);
@@ -1089,7 +1116,10 @@ function updateShadows(dt) {
     // Contact avec Ilo
     if (ilo.iframes <= 0) {
       const hitR = ilo.r + s.r * 0.6;
-      if (dist2(s.x, s.y, ilo.x, ilo.y) < hitR * hitR) hurtIlo(s);
+      if (dist2(s.x, s.y, ilo.x, ilo.y) < hitR * hitR) {
+        hurtIlo(s);
+        if (G.state !== 'playing') return;
+      }
     }
   }
 }
@@ -1149,6 +1179,7 @@ function doBurst() {
       const s = G.shadows[i];
       addParticles(s.x, s.y, 16, '#7d8ba6', 120, 0.7, 2.4);
       addScore(CFG.SCORE_SHADOW);
+      G.shadowPts += CFG.SCORE_SHADOW;
       addFloat(s.x, s.y - 14, '+' + CFG.SCORE_SHADOW, '#b9c6df', 15);
       SFX.puff();
       G.shadows.splice(i, 1);
@@ -1175,8 +1206,8 @@ function finishNight() {
   const W = G.world;
   const timeBonus = G.nightTime < CFG.TIME_BONUS_LIMIT ? CFG.SCORE_TIME_BONUS : 0;
   const nightBonus = CFG.SCORE_NIGHT * G.night;
-  const beaconPts = W.beacons.length * CFG.SCORE_BEACON;
-  const shadowPts = Math.max(0, G.nightPoints - beaconPts);
+  const beaconPts = G.beaconPts;
+  const shadowPts = G.shadowPts;
   let total = G.nightPoints + nightBonus + timeBonus;
   const mult = G.tookDamage ? 1 : CFG.NO_DAMAGE_MULT;
   total = Math.round(total * mult);
@@ -1378,7 +1409,7 @@ function drawWorld() {
   ctx.save();
   ctx.fillStyle = COL.bg;
   ctx.fillRect(0, 0, VW, VH);
-  ctx.translate(-camX % 96, -camY % 96);
+  ctx.translate(-(((camX % 96) + 96) % 96), -(((camY % 96) + 96) % 96));
   ctx.fillStyle = groundPattern;
   ctx.fillRect(0, 0, VW + 96, VH + 96);
   ctx.restore();
@@ -1436,7 +1467,7 @@ function drawTrees(x0, x1, y0, y1) {
       ctx.fill();
     }
     // Reflet froid sur la couronne
-    ctx.fillStyle = 'rgba(120,160,150,0.07)';
+    ctx.fillStyle = 'rgba(150,200,180,0.10)';
     ctx.beginPath();
     ctx.arc(X - t.r * 0.3 + t.lean * t.r, Y - t.r * 1.15, t.r * 0.5, 0, TAU);
     ctx.fill();
@@ -1607,7 +1638,7 @@ function drawDarkness() {
   const flick = 1 + 0.03 * Math.sin(G.time * 9.3) + (G.light < 20 ? 0.07 * Math.sin(G.time * 22) : 0);
   hole(sx(G.nim.x), sy(G.nim.y), hr * flick, 1);
   // Très faible souvenir autour d'Ilo
-  hole(sx(G.ilo.x), sy(G.ilo.y), 26, 0.38);
+  hole(sx(G.ilo.x), sy(G.ilo.y), 32, 0.6);
   // Balises allumées
   for (let i = 0; i < W.beacons.length; i++) {
     const b = W.beacons[i];
@@ -1647,7 +1678,7 @@ function drawLights() {
   ctx.globalCompositeOperation = 'lighter';
 
   const hr = haloRadius();
-  radialGlow(sx(G.nim.x), sy(G.nim.y), hr * 1.12, 'rgba(255,168,86,0.34)', 1);
+  radialGlow(sx(G.nim.x), sy(G.nim.y), hr * 1.12, 'rgba(255,168,86,0.26)', 1);
   radialGlow(sx(G.nim.x), sy(G.nim.y), hr * 0.42, 'rgba(255,224,170,0.30)', 1);
 
   for (let i = 0; i < W.beacons.length; i++) {
@@ -1677,10 +1708,17 @@ function drawLights() {
   for (let i = 0; i < G.bursts.length; i++) {
     const b = G.bursts[i];
     const k = 1 - b.t / b.dur;
-    ctx.globalAlpha = k * 0.75;
-    ctx.strokeStyle = 'rgba(255,240,214,1)';
-    ctx.lineWidth = 2 + 6 * k;
-    ctx.beginPath(); ctx.arc(sx(b.x), sy(b.y), b.r, 0, TAU); ctx.stroke();
+    const BX = sx(b.x), BY = sy(b.y);
+    const rg = ctx.createRadialGradient(BX, BY, Math.max(0, b.r - 26), BX, BY, b.r + 12);
+    rg.addColorStop(0, 'rgba(255,150,60,0)');
+    rg.addColorStop(0.7, 'rgba(255,190,110,' + (0.5 * k) + ')');
+    rg.addColorStop(1, 'rgba(255,120,60,0)');
+    ctx.fillStyle = rg;
+    ctx.beginPath(); ctx.arc(BX, BY, b.r + 12, 0, TAU); ctx.fill();
+    ctx.globalAlpha = k;
+    ctx.strokeStyle = 'rgba(255,244,220,1)';
+    ctx.lineWidth = 2 + 5 * k;
+    ctx.beginPath(); ctx.arc(BX, BY, b.r, 0, TAU); ctx.stroke();
     ctx.globalAlpha = 1;
   }
 
@@ -1691,8 +1729,8 @@ function drawLights() {
     if (X < -40 || X > VW + 40 || Y < -40 || Y > VH + 40) continue;
     const amt = lightAmount(s.x, s.y);
     const d = dist(s.x, s.y, G.ilo.x, G.ilo.y);
-    const near = 1 - clamp((d - 45) / 105, 0, 1);
-    const a = Math.max(clamp(amt * 1.6, 0, 1) * 0.55, near * 0.4);
+    const near = 1 - clamp((d - 55) / 115, 0, 1);
+    const a = Math.max(clamp(amt * 1.6, 0, 1) * 0.6, near * 0.55);
     if (a < 0.02) continue;
     const dirx = s.vx, diry = s.vy;
     const dl = Math.hypot(dirx, diry) || 1;
@@ -1726,7 +1764,7 @@ function drawLights() {
   ctx.beginPath(); ctx.arc(nx, ny, 3.1 + 0.5 * Math.sin(G.time * 12), 0, TAU); ctx.fill();
 
   // Rappel très discret d'Ilo, pour ne jamais le perdre
-  radialGlow(sx(G.ilo.x), sy(G.ilo.y), 20, 'rgba(255,200,140,0.16)', 1);
+  radialGlow(sx(G.ilo.x), sy(G.ilo.y), 24, 'rgba(255,198,138,0.34)', 1);
 
   ctx.restore();
 }
@@ -1961,7 +1999,7 @@ function drawTitleScreen() {
     const it = G.menuItems[i];
     const bx = cx - iw / 2, by = y + i * (ih + 10 * uiScale);
     const hover = input.mx >= bx && input.mx <= bx + iw && input.my >= by && input.my <= by + ih;
-    if (hover && G.menuIndex !== i) G.menuIndex = i;
+    if (hover && input.moved && G.menuIndex !== i) G.menuIndex = i;
     const sel = G.menuIndex === i;
     ctx.fillStyle = sel ? 'rgba(255,183,101,0.14)' : 'rgba(255,255,255,0.045)';
     ctx.fillRect(bx, by, iw, ih);
@@ -2064,12 +2102,24 @@ function drawStoryScreen() {
 
   const shown = st.text.slice(0, Math.floor(st.shown));
   const paras = shown.split('\n\n');
-  ctx.font = font(21, '', true);
-  const lineH = Math.max(20, 32 * uiScale);
-  let y = VH * 0.20 + 56 * uiScale;
-  for (let i = 0; i < paras.length; i++) {
-    const ls = wrap(paras[i], maxW);
-    for (const l of ls) { shadowText(l, cx, y, 'center', '#f0e8da'); y += lineH; }
+  const top = VH * 0.20 + 56 * uiScale;
+  const room = VH * 0.62 - 56 * uiScale;
+
+  // On rétrécit le texte si le récit est long, pour qu'il tienne toujours à l'écran.
+  let size = 21, blocks = null, lineH = 0;
+  for (const cand of [21, 19, 17, 15, 14]) {
+    ctx.font = font(cand, '', true);
+    lineH = Math.max(18, cand * 1.5 * uiScale);
+    blocks = paras.map(t => wrap(t, maxW));
+    let total = 0;
+    for (const b of blocks) total += b.length * lineH + lineH * 0.45;
+    size = cand;
+    if (total <= room) break;
+  }
+  ctx.font = font(size, '', true);
+  let y = top;
+  for (let i = 0; i < blocks.length; i++) {
+    for (const l of blocks[i]) { shadowText(l, cx, y, 'center', '#f0e8da'); y += lineH; }
     y += lineH * 0.45;
   }
 
@@ -2233,6 +2283,7 @@ function frame(now) {
   }
 
   render();
+  input.moved = false;
 }
 
 /* ============================================================
