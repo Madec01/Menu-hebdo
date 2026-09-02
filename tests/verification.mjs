@@ -361,6 +361,90 @@ if (fichier){
 }
 await page.click('#bClose').catch(() => {}); await page.waitForTimeout(200);
 
+/* ---- 7 bis. Instantanés : réservoir partagé ------------------------------ */
+{
+  const snap = await page.evaluate(() => {
+    // On repart d'un stockage d'instantanés propre.
+    for (const j of listerInstantanes()) localStorage.removeItem(K.snap + j);
+    ramasserLeReservoir();
+
+    for (let i = 0; i < 120; i++){
+      etat.items['pool' + i] = Object.assign({}, ITEM_DEFAUT, { id:'pool' + i,
+        title:'Tâche de mesure du réservoir numéro ' + i, date:dateAujourdhui(),
+        origDate:dateAujourdhui(), status:'open' });
+    }
+    const compter = (p) => { let n = 0; for (let i = 0; i < localStorage.length; i++){
+      const c = localStorage.key(i); if (c && c.indexOf(p) === 0) n++; } return n; };
+    const mesurer = () => { let o = 0; for (let i = 0; i < localStorage.length; i++){
+      const c = localStorage.key(i); if (c && c.indexOf(K.snap) === 0) o += (localStorage.getItem(c) || '').length;
+      } return o; };
+
+    const vraiAuj = window.dateAujourdhui;
+    const jours = [];
+    for (let d = 0; d < 5; d++){
+      const j = datePlus(vraiAuj(), -4 + d);
+      window.dateAujourdhui = () => j;
+      instantaner(etat);                       // mêmes tâches, cinq jours de suite
+      window.dateAujourdhui = vraiAuj;
+      jours.push(j);
+    }
+    return { instantanes: compter(K.snap), reservoir: compter(K.pool),
+             octetsInstantanes: mesurer(), jours: jours,
+             taches: Object.keys(etat.items).length,
+             taillesTaches: JSON.stringify(etat.items).length };
+  });
+
+  ok('instantanés : cinq jours enregistrés', snap.instantanes, 5);
+  // Les taches n'ont pas bouge d'un jour sur l'autre : le reservoir en contient
+  // donc UNE par tache, et non cinq. C'est tout l'interet du dispositif.
+  ok('réservoir : une seule copie par tâche inchangée', snap.reservoir, snap.taches);
+  ok('réservoir : cinq instantanés coûtent moins qu\'une copie entière',
+     snap.octetsInstantanes < snap.taillesTaches, true);
+
+  // Reconstruction fidele
+  const relu = await page.evaluate(j => {
+    const v = lireInstantane(j);
+    return { ok: v.ok, taches: v.ok ? Object.keys(v.paquet.data.items).length : -1,
+             titre: v.ok ? v.paquet.data.items.pool7.title : '' };
+  }, snap.jours[2]);
+  ok('instantané relu : reconstruction réussie', relu.ok, true);
+  ok('instantané relu : toutes les tâches sont là', relu.taches >= 120, true);
+  ok('instantané relu : le contenu est fidèle', relu.titre, 'Tâche de mesure du réservoir numéro 7');
+
+  // Un reservoir ampute doit etre DETECTE, jamais reconstruit a moitie en silence.
+  const ampute = await page.evaluate(j => {
+    const p = JSON.parse(localStorage.getItem(K.snap + j));
+    localStorage.removeItem(p.refs.pool3);
+    const v = lireInstantane(j);
+    return { ok: v.ok, msg: v.msg || '' };
+  }, snap.jours[2]);
+  ok('instantané amputé : refusé, pas reconstruit à moitié', ampute.ok, false);
+  ok('instantané amputé : l\'agenda dit pourquoi', /introuvable/.test(ampute.msg), true);
+
+  // Les instantanes de l'ancien format, complets, restent lisibles.
+  const ancien = await page.evaluate(() => {
+    const j = datePlus(dateAujourdhui(), -9);
+    localStorage.setItem(K.snap + j, JSON.stringify(enveloppe({
+      schemaVersion: SCHEMA_VERSION, appVersion: APP_VERSION, meta: etat.meta,
+      items: { vieille: Object.assign({}, ITEM_DEFAUT, { id:'vieille', title:'Format d\'avant' }) },
+      weekNotes: {}, settings: etat.settings })));
+    const v = lireInstantane(j);
+    return { ok: v.ok, titre: v.ok ? v.paquet.data.items.vieille.title : '' };
+  });
+  ok('instantané de l\'ancien format : toujours lisible', ancien.ok, true);
+  ok('instantané de l\'ancien format : contenu intact', ancien.titre, 'Format d\'avant');
+
+  // Le ramasse-miettes ne doit rien laisser derriere lui.
+  const gc = await page.evaluate(() => {
+    for (const j of listerInstantanes()) localStorage.removeItem(K.snap + j);
+    ramasserLeReservoir();
+    let n = 0; for (let i = 0; i < localStorage.length; i++){
+      const c = localStorage.key(i); if (c && c.indexOf(K.pool) === 0) n++; }
+    return n;
+  });
+  ok('réservoir : rien ne subsiste sans instantané qui le désigne', gc, 0);
+}
+
 /* ---- 8. Réglages, affichage, impression --------------------------------- */
 await page.click('#settingsBtn'); await page.waitForTimeout(300);
 await page.selectOption('#rTheme', 'sombre'); await page.waitForTimeout(200);

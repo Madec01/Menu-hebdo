@@ -573,6 +573,7 @@ const K = {
   snap:   PREFIX + "snap:",     // + AAAA-MM-JJ
   premig: PREFIX + "premigration:v",
   stamp:  PREFIX + "stamp",     // jeton de la derniere ecriture, pour detecter un autre onglet
+  pool:   PREFIX + "pool:",     // + empreinte : reservoir de taches partage entre instantanes
 };
 
 const PRIO = {
@@ -907,14 +908,96 @@ function valider(texte){
   return { ok:true, paquet:p };
 }
 
+/* INSTANTANES : ONZE COPIES, OU UNE SEULE ?
+   -------------------------------------------------------------------------
+   Chaque instantane conservait l'integralite des taches. Avec sept
+   quotidiens, quatre hebdomadaires et les deux emplacements A/B, chaque
+   tache etait donc rangee TREIZE fois. Mesure faite dans un vrai navigateur :
+   406 octets par tache, 5 025 Ko de quota, saturation vers 970 taches, soit
+   environ un an d'usage. Les instantanes provoquaient exactement la panne
+   qu'ils etaient censes prevenir.
+
+   Or d'un jour sur l'autre, l'immense majorite des taches ne bouge pas. On
+   les range donc UNE fois dans un reservoir commun, adresse par l'empreinte
+   de leur contenu ; un instantane n'est plus qu'une liste de renvois vers ce
+   reservoir. Onze instantanes d'un agenda stable coutent alors a peine plus
+   qu'un seul.
+
+   L'empreinte est un FNV-1a sur 32 bits : deux contenus differents peuvent
+   tres rarement la partager. On ne s'en remet donc jamais a elle seule — a
+   l'ecriture, si la case est deja prise par un contenu DIFFERENT, on prend la
+   case suivante. La cle finale est stockee dans l'instantane, si bien qu'une
+   collision ne peut jamais renvoyer la mauvaise tache. */
+
+function clePourItem(json){
+  const base = K.pool + empreinte(json) + "-" + json.length;
+  for (let n = 0; n < 50; n++){
+    const cle = n === 0 ? base : base + "#" + n;
+    const dedans = localStorage.getItem(cle);
+    if (dedans === null || dedans === json) return { cle: cle, aEcrire: dedans === null };
+  }
+  return null;                                    // 50 collisions exactes : on renonce
+}
+
 function instantaner(data){
   if (!stockageOK) return;
   const jour = dateAujourdhui();
   const cle = K.snap + jour;
   if (localStorage.getItem(cle)) return;          // un seul par jour
-  try { localStorage.setItem(cle, JSON.stringify(enveloppe(data))); } catch(e){}
+
+  try {
+    const renvois = {};
+    for (const id in data.items){
+      const json = JSON.stringify(data.items[id]);
+      const place = clePourItem(json);
+      if (!place) return;                         // on prefere pas d'instantane a un instantane faux
+      if (place.aEcrire) localStorage.setItem(place.cle, json);
+      renvois[id] = place.cle;
+    }
+    localStorage.setItem(cle, JSON.stringify({
+      format: "agenda-hebdo-instantane",
+      version: SCHEMA_VERSION,
+      appVersion: APP_VERSION,
+      savedAt: new Date().toISOString(),
+      refs: renvois,
+      weekNotes: data.weekNotes,
+      meta: data.meta,
+      settings: data.settings,
+    }));
+  } catch(e){}
   purgerInstantanes(false);
 }
+
+/* Reconstruit un instantane sous la forme d'une enveloppe ordinaire, celle
+   que valider() et le reste de l'application savent lire. Accepte aussi les
+   instantanes complets ecrits par les versions anterieures. */
+function lireInstantane(jour){
+  const texte = localStorage.getItem(K.snap + jour);
+  if (!texte) return { ok:false, msg:"Cet instantané n'existe plus." };
+
+  let p;
+  try { p = JSON.parse(texte); }
+  catch(e){ return { ok:false, msg:"Instantané illisible." }; }
+
+  if (p.format !== "agenda-hebdo-instantane") return valider(texte);   // ancien format complet
+
+  const items = {};
+  let manquantes = 0;
+  for (const id in p.refs){
+    const json = localStorage.getItem(p.refs[id]);
+    if (json === null){ manquantes++; continue; }
+    try { items[id] = JSON.parse(json); } catch(e){ manquantes++; }
+  }
+  if (manquantes){
+    return { ok:false, msg:"Instantané incomplet : " + manquantes + " tâche(s) introuvable(s) dans le réservoir. " +
+                           "Choisissez un autre instantané, ou un fichier de sauvegarde." };
+  }
+  return valider(JSON.stringify(enveloppe({
+    schemaVersion: p.version, appVersion: p.appVersion,
+    meta: p.meta, items: items, weekNotes: p.weekNotes, settings: p.settings,
+  })));
+}
+
 function listerInstantanes(){
   const out = [];
   for (let i = 0; i < localStorage.length; i++){
@@ -923,6 +1006,7 @@ function listerInstantanes(){
   }
   return out.sort().reverse();
 }
+
 function purgerInstantanes(agressif){
   const jours = listerInstantanes();
   const garder = new Set(jours.slice(0, agressif ? 2 : SNAP_JOURS));
@@ -934,6 +1018,52 @@ function purgerInstantanes(agressif){
     }
   }
   for (const j of jours) if (!garder.has(j)) { try { localStorage.removeItem(K.snap + j); } catch(e){} }
+  ramasserLeReservoir();
+}
+
+/* Le stockage d'un navigateur n'est pas extensible. Mieux vaut prevenir un an
+   avant la panne que la constater le jour ou plus rien ne s'enregistre :
+   l'agenda ne supprime jamais rien tout seul, c'est donc a l'utilisateur de
+   decider, et il lui faut du temps pour cela. */
+const SEUIL_ALERTE_STOCKAGE = 0.75;
+let stockageDejaSignale = false;
+function surveillerLeStockage(){
+  if (!stockageOK || stockageDejaSignale) return;
+  let octets = 0;
+  for (let i = 0; i < localStorage.length; i++){
+    const c = localStorage.key(i);
+    if (!c || c.indexOf(PREFIX) !== 0) continue;
+    octets += c.length + (localStorage.getItem(c) || "").length;
+  }
+  // Les navigateurs accordent 5 Mo par espace de stockage, comptes en UTF-16.
+  const part = (octets * 2) / (5 * 1024 * 1024);
+  if (part < SEUIL_ALERTE_STOCKAGE) return;
+  stockageDejaSignale = true;
+  signalerBloquantAvecAction(
+    "L'espace de rangement de cet agenda est occupé à " + Math.round(part * 100) + " %. " +
+    "Au-delà, il ne pourra plus enregistrer. Exportez une sauvegarde, puis envoyez au parking " +
+    "ou abandonnez ce dont vous n'avez plus besoin. Rien ne sera supprimé sans vous.",
+    "Sauvegarder maintenant",
+    () => panneauSauvegarde());
+}
+
+/* Une tache du reservoir n'est plus utile des qu'aucun instantane ne la
+   designe. Sans ce ramassage, le reservoir grossirait sans fin et l'on aurait
+   simplement deplace le probleme. */
+function ramasserLeReservoir(){
+  const vivantes = new Set();
+  for (const j of listerInstantanes()){
+    try {
+      const p = JSON.parse(localStorage.getItem(K.snap + j) || "{}");
+      if (p.refs) for (const id in p.refs) vivantes.add(p.refs[id]);
+    } catch(e){}
+  }
+  const aJeter = [];
+  for (let i = 0; i < localStorage.length; i++){
+    const c = localStorage.key(i);
+    if (c && c.indexOf(K.pool) === 0 && !vivantes.has(c)) aJeter.push(c);
+  }
+  for (const c of aJeter) { try { localStorage.removeItem(c); } catch(e){} }
 }
 
 /* =========================================================================
@@ -2202,7 +2332,7 @@ function panneauSauvegarde(){
   $("bPaste").onclick = panneauCollage;
   if ($("bSnap")) $("bSnap").onclick = () => {
     const j = $("bSnapSel").value;
-    const v = valider(localStorage.getItem(K.snap + j) || "");
+    const v = lireInstantane(j);
     if (!v.ok){ signaler(v.msg, "bad"); return; }
     confirmerRestauration(v.paquet, "instantané du " + dateLisibleLongue(j));
   };
@@ -2660,6 +2790,7 @@ function demarrer(){
   etat.meta.lastOpenOn = auj;
   enregistrerMaintenant();
   instantaner(etat);
+  surveillerLeStockage();
   lancerSauvegardeAutoSiNecessaire();
 
   panneauSuivant();
