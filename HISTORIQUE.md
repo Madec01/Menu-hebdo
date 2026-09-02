@@ -4,6 +4,119 @@ Journal daté de tout ce qui a été fait, dans l'ordre. La version la plus réc
 
 ---
 
+## Version 1.1.0 — 2 septembre 2026
+
+Trois audits, puis la réparation de ce qu'ils ont trouvé de plus grave.
+
+### Pourquoi cette version
+
+Après une semaine d'usage réel, le constat était : « je le trouve peu pratique finalement,
+la partie chose à faire est trop petite, les affichages ne se font pas bien dans les cases,
+ça manque de beaucoup d'ergonomie ».
+
+Trois audits ont donc été lancés en parallèle et sans coordination entre eux — code,
+interface visuelle, ergonomie — avec obligation pour chacun de manipuler réellement l'agenda
+dans un navigateur et de fournir une mesure pour chaque constat. Leurs rapports complets sont
+dans `audits/`, avec une synthèse.
+
+Ils arrivent séparément à la même conclusion : **le moteur est sain, la présentation est
+structurellement fausse.** Le report est resté idempotent face à douze scénarios, dont une
+absence de dix-sept jours à cheval sur une fin d'année en semaine ISO 53. Aucun des trois ne
+recommande de repartir de zéro.
+
+### La cause racine des trois reproches
+
+Une seule mesure les explique tous. Sur chaque tâche, **quatre-vingt-quatre pixels sont
+consommés par la décoration** — poignée, case à cocher, pastille de priorité, croix — et cette
+valeur est une constante, quelle que soit la taille de l'écran.
+
+| Écran | Colonne d'un jour | Largeur qui porte du texte | Part perdue |
+|---|---|---|---|
+| 1920 px | 266 px | 173 px | 32 % |
+| 1440 px | 197 px | 105 px | 43 % |
+| 1366 px | 187 px | 94 px | **45 %** |
+
+Sur un portable, il restait quinze caractères par ligne.
+
+### Ce qui a été réparé : les données d'abord
+
+Six défauts pouvant coûter des données, tous reproduits dans un navigateur avant correction.
+
+**La sauvegarde annonçait un succès qu'elle ignorait.** C'est le plus grave des trois audits.
+Un téléchargement refusé par le navigateur échoue de façon asynchrone et silencieuse : aucun
+événement, aucune exception. La fonction renvoyait donc « réussi » dans tous les cas, la date
+était inscrite, la pastille passait au vert. Quelqu'un ayant répondu « Bloquer » à la demande
+d'autorisation — celle que le mode d'emploi lui dit d'accepter, une seule fois, sans jamais
+revenir — se retrouvait sans aucune protection avec un indicateur rassurant sous les yeux,
+tous les matins.
+
+La tentative et la confirmation sont désormais deux choses distinctes, et la pastille ne
+reflète que la seconde. Deux sources de confirmation, et deux seulement : le navigateur, via
+la fenêtre d'enregistrement qui confirme ou rejette l'écriture ; ou vous-même, à qui la
+question est posée au plus une fois toutes les deux semaines, jamais sur un agenda vide.
+Si vous répondez que vous ne trouvez pas le fichier, un écran explique la cause la plus
+fréquente et comment la lever.
+
+**Un onglet oublié écrasait tout en se fermant** — mesuré : neuf tâches ramenées à une.
+Un jeton renouvelé à chaque écriture permet maintenant de détecter qu'un autre onglet est
+passé. L'onglet périmé refuse alors d'écrire, définitivement, et le dit.
+
+**Le pointeur d'emplacement perdu pouvait renvoyer les données les plus anciennes.** Les deux
+emplacements sont désormais validés et le plus récent l'emporte.
+
+**Le stockage saturait vers 974 tâches**, soit environ un an. Chaque tâche était rangée treize
+fois. Elles sont maintenant rangées une seule fois dans un réservoir commun adressé par
+empreinte ; un instantané n'est plus qu'une liste de renvois. Coût des instantanés : 3 489 Ko
+avant, 629 Ko après. **Plafond : 974 tâches avant, 4 455 après**, soit environ quatre ans.
+Un avertissement prévient désormais à 75 % d'occupation.
+
+**La copie de sécurité d'avant restauration n'était pas vérifiée** : si elle échouait, le
+remplacement avait lieu quand même, alors que le panneau promet la réversibilité. La
+restauration s'interrompt maintenant sans rien toucher.
+
+**Tout rendez-vous passé était reporté et perdait son heure.** Le champ `kind` n'a jamais reçu
+d'autre valeur que sa valeur par défaut dans le code de production, si bien que le test qui
+devait exclure les rendez-vous était toujours vrai. C'est désormais l'emplacement qui décide.
+
+### Ce qui a été réparé : l'affichage
+
+**Les tâches étaient écrasées par leur bac** et leur texte débordait par-dessus la suivante :
+boîte à 34 pixels pour un texte qui en réclamait 53. Les bacs sont des colonnes flexibles, et
+sans instruction contraire le navigateur comprime les tâches au lieu de faire défiler. Le champ
+de titre, lui, se dimensionnait correctement depuis toujours.
+
+**Deux rendez-vous simultanés rendaient la journée inclicable.** Les pistes de la colonne
+mesuraient `0px 98px 98px` : la première, celle des quarante-huit cases cliquables, tombait à
+zéro. Les rendez-vous ont maintenant de vrais couloirs. Sur un couloir partagé, la décoration
+ne laissait rien au texte, mesuré à zéro pixel ; elle passe en superposition et revient au
+survol. Texte : 0 pixel avant, 38 après.
+
+**La barre d'alerte cassait tout l'écran** — un simple avertissement « ouvert dans un autre
+onglet » suffisait à faire dessiner les pastilles urgentes par-dessus les en-têtes de jours.
+
+Corriger le premier point rendait les tâches lisibles mais en montrait moins. Un repère
+**« + n autres »** annonce donc ce qui dépasse du cadre et y mène d'un clic.
+
+### Vérification
+
+**100 contrôles automatiques**, contre 57, tous verts, aucune erreur JavaScript.
+
+Le plus instructif : le contrôle censé surveiller la troncature des titres mesurait le champ
+de texte, qui a toujours été correct, et non la boîte qui le contient. Il passait au vert sur
+un défaut visible à l'œil nu. Et rien ne créait deux rendez-vous simultanés — c'est
+exactement pourquoi ce défaut a traversé toute la version 1.0.0. Un test qui mesure le mauvais
+objet est pire qu'un test absent : il donne une confiance imméritée.
+
+### Ce qui reste à faire
+
+La répartition de l'espace n'est pas engagée : le bac « À faire » reste plafonné à 190 pixels
+pendant que la grille horaire garde des centaines de pixels de vide. C'est le cœur du reproche
+« la partie chose à faire est trop petite », et c'est l'étape suivante.
+L'horizon glissant sur dix jours est reporté après elle : le faire avant reviendrait à le
+construire deux fois.
+
+---
+
 ## Version 1.0.0 — 2 septembre 2026
 
 Première version. Création complète de l'agenda à partir d'un dépôt vide.

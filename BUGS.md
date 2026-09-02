@@ -5,6 +5,119 @@ Ce fichier sert de mémoire : un problème consigné ici ne sera pas re-découve
 
 ---
 
+## Version 1.1.0 — 2 septembre 2026
+
+Défauts trouvés par les trois audits (rapports complets dans `audits/`). Tous ont été
+reproduits dans un vrai navigateur avant d'être corrigés : un défaut qu'on ne sait pas
+déclencher n'est pas un défaut.
+
+### B-006 — La sauvegarde annonçait « réussi » quand elle avait échoué
+**Symptôme.** La pastille affichait « Sauvegardé aujourd'hui » alors qu'aucun fichier
+n'arrivait dans le dossier Téléchargements.
+**Cause.** `telecharger()` renvoyait `true` dès l'instant où le clic n'avait pas levé
+d'erreur. Or un téléchargement refusé par le navigateur échoue de façon **asynchrone et
+silencieuse** : aucun événement, aucune exception. La fonction renvoyait donc « réussi »
+dans tous les cas.
+**Pourquoi c'était le plus grave.** La sauvegarde quotidienne est la seule protection réelle
+contre un effacement des données du navigateur. Quelqu'un ayant répondu « Bloquer » à la
+demande d'autorisation — celle que le mode d'emploi lui dit d'accepter, une seule fois, sans
+jamais revenir — se retrouvait sans aucune protection, avec un indicateur rassurant sous les
+yeux, tous les matins, indéfiniment.
+**Correction.** La tentative et la confirmation sont devenues deux champs distincts. La
+pastille ne reflète que la confirmation. Deux sources de confirmation seulement : la fenêtre
+d'enregistrement du navigateur, qui confirme ou rejette l'écriture, ou une question posée à
+l'utilisateur au plus une fois toutes les deux semaines.
+**Leçon.** Ne jamais transformer « la demande est partie » en « c'est fait ». Quand on ne peut
+pas savoir, on le dit.
+
+### B-007 — Un onglet oublié écrasait tout en se fermant
+**Symptôme.** Neuf tâches ramenées à une, mesuré.
+**Cause.** Deux onglets travaillent sur deux copies indépendantes de l'état. Le second à se
+fermer écrivait la sienne par-dessus le travail du premier. L'avertissement « ouvert dans un
+autre onglet » prévenait mais n'empêchait rien.
+**Correction.** Un jeton renouvelé à chaque écriture, comparé avant d'écrire. L'onglet périmé
+refuse d'écrire, définitivement, et propose « Afficher et copier » pour ne pas laisser
+l'utilisateur sans issue.
+**Leçon.** Un avertissement n'est pas une protection.
+
+### B-008 — Le pointeur d'emplacement perdu renvoyait les données les plus anciennes
+**Cause.** `storeLire()` se rabattait sur l'emplacement « A » quand le pointeur était absent,
+alors que `savedAt` figure dans chaque enveloppe et n'était jamais lu.
+**Correction.** Les deux emplacements sont validés, le plus récent l'emporte.
+
+### B-009 — Les instantanés provoquaient la panne qu'ils devaient prévenir
+**Symptôme.** Saturation du stockage vers 974 tâches, soit environ un an d'usage.
+**Cause.** Sept instantanés quotidiens, quatre hebdomadaires et deux emplacements : chaque
+tâche était rangée treize fois. Mesuré : 406 octets par tâche, 5 025 Ko de quota.
+**Correction.** Les tâches sont rangées une seule fois dans un réservoir commun adressé par
+empreinte ; un instantané n'est plus qu'une liste de renvois. Coût des instantanés : 3 489 Ko
+avant, 629 Ko après. Plafond : 974 tâches avant, 4 455 après.
+**Piège évité.** L'empreinte est un FNV-1a sur 32 bits, donc sujette aux collisions. On ne s'y
+fie jamais seule : si la case est prise par un contenu différent, on prend la suivante, et la
+clé retenue est inscrite dans l'instantané.
+
+### B-010 — La copie de sécurité d'avant restauration n'était pas vérifiée
+**Cause.** Le résultat de l'export était ignoré : si la copie échouait, le remplacement avait
+lieu quand même, alors que le panneau promet noir sur blanc que la restauration reste
+réversible.
+**Correction.** La restauration s'interrompt sans rien toucher et renvoie vers
+« Afficher et copier ».
+
+### B-011 — Tout rendez-vous passé était reporté et perdait son heure
+**Symptôme.** Contraire à ce qu'annoncent le README et le mode d'emploi.
+**Cause.** Le champ `kind` n'a **jamais** reçu d'autre valeur que sa valeur par défaut
+« task » dans le code de production. Le test `kind === "task"` était donc toujours vrai et
+laissait passer les rendez-vous.
+**Correction.** C'est l'emplacement qui décide : un élément posé sur un créneau horaire est un
+rendez-vous, et rien ne le déplace.
+**Ce que ça a révélé.** La suite de vérification se contredisait elle-même : une ligne exigeait
+qu'un élément posé sur un créneau soit reporté, une autre exigeait l'inverse, et les deux ne se
+distinguaient que par ce champ jamais renseigné. La documentation diverge de la même façon —
+`MODE-EMPLOI.md` promet qu'un rendez-vous passé ne bouge jamais, `HISTORIQUE.md` décrit une
+tâche reportée qui perd son heure. C'est la promesse du mode d'emploi qui a été appliquée.
+
+### B-012 — Les tâches étaient écrasées par leur bac, le texte débordant sur la suivante
+**Symptôme.** « Appeler le comptable pour le bilan » se lisait « Appeler le comptable pour
+le ». Quinze tâches sur seize concernées sur un bac chargé.
+**Cause.** Les bacs sont des colonnes flexibles. Sans `flex:0 0 auto`, une tâche prend la
+valeur par défaut `flex-shrink:1` : dès que le contenu dépasse, le navigateur **comprime** les
+tâches au lieu de les faire défiler. Mesure : boîte à 34 pixels pour un texte de 53.
+**Ce n'est pas le retour de B-003.** Le correctif de B-003 fonctionne : le champ de titre se
+dimensionne correctement. C'est son conteneur qui l'écrasait — un second mécanisme, indépendant,
+produisant le même symptôme.
+**Pourquoi le contrôle ne l'a pas vu.** Il mesurait la hauteur du **champ** (53 pixels,
+correct) et non celle de la **boîte** (34 pixels, faux). Il passait au vert sur un défaut
+visible à l'œil nu.
+**Leçon.** Un contrôle qui mesure le mauvais objet est pire qu'un contrôle absent : il donne
+une confiance imméritée.
+
+### B-013 — Deux rendez-vous simultanés rendaient la journée inclicable
+**Symptôme.** Impossible de cliquer sur un créneau pour poser un rendez-vous dès que deux
+autres se chevauchaient dans la journée.
+**Cause.** Le code plaçait les rendez-vous par leur rangée et ne leur donnait **jamais** de
+colonne. Le navigateur en fabriquait donc de nouvelles à la volée et répartissait l'espace
+entre elles. Les pistes mesuraient `0px 98px 98px` : la première, celle des quarante-huit
+cases cliquables, tombait à zéro.
+**Correction.** Une colonne explicite, et les rendez-vous posés en absolu avec de vrais
+couloirs : les simultanés se partagent la largeur, un rendez-vous isolé la reprend entière.
+**Défaut associé.** Sur un couloir partagé de 54 pixels, les 84 pixels de décoration ne
+laissaient **rien** au texte, mesuré à zéro pixel. La décoration passe en superposition et
+revient au survol : texte à 38 pixels.
+**Pourquoi il a traversé toute la version 1.0.0.** Aucun des cinquante-sept contrôles ne créait
+deux rendez-vous simultanés.
+
+### B-014 — La barre d'alerte cassait toute la mise en page
+**Symptôme.** À l'apparition d'un avertissement, le bandeau urgent s'étirait et ses pastilles
+se dessinaient par-dessus les en-têtes de jours.
+**Cause.** La grille de `.app` déclarait quatre rangées pour six enfants, dont un — la barre
+d'alerte — qui apparaît et disparaît. Chaque apparition décalait toutes les rangées d'un cran :
+la rangée souple tombait sur le bandeau urgent.
+**Correction.** Une colonne souple, qui ne compte pas ses enfants.
+**Leçon.** Une grille à rangées numérotées et des enfants qui apparaissent ou disparaissent ne
+vont pas ensemble.
+
+---
+
 ## Version 1.0.0 — 2 septembre 2026
 
 ### B-001 — Variable de couleur corrompue dans le thème sombre

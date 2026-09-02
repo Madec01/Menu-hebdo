@@ -25,13 +25,41 @@ Toutes les idées évoquées pour l'agenda : ce qui est fait, ce qui attend, ce 
 
 ---
 
+## Retenues et faites (version 1.1.0)
+
+Issues des trois audits de septembre 2026 (rapports complets dans `audits/`).
+
+| Idée | D'où elle vient |
+|---|---|
+| Séparer la tentative de sauvegarde de sa confirmation | Audit code. Un téléchargement refusé est silencieux : sans cette séparation, la pastille ment. |
+| Confirmation par la fenêtre d'enregistrement du navigateur | Audit code. Seul chemin donnant une certitude. Bonus pour Chrome et Edge, jamais le socle : absent de Firefox et Safari, conformément à ce qui était déjà écrit plus bas. |
+| Question de vérification, au plus une fois par quinzaine | Audit ergonomie. Le seul point de tout l'agenda où l'œil de l'utilisateur est indispensable. |
+| Refus d'écrire depuis un onglet périmé | Audit code. Un avertissement n'est pas une protection. |
+| Réservoir d'instantanés adressé par empreinte | Audit code. Les instantanés provoquaient la panne qu'ils devaient prévenir. |
+| Avertissement à 75 % d'occupation du stockage | Audit code. Prévenir un an avant la panne, pas le jour où plus rien ne s'enregistre. |
+| Couloirs pour les rendez-vous qui se chevauchent | Audits interface et ergonomie. Deux rendez-vous simultanés rendaient la journée inclicable. |
+| Décoration en superposition sur un rendez-vous étroit | Audits interface et ergonomie. Les 84 pixels de décoration ne laissaient rien au texte. |
+| Repère « + n autres » sur un bac qui déborde | Constaté en corrigeant : rendre les tâches lisibles en montrait moins, et les navigateurs masquent leur barre de défilement au repos. |
+| Colonne souple plutôt que grille à rangées numérotées | Audit interface. Un enfant qui apparaît décalait toutes les rangées. |
+
+---
+
 ## En réserve — vague suivante
 
 Classées par ce que j'estime être le meilleur rapport entre l'utilité au quotidien et le travail nécessaire.
 
 ### Priorité haute
 
-**L'horizon glissant sur 10 jours** — *vous l'aviez retenu*
+**La répartition de l'espace entre le bac « À faire » et la grille horaire** — *nouveau, prioritaire*
+C'est le cœur du reproche « la partie chose à faire est trop petite », et les trois audits le
+placent en tête. Le bac reste plafonné à 190 pixels sur tout écran : à 1920×1080 il occupe
+17,7 % de la hauteur pendant que la grille horaire, vide à 80 %, en prend 48,4 %. Il faut aussi
+récupérer les 84 pixels de décoration constants sur chaque tâche — la cause racine des trois
+reproches — en ne montrant les commandes qu'au survol, comme le font tous les outils du métier.
+À faire **avant** l'horizon glissant : celui-ci change la notion de semaine affichée, et le
+construire d'abord reviendrait à le refaire deux fois.
+
+**L'horizon glissant sur 10 jours** — *vous l'aviez retenu, reporté après la répartition de l'espace*
 Une vue montrant la fin de la semaine en cours plus le début de la suivante. À partir du mercredi,
 la vraie question n'est plus « que fait-on cette semaine » mais « qu'est-ce qui bascule sur la
 semaine prochaine ». Un semainier strict coupe la pensée là où elle continue.

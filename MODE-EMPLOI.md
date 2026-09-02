@@ -26,7 +26,9 @@ n'appartient à aucun jour : c'est ce qui doit être fait maintenant.
 - en dessous, la **grille horaire**, découpée en heures et demi-heures, pour les rendez-vous.
 
 La distinction est importante : **seules les tâches du bac se reportent**. Un rendez-vous
-passé ne se déplace jamais tout seul au lendemain.
+passé ne se déplace jamais tout seul au lendemain : il garde sa date et son heure, là où vous
+l'aviez posé. Tout ce qui est posé sur un créneau horaire est un rendez-vous, y compris une
+tâche que vous y avez glissée.
 
 **Le bas de page.** Vos notes de la semaine à gauche, le parking à droite.
 Attrapez la fine barre au-dessus pour l'agrandir ou le réduire.
@@ -138,10 +140,33 @@ vrai disque : il survit à un vidage du navigateur, à un changement de navigate
 réinstallation de Windows.
 
 Votre navigateur demandera **une seule fois** l'autorisation d'enregistrer plusieurs fichiers.
-Acceptez.
+Acceptez. Si vous refusez ce jour-là, plus rien ne partira ensuite, et le navigateur ne vous
+le dira jamais.
 
-La pastille en haut à droite vous dit où vous en êtes : verte si c'est récent, orange au-delà
-d'une semaine, rouge au-delà de deux.
+### Pourquoi l'agenda vous pose une question tous les quinze jours
+
+C'est le seul point de tout l'agenda où votre œil est indispensable, et il faut savoir pourquoi.
+
+**Un navigateur qui refuse un téléchargement ne le dit à personne.** L'agenda demande
+l'enregistrement, le navigateur le jette en silence, et rien ne remonte au programme. L'agenda
+ne peut donc pas savoir tout seul si vos sauvegardes arrivent.
+
+Plutôt que de vous laisser croire que tout va bien, il vous demande, **au plus une fois toutes
+les deux semaines**, si vous retrouvez bien le fichier dans votre dossier Téléchargements.
+Trente secondes, une fois par quinzaine, pour la seule chose qui vous protège vraiment.
+
+Si vous répondez que vous ne le trouvez pas, un écran vous explique la cause la plus fréquente
+et comment la lever.
+
+**La pastille en haut à droite ne compte que les sauvegardes vérifiées.** Elle est verte si
+c'est récent, orange au-delà d'une semaine, rouge au-delà de deux. Si elle affiche
+**« Sauvegarde non vérifiée »**, cela veut dire qu'un fichier a été demandé mais que personne
+n'a jamais confirmé son arrivée : considérez que vous n'êtes pas protégé tant que vous n'avez
+pas vérifié.
+
+Le bouton **Sauvegarde → Télécharger** vous ouvre, sous Chrome et Edge, une fenêtre
+« où enregistrer ». C'est le seul chemin qui donne une certitude, et il vous permet d'enregistrer
+directement sur une clé USB ou dans OneDrive.
 
 **Une fois par mois**, copiez le contenu de votre dossier Téléchargements vers OneDrive,
 Google Drive ou une clé USB. Vos données sortent alors de la machine.
@@ -204,3 +229,20 @@ le même agenda peuvent s'écraser mutuellement.
 Le navigateur a peut-être bloqué le téléchargement. Utilisez alors
 **Sauvegarde → Afficher et copier**, et collez le texte dans un fichier bloc-notes.
 Ce chemin fonctionne toujours.
+
+**La pastille affiche « Sauvegarde non vérifiée ».**
+Un fichier a été demandé, mais personne n'a confirmé qu'il soit arrivé. Ouvrez votre dossier
+Téléchargements et cherchez un fichier `agenda-` suivi d'une date. Si vous le trouvez, répondez
+oui à la prochaine question de l'agenda. Si vous ne le trouvez pas, votre navigateur bloque les
+téléchargements automatiques : cliquez sur l'icône à gauche de l'adresse, en haut de la fenêtre,
+et autorisez-les pour cette page.
+
+**Un bandeau dit que l'espace de rangement est presque plein.**
+Exportez une sauvegarde, puis envoyez au parking ou abandonnez ce dont vous n'avez plus besoin.
+L'agenda ne supprime jamais rien de lui-même. Vous avez le temps : l'avertissement arrive
+largement avant la panne.
+
+**Un bandeau dit que cet onglet n'enregistre plus.**
+L'agenda est ouvert dans un autre onglet, qui a enregistré depuis. Pour ne pas écraser ce qui y
+a été fait, celui-ci s'est arrêté. Récupérez au besoin ce que vous venez de saisir avec
+**Afficher et copier**, puis rechargez la page.

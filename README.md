@@ -23,6 +23,11 @@ Vos tâches sont rangées par le navigateur, dans un espace attaché à ce fichi
 Une sauvegarde datée tombe automatiquement dans votre dossier Téléchargements
 à la première ouverture de chaque journée. C'est votre vraie protection.
 
+Un navigateur qui refuse un téléchargement ne le dit à personne. L'agenda vous demande donc,
+au plus une fois toutes les deux semaines, si vous retrouvez bien le fichier. La pastille en
+haut à droite ne compte que les sauvegardes ainsi vérifiées : si elle affiche
+« Sauvegarde non vérifiée », considérez que vous n'êtes pas protégé.
+
 ## Les fichiers du dépôt
 
 | Fichier | Contenu |
@@ -32,4 +37,5 @@ Une sauvegarde datée tombe automatiquement dans votre dossier Téléchargements
 | `HISTORIQUE.md` | Journal daté de toutes les modifications. |
 | `IDEES.md` | Idées proposées : retenues, en réserve, écartées. |
 | `BUGS.md` | Problèmes rencontrés, leur cause, leur correction. |
-| `tests/verification.mjs` | Suite de vérification automatique (57 contrôles). |
+| `tests/verification.mjs` | Suite de vérification automatique (100 contrôles). |
+| `audits/` | Audits du code, de l'interface et de l'ergonomie, avec leur synthèse. |
