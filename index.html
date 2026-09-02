@@ -2026,9 +2026,9 @@ function createFX() {
     stiffF: 34, dampF: 0.800,      // en focus : plus lourd
     whip: 3.4,                     // rad/s au-delà desquels le faisceau se dilue
     hwMin: 0.105, hwMax: 0.44,     // demi-ouverture du cône (immobile -> balayage)
-    focusHw: 0.46, focusRange: 1.75, focusGain: 1.7,
-    gain: 0.62, range: 0.52,       // portée = 0.52 * min(w,h)... recalculée au resize
-    heatUp: 0.36, heatStill: 0.10, heatDown: 0.30, blackout: 2.5,
+    focusHw: 0.55, focusRange: 1.75, focusGain: 1.7,
+    gain: 0.70, range: 0.52,       // portée = 0.52 * min(w,h)... recalculée au resize
+    heatUp: 0.36, heatDown: 0.30, blackout: 2.5,
     oilMax: 100, flareCost: 34, oilPerSave: 15, oilPerNight: 35,
     flareR: 300, flareBoost: 0.42
   };
@@ -2298,10 +2298,7 @@ function createFX() {
 
     // --- chaleur / lampe ---
     if (S.lamp) {
-      var up = 0;
-      if (S.focus) up += K.heatUp;
-      if (spd < 0.35) up += K.heatStill;
-      if (up > 0) S.heat += up * dt; else S.heat -= K.heatDown * dt;
+      if (S.focus) S.heat += K.heatUp * dt; else S.heat -= K.heatDown * dt;
       S.heat = clamp(S.heat, 0, 1);
       if (S.heat >= 1) {
         S.lamp = false; S.blackout = K.blackout; S.focus = false;
@@ -2355,7 +2352,7 @@ function createFX() {
       if (l.stun > 0) l.stun -= dt;
       if (l.dead > 0) { l.dead += dt; if (l.dead > 0.8) S.lights.splice(j, 1); continue; }
       // extinction au focus
-      if (S.lamp && S.focus && inBeam(l.x, l.y, 1)) {
+      if (S.lamp && S.focus && inBeam(l.x, l.y, 1, 26)) {
         l.hold += dt;
         FX.spark(l.x, l.y, 1, COL.ys, 60);
         if (l.hold >= 1.2) {
@@ -2396,14 +2393,16 @@ function createFX() {
 
   function a2angle() { return S.angle; }
 
-  function inBeam(x, y, ignoreFog) {
+  function inBeam(x, y, ignoreFog, radius) {
     if (!S.lamp) return 0;
     var dx = x - S.cx, dy = y - S.cy;
     var d = Math.hypot(dx, dy);
     if (d > S.beamRange || d < 8) return 0;
+    // une cible n'est pas un point : sa largeur angulaire élargit le cône utile
+    var hw = S.hw + (radius ? Math.asin(Math.min(0.85, radius / d)) : 0);
     var da = Math.abs(wrapPi(Math.atan2(dy, dx) - S.angle));
-    if (da > S.hw) return 0;
-    var edge = 1 - Math.pow(da / S.hw, 2) * 0.65;
+    if (da > hw) return 0;
+    var edge = 1 - Math.pow(da / hw, 2) * 0.65;
     var falloff = 1 - 0.3 * (d / S.beamRange);
     var fog = 1;
     if (!ignoreFog) {
@@ -2422,7 +2421,7 @@ function createFX() {
     if (sh.born < 1) sh.born = Math.min(1, sh.born + dt * 1.6);
 
     if (sh.state === 'lost') {
-      var lit = inBeam(sh.x, sh.y, 0) * S.power;
+      var lit = inBeam(sh.x, sh.y, 0, t.r) * S.power;
       sh.lit = lerp(sh.lit, lit, 1 - Math.pow(0.001, dt));
       if (lit > 0.02) addConf(sh, K.gain * lit * t.gain * (S.focus ? K.focusGain : 1) * dt);
       else sh.conf = Math.max(0, sh.conf - t.decay * dt * (1 + sh.panic));
@@ -2869,8 +2868,9 @@ function createFX() {
     ctx.fillStyle = 'rgba(3,6,12,0.55)'; ctx.fillRect(0, 0, w, h);
     ctx.textAlign = 'center';
     ctx.fillStyle = COL.ember;
-    ctx.font = '300 64px Georgia, "Times New Roman", serif';
-    ctx.letterSpacing = '14px';
+    var ts = clamp(w / 13, 34, 64);
+    ctx.font = '300 ' + Math.round(ts) + 'px Georgia, "Times New Roman", serif';
+    ctx.letterSpacing = Math.round(ts * 0.22) + 'px';
     ctx.fillText(C.title || 'VEILLEUR', w / 2, h * 0.28);
     ctx.letterSpacing = '4px';
     ctx.font = 'italic 15px Georgia, serif';
@@ -2887,11 +2887,11 @@ function createFX() {
     for (var j = 0; j < ht.length; j++) ctx.fillText(ht[j], w / 2, h * 0.74 + j * 21);
     ctx.font = '600 13px ui-sans-serif, system-ui, sans-serif';
     ctx.fillStyle = 'rgba(255,196,107,' + (0.55 + 0.45 * Math.sin(S.t * 3)) + ')';
-    ctx.fillText('CLIQUEZ POUR ALLUMER LA LAMPE', w / 2, h * 0.90);
+    ctx.fillText('CLIQUEZ POUR ALLUMER LA LAMPE', w / 2, h * 0.885);
     if (S.best > 0) {
       ctx.font = '11px ui-sans-serif, system-ui, sans-serif';
       ctx.fillStyle = COL.dim;
-      ctx.fillText('record : ' + S.best + ' âmes', w / 2, h * 0.90 + 24);
+      ctx.fillText('record : ' + S.best + ' âmes', w / 2, h * 0.885 + 24);
     }
     ctx.restore();
   }
