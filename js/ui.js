@@ -133,7 +133,7 @@ window.BP = window.BP || {};
 
   function story() { return BP.story || {}; }
   function gameTitle() { return story().gameTitle || 'Bêtes de Papier'; }
-  function tagline() { return story().title || story().tagline || FALLBACK.tagline; }
+  function tagline() { return story().tagline || story().subtitle || FALLBACK.tagline; }
   /** Retourne l'entrée d'acte n (1..3) quel que soit l'indexage choisi par story.js. */
   function actStory(n) {
     var a = story().acts, found = null;
@@ -879,13 +879,15 @@ window.BP = window.BP || {};
     var all = allLevels();
     if (all.length && all[0] && all[0].id === level.id && !s.seen.target) q.push('target');
     if ((level.readings || []).indexOf('umbra') >= 0 && !s.seen.umbra) q.push('umbra');
-    tutoQueue = q;
+    q.forEach(function (n) { if (n !== tutoCurrent && tutoQueue.indexOf(n) < 0) tutoQueue.push(n); });
     nextTutorial();
   }
+  var tutoCurrent = null;
   function nextTutorial() {
     if (tutoBusy) return;
     var name = tutoQueue.shift();
-    if (!name) return;
+    if (!name) { tutoCurrent = null; return; }
+    tutoCurrent = name;
     var txt = tutoText(name);
     if (!txt) { nextTutorial(); return; }
     tutoBusy = true;
@@ -1135,7 +1137,12 @@ window.BP = window.BP || {};
     var tier = min >= 0.95 ? 2 : min >= (BP.PASS || 0.9) ? 1 : 0;
     var e = story().endings;
     var got = null;
-    if (Array.isArray(e) && e.length) {
+    if (typeof story().pickEnding === 'function') {
+      // Règle canonique du récit : transmission / évasion / dissolution selon les trois lectures.
+      try { got = story().pickEnding(scores || {}); } catch (err) { got = null; }
+    }
+    if (got) { /* déjà choisi */ }
+    else if (Array.isArray(e) && e.length) {
       var withMin = e.filter(function (x) { return x && typeof x.min === 'number'; });
       if (withMin.length === e.length) {
         var sorted = e.slice().sort(function (a, b) { return a.min - b.min; });
@@ -1149,7 +1156,8 @@ window.BP = window.BP || {};
     }
     if (typeof got === 'string') got = { title: '', text: got };
     if (!got) got = FALLBACK.endings[tier];
-    return { title: got.title || FALLBACK.endings[tier].title, text: got.text || got.body || FALLBACK.endings[tier].text, min: min };
+    var text = got.text || got.body || (Array.isArray(got.paragraphs) ? got.paragraphs.join('\n\n') : '') || FALLBACK.endings[tier].text;
+    return { title: got.title || FALLBACK.endings[tier].title, text: text, min: min };
   }
 
   function screenEpilogue(scores, level) {
@@ -1412,7 +1420,8 @@ window.BP = window.BP || {};
         ctx.extra.push(name);
         if (ctx.playing) { hudBuild(ctx.level); kickResize(); }
       }
-      if (S().seen[name]) return;
+      // Le tutoriel est planifié par runTutorials() au lancement du tableau (évite les doublons).
+      if (S().seen[name] || tutoQueue.indexOf(name) >= 0 || !ctx.playing) return;
       tutoQueue.push(name);
       nextTutorial();
     });

@@ -416,12 +416,16 @@ window.BP = window.BP || {};
     var sw = Math.min(L.drapW * 0.34, 168), sh2 = Math.min(L.drapH * 0.22, 82);
     L.side.on = !!opts.showSideView && L.drapW > 200 && L.drapH > 130;
     L.side.w = sw; L.side.h = sh2;
+    // La vue de côté ne recouvre jamais le drap : elle vit dans les coulisses (sous le drap)
+    // quand il y a de la place, sinon elle disparaît.
     var freeBelow = (portrait ? L.coffre.y : h) - (L.drapY + L.drapH);
-    if (portrait && freeBelow > sh2 + 24) {
-      L.side.x = L.drapX; L.side.y = L.drapY + L.drapH + 12;
+    if (freeBelow >= 46) {
+      sh2 = Math.min(sh2, freeBelow - 16);
+      L.side.h = sh2;
+      L.side.x = L.drapX; L.side.y = L.drapY + L.drapH + 8;
       L.side.inRoom = true;
     } else {
-      L.side.x = L.drapX + 8; L.side.y = L.drapY + L.drapH - sh2 - 8;
+      L.side.on = false;
       L.side.inRoom = false;
     }
 
@@ -1439,10 +1443,8 @@ window.BP = window.BP || {};
     var list = level.unlocks || [], i, fresh = [];
     var d = BP.save.get();
     for (i = 0; i < list.length; i++) if (!d.seen[list[i]]) fresh.push(list[i]);
-    if (fresh.length) {
-      BP.save.set(function (dd) { for (var k = 0; k < fresh.length; k++) dd.seen[fresh[k]] = true; });
-      for (i = 0; i < fresh.length; i++) E.emit('unlock', fresh[i]);
-    }
+    // Le marquage « vu » est fait par l'UI après le tutoriel ; le moteur se contente de signaler.
+    for (i = 0; i < fresh.length; i++) E.emit('unlock', fresh[i]);
   }
 
   /* ===================================================================================
@@ -1658,6 +1660,9 @@ window.BP = window.BP || {};
     recompute(false);
     var sc = S.score;
     S.beat.scores.push(sc);
+    // Mémorise aussi les scores par lecture de cette frappe (pour l'épilogue et l'écran de fin).
+    S.beat.readingScores = S.beat.readingScores || [];
+    S.beat.readingScores.push(S.scores ? JSON.parse(JSON.stringify(S.scores)) : {});
     E.emit('beat', { index: S.beat.index, score: sc, scores: S.beat.scores.slice() });
     sfx('beat');
 
@@ -1681,6 +1686,10 @@ window.BP = window.BP || {};
     S.perfPhase = 'over';
     S.beat.remaining = 0;
     S.score = avg;
+    // Score moyen par lecture sur l'ensemble des frappes (objet {main|red|blue|umbra}).
+    var rs = S.beat.readingScores || [], byReading = {}, r, k;
+    for (r = 0; r < rs.length; r++) for (k in rs[r]) if (rs[r].hasOwnProperty(k)) byReading[k] = (byReading[k] || 0) + rs[r][k] / rs.length;
+    S.scores = byReading;
     if (BP.audio && isFn(BP.audio.stopDrum)) { try { BP.audio.stopDrum(); } catch (e) { } }
     var ok = (avg >= BP.PASS && worst >= 0.75);
     if (ok) {
@@ -1690,7 +1699,7 @@ window.BP = window.BP || {};
       S.bestStars = stars;
       saveResult(avg, stars, S.moves);
       sfx(avg >= BP.GOLD ? 'gold' : 'success');
-      E.emit('won', { score: avg, stars: stars, moves: S.moves, par: S.level.par, level: S.level, scores: list.slice() });
+      E.emit('won', { score: avg, stars: stars, moves: S.moves, par: S.level.par, level: S.level, scores: byReading, beatScores: list.slice() });
     } else {
       S.status = 'lost';
       sfx('error');
@@ -2147,6 +2156,10 @@ window.BP = window.BP || {};
     renderThumb: renderThumb,
 
     /** Utilitaire pur : masques d'une configuration (nouveaux tampons à chaque appel). */
+    /** Accesseurs de diagnostic (tests) : mise en page courante et cartes du coffre, en px CSS. */
+    _layout: function () { return { drapX: L.drapX, drapY: L.drapY, drapW: L.drapW, drapH: L.drapH, scale: L.scale, coffre: L.coffre, side: L.side }; },
+    _coffreRects: function () { return slots.map(function (s) { return { x: s.x, y: s.y, w: s.w, h: s.h, index: s.index }; }); },
+
     computeMasks: function (pieces, lamps) {
       lamps = (lamps && lamps.length) ? lamps : DEFAULT_LAMPS;
       var norm = [], i;
