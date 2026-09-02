@@ -698,7 +698,10 @@ function etatVide(){
     appVersion: APP_VERSION,
     meta: {
       createdAt: now, updatedAt: now,
-      lastRolloverOn: "", lastBackupOn: "", lastSasOn: "",
+      lastRolloverOn: "",
+      lastBackupOn: "",       // derniere sauvegarde CONFIRMEE (fichier reellement arrive)
+      lastBackupTryOn: "",    // derniere tentative : ne prouve rien a elle seule
+      lastSasOn: "",
       lastWeekReviewOn: "", lastOpenOn: "", firstRunDone: false,
     },
     items: {},
@@ -1454,15 +1457,33 @@ function ajusterTousLesTitres(racine){
 }
 
 /* --- Indicateurs, messages, panneaux -------------------------------------- */
+/* La pastille ne reflete QUE des sauvegardes confirmees. Une tentative dont
+   personne n'a verifie l'arrivee n'a pas le droit de la faire passer au vert :
+   c'est exactement ce mensonge qui laissait quelqu'un sans aucune protection
+   pendant des mois avec un indicateur rassurant sous les yeux. */
 function majPastilleSauvegarde(){
   const t = els.saveText, chip = els.saveChip;
   if (!stockageOK){ chip.dataset.level = "bad"; t.textContent = "Stockage indisponible"; return; }
   const dep = etat.meta.lastBackupOn ? dateEcart(etat.meta.lastBackupOn, dateAujourdhui()) : null;
-  if (dep === null){ chip.dataset.level = "warn"; t.textContent = "Jamais sauvegardé"; return; }
-  if (dep <= 1){ delete chip.dataset.level; t.textContent = dep === 0 ? "Sauvegardé aujourd'hui" : "Sauvegardé hier"; return; }
+  if (dep === null){
+    chip.dataset.level = etat.meta.lastBackupTryOn ? "warn" : "bad";
+    t.textContent = etat.meta.lastBackupTryOn ? "Sauvegarde non vérifiée" : "Jamais sauvegardé";
+    chip.title = etat.meta.lastBackupTryOn
+      ? "Une sauvegarde a été tentée le " + dateLisible(etat.meta.lastBackupTryOn, true) +
+        ", mais rien ne confirme qu'elle soit arrivée sur votre disque."
+      : "Aucune sauvegarde n'a encore été déposée dans votre dossier Téléchargements.";
+    return;
+  }
+  if (dep <= 1){
+    delete chip.dataset.level;
+    t.textContent = dep === 0 ? "Sauvegardé aujourd'hui" : "Sauvegardé hier";
+    chip.title = "Dernière sauvegarde vérifiée le " + dateLisible(etat.meta.lastBackupOn, true) + ".";
+    return;
+  }
   chip.dataset.level = dep > 13 ? "bad" : (dep > 6 ? "warn" : "");
   if (!chip.dataset.level) delete chip.dataset.level;
   t.textContent = "Sauvegardé il y a " + dep + " jours";
+  chip.title = "Dernière sauvegarde vérifiée le " + dateLisible(etat.meta.lastBackupOn, true) + ".";
 }
 
 let toastTimer = null;
@@ -1982,7 +2003,18 @@ function nomFichierSauvegarde(suffixe){
   return "agenda-" + (suffixe ? suffixe + "-" : "") + dateAujourdhui() + ".json";
 }
 
-function telecharger(nom, texte){
+/* CE QUE CETTE FONCTION SAIT, ET CE QU'ELLE NE SAIT PAS.
+   Elle sait qu'elle a demande un telechargement au navigateur. Elle ne sait
+   PAS si un fichier est arrive sur le disque : un telechargement refuse —
+   parce que l'utilisateur a repondu « Bloquer » a la demande d'autorisation
+   pour plusieurs fichiers, parce qu'une strategie d'entreprise l'interdit,
+   parce que le dossier est plein — echoue de facon asynchrone et silencieuse.
+   Aucun evenement, aucune exception.
+   Elle renvoie donc « la demande est partie », et surtout pas « c'est
+   sauvegarde ». Toute la suite depend de cette distinction : c'est en la
+   confondant que la pastille annoncait « Sauvegarde du jour » a quelqu'un
+   dont plus rien ne partait depuis des mois. */
+function demanderTelechargement(nom, texte){
   try {
     const blob = new Blob([texte], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -1994,22 +2026,116 @@ function telecharger(nom, texte){
   } catch(e){ return false; }
 }
 
+/* Le seul chemin qui permette une VRAIE confirmation : le navigateur ouvre
+   une fenetre d'enregistrement, et l'ecriture est confirmee ou rejetee.
+   Absent de Firefox et de Safari, et exige un geste de l'utilisateur : c'est
+   donc un bonus pour le bouton « Sauvegarde », jamais le socle. */
+function enregistrementVerifiableDisponible(){
+  return typeof window.showSaveFilePicker === "function";
+}
+async function enregistrerAvecConfirmation(nom, texte){
+  const poignee = await window.showSaveFilePicker({
+    suggestedName: nom,
+    types: [{ description: "Sauvegarde de l'agenda", accept: { "application/json": [".json"] } }],
+  });
+  const flux = await poignee.createWritable();
+  await flux.write(texte);
+  await flux.close();
+  return true;
+}
+
+/* Une sauvegarde CONFIRMEE : un fichier est reellement arrive sur le disque,
+   soit parce que le navigateur nous l'a confirme, soit parce que
+   l'utilisateur nous a dit l'avoir retrouve. C'est la seule chose que la
+   pastille a le droit de refleter. */
+function marquerSauvegardeConfirmee(){
+  etat.meta.lastBackupOn = dateAujourdhui();
+  planifierEnregistrement();
+  majPastilleSauvegarde();
+}
+
 function exporter(auto, suffixe){
   const texte = JSON.stringify(enveloppe(etat), null, auto ? 0 : 1);
-  const ok = telecharger(nomFichierSauvegarde(suffixe), texte);
-  if (ok && !suffixe){
-    etat.meta.lastBackupOn = dateAujourdhui();
+  const partie = demanderTelechargement(nomFichierSauvegarde(suffixe), texte);
+  if (partie && !suffixe){
+    etat.meta.lastBackupTryOn = dateAujourdhui();   // tentative, pas confirmation
     planifierEnregistrement();
     majPastilleSauvegarde();
   }
-  return ok;
+  return partie;
+}
+
+/* Question posee au plus une fois toutes les deux semaines, et seulement
+   apres une sauvegarde automatique. C'est le seul moyen honnete de savoir si
+   les fichiers arrivent vraiment quand le navigateur ne nous dit rien. */
+const JOURS_ENTRE_VERIFICATIONS = 14;
+function verificationSauvegardeNecessaire(){
+  // Rien a perdre, rien a verifier : on n'importune personne le premier jour,
+  // sur un agenda encore vide.
+  if (!Object.keys(etat.items).length) return false;
+  const conf = etat.meta.lastBackupOn;
+  if (!conf) return true;
+  return dateEcart(conf, dateAujourdhui()) >= JOURS_ENTRE_VERIFICATIONS;
+}
+
+function panneauVerifierSauvegarde(){
+  const nom = nomFichierSauvegarde();
+  ouvrirPanneau(
+  '<div class="panelhead"><h2>Une vérification, une seule fois</h2>' +
+  '<p>L\'agenda vient de déposer une sauvegarde. Il n\'a aucun moyen de savoir si elle est ' +
+  'vraiment arrivée : un navigateur qui refuse un téléchargement ne le dit à personne. ' +
+  'Vous seul pouvez le confirmer.</p></div>' +
+  '<div class="panelbody">' +
+    '<div class="note"><strong>Ouvrez votre dossier Téléchargements</strong> et cherchez un fichier nommé ' +
+    '<code>' + echapper(nom) + '</code>.</div>' +
+    '<div class="note">Cette question ne reviendra pas avant deux semaines. C\'est le seul point ' +
+    'de tout l\'agenda où votre œil est indispensable : le reste, il s\'en occupe seul.</div>' +
+  '</div>' +
+  '<div class="panelfoot"><button class="btn" id="vNon">Je ne le trouve pas</button>' +
+  '<div class="spacer"></div><button class="btn primary" id="vOui">Oui, le fichier est là</button></div>');
+
+  $("vOui").onclick = () => { marquerSauvegardeConfirmee(); terminerPanneau(); };
+  $("vNon").onclick = () => {
+    etat.meta.lastBackupOn = "";           // on ne pretend plus rien
+    planifierEnregistrement();
+    majPastilleSauvegarde();
+    terminerPanneau();
+    panneauSauvegardeBloquee();
+  };
+}
+
+function panneauSauvegardeBloquee(){
+  ouvrirPanneau(
+  '<div class="panelhead"><h2>Vos sauvegardes n\'arrivent pas</h2>' +
+  '<p>C\'est le seul défaut de cet agenda qui puisse vous coûter vos données. On le règle maintenant.</p></div>' +
+  '<div class="panelbody">' +
+    '<div class="sectitle">La cause la plus fréquente</div>' +
+    '<div class="note">Votre navigateur a demandé un jour l\'autorisation d\'enregistrer plusieurs ' +
+    'fichiers, et la réponse a été <strong>Bloquer</strong>. Depuis, tout téléchargement automatique ' +
+    'est jeté en silence.<br><br>' +
+    'Dans Chrome ou Edge : cliquez sur l\'icône à gauche de l\'adresse, en haut de la fenêtre, ' +
+    'puis autorisez les téléchargements automatiques pour cette page. Rechargez ensuite l\'agenda.</div>' +
+    '<div class="sectitle">Le chemin qui marche toujours</div>' +
+    '<div class="note">Quoi qu\'il arrive, <strong>Afficher et copier</strong> vous donne vos données ' +
+    'sous forme de texte. Vous les collez dans un fichier bloc-notes que vous enregistrez où vous ' +
+    'voulez. Aucun navigateur ne peut vous en empêcher.</div>' +
+  '</div>' +
+  '<div class="panelfoot"><button class="btn" id="sbCopy">Afficher et copier</button>' +
+  '<div class="spacer"></div><button class="btn primary" id="sbClose">J\'ai compris</button></div>');
+  $("sbCopy").onclick = panneauCopie;
+  $("sbClose").onclick = terminerPanneau;
 }
 
 function panneauSauvegarde(){
   const dep = etat.meta.lastBackupOn ? dateEcart(etat.meta.lastBackupOn, dateAujourdhui()) : null;
-  const etatTexte = dep === null ? "Aucune sauvegarde enregistrée pour l'instant."
-    : dep === 0 ? "Dernière sauvegarde : aujourd'hui."
-    : "Dernière sauvegarde il y a " + dep + " jour" + (dep > 1 ? "s" : "") + " (" + dateLisible(etat.meta.lastBackupOn, true) + ").";
+  const etatTexte = dep === null
+    ? (etat.meta.lastBackupTryOn
+        ? "Une sauvegarde a été tentée le " + dateLisible(etat.meta.lastBackupTryOn, true) +
+          ", mais aucune n'a jamais été vérifiée. Tant que vous n'avez pas retrouvé un de ces " +
+          "fichiers dans votre dossier Téléchargements, considérez que vous n'êtes pas protégé."
+        : "Aucune sauvegarde n'a encore été déposée.")
+    : dep === 0 ? "Dernière sauvegarde vérifiée : aujourd'hui."
+    : "Dernière sauvegarde vérifiée il y a " + dep + " jour" + (dep > 1 ? "s" : "") + " (" + dateLisible(etat.meta.lastBackupOn, true) + ").";
   const snaps = listerInstantanes();
 
   ouvrirPanneau(
@@ -2040,9 +2166,35 @@ function panneauSauvegarde(){
   '</div>' +
   '<div class="panelfoot"><div class="spacer"></div><button class="btn primary" id="bClose">Fermer</button></div>', true);
 
-  $("bExp").onclick = () => {
-    if (exporter(false)) signaler("Sauvegarde téléchargée : " + nomFichierSauvegarde());
-    else signaler("Le téléchargement a été refusé. Utilisez la copie dans le presse-papier.", "bad");
+  /* Ce bouton part d'un geste de l'utilisateur : c'est la seule occasion ou
+     l'on peut demander au navigateur une confirmation reelle. Quand il sait
+     le faire, on l'utilise et la sauvegarde est confirmee sans rien demander
+     a personne. Sinon on retombe sur le telechargement classique, dont on ne
+     sait rien, et on pose la question. */
+  $("bExp").onclick = async () => {
+    const texte = JSON.stringify(enveloppe(etat), null, 1);
+    if (enregistrementVerifiableDisponible()){
+      try {
+        await enregistrerAvecConfirmation(nomFichierSauvegarde(), texte);
+        etat.meta.lastBackupTryOn = dateAujourdhui();
+        marquerSauvegardeConfirmee();
+        signaler("Sauvegarde enregistrée, et cette fois c'est confirmé par votre navigateur.");
+        return;
+      } catch(e){
+        if (e && e.name === "AbortError") return;      // l'utilisateur a renonce
+        // Toute autre panne : on retombe sur le chemin classique ci-dessous.
+      }
+    }
+    if (!exporter(false)){
+      signaler("Le téléchargement a été refusé. Utilisez « Afficher et copier ».", "bad");
+      return;
+    }
+    signalerAvecAction("Sauvegarde déposée : " + nomFichierSauvegarde() +
+      " — l'agenda ne peut pas vérifier qu'elle est bien arrivée.",
+      "Je l'ai retrouvée", () => {
+        marquerSauvegardeConfirmee();
+        signaler("Merci. La pastille repart de cette date.");
+      });
   };
   $("bCopy").onclick = panneauCopie;
   $("bArch").onclick = () => { creerArchiveAutonome(); };
@@ -2121,8 +2273,31 @@ function confirmerRestauration(paquet, origine){
   '<div class="panelfoot"><div class="spacer"></div><button class="btn" id="crNon">Annuler</button>' +
   '<button class="btn primary" id="crOui">Remplacer mes données</button></div>');
   $("crNon").onclick = fermerLePanneau;
+  /* La copie de securite n'est pas une formalite : c'est elle qui rend la
+     restauration reversible, et le panneau ci-dessus le promet noir sur blanc.
+     Son resultat etait ignore. Si la demande de telechargement ne part meme
+     pas, on ne remplace rien : on renvoie vers « Afficher et copier », qui
+     fonctionne toujours, et l'utilisateur decide ensuite.
+     Comme partout ailleurs, « la demande est partie » ne veut pas dire « le
+     fichier est arrive » : on le dit plutot que de le laisser croire. */
   $("crOui").onclick = () => {
-    exporter(false, "avant-restauration");
+    if (!exporter(false, "avant-restauration")){
+      fermerLePanneau();
+      ouvrirPanneau(
+      '<div class="panelhead"><h2>Restauration interrompue</h2>' +
+      '<p>Vos données actuelles n\'ont pas pu être copiées avant le remplacement. ' +
+      'Rien n\'a été touché.</p></div>' +
+      '<div class="panelbody"><div class="note">Le panneau de restauration vous promet de pouvoir ' +
+      'revenir en arrière. Cette promesse repose entièrement sur cette copie. Tant qu\'elle n\'est ' +
+      'pas faite, remplacer vos données serait irréversible, donc l\'agenda s\'arrête ici.<br><br>' +
+      'Utilisez <strong>Afficher et copier</strong> pour mettre vos données actuelles en sécurité ' +
+      'à la main, puis recommencez la restauration.</div></div>' +
+      '<div class="panelfoot"><button class="btn" id="riCopy">Afficher et copier</button>' +
+      '<div class="spacer"></div><button class="btn primary" id="riClose">Fermer</button></div>');
+      $("riCopy").onclick = panneauCopie;
+      $("riClose").onclick = fermerLePanneau;
+      return;
+    }
     const donnees = migrer(paquet);
     etat = hydrater(donnees);
     etat.meta.updatedAt = new Date().toISOString();
@@ -2159,7 +2334,7 @@ function creerArchiveAutonome(){
     JSON.stringify(enveloppe(etat)).replace(/<\//g, "<\\/") + '<\/script>';
   const sortie = html.replace("</head>", charge + "\n</head>");
   const mois = dateAujourdhui().slice(0, 7);
-  const ok = telecharger("agenda-archive-" + mois + ".html", "<!DOCTYPE html>\n" + sortie);
+  const ok = demanderTelechargement("agenda-archive-" + mois + ".html", "<!DOCTYPE html>\n" + sortie);
   signaler(ok ? "Archive créée : agenda-archive-" + mois + ".html"
               : "Le téléchargement a été refusé.", ok ? "" : "bad");
 }
@@ -2191,6 +2366,14 @@ function panneauSuivant(){
   if (fn) fn(); else fermerLePanneau();
 }
 function terminerPanneau(){ els.veil.hidden = true; els.panel.innerHTML = ""; panneauSuivant(); }
+
+/* Au demarrage, c'est demarrer() qui depile la file, une fois et une seule.
+   Mais un panneau peut aussi etre enfile en pleine session — au passage de
+   minuit, par exemple. Personne ne dépilerait alors la file : elle resterait
+   pleine et l'ecran ne s'afficherait jamais. */
+function demarrerLaFileSiInactive(){
+  if (els.veil.hidden && filePanneaux.length) panneauSuivant();
+}
 
 /* --- Premier lancement, ou données introuvables --------------------------- */
 function panneauBienvenue(){
@@ -2394,6 +2577,7 @@ function verifierChangementDeJour(){
     semaineAffichee = dateLundi(auj);
     rendre();
     lancerSauvegardeAutoSiNecessaire();
+    demarrerLaFileSiInactive();
   } else {
     rendreGrille();          // la ligne d'heure courante avance
   }
@@ -2403,9 +2587,14 @@ function lancerSauvegardeAutoSiNecessaire(){
   const s = etat.settings;
   if (!s.sauvegardeAuto || !stockageOK) return;
   const auj = dateAujourdhui();
-  const dep = etat.meta.lastBackupOn ? dateEcart(etat.meta.lastBackupOn, auj) : 9999;
+  // On se cale sur la TENTATIVE, pas sur la confirmation : sinon une sauvegarde
+  // jamais confirmee relancerait un telechargement a chaque ouverture.
+  const dep = etat.meta.lastBackupTryOn ? dateEcart(etat.meta.lastBackupTryOn, auj) : 9999;
   if (dep < s.sauvegardeJours) return;
-  if (exporter(true)) signaler("Sauvegarde du jour enregistrée dans votre dossier Téléchargements.");
+  if (!exporter(true)) return;
+
+  if (verificationSauvegardeNecessaire()) enfilerPanneau(panneauVerifierSauvegarde);
+  else signaler("Sauvegarde du jour déposée dans votre dossier Téléchargements.");
 }
 
 /* --- Sequence de demarrage ------------------------------------------------

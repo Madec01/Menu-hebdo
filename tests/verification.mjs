@@ -37,13 +37,25 @@ const erreurs = [];
 page.on('pageerror', e => erreurs.push('ERREUR JS : ' + e.message));
 page.on('console', m => { if (m.type() === 'error') erreurs.push('CONSOLE : ' + m.text()); });
 
+/* Les panneaux de demarrage se presentent l'un apres l'autre. On les evacue
+   tous, quel que soit leur ordre, sinon un panneau ajoute plus tard fait
+   echouer des dizaines de controles sans rapport avec lui. */
+const evacuerPanneaux = async (p = page) => {
+  for (let tour = 0; tour < 6; tour++){
+    if (await p.locator('#wOk').count()){ await p.click('#wOk'); await p.waitForTimeout(200); continue; }
+    if (await p.locator('#vOui').count()){ await p.click('#vOui'); await p.waitForTimeout(200); continue; }
+    break;
+  }
+};
 const neuf = async () => {
   await page.goto(ADRESSE);
   await page.waitForTimeout(500);
-  if (await page.locator('#wOk').count()) { await page.click('#wOk'); await page.waitForTimeout(200); }
+  await evacuerPanneaux();
 };
 const injecter = (fn, arg) => page.evaluate(fn, arg);
-const recharger = async (ms = 800) => { await page.reload(); await page.waitForTimeout(ms); };
+const recharger = async (ms = 800) => {
+  await page.reload(); await page.waitForTimeout(ms); await evacuerPanneaux();
+};
 
 /* ---- 1. Chargement et utilitaires de date ------------------------------- */
 await neuf();
@@ -112,14 +124,14 @@ ok('pointeur perdu : on repart des données les plus récentes',
 {
   const ctxO = await navigateur.newContext();
   const o1 = await ctxO.newPage(); await o1.goto(ADRESSE); await o1.waitForTimeout(500);
-  if (await o1.locator('#wOk').count()) await o1.click('#wOk');
+  await evacuerPanneaux(o1);
   await o1.evaluate(() => { for (let i = 0; i < 9; i++){
     const id = creerItem({ placement:'day', date:dateAujourdhui() }, false); etat.items[id].title = 'T' + i; }
     enregistrerMaintenant(); });
   await o1.waitForTimeout(300);
 
   const o2 = await ctxO.newPage(); await o2.goto(ADRESSE); await o2.waitForTimeout(600);
-  if (await o2.locator('#wOk').count()) await o2.click('#wOk');
+  await evacuerPanneaux(o2);
   ok('deux onglets : le second voit les données du premier',
      await o2.evaluate(() => Object.keys(etat.items).length), 9);
 
@@ -136,7 +148,7 @@ ok('pointeur perdu : on repart des données les plus récentes',
      await o1.locator('#alertAction').isVisible(), true);
 
   const o3 = await ctxO.newPage(); await o3.goto(ADRESSE); await o3.waitForTimeout(600);
-  if (await o3.locator('#wOk').count()) await o3.click('#wOk');
+  await evacuerPanneaux(o3);
   ok('deux onglets : rien n\'est écrasé', await o3.evaluate(() => Object.keys(etat.items).length), 10);
   await ctxO.close();
 }
@@ -258,11 +270,84 @@ ok('rattrapage : tout au parking en un clic',
      etat.items[i].placement === 'park').length), 15);
 
 /* ---- 7. Sauvegarde et intégrité ----------------------------------------- */
+
+/* La sauvegarde ne doit JAMAIS annoncer un succès qu'elle ne peut pas
+   constater. Deux chemins, deux comportements, tous deux contrôlés ici. */
+
+// Chemin 1 : le navigateur sait confirmer (fenêtre d'enregistrement).
+// On simule une confirmation, puis un renoncement de l'utilisateur.
+await page.evaluate(() => {
+  window.__ecrit = null;
+  window.showSaveFilePicker = async (opts) => ({
+    createWritable: async () => ({
+      write: async (t) => { window.__ecrit = { nom: opts.suggestedName, taille: t.length }; },
+      close: async () => {},
+    }),
+  });
+  etat.meta.lastBackupOn = ''; etat.meta.lastBackupTryOn = '';
+});
 await page.click('#backupBtn'); await page.waitForTimeout(300);
+await page.click('#bExp'); await page.waitForTimeout(400);
+ok('enregistrement confirmé : le fichier est bien écrit',
+   await page.evaluate(() => !!(window.__ecrit && window.__ecrit.taille > 100)), true);
+ok('enregistrement confirmé : nom daté',
+   await page.evaluate(() => /^agenda-\d{4}-\d{2}-\d{2}\.json$/.test(window.__ecrit.nom)), true);
+ok('enregistrement confirmé : la pastille peut passer au vert',
+   await page.evaluate(() => etat.meta.lastBackupOn === dateAujourdhui()), true);
+
+await page.evaluate(() => {
+  etat.meta.lastBackupOn = ''; etat.meta.lastBackupTryOn = '';
+  window.showSaveFilePicker = async () => { const e = new Error('annulé'); e.name = 'AbortError'; throw e; };
+});
+await page.click('#bExp'); await page.waitForTimeout(400);
+ok('enregistrement abandonné : rien n\'est prétendu',
+   await page.evaluate(() => etat.meta.lastBackupOn), '');
+
+// Chemin 2 : téléchargement classique. On ne sait pas s'il arrive, donc on
+// enregistre une TENTATIVE et surtout pas une confirmation.
+await page.evaluate(() => {
+  delete window.showSaveFilePicker;
+  etat.meta.lastBackupOn = ''; etat.meta.lastBackupTryOn = '';
+});
 const dl = page.waitForEvent('download', { timeout:8000 });
 await page.click('#bExp');
 const fichier = await dl.catch(() => null);
 ok('téléchargement de la sauvegarde', fichier !== null, true);
+ok('téléchargement non vérifiable : tentative enregistrée',
+   await page.evaluate(() => etat.meta.lastBackupTryOn === dateAujourdhui()), true);
+ok('téléchargement non vérifiable : AUCUNE confirmation prétendue',
+   await page.evaluate(() => etat.meta.lastBackupOn), '');
+ok('téléchargement non vérifiable : la pastille le dit',
+   await page.evaluate(() => { majPastilleSauvegarde();
+     return document.getElementById('saveText').textContent; }), 'Sauvegarde non vérifiée');
+ok('téléchargement non vérifiable : une confirmation est proposée',
+   await page.locator('#toastAction').isVisible(), true);
+await page.click('#toastAction'); await page.waitForTimeout(300);
+ok('l\'utilisateur confirme : la sauvegarde compte enfin',
+   await page.evaluate(() => etat.meta.lastBackupOn === dateAujourdhui()), true);
+await page.click('#backupBtn').catch(() => {}); await page.waitForTimeout(300);
+
+/* La restauration promet d'être réversible, et cette promesse repose
+   entièrement sur la copie de sécurité. Si elle ne part pas, on ne remplace
+   rien : mieux vaut ne pas restaurer que restaurer sans retour possible. */
+{
+  await page.click('#bClose').catch(() => {}); await page.waitForTimeout(200);
+  const avantResto = await page.evaluate(() => Object.keys(etat.items).length);
+  await page.evaluate(() => {
+    window.__blobOrigine = window.Blob;
+    window.Blob = function(){ throw new Error('téléchargement indisponible'); };
+    const faux = enveloppe(etatVide());
+    confirmerRestauration(faux, 'test');
+  });
+  await page.waitForTimeout(300);
+  await page.click('#crOui'); await page.waitForTimeout(400);
+  ok('copie de sécurité impossible : la restauration est interrompue',
+     await page.evaluate(() => Object.keys(etat.items).length), avantResto);
+  ok('copie de sécurité impossible : l\'agenda explique pourquoi',
+     await page.locator('#riClose').isVisible(), true);
+  await page.click('#riClose'); await page.waitForTimeout(200);
+  await page.evaluate(() => { window.Blob = window.__blobOrigine; });
+}
 if (fichier){
   ok('nom de fichier daté', /^agenda-\d{4}-\d{2}-\d{2}\.json$/.test(fichier.suggestedFilename()), true);
   const flux = await fichier.createReadStream();
