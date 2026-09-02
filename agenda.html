@@ -7,7 +7,7 @@
 <!--
 ===============================================================================
   AGENDA SEMAINIER DE BUREAU — fichier unique, autonome, hors ligne
-  Version 1.2.0
+  Version 1.2.1
 
   TABLE DES MATIERES (cherchez [01], [02]... avec Ctrl+F)
 
@@ -338,8 +338,29 @@ input,textarea{font:inherit;color:inherit}
 .daybin:last-child{border-right:0}
 .daybin.dropok{background:var(--surface-3);box-shadow:inset 0 0 0 2px var(--accent)}
 
-.board-scroll{overflow-y:auto;overflow-x:hidden}
-.board-scroll .row{padding-top:8px}
+/* Colonne souple : les deux bandes gardent leur taille, la grille occupe tout
+   ce qui reste. Sans cela, les colonnes des jours s'arretaient net au dernier
+   creneau et laissaient plusieurs centaines de pixels morts sous elles. */
+.board-scroll{overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column}
+.board-scroll .row{padding-top:8px;flex:1 0 auto}
+
+/* SANS CES DEUX BANDES, LE REPLI DE LA GRILLE EST UN PIEGE.
+   La grille ne montre que les heures occupees. Mais si le seul rendez-vous de
+   la semaine est a 14 h, elle commence a 13 h : huit heures du matin n'existe
+   alors nulle part, aucune case n'y correspond, et il n'y a meme rien a faire
+   defiler puisque la grille tient entierement dans le cadre. Impossible d'y
+   poser quoi que ce soit. Un affichage qui se resserre doit toujours offrir le
+   moyen de se rouvrir. */
+.plagebtn{
+  display:block;width:100%;border:0;cursor:pointer;
+  background:var(--surface-2);color:var(--text-soft);
+  font-size:11px;font-weight:600;letter-spacing:.03em;padding:4px 0;
+  font-variant-numeric:tabular-nums;font-family:inherit;
+}
+.plagebtn:hover{background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--text)}
+.plagebtn[hidden]{display:none}
+#plusTot{border-bottom:1px solid var(--border)}
+#plusTard{border-top:1px solid var(--border)}
 .gutter{border-right:1px solid var(--border);position:relative}
 .gutter .hlab{
   position:absolute;right:7px;font-size:11px;color:var(--text-faint);
@@ -647,7 +668,7 @@ kbd{
      rendez-vous. La changer en CSS desalignerait les rendez-vous de la grille.
      C'est preparerImpression() qui s'en charge, juste avant l'impression. */
   .topbar,.grabber,.bingrab,.alertbar,.iconbtn,.btn,
-  .item .grip,.item .del,.item .pdot,.binreste,.ureste,.wetoggle{display:none!important}
+  .item .grip,.item .del,.item .pdot,.binreste,.ureste,.wetoggle,.plagebtn{display:none!important}
   .app{height:auto;display:block}
   .board{display:block}
   .board-scroll{overflow:visible}
@@ -722,7 +743,9 @@ kbd{
     <div class="row board-bins" id="boardBins"></div>
     <div class="bingrab" id="binGrab" title="Glisser pour arbitrer entre les tâches et les heures — double-cliquez pour revenir à l&#39;ajustement automatique"></div>
     <div class="board-scroll" id="boardScroll">
-      <div class="row" id="boardGrid" style="min-height:100%"></div>
+      <button class="plagebtn" id="plusTot" hidden></button>
+      <div class="row" id="boardGrid"></div>
+      <button class="plagebtn" id="plusTard" hidden></button>
     </div>
   </main>
 
@@ -756,7 +779,7 @@ kbd{
 /* =========================================================================
    [01] CONSTANTES ET CONFIGURATION
    ========================================================================= */
-const APP_VERSION   = "1.2.0";
+const APP_VERSION   = "1.2.1";
 const SCHEMA_VERSION = 1;
 
 /* Prefixe de toutes les cles de stockage.
@@ -1484,6 +1507,13 @@ function joursAffiches(){
    Le repli se desactive dans les reglages pour qui prefere une grille stable. */
 const PLAGE_MIN = 240;          // quatre heures
 const PLAGE_MARGE = 60;         // une heure de part et d'autre
+
+/* Bornes reclamees par l'utilisateur avec les bandes « plus tot » et « plus
+   tard ». Elles ne font qu'ELARGIR ce que le contenu impose : poser ensuite un
+   rendez-vous a l'heure ainsi decouverte suffit a ce que la plage l'inclue
+   d'elle-meme, et la demande devient inutile. */
+let plageForceeDebut = null, plageForceeFin = null;
+
 function plageAffichee(){
   const s = etat.settings;
   const fixe = { debut: s.debutJournee, fin: s.finJournee };
@@ -1505,17 +1535,59 @@ function plageAffichee(){
     const m = minutesMaintenant();
     elargir(m, m);
   }
-  if (min === null) return { debut: fixe.debut, fin: Math.min(1440, fixe.debut + PLAGE_MIN) };
+  let debut, fin;
+  if (min === null){
+    debut = fixe.debut;
+    fin   = Math.min(1440, fixe.debut + PLAGE_MIN);
+  } else {
+    debut = Math.max(0, Math.floor((min - PLAGE_MARGE) / 60) * 60);
+    fin   = Math.min(1440, Math.ceil((max + PLAGE_MARGE) / 60) * 60);
+  }
 
-  let debut = Math.floor((min - PLAGE_MARGE) / 60) * 60;
-  let fin   = Math.ceil((max + PLAGE_MARGE) / 60) * 60;
-  debut = Math.max(0, debut);
-  fin   = Math.min(1440, fin);
+  // Ce que l'utilisateur a explicitement demande a voir ne se referme jamais.
+  if (plageForceeDebut !== null) debut = Math.min(debut, plageForceeDebut);
+  if (plageForceeFin   !== null) fin   = Math.max(fin,   plageForceeFin);
+
   if (fin - debut < PLAGE_MIN){
     fin = Math.min(1440, debut + PLAGE_MIN);
     debut = Math.max(0, fin - PLAGE_MIN);
   }
   return { debut: debut, fin: fin };
+}
+
+/* Un clic decouvre d'abord la journee REGLEE — « ma journee va de 8 h a 19 h »
+   est le modele que l'utilisateur a en tete —, puis une heure de plus a chaque
+   clic suivant. On atteint donc 8 h en une fois, et non en cinq. */
+function etendrePlage(sens){
+  const p = plageAffichee(), s = etat.settings;
+  if (sens < 0) plageForceeDebut = p.debut > s.debutJournee ? s.debutJournee : Math.max(0, p.debut - 60);
+  else          plageForceeFin   = p.fin  < s.finJournee    ? s.finJournee    : Math.min(1440, p.fin + 60);
+  squeletteSignature = "";
+  rendre("grille");
+  if (sens < 0) els.boardScroll.scrollTop = 0;
+}
+
+/* Revenir a la plage deduite du contenu. Bascule aussi appelee quand on
+   change le reglage du repli : c'est un acte deliberé, il remet a zero. */
+function reinitialiserPlage(){ plageForceeDebut = null; plageForceeFin = null; }
+
+function rendreBandesDePlage(){
+  const p = plageAffichee();
+  const haut = $("plusTot"), bas = $("plusTard");
+  if (!haut || !bas) return;
+
+  haut.hidden = p.debut <= 0;
+  if (!haut.hidden){
+    const cible = p.debut > etat.settings.debutJournee ? etat.settings.debutJournee : Math.max(0, p.debut - 60);
+    haut.textContent = "▲  remonter jusqu'à " + minVersHeure(cible);
+    haut.title = "La grille ne montre que vos heures occupées. Cliquez pour découvrir le début de journée.";
+  }
+  bas.hidden = p.fin >= 1440;
+  if (!bas.hidden){
+    const cible = p.fin < etat.settings.finJournee ? etat.settings.finJournee : Math.min(1440, p.fin + 60);
+    bas.textContent = "▼  descendre jusqu'à " + minVersHeure(cible);
+    bas.title = "Cliquez pour découvrir la fin de journée.";
+  }
 }
 
 function nbCreneaux(){
@@ -1576,7 +1648,7 @@ function initRefs(){
   ["boardHead","boardBins","boardGrid","boardScroll","urgentList","parkList","notes",
    "weekLabel","weekSub","saveChip","saveText","alertBar","alertText","alertAction","alertClose",
    "veil","panel","toast","toastText","toastAction","live","fileInput","notesCnt","parkCnt",
-   "printhead","grabber"].forEach(id => { els[id] = $(id); });
+   "printhead","grabber","plusTot","plusTard"].forEach(id => { els[id] = $(id); });
 }
 
 let squeletteSignature = "";
@@ -1638,7 +1710,7 @@ function rendre(zone){
   construireSquelette();
   if (!zone || zone === "entete")  rendreEntete();
   if (!zone || zone === "urgent")  rendreUrgent();
-  if (!zone || zone === "grille")  { rendreEnTetesJours(); rendreBacs(); rendreGrille(); }
+  if (!zone || zone === "grille")  { rendreEnTetesJours(); rendreBacs(); rendreGrille(); rendreBandesDePlage(); }
   if (!zone || zone === "bas")     { rendreNotes(); rendreParking(); }
   ajusterTousLesTitres();
   majPastilleSauvegarde();
@@ -2151,6 +2223,8 @@ function brancherEvenements(){
   $("prevWeek").onclick = () => allerSemaine(-1);
   $("nextWeek").onclick = () => allerSemaine(1);
   $("todayBtn").onclick = () => { semaineAffichee = dateLundi(dateAujourdhui()); rendre(); };
+  $("plusTot").onclick  = () => etendrePlage(-1);
+  $("plusTard").onclick = () => etendrePlage(1);
   $("settingsBtn").onclick = panneauReglages;
   $("helpBtn").onclick = panneauAide;
   $("backupBtn").onclick = panneauSauvegarde;
@@ -2573,6 +2647,7 @@ function panneauReglages(){
       let v = el.type === "checkbox" ? el.checked : el.value;
       if (transf) v = transf(v);
       etat.settings[cle] = v;
+      if (cle === "grilleRepliee" || cle === "debutJournee" || cle === "finJournee") reinitialiserPlage();
       if (id === "rFs") $("rFsVal").textContent = v;
       if (id === "rSh") $("rShVal").textContent = v;
       if (cle === "debutJournee" && etat.settings.finJournee <= v){ etat.settings.finJournee = Math.min(1440, v + 60); $("rFin").value = etat.settings.finJournee; }

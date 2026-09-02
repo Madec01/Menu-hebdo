@@ -71,6 +71,35 @@ navigateur la photographier, tout remettre en place.
 **Résultat honnête.** Une semaine normale tient sur une page (680 pixels). Une semaine très
 chargée en demande 991 et déborde encore. Le mode d'emploi le dit désormais.
 
+### B-021 — Le repli de la grille rendait le matin inatteignable
+**Symptôme, signalé à l'usage quelques minutes après la livraison.**
+« Impossible de remonter les heures vers 8 h 00 pour y mettre un rendez-vous, ça reste figé. »
+**Cause.** La grille ne montre que les heures occupées. Avec un seul rendez-vous à 14 h, elle
+commençait à 13 h : **huit heures du matin n'existait nulle part**, aucune case n'y
+correspondait. Et il n'y avait rien à faire défiler, puisque la grille tenait entièrement dans
+son cadre — d'où l'impression que l'écran était figé. Reproduit exactement : réglage
+08:00–19:00, affichage 13:00–17:00, aucune case à 08:00, aucun défilement possible.
+**Correction.** Deux bandes cliquables, en haut et en bas de la grille. Le premier clic
+découvre la journée **réglée** — « ma journée va de 8 h à 19 h » est le modèle que l'utilisateur
+a en tête, on l'atteint donc en une fois et non en cinq — les clics suivants ajoutent une heure.
+Une fois le rendez-vous posé à l'heure ainsi découverte, la plage l'inclut d'elle-même et la
+demande devient inutile.
+**Leçon.** Un affichage qui se resserre tout seul doit toujours offrir le moyen de se rouvrir.
+Sans cela, l'optimisation devient un mur. Et un défaut où *rien ne se passe* est le plus
+difficile à signaler : il n'y a ni message, ni erreur, ni trace — seulement une impression
+d'outil cassé.
+**Ce que la suite de vérification ne voyait pas.** Elle contrôlait que la plage se resserrait
+bien, et que le nombre de créneaux suivait. Aucun contrôle ne vérifiait qu'on pouvait encore
+**atteindre** une heure sortie du cadre. Sept contrôles ajoutés, dont celui-ci : poser
+réellement un rendez-vous à huit heures depuis une grille resserrée sur l'après-midi.
+
+### B-022 — Deux cent soixante pixels morts sous la grille
+**Cause.** En ajoutant les deux bandes, la règle qui faisait remplir la zone par la grille avait
+été retirée : les colonnes des jours s'arrêtaient au dernier créneau.
+**Correction.** La zone de défilement est devenue une colonne souple, les bandes gardent leur
+taille et la grille occupe tout ce qui reste.
+**Détection.** Capture d'écran, immédiatement après le correctif précédent.
+
 ---
 
 ## Version 1.1.0 — 2 septembre 2026

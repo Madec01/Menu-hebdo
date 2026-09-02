@@ -60,6 +60,11 @@ auparavant.
 **Le bandeau urgent est borné à deux lignes.** Il pouvait s'étaler sur trois rangées et
 138 pixels pris sur la zone de travail.
 
+**Correction immédiate après signalement.** Le repli de la grille rendait le matin
+inatteignable : avec un seul rendez-vous l'après-midi, elle commençait à 13 h, huit heures
+n'existait nulle part et il n'y avait rien à faire défiler. Deux bandes cliquables, en haut et
+en bas, découvrent la journée réglée en un clic. Voir B-021.
+
 ### Le résultat, mesuré
 
 | Écran | Texte par tâche | Caractères par ligne |

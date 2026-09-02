@@ -61,6 +61,10 @@ Plutôt que de réserver 8 h – 19 h toute l'année, la grille se resserre sur 
 réellement des rendez-vous, plus une heure de marge de chaque côté. L'espace ainsi gagné revient
 à vos tâches. Elle ne descend jamais sous quatre heures, et l'heure actuelle y figure toujours.
 
+**Pour atteindre une heure qui n'est pas affichée**, cliquez sur la bande
+**« ▲ remonter jusqu'à 08:00 »** en haut de la grille, ou **« ▼ descendre »** en bas. Un seul
+clic vous rend votre journée entière. Une fois le rendez-vous posé, la grille l'inclut d'elle-même.
+
 Si ce recadrage vous déroute, décochez **Réglages → Replier la grille sur les heures occupées**.
 
 ---

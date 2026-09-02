@@ -37,5 +37,5 @@ haut à droite ne compte que les sauvegardes ainsi vérifiées : si elle affiche
 | `HISTORIQUE.md` | Journal daté de toutes les modifications. |
 | `IDEES.md` | Idées proposées : retenues, en réserve, écartées. |
 | `BUGS.md` | Problèmes rencontrés, leur cause, leur correction. |
-| `tests/verification.mjs` | Suite de vérification automatique (130 contrôles). |
+| `tests/verification.mjs` | Suite de vérification automatique (139 contrôles). |
 | `audits/` | Audits du code, de l'interface et de l'ergonomie, avec leur synthèse. |

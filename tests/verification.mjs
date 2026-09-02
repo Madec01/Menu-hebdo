@@ -691,6 +691,82 @@ ok('grille repliée : jamais moins de quatre heures', repli.fin - repli.debut >=
 ok('grille repliée : le nombre de créneaux suit la plage',
    repli.creneaux, (repli.fin - repli.debut) / 30);
 
+/* UNE GRILLE QUI SE RESSERRE DOIT TOUJOURS POUVOIR SE ROUVRIR.
+   Défaut signalé à l'usage, quelques minutes après la livraison : avec un seul
+   rendez-vous l'après-midi, la grille commençait à 13 h. Huit heures du matin
+   n'existait alors nulle part — aucune case, et rien à faire défiler puisque
+   la grille tenait dans son cadre. Impossible d'y poser un rendez-vous. */
+await page.click('#rClose').catch(() => {}); await page.waitForTimeout(200);
+{
+  const jourMatin = await injecter(() => {
+    for (const id of Object.keys(etat.items)) delete etat.items[id];
+    etat.settings.debutJournee = 480; etat.settings.finJournee = 1140;
+    etat.settings.grilleRepliee = true;
+    const j = datePlus(dateLundi(dateAujourdhui()), 1);
+    const id = creerItem({ placement:'slot', date:j, startMin:840 }, false);   // 14:00
+    etat.items[id].title = 'Atelier';
+    appliquerReglages(); rendre();
+    return j;
+  });
+  await page.waitForTimeout(300);
+
+  const serre = await page.evaluate(j => ({
+    debut: plageAffichee().debut,
+    huitDispo: [...document.querySelectorAll(`.daycol[data-jour="${j}"] .slot`)]
+                 .some(e => +e.dataset.min === 480),
+    defilable: document.getElementById('boardScroll').scrollHeight >
+               document.getElementById('boardScroll').clientHeight,
+    bande: !document.getElementById('plusTot').hidden,
+  }), jourMatin);
+
+  ok('grille resserrée : le début de journée n\'est plus affiché', serre.debut > 480, true);
+  ok('grille resserrée : une bande propose de remonter', serre.bande, true);
+  ok('grille resserrée : le défilement seul ne suffirait pas', serre.defilable, false);
+
+  await page.click('#plusTot'); await page.waitForTimeout(300);
+  const ouvert = await page.evaluate(j => ({
+    debut: plageAffichee().debut,
+    huitDispo: [...document.querySelectorAll(`.daycol[data-jour="${j}"] .slot`)]
+                 .some(e => +e.dataset.min === 480),
+  }), jourMatin);
+  ok('un clic découvre la journée réglée', ouvert.debut, 480);
+  ok('la case de huit heures redevient cliquable', ouvert.huitDispo, true);
+
+  await page.click(`.daycol[data-jour="${jourMatin}"] .slot[data-min="480"]`);
+  await page.waitForTimeout(250);
+  await page.keyboard.type('Réunion du matin');
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(300);
+  const pose = await page.evaluate(() => {
+    const it = tousLesItems().find(i => i.title === 'Réunion du matin');
+    return it ? { heure: it.startMin, place: it.placement } : null;
+  });
+  ok('un rendez-vous se pose bien à huit heures', pose, { heure:480, place:'slot' });
+
+  // Une fois le rendez-vous posé, la plage l'inclut d'elle-même.
+  await recharger();
+  ok('la plage inclut ensuite ce rendez-vous sans rien demander',
+     await page.evaluate(() => plageAffichee().debut <= 480), true);
+
+  await page.click('#plusTard'); await page.waitForTimeout(250);
+  ok('la bande du bas découvre la fin de journée',
+     await page.evaluate(() => plageAffichee().fin >= etat.settings.finJournee), true);
+
+  // La plage élargie à la main est un choix qui persiste ; on le remet à zéro
+  // avant la suite, comme le ferait le réglage du repli.
+  await injecter(() => {
+    for (const id of Object.keys(etat.items)) delete etat.items[id];
+    reinitialiserPlage(); rendre();
+  });
+  /* Sans aucun rendez-vous, la plage se cale autour de l'heure actuelle pour
+     que la ligne rouge du « maintenant » reste visible : son début dépend donc
+     de l'heure à laquelle tourne ce contrôle. Ce qui est vérifiable sans
+     dépendre de l'heure, c'est qu'elle est revenue à sa largeur minimale. */
+  ok('la plage revient à ce que dicte le contenu',
+     await page.evaluate(() => plageAffichee().fin - plageAffichee().debut), 240);
+  await page.click('#settingsBtn'); await page.waitForTimeout(300);
+}
+
 await page.uncheck('#rWe'); await page.waitForTimeout(250);
 ok('week-end masqué : 5 colonnes', await page.locator('.board-head .dayhead').count(), 5);
 await page.check('#rWe'); await page.waitForTimeout(250);
