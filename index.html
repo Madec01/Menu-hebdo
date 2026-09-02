@@ -694,6 +694,8 @@ function stick(side) {
   return { active: true, dx: dx / l * len, dy: dy / l * len, len, o };
 }
 if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) document.body.classList.add('touch');
+document.addEventListener('gesturestart', e => e.preventDefault(), { passive: false });
+document.addEventListener('dblclick', e => { if (e.target === canvas) e.preventDefault(); });
 
 const dashBtn = $('dashBtn');
 const dashPress = e => { e.preventDefault(); wantDash = true; };
