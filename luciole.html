@@ -21,7 +21,12 @@
     display: block;
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     background: #06070f;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
   }
   body.playing { cursor: none; }
   #noscript {
@@ -484,6 +489,116 @@ canvas.addEventListener('mousedown', (e) => {
 }, { passive: false });
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
+/* --- Tactile : pouce gauche = joystick pour Ilo, pouce droit = pavé tactile pour Nim,
+       tap court = éclat. Les événements souris émulés sont neutralisés (preventDefault). --- */
+const touch = {
+  active: (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) || false,
+  move: null,     // { id, x0, y0, x, y }
+  nim: null,      // { id, lx, ly, t0, dist }
+  dirX: 0, dirY: 0, mag: 0,
+  hintT: 0
+};
+const TOUCH_STICK_R = 52;
+const TOUCH_NIM_GAIN = 1.6;
+
+function touchPos(t) {
+  const r = canvas.getBoundingClientRect();
+  return { x: t.clientX - r.left, y: t.clientY - r.top };
+}
+
+function touchStart(e) {
+  e.preventDefault();
+  touch.active = true;
+  audioInit();
+  const inGame = G.state === 'playing' && !G.paused;
+  for (let i = 0; i < e.changedTouches.length; i++) {
+    const t = e.changedTouches[i];
+    const pos = touchPos(t);
+    if (!inGame) {
+      input.mx = pos.x; input.my = pos.y; input.moved = true;
+      onPointerDown();
+      continue;
+    }
+    if (hitPauseButton(pos.x, pos.y)) { togglePause(true); continue; }
+    if (!touch.move && pos.x < VW * 0.5) {
+      touch.move = { id: t.identifier, x0: pos.x, y0: pos.y, x: pos.x, y: pos.y, t0: performance.now(), dist: 0 };
+    } else if (!touch.nim) {
+      touch.nim = { id: t.identifier, lx: pos.x, ly: pos.y, t0: performance.now(), dist: 0 };
+    }
+  }
+}
+
+function touchMove(e) {
+  e.preventDefault();
+  for (let i = 0; i < e.changedTouches.length; i++) {
+    const t = e.changedTouches[i];
+    const pos = touchPos(t);
+    if (touch.move && t.identifier === touch.move.id) {
+      const m = touch.move;
+      m.dist += Math.hypot(pos.x - m.x, pos.y - m.y);
+      m.x = pos.x; m.y = pos.y;
+      let dx = m.x - m.x0, dy = m.y - m.y0;
+      const d = Math.hypot(dx, dy);
+      if (d > TOUCH_STICK_R) {
+        // Le socle suit le pouce : on ne perd jamais la direction en glissant loin
+        m.x0 = m.x - dx / d * TOUCH_STICK_R;
+        m.y0 = m.y - dy / d * TOUCH_STICK_R;
+        dx = m.x - m.x0; dy = m.y - m.y0;
+      }
+      const dead = 7;
+      const mag = clamp((Math.hypot(dx, dy) - dead) / (TOUCH_STICK_R - dead), 0, 1);
+      if (mag > 0) { const l = Math.hypot(dx, dy); touch.dirX = dx / l; touch.dirY = dy / l; touch.mag = mag; }
+      else { touch.dirX = 0; touch.dirY = 0; touch.mag = 0; }
+    } else if (touch.nim && t.identifier === touch.nim.id) {
+      const n = touch.nim;
+      const ddx = pos.x - n.lx, ddy = pos.y - n.ly;
+      n.dist += Math.hypot(ddx, ddy);
+      n.lx = pos.x; n.ly = pos.y;
+      input.mx = clamp(input.mx + ddx * TOUCH_NIM_GAIN, 0, VW);
+      input.my = clamp(input.my + ddy * TOUCH_NIM_GAIN, 0, VH);
+      input.hasMouse = true;
+      input.moved = true;
+    }
+  }
+}
+
+function touchEnd(e) {
+  e.preventDefault();
+  for (let i = 0; i < e.changedTouches.length; i++) {
+    const t = e.changedTouches[i];
+    let f = null;
+    if (touch.move && t.identifier === touch.move.id) { f = touch.move; touch.move = null; touch.dirX = 0; touch.dirY = 0; touch.mag = 0; }
+    else if (touch.nim && t.identifier === touch.nim.id) { f = touch.nim; touch.nim = null; }
+    if (f && G.state === 'playing' && !G.paused) {
+      const tap = (performance.now() - f.t0) < 260 && f.dist < 14;
+      if (tap) input.burstQueued = true;
+    }
+  }
+}
+
+canvas.addEventListener('touchstart', touchStart, { passive: false });
+canvas.addEventListener('touchmove', touchMove, { passive: false });
+canvas.addEventListener('touchend', touchEnd, { passive: false });
+canvas.addEventListener('touchcancel', touchEnd, { passive: false });
+
+function pauseButtonRect() {
+  const r = 20 * uiScale;
+  return { x: VW / 2, y: 30 * uiScale, r };
+}
+function hitPauseButton(x, y) {
+  if (!touch.active) return false;
+  const b = pauseButtonRect();
+  return dist2(x, y, b.x, b.y) < (b.r * 1.5) * (b.r * 1.5);
+}
+
+function requestFullscreenIfTouch() {
+  if (!touch.active) return;
+  const el = document.documentElement;
+  const fn = el.requestFullscreen || el.webkitRequestFullscreen;
+  if (!fn || document.fullscreenElement) return;
+  try { const r = fn.call(el, { navigationUI: 'hide' }); if (r && r.catch) r.catch(() => {}); } catch (err) { /* iOS : pas de plein écran, tant pis */ }
+}
+
 /* ============================================================
    SOL — texture procédurale pré-rendue une fois par nuit
    (herbe / mousse / cailloux / racines ; jamais recalculée en jeu)
@@ -796,6 +911,8 @@ const G = {
   lastResult: null,
   menuIndex: 0,
   menuItems: [],
+  pauseHit: [],
+  hintBandH: 0,
   menuHit: [],
   story: null,
   gameOverLine: '',
@@ -958,9 +1075,11 @@ function updatePlaying(dt) {
   if (held(KEY_RIGHT)) dx += 1;
   if (held(KEY_UP)) dy -= 1;
   if (held(KEY_DOWN)) dy += 1;
-  const dl = Math.hypot(dx, dy);
+  let dl = Math.hypot(dx, dy);
+  let speedK = 1;
+  if (dl === 0 && touch.mag > 0) { dx = touch.dirX; dy = touch.dirY; dl = 1; speedK = 0.45 + 0.55 * touch.mag; }
   if (dl > 0) { dx /= dl; dy /= dl; ilo.face = dx !== 0 ? Math.sign(dx) : ilo.face; }
-  const tvx = dx * CFG.ILO_SPEED, tvy = dy * CFG.ILO_SPEED;
+  const tvx = dx * CFG.ILO_SPEED * speedK, tvy = dy * CFG.ILO_SPEED * speedK;
   const acc = dl > 0 ? CFG.ILO_ACCEL : CFG.ILO_ACCEL * 1.6;
   ilo.vx += clamp(tvx - ilo.vx, -acc * dt, acc * dt);
   ilo.vy += clamp(tvy - ilo.vy, -acc * dt, acc * dt);
@@ -1442,6 +1561,7 @@ function activateMenu() {
   const it = G.menuItems[G.menuIndex];
   if (!it) return;
   SFX.ui();
+  if (it.id === 'new' || it.id === 'continue') requestFullscreenIfTouch();
   if (it.id === 'new') {
     startRun(1);
     const intro = sArr(STORY && STORY.intro, []);
@@ -1529,7 +1649,20 @@ function onPointerDown() {
   if (s === 'help') { SFX.ui(); toTitle(); return; }
   if (s === 'intro' || s === 'nightBefore' || s === 'nightAfter' || s === 'epilogue') { advanceStory(); return; }
   if (s === 'playing') {
-    if (G.paused) { togglePause(false); return; }   // le clic qui reprend ne déclenche pas d'éclat
+    if (G.paused) {
+      // Boutons de l'écran de pause (souris ou doigt), sinon le clic reprend sans déclencher d'éclat
+      for (let i = 0; i < G.pauseHit.length; i++) {
+        const h = G.pauseHit[i];
+        if (input.mx >= h.x && input.mx <= h.x + h.w && input.my >= h.y && input.my <= h.y + h.h) {
+          if (h.id === 'title') { SFX.ui(); toTitle(); }
+          else togglePause(false);
+          return;
+        }
+      }
+      togglePause(false);
+      return;
+    }
+    if (hitPauseButton(input.mx, input.my)) { togglePause(true); return; }
     input.burstQueued = true;
     return;
   }
@@ -2270,12 +2403,14 @@ function drawHUD() {
   }
 
   // Conseil de la nuit : quelques secondes, bien lisible, puis il s'efface
+  G.hintBandH = 0;
   if (G.hintT > 0 && G.hintText) {
     const a = clamp(G.hintT / 2, 0, 1) * 0.85;
     ctx.globalAlpha = a;
     ctx.font = font(15, '', true);
     ctx.textAlign = 'center';
     const lines = wrap(G.hintText, Math.min(760 * uiScale, VW - 80));
+    G.hintBandH = (26 + lines.length * 21) * uiScale;
     let hy = VH - 26 * uiScale - (lines.length - 1) * 21 * uiScale;
     for (const l of lines) { shadowText(l, VW / 2, hy, 'center', '#a9bdd6'); hy += 21 * uiScale; }
     ctx.textAlign = 'left';
@@ -2318,7 +2453,7 @@ function drawObjectiveHint() {
   const X = sx(tx), Y = sy(ty);
   const m = 56 * uiScale;
   // Quand le conseil de la nuit est affiché en bas, la boussole reste au-dessus du bandeau
-  const mb = (G.hintT > 0 && G.hintText) ? 104 * uiScale : m;
+  const mb = G.hintBandH ? G.hintBandH + 44 * uiScale : m;
   if (X > m && X < VW - m && Y > m && Y < VH - mb) return;
 
   // Position sur le cadre de l'écran, dans la direction de l'objectif depuis Ilo
@@ -2452,7 +2587,12 @@ function drawTitleScreen() {
     y += 26 * uiScale;
   }
   ctx.font = font(14);
-  shadowText('Flèches / ZQSD pour choisir, Entrée pour valider. M coupe le son.', cx, VH - 26 * uiScale, 'center', COL.dim);
+  if (touch.active) {
+    if (VH > VW) shadowText('Tourne ton téléphone en paysage pour voir plus loin.', cx, VH - 50 * uiScale, 'center', '#ffd9a0');
+    shadowText('Touche un bouton pour commencer.', cx, VH - 26 * uiScale, 'center', COL.dim);
+  } else {
+    shadowText('Flèches / ZQSD pour choisir, Entrée pour valider. M coupe le son.', cx, VH - 26 * uiScale, 'center', COL.dim);
+  }
   ctx.textAlign = 'left';
 }
 
@@ -2465,7 +2605,12 @@ function drawHelpScreen() {
   shadowText('Comment jouer', cx, y, 'center', '#ffd9a0');
   y += 42 * uiScale;
 
-  const lines = sArr(STORY && STORY.howToPlay, [
+  const lines = touch.active ? [
+    'Pouce gauche : pose-le n\'importe où à gauche et glisse pour faire marcher Ilo.',
+    'Pouce droit : glisse à droite pour guider Nim, la luciole. Elle seule fait de la lumière, et elle ne s\'éloigne jamais beaucoup d\'Ilo.',
+    'Tap court : Nim jette un éclat qui repousse les ombres. Ça coûte de la lumière.',
+    'But : allumer toutes les pierres de veille, puis rejoindre l\'arche avant que la lumière s\'épuise.'
+  ] : sArr(STORY && STORY.howToPlay, [
     'ZQSD / WASD / flèches : déplacer Ilo.',
     'Souris : guider Nim, la seule lumière.',
     'Clic gauche ou Espace : éclat de lumière.'
@@ -2519,7 +2664,7 @@ function drawHelpScreen() {
   shadowText('Nim', sxn, sy0 + 52 * uiScale, 'center', '#ffd9a0');
 
   ctx.font = font(15);
-  shadowText('Entrée, clic ou Échap pour revenir', cx, VH - 30 * uiScale, 'center', COL.dim);
+  shadowText(touch.active ? 'Touche l\'écran pour revenir' : 'Entrée, clic ou Échap pour revenir', cx, VH - 30 * uiScale, 'center', COL.dim);
   ctx.textAlign = 'left';
 }
 
@@ -2565,11 +2710,11 @@ function drawStoryScreen() {
     const a = 0.45 + 0.35 * Math.sin(G.uiT * 3.2);
     ctx.globalAlpha = a;
     ctx.font = font(15, '600');
-    shadowText('Entrée ou clic pour continuer', cx, VH - 40 * uiScale, 'center', COL.dim);
+    shadowText(touch.active ? 'Touche l\'écran pour continuer' : 'Entrée ou clic pour continuer', cx, VH - 40 * uiScale, 'center', COL.dim);
     ctx.globalAlpha = 1;
   } else {
     ctx.font = font(14);
-    shadowText('clic pour accélérer', cx, VH - 40 * uiScale, 'center', 'rgba(154,147,168,0.65)');
+    shadowText(touch.active ? 'touche pour accélérer' : 'clic pour accélérer', cx, VH - 40 * uiScale, 'center', 'rgba(154,147,168,0.65)');
   }
 
   // Récapitulatif de score après une nuit réussie
@@ -2631,10 +2776,10 @@ function drawGameOverScreen() {
   const a = 0.5 + 0.35 * Math.sin(G.uiT * 3.2);
   ctx.globalAlpha = a;
   ctx.font = font(17, '600');
-  shadowText('Entrée ou clic pour rejouer', cx, y, 'center', '#ffd9a0');
+  shadowText(touch.active ? 'Touche l\'écran pour rejouer' : 'Entrée ou clic pour rejouer', cx, y, 'center', '#ffd9a0');
   ctx.globalAlpha = 1;
   ctx.font = font(14);
-  shadowText('Échap : retour au titre', cx, y + 26 * uiScale, 'center', COL.dim);
+  if (!touch.active) shadowText('Échap : retour au titre', cx, y + 26 * uiScale, 'center', COL.dim);
   ctx.textAlign = 'left';
 }
 
@@ -2648,12 +2793,80 @@ function drawPauseOverlay() {
   shadowText('Pause', cx, y, 'center', '#ffd9a0');
   y += 42 * uiScale;
   ctx.font = font(16);
-  shadowText('Échap, P ou clic : reprendre', cx, y, 'center', COL.text);
-  y += 24 * uiScale;
-  shadowText('T : retour au titre', cx, y, 'center', COL.dim);
-  y += 24 * uiScale;
-  shadowText('M : son ' + (save.muted ? '(coupé)' : '(activé)'), cx, y, 'center', COL.dim);
+  G.pauseHit = [];
+  if (touch.active) {
+    const iw = 260 * uiScale, ih = 46 * uiScale;
+    const btns = [{ id: 'resume', label: 'Reprendre' }, { id: 'title', label: 'Retour au titre' }];
+    for (let i = 0; i < btns.length; i++) {
+      const bx = cx - iw / 2, by = y + i * (ih + 12 * uiScale);
+      ctx.fillStyle = i === 0 ? 'rgba(255,183,101,0.14)' : 'rgba(255,255,255,0.05)';
+      ctx.fillRect(bx, by, iw, ih);
+      ctx.strokeStyle = i === 0 ? 'rgba(255,183,101,0.75)' : 'rgba(255,255,255,0.18)';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(bx + 0.5, by + 0.5, iw, ih);
+      ctx.font = font(18, '600');
+      shadowText(btns[i].label, cx, by + ih * 0.66, 'center', i === 0 ? '#ffe0b0' : COL.text);
+      G.pauseHit.push({ id: btns[i].id, x: bx, y: by, w: iw, h: ih });
+    }
+    y += btns.length * (ih + 12 * uiScale) + 10 * uiScale;
+    ctx.font = font(14);
+    shadowText('Pouce gauche : marcher  •  pouce droit : Nim  •  tap : éclat', cx, y, 'center', COL.dim);
+  } else {
+    shadowText('Échap, P ou clic : reprendre', cx, y, 'center', COL.text);
+    y += 24 * uiScale;
+    shadowText('T : retour au titre', cx, y, 'center', COL.dim);
+    y += 24 * uiScale;
+    shadowText('M : son ' + (save.muted ? '(coupé)' : '(activé)'), cx, y, 'center', COL.dim);
+  }
   ctx.textAlign = 'left';
+}
+
+/* Couche tactile : joystick sous le pouce, bouton pause, rappel des gestes au début */
+function drawTouchUI() {
+  if (!touch.active) return;
+  const sc = uiScale;
+  ctx.save();
+  // Bouton pause
+  const b = pauseButtonRect();
+  ctx.globalAlpha = 0.55;
+  ctx.fillStyle = 'rgba(255,255,255,0.10)';
+  ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, TAU); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1.2; ctx.stroke();
+  ctx.fillStyle = '#efe7d8';
+  ctx.fillRect(b.x - 6 * sc, b.y - 7 * sc, 4 * sc, 14 * sc);
+  ctx.fillRect(b.x + 2 * sc, b.y - 7 * sc, 4 * sc, 14 * sc);
+  ctx.globalAlpha = 1;
+
+  // Joystick
+  if (touch.move) {
+    const m = touch.move;
+    ctx.globalAlpha = 0.35;
+    ctx.strokeStyle = '#ffd9a0'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(m.x0, m.y0, TOUCH_STICK_R, 0, TAU); ctx.stroke();
+    ctx.globalAlpha = 0.6;
+    ctx.fillStyle = '#ffe0b0';
+    const kx = m.x0 + touch.dirX * touch.mag * TOUCH_STICK_R;
+    const ky = m.y0 + touch.dirY * touch.mag * TOUCH_STICK_R;
+    ctx.beginPath(); ctx.arc(kx, ky, 18, 0, TAU); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  // Rappel des gestes pendant les premières secondes de la nuit
+  if (G.nightTime < 7 && !G.paused) {
+    const a = clamp((7 - G.nightTime) / 1.5, 0, 1) * 0.8;
+    ctx.globalAlpha = a;
+    ctx.font = font(14, '600');
+    ctx.textAlign = 'center';
+    const msg = '◐ pouce gauche : marcher    ◑ pouce droit : guider Nim    tap : éclat';
+    const hy = 104 * sc;
+    if (VW < 620) {
+      shadowText('◐ pouce gauche : marcher   ◑ pouce droit : Nim', VW / 2, hy, 'center', '#ffd9a0');
+      shadowText('tap : éclat', VW / 2, hy + 20 * sc, 'center', '#ffd9a0');
+    } else shadowText(msg, VW / 2, hy, 'center', '#ffd9a0');
+    ctx.textAlign = 'left';
+    ctx.globalAlpha = 1;
+  }
+  ctx.restore();
 }
 
 /* ============================================================
@@ -2677,6 +2890,7 @@ function render() {
       ctx.fillRect(0, 0, VW, VH);
     }
     drawHUD();
+    drawTouchUI();
     if (G.paused) drawPauseOverlay();
   } else if (s === 'title') {
     drawTitleScreen();
