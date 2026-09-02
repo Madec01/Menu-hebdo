@@ -2069,6 +2069,7 @@ function createFX() {
   }
 
   function resize() {
+    var ocx = S.cx, ocy = S.cy, omin = Math.min(S.w, S.h);
     DPR = Math.min(window.devicePixelRatio || 1, 2);
     S.w = window.innerWidth; S.h = window.innerHeight;
     cv.width = Math.floor(S.w * DPR); cv.height = Math.floor(S.h * DPR);
@@ -2077,6 +2078,25 @@ function createFX() {
     S.cx = S.w * 0.5; S.cy = S.h * 0.46;
     S.range = Math.max(360, Math.min(S.w, S.h) * 0.62);
     FX.resize(S.w, S.h);
+    // La scène est solidaire du phare : on la recale et on la remet à l'échelle,
+    // sinon un redimensionnement laisse la moitié des récifs hors de l'écran.
+    if (omin > 0) {
+      var k = Math.min(S.w, S.h) / omin;
+      remap(S.rocks, ocx, ocy, k, false);
+      remap(S.ships, ocx, ocy, k, false);
+      remap(S.lights, ocx, ocy, k, false);
+      remap(S.fogs, ocx, ocy, k, true);
+      remap(S.notes, ocx, ocy, k, false);
+    }
+  }
+
+  function remap(list, ocx, ocy, k, scaleR) {
+    for (var i = 0; i < list.length; i++) {
+      var o = list[i];
+      o.x = S.cx + (o.x - ocx) * k;
+      o.y = S.cy + (o.y - ocy) * k;
+      if (scaleR) { o.r *= k; o.r0 *= k; }
+    }
   }
 
   // ---------- entrées ----------
