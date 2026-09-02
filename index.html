@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#1a120b">
+<title>Bêtes de Papier</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <div id="stage-wrap"><canvas id="stage"></canvas></div>
+  <div id="hud"></div>
+  <div id="screens"></div>
+</div>
+<script src="js/bp.js"></script>
+<script src="js/shapes.js"></script>
+<script src="js/levels.js"></script>
+<script src="js/story.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/core.js"></script>
+<script src="js/ui.js"></script>
+<script>
+  window.addEventListener('DOMContentLoaded', function () {
+    if (window.BP && BP.ui && BP.ui.init) BP.ui.init();
+  });
+</script>
+</body>
+</html>
