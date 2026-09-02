@@ -1,0 +1,2459 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agenda de la semaine</title>
+<!--
+===============================================================================
+  AGENDA SEMAINIER DE BUREAU — fichier unique, autonome, hors ligne
+  Version 1.0.0
+
+  TABLE DES MATIERES (cherchez [01], [02]... avec Ctrl+F)
+
+    CSS
+    [C1] VARIABLES ET THEMES
+    [C2] STRUCTURE GENERALE
+    [C3] EN-TETE ET BARRE D'OUTILS
+    [C4] BANDEAU URGENT
+    [C5] GRILLE DE LA SEMAINE
+    [C6] ELEMENTS (taches et rendez-vous)
+    [C7] BAS DE PAGE : NOTES ET PARKING
+    [C8] PANNEAUX (reglages, arbitrage, sas, sauvegarde)
+    [C9] IMPRESSION
+
+    JAVASCRIPT
+    [01] CONSTANTES ET CONFIGURATION
+    [02] UTILITAIRES DE DATE   <- seul endroit autorise a manipuler des dates
+    [03] SCHEMA, VALEURS PAR DEFAUT, MIGRATIONS
+    [04] PERSISTANCE (ecriture A/B, instantanes, integrite)
+    [05] ETAT ET MUTATIONS (commit, annulation)
+    [06] METIER (report, priorites, arbitrage, sas de fin de journee)
+    [07] SELECTEURS ET VUES DERIVEES
+    [08] RENDU
+    [09] EVENEMENTS
+    [10] THEME ET REGLAGES
+    [11] IMPORT / EXPORT / SAUVEGARDE
+    [12] DEMARRAGE ET AUTO-TEST
+
+  REGLE DE SURVIE DES DONNEES
+    Ce fichier contient le programme, PAS vos donnees.
+    Vos donnees sont rangees par le navigateur, dans un espace lie a ce fichier.
+    Choisissez un dossier et un nom une bonne fois pour toutes.
+    Utilisez Chrome ou Edge. Safari ne sait pas stocker pour un fichier local.
+===============================================================================
+-->
+<style>
+/* =========================================================================
+   [C1] VARIABLES ET THEMES
+   ========================================================================= */
+:root{
+  --accent:#3b6ea5;
+  --slot-h:22px;
+  --gutter:58px;
+  --radius:7px;
+  --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --fs:14px;
+
+  --bg:#eef0f4;
+  --surface:#ffffff;
+  --surface-2:#f7f8fa;
+  --surface-3:#eceef2;
+  --border:#dfe3ea;
+  --border-strong:#c7cdd8;
+  --text:#1b1f24;
+  --text-soft:#59616e;
+  --text-faint:#8b93a1;
+  --today:#fffdf3;
+  --today-line:#d94f3d;
+
+  --p-urgent:#cf3b30;
+  --p-urgent-bg:#fdecea;
+  --p-semaine:#c97b00;
+  --p-semaine-bg:#fdf3e2;
+  --p-libre:#7c8899;
+  --p-libre-bg:#f0f2f6;
+
+  --ok:#2e7d5b;
+  --warn:#c97b00;
+  --bad:#cf3b30;
+  --shadow:0 1px 2px rgba(20,25,35,.06),0 4px 14px rgba(20,25,35,.06);
+}
+html[data-theme="sombre"]{
+  --bg:#14171c;
+  --surface:#1c2027;
+  --surface-2:#22262e;
+  --surface-3:#2a2f38;
+  --border:#2e343e;
+  --border-strong:#3d444f;
+  --text:#e6e9ee;
+  --text-soft:#a4acba;
+  --text-faint:#767f8d;
+  --today:#232019;
+  --today-line:#e8695a;
+
+  --p-urgent:#f0776a;
+  --p-urgent-bg:#3a2320;
+  --p-semaine:#e0a44a;
+  --p-semaine-bg:#372c18;
+  --p-libre:#9aa5b4;
+  --p-libre-bg:#272c34;
+
+  --ok:#5fbf95;
+  --warn:#e0a44a;
+  --bad:#f0776a;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25);
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;background:var(--bg);color:var(--text);
+  font-family:var(--font);font-size:var(--fs);line-height:1.4;
+  -webkit-font-smoothing:antialiased;overflow:hidden;
+}
+button{font:inherit;color:inherit;cursor:pointer}
+input,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+
+/* =========================================================================
+   [C2] STRUCTURE GENERALE
+   ========================================================================= */
+.app{
+  display:grid;
+  grid-template-rows:auto auto minmax(0,1fr) auto;
+  height:100vh;height:100dvh;
+}
+
+/* =========================================================================
+   [C3] EN-TETE ET BARRE D'OUTILS
+   ========================================================================= */
+.topbar{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 14px;background:var(--surface);
+  border-bottom:1px solid var(--border);
+}
+.nav{display:flex;align-items:center;gap:2px}
+.iconbtn{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:30px;height:30px;border:1px solid transparent;border-radius:var(--radius);
+  background:transparent;color:var(--text-soft);
+}
+.iconbtn:hover{background:var(--surface-3);color:var(--text)}
+.iconbtn svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.weeklabel{font-weight:650;font-size:15px;letter-spacing:-.01em;white-space:nowrap}
+.weeksub{color:var(--text-faint);font-size:12.5px;white-space:nowrap}
+.btn{
+  border:1px solid var(--border-strong);background:var(--surface);
+  border-radius:var(--radius);padding:5px 11px;font-size:13px;font-weight:500;
+  white-space:nowrap;
+}
+.btn:hover{background:var(--surface-3)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--text-soft)}
+.btn.ghost:hover{background:var(--surface-3);color:var(--text)}
+.spacer{flex:1}
+
+.savechip{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:12px;color:var(--text-faint);
+  padding:4px 9px;border-radius:99px;background:var(--surface-2);
+  border:1px solid var(--border);white-space:nowrap;
+}
+.savechip .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);flex:none}
+.savechip[data-level="warn"]{color:var(--warn);border-color:var(--warn)}
+.savechip[data-level="warn"] .dot{background:var(--warn)}
+.savechip[data-level="bad"]{color:var(--bad);border-color:var(--bad)}
+.savechip[data-level="bad"] .dot{background:var(--bad)}
+
+.alertbar{
+  padding:9px 14px;font-size:13px;background:var(--p-semaine-bg);
+  color:var(--p-semaine);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;
+}
+.alertbar.grave{background:var(--p-urgent-bg);color:var(--p-urgent)}
+.alertbar[hidden]{display:none}
+
+/* =========================================================================
+   [C4] BANDEAU URGENT
+   ========================================================================= */
+.urgentbar{
+  background:var(--surface);border-bottom:1px solid var(--border);
+  padding:7px 14px;display:flex;align-items:flex-start;gap:10px;min-height:40px;
+}
+.urgentbar .lab{
+  display:inline-flex;align-items:center;gap:6px;flex:none;
+  font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--p-urgent);padding-top:4px;
+}
+.urgentlist{display:flex;flex-wrap:wrap;gap:6px;flex:1;align-items:flex-start}
+.uchip{
+  display:flex;align-items:center;gap:6px;
+  background:var(--p-urgent-bg);border:1px solid transparent;
+  border-radius:99px;padding:3px 10px 3px 6px;max-width:440px;
+}
+.uchip.done{opacity:.45}
+.uchip .utitle{
+  border:0;background:transparent;padding:0;min-width:40px;width:auto;
+  font-size:13px;color:var(--p-urgent);font-weight:500;
+}
+.uchip .uday{font-size:11px;color:var(--p-urgent);opacity:.7;flex:none}
+.emptyhint{color:var(--text-faint);font-size:12.5px;padding:5px 2px}
+
+/* =========================================================================
+   [C5] GRILLE DE LA SEMAINE
+   ========================================================================= */
+.board{
+  display:grid;grid-template-rows:auto auto minmax(0,1fr);
+  background:var(--surface);border-bottom:1px solid var(--border);
+  min-height:0;
+}
+.row{display:grid;grid-template-columns:var(--gutter) repeat(var(--ncols),minmax(0,1fr))}
+.board-head{border-bottom:1px solid var(--border);background:var(--surface)}
+.gcell{border-right:1px solid var(--border);padding:6px 4px;text-align:right;color:var(--text-faint);font-size:11px}
+
+.dayhead{
+  border-right:1px solid var(--border);padding:6px 9px 5px;
+  display:flex;align-items:baseline;gap:7px;
+}
+.dayhead:last-child{border-right:0}
+.dayhead .dn{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-soft)}
+.dayhead .dd{font-size:16px;font-weight:650;letter-spacing:-.02em}
+.dayhead .load{
+  margin-left:auto;font-size:11px;color:var(--text-faint);
+  background:var(--surface-3);border-radius:99px;padding:1px 7px;font-variant-numeric:tabular-nums;
+}
+.dayhead .load[data-level="warn"]{color:var(--warn);background:var(--p-semaine-bg)}
+.is-today{background:var(--today)}
+.is-today .dn{color:var(--today-line)}
+.is-weekend{background:var(--surface-2)}
+.is-today.is-weekend{background:var(--today)}
+
+.board-bins{border-bottom:1px solid var(--border-strong);background:var(--surface)}
+.binlabel{
+  border-right:1px solid var(--border);padding:6px 5px;text-align:right;
+  font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--text-faint);line-height:1.15;
+}
+.daybin{
+  border-right:1px solid var(--border);padding:4px;min-height:46px;
+  max-height:190px;overflow-y:auto;display:flex;flex-direction:column;gap:2px;
+}
+.daybin:last-child{border-right:0}
+.daybin.dropok{background:var(--surface-3);box-shadow:inset 0 0 0 2px var(--accent)}
+
+.board-scroll{overflow-y:auto;overflow-x:hidden;min-height:0}
+.board-scroll .row{padding-top:8px}
+.gutter{border-right:1px solid var(--border);position:relative}
+.gutter .hlab{
+  position:absolute;right:7px;font-size:11px;color:var(--text-faint);
+  transform:translateY(-50%);font-variant-numeric:tabular-nums;
+  background:var(--surface);padding:0 1px;
+}
+.daycol{
+  border-right:1px solid var(--border);position:relative;
+  display:grid;grid-auto-rows:var(--slot-h);
+}
+.daycol:last-child{border-right:0}
+.slot{border-bottom:1px solid var(--border);grid-column:1}
+.slot.half{border-bottom-style:dashed;border-bottom-color:color-mix(in srgb,var(--border) 55%,transparent)}
+.slot:hover{background:color-mix(in srgb,var(--accent) 7%,transparent)}
+.slot.dropok{background:color-mix(in srgb,var(--accent) 18%,transparent)}
+.nowline{
+  position:absolute;left:0;right:0;height:0;border-top:1.5px solid var(--today-line);
+  z-index:5;pointer-events:none;
+}
+.nowline::before{
+  content:"";position:absolute;left:-3px;top:-3.5px;width:7px;height:7px;
+  border-radius:50%;background:var(--today-line);
+}
+
+/* =========================================================================
+   [C6] ELEMENTS (taches et rendez-vous)
+   ========================================================================= */
+.item{
+  display:flex;align-items:flex-start;gap:5px;
+  background:var(--surface-2);border:1px solid var(--border);
+  border-left:3px solid var(--p-libre);
+  border-radius:5px;padding:2px 5px 2px 3px;min-height:20px;font-size:12.5px;
+}
+.item:hover{border-color:var(--border-strong)}
+.item.p-urgent{border-left-color:var(--p-urgent);background:var(--p-urgent-bg)}
+.item.p-semaine{border-left-color:var(--p-semaine);background:var(--p-semaine-bg)}
+.item.done{opacity:.42}
+.item.done .title{text-decoration:line-through}
+.item.dragging{opacity:.35}
+.item.stale .title{color:var(--text-faint)}
+.item.stale{border-top:1px dashed var(--p-semaine);border-right:1px dashed var(--p-semaine);border-bottom:1px dashed var(--p-semaine)}
+
+.item .grip{
+  flex:none;width:11px;align-self:stretch;cursor:grab;opacity:0;
+  background:radial-gradient(circle at 2.5px 2.5px,var(--text-faint) 1px,transparent 1.2px) 0 0/5px 5px;
+  border-radius:3px;margin-top:3px;height:12px;
+}
+.item:hover .grip{opacity:.55}
+.chk{flex:none;margin:2px 0 0;width:13px;height:13px;accent-color:var(--accent);cursor:pointer}
+.item .title{
+  flex:1;min-width:0;border:0;background:transparent;padding:1px 0;
+  font-size:12.5px;line-height:1.35;font-family:inherit;
+  resize:none;overflow:hidden;display:block;height:18px;
+}
+.item .title::placeholder{color:var(--text-faint)}
+.item .roll{
+  flex:none;font-size:10px;color:var(--p-semaine);background:transparent;
+  border:0;padding:0 2px;cursor:help;font-variant-numeric:tabular-nums;
+}
+.item .pdot{
+  flex:none;width:13px;height:13px;border-radius:50%;border:2px solid var(--p-libre);
+  background:transparent;padding:0;margin-top:2px;
+}
+.item .pdot[data-p="urgent"]{border-color:var(--p-urgent);background:var(--p-urgent)}
+.item .pdot[data-p="semaine"]{border-color:var(--p-semaine);background:var(--p-semaine)}
+.del{
+  flex:none;opacity:0;color:var(--text-faint);border:0;background:transparent;
+  padding:0 3px;font-size:15px;line-height:1;border-radius:4px;
+}
+.item:hover .del{opacity:.7}
+.uchip .del{opacity:.5}
+.del:hover{color:var(--bad);opacity:1;background:var(--surface-3)}
+
+.item.slotitem{
+  position:relative;z-index:2;margin:0 3px 0 1px;align-self:stretch;
+  overflow:hidden;box-shadow:var(--shadow);
+}
+.item.slotitem .title{font-size:12px}
+.resize{
+  position:absolute;left:0;right:0;bottom:0;height:6px;cursor:ns-resize;
+}
+.resize:hover{background:color-mix(in srgb,var(--accent) 35%,transparent)}
+
+/* =========================================================================
+   [C7] BAS DE PAGE : NOTES ET PARKING
+   ========================================================================= */
+.bottom{
+  display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);
+  background:var(--surface);border-top:1px solid var(--border-strong);
+  height:var(--bottom-h,168px);
+}
+.pane{display:flex;flex-direction:column;min-width:0;border-right:1px solid var(--border)}
+.pane:last-child{border-right:0}
+.paneheader{
+  display:flex;align-items:center;gap:8px;padding:6px 12px;
+  font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--text-faint);border-bottom:1px solid var(--border);
+}
+.paneheader .cnt{margin-left:auto;font-weight:500;letter-spacing:0;text-transform:none;font-size:11px}
+#notes{
+  flex:1;border:0;resize:none;padding:9px 12px;background:transparent;
+  font-size:13px;line-height:1.55;
+}
+.parklist{flex:1;overflow-y:auto;padding:6px 10px;display:flex;flex-direction:column;gap:3px}
+.parklist.dropok{background:var(--surface-3);box-shadow:inset 0 0 0 2px var(--accent)}
+.grabber{height:5px;cursor:ns-resize;background:transparent;margin-top:-3px;position:relative;z-index:6}
+.grabber:hover{background:color-mix(in srgb,var(--accent) 30%,transparent)}
+
+/* =========================================================================
+   [C8] PANNEAUX
+   ========================================================================= */
+.veil{
+  position:fixed;inset:0;background:rgba(15,20,28,.42);
+  display:flex;align-items:flex-start;justify-content:center;padding:5vh 16px;
+  z-index:50;overflow-y:auto;
+}
+.veil[hidden]{display:none}
+.panel{
+  background:var(--surface);border-radius:12px;box-shadow:0 12px 48px rgba(10,15,25,.28);
+  width:100%;max-width:620px;overflow:hidden;
+}
+.panel.wide{max-width:760px}
+.panelhead{
+  padding:15px 20px 12px;border-bottom:1px solid var(--border);
+}
+.panelhead h2{margin:0;font-size:16px;letter-spacing:-.01em}
+.panelhead p{margin:5px 0 0;font-size:13px;color:var(--text-soft);line-height:1.5}
+.panelbody{padding:14px 20px;max-height:60vh;overflow-y:auto}
+.panelfoot{
+  padding:12px 20px;border-top:1px solid var(--border);background:var(--surface-2);
+  display:flex;gap:8px;align-items:center;
+}
+
+.field{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)}
+.field:last-child{border-bottom:0}
+.field label{flex:1;font-size:13px}
+.field label small{display:block;color:var(--text-faint);font-size:11.5px;margin-top:2px;line-height:1.45}
+.field input[type=number],.field input[type=time],.field select{
+  border:1px solid var(--border-strong);border-radius:6px;padding:4px 7px;
+  background:var(--surface);font-size:13px;
+}
+.field input[type=color]{width:38px;height:28px;padding:1px;border:1px solid var(--border-strong);border-radius:6px;background:var(--surface)}
+.field input[type=range]{width:130px;accent-color:var(--accent)}
+.switch{position:relative;width:38px;height:21px;flex:none}
+.switch input{opacity:0;width:100%;height:100%;margin:0;cursor:pointer}
+.switch span{
+  position:absolute;inset:0;border-radius:99px;background:var(--border-strong);
+  transition:background .13s;pointer-events:none;
+}
+.switch span::after{
+  content:"";position:absolute;top:2px;left:2px;width:17px;height:17px;border-radius:50%;
+  background:#fff;transition:transform .13s;
+}
+.switch input:checked + span{background:var(--accent)}
+.switch input:checked + span::after{transform:translateX(17px)}
+.sectitle{
+  font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--text-faint);margin:16px 0 4px;
+}
+.sectitle:first-child{margin-top:0}
+
+.arbrow{
+  display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid var(--border);
+}
+.arbrow .txt{flex:1;min-width:0;font-size:13px}
+.arbrow .txt small{display:block;color:var(--text-faint);font-size:11.5px;margin-top:2px}
+.arbrow .acts{display:flex;gap:4px;flex:none}
+.minibtn{
+  border:1px solid var(--border-strong);background:var(--surface);border-radius:5px;
+  padding:3px 8px;font-size:11.5px;white-space:nowrap;
+}
+.minibtn:hover{background:var(--surface-3)}
+.minibtn.b-urgent:hover{border-color:var(--p-urgent);color:var(--p-urgent)}
+.minibtn.b-drop:hover{border-color:var(--bad);color:var(--bad)}
+
+.toast{
+  position:fixed;left:50%;bottom:22px;transform:translateX(-50%);
+  background:var(--text);color:var(--surface);border-radius:8px;
+  padding:9px 14px;font-size:13px;display:flex;align-items:center;gap:12px;
+  box-shadow:0 8px 26px rgba(0,0,0,.3);z-index:80;
+}
+.toast[hidden]{display:none}
+.toast button{border:0;background:0;color:var(--accent);font-weight:600;padding:0}
+html[data-theme="sombre"] .toast button{color:#8fb6e0}
+
+.mono{
+  width:100%;height:210px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:11px;border:1px solid var(--border-strong);border-radius:7px;padding:8px;
+  background:var(--surface-2);resize:vertical;line-height:1.45;
+}
+.note{
+  font-size:12.5px;color:var(--text-soft);line-height:1.55;
+  background:var(--surface-2);border-left:3px solid var(--accent);
+  padding:9px 12px;border-radius:0 7px 7px 0;margin:10px 0;
+}
+.note.danger{border-left-color:var(--bad)}
+kbd{
+  font-family:var(--font);font-size:11px;background:var(--surface-3);
+  border:1px solid var(--border-strong);border-bottom-width:2px;
+  border-radius:4px;padding:1px 5px;
+}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* =========================================================================
+   [C9] IMPRESSION
+   ========================================================================= */
+@media print{
+  @page{size:A4 landscape;margin:8mm}
+  body{background:#fff;overflow:visible;font-size:9pt}
+  .topbar,.grabber,.alertbar,.iconbtn,.btn,.item .grip,.item .del,.item .pdot{display:none!important}
+  .app{height:auto;display:block}
+  .board-scroll{overflow:visible}
+  .veil{display:none!important}
+  .bottom{height:auto;page-break-inside:avoid}
+  .item{background:#fff!important;border-color:#999!important;box-shadow:none!important}
+  .daybin{max-height:none;overflow:visible}
+  .is-today{background:#fff}
+  #printhead{display:block!important;padding:0 0 6px;font-size:11pt;font-weight:700}
+}
+#printhead{display:none}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ================= EN-TETE ================= -->
+  <header class="topbar">
+    <div class="nav">
+      <button class="iconbtn" id="prevWeek" title="Semaine précédente (flèche gauche)" aria-label="Semaine précédente">
+        <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <button class="iconbtn" id="nextWeek" title="Semaine suivante (flèche droite)" aria-label="Semaine suivante">
+        <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+    </div>
+    <div>
+      <div class="weeklabel" id="weekLabel">—</div>
+      <div class="weeksub" id="weekSub">—</div>
+    </div>
+    <button class="btn" id="todayBtn" title="Revenir à aujourd'hui (touche T)">Aujourd'hui</button>
+    <div class="spacer"></div>
+    <span class="savechip" id="saveChip"><span class="dot"></span><span id="saveText">—</span></span>
+    <button class="btn ghost" id="backupBtn" title="Sauvegarder, exporter, restaurer">Sauvegarde</button>
+    <button class="iconbtn" id="settingsBtn" title="Réglages" aria-label="Réglages">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 7 19.4a1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0-1.2-2.9H1a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 2.6 7a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H7a1.7 1.7 0 0 0 1-1.5V1a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V7a1.7 1.7 0 0 0 1.5 1H23a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+    </button>
+    <button class="iconbtn" id="helpBtn" title="Aide et raccourcis" aria-label="Aide">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+    </button>
+  </header>
+
+  <div class="alertbar" id="alertBar" hidden>
+    <span id="alertText"></span>
+    <div class="spacer"></div>
+    <button class="btn" id="alertAction" hidden></button>
+    <button class="iconbtn" id="alertClose" aria-label="Masquer">
+      <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+
+  <!-- ================= BANDEAU URGENT ================= -->
+  <section class="urgentbar" aria-label="Tâches urgentes de la semaine">
+    <span class="lab">
+      <svg viewBox="0 0 24 24" width="13" height="13" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M12 2l2.9 6.3 6.6.8-4.9 4.5 1.3 6.6L12 17l-5.9 3.2 1.3-6.6L2.5 9.1l6.6-.8z"/></svg>
+      Urgent
+    </span>
+    <div class="urgentlist" id="urgentList"></div>
+    <button class="btn ghost" id="addUrgent" title="Ajouter une tâche urgente">+ Ajouter</button>
+  </section>
+
+  <!-- ================= GRILLE ================= -->
+  <main class="board">
+    <div id="printhead"></div>
+    <div class="row board-head" id="boardHead"></div>
+    <div class="row board-bins" id="boardBins"></div>
+    <div class="board-scroll" id="boardScroll">
+      <div class="row" id="boardGrid" style="min-height:100%"></div>
+    </div>
+  </main>
+
+  <!-- ================= BAS DE PAGE ================= -->
+  <div class="grabber" id="grabber" title="Glisser pour redimensionner"></div>
+  <section class="bottom">
+    <div class="pane">
+      <div class="paneheader">Notes de la semaine<span class="cnt" id="notesCnt"></span></div>
+      <textarea id="notes" placeholder="Tout ce qui compte cette semaine et qui n'est pas une tâche…" spellcheck="true"></textarea>
+    </div>
+    <div class="pane">
+      <div class="paneheader">
+        Parking · plus tard
+        <span class="cnt" id="parkCnt"></span>
+        <button class="btn ghost" id="addPark" style="padding:1px 7px;font-size:11px">+</button>
+      </div>
+      <div class="parklist" id="parkList"></div>
+    </div>
+  </section>
+
+</div>
+
+<div class="veil" id="veil" hidden><div class="panel" id="panel"></div></div>
+<div class="toast" id="toast" hidden><span id="toastText"></span><button id="toastAction" hidden></button></div>
+<div class="sr" id="live" aria-live="polite"></div>
+<input type="file" id="fileInput" accept=".json,application/json" hidden>
+
+<script>
+"use strict";
+
+/* =========================================================================
+   [01] CONSTANTES ET CONFIGURATION
+   ========================================================================= */
+const APP_VERSION   = "1.0.0";
+const SCHEMA_VERSION = 1;
+
+/* Prefixe de toutes les cles de stockage.
+   NE JAMAIS LE CHANGER : sous Chrome, tous les fichiers HTML locaux partagent
+   le meme espace de stockage. Ce prefixe est ce qui isole cet agenda des
+   autres pages locales, et ce qui relie une nouvelle version du fichier aux
+   donnees deja enregistrees. */
+const PREFIX = "agendaHebdo:";
+const K = {
+  slot:   PREFIX + "slot",      // "A" ou "B" : quel emplacement est actif
+  dataA:  PREFIX + "dataA",
+  dataB:  PREFIX + "dataB",
+  probe:  PREFIX + "probe",
+  snap:   PREFIX + "snap:",     // + AAAA-MM-JJ
+  premig: PREFIX + "premigration:v",
+};
+
+const PRIO = {
+  urgent:  { cle:"urgent",  nom:"Urgent",        court:"Urgent",     desc:"Dans le bandeau de la semaine" },
+  semaine: { cle:"semaine", nom:"Cette semaine", court:"Semaine",    desc:"Doit etre fait avant dimanche" },
+  libre:   { cle:"libre",   nom:"Quand je peux", court:"Quand je peux", desc:"Report libre" },
+};
+const PRIO_ORDRE = ["urgent","semaine","libre"];
+
+const JOURS_COURTS = ["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"];
+const JOURS_LONGS  = ["lundi","mardi","mercredi","jeudi","vendredi","samedi","dimanche"];
+const MOIS         = ["janvier","février","mars","avril","mai","juin","juillet",
+                      "août","septembre","octobre","novembre","décembre"];
+
+const MAX_UNDO = 25;
+const SNAP_JOURS = 7;      // instantanes quotidiens conserves
+const SNAP_SEMAINES = 4;   // instantanes hebdomadaires conserves
+
+/* =========================================================================
+   [02] UTILITAIRES DE DATE
+   -------------------------------------------------------------------------
+   REGLE ABSOLUE : aucune manipulation de date ailleurs que dans cette section.
+
+   Un « jour » est toujours une chaine "AAAA-MM-JJ" en heure LOCALE.
+   On ne se sert jamais de toISOString() pour fabriquer un jour : le soir, en
+   heure d'ete, toISOString() renvoie deja la date du lendemain.
+   On ne fait jamais d'arithmetique en millisecondes : les jours de changement
+   d'heure font 23 ou 25 heures.
+   Comparer deux jours = comparer deux chaines. Exact, sans fuseau, sans piege.
+   ========================================================================= */
+function dateCle(d){                       // Date -> "AAAA-MM-JJ" (local)
+  const m = d.getMonth() + 1, j = d.getDate();
+  return d.getFullYear() + "-" + (m < 10 ? "0" : "") + m + "-" + (j < 10 ? "0" : "") + j;
+}
+function dateAujourdhui(){ return dateCle(new Date()); }
+function dateDepuisCle(cle){               // "AAAA-MM-JJ" -> Date locale a minuit
+  const p = cle.split("-");
+  return new Date(+p[0], +p[1] - 1, +p[2]);
+}
+function datePlus(cle, n){                 // decalage en jours, sur du calendrier
+  const d = dateDepuisCle(cle);
+  return dateCle(new Date(d.getFullYear(), d.getMonth(), d.getDate() + n));
+}
+function dateEcart(a, b){                  // nombre de jours entiers de a vers b
+  const da = dateDepuisCle(a), db = dateDepuisCle(b);
+  return Math.round((db - da) / 86400000);
+}
+function dateLundi(cle){                   // lundi de la semaine contenant ce jour
+  const d = dateDepuisCle(cle);
+  const dow = (d.getDay() + 6) % 7;        // 0 = lundi ... 6 = dimanche
+  return datePlus(cle, -dow);
+}
+function dateIndexJour(cle){ return (dateDepuisCle(cle).getDay() + 6) % 7; }
+function dateEstWeekend(cle){ return dateIndexJour(cle) >= 5; }
+
+function dateLisible(cle, avecAnnee){
+  const d = dateDepuisCle(cle);
+  return d.getDate() + " " + MOIS[d.getMonth()] + (avecAnnee ? " " + d.getFullYear() : "");
+}
+function dateLisibleLongue(cle){
+  return JOURS_LONGS[dateIndexJour(cle)] + " " + dateLisible(cle, true);
+}
+function numeroSemaine(cle){               // numero ISO 8601
+  const d = dateDepuisCle(cle);
+  const j = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 3 - ((d.getDay() + 6) % 7));
+  const premierJeudi = new Date(j.getFullYear(), 0, 4);
+  const decal = (premierJeudi.getDay() + 6) % 7;
+  const lundi1 = new Date(premierJeudi.getFullYear(), 0, 4 - decal);
+  return 1 + Math.round((j - lundi1) / 604800000);
+}
+function heureVersMin(h){ const p = String(h).split(":"); return (+p[0]) * 60 + (+p[1] || 0); }
+function minVersHeure(m){
+  const h = Math.floor(m / 60), mm = m % 60;
+  return (h < 10 ? "0" : "") + h + ":" + (mm < 10 ? "0" : "") + mm;
+}
+function minutesMaintenant(){ const d = new Date(); return d.getHours() * 60 + d.getMinutes(); }
+
+/* =========================================================================
+   [03] SCHEMA, VALEURS PAR DEFAUT, MIGRATIONS
+   ========================================================================= */
+const REGLAGES_DEFAUT = {
+  theme: "clair",
+  accent: "#3b6ea5",
+  taillePolice: 14,
+  hauteurCreneau: 22,
+  hauteurBas: 168,
+  debutJournee: 480,          // 08:00
+  finJournee: 1140,           // 19:00
+  afficherWeekend: true,
+  seuilCharge: 8,             // au-dela, l'indicateur de charge passe orange
+  reportActif: true,
+  reportSauteWeekend: false,  // vendredi -> lundi au lieu de vendredi -> samedi
+  reportAgeMax: 60,           // au-dela, la tache part au parking plutot que sur aujourd'hui
+  reportSeuilTriage: 12,      // au-dela, ecran de rattrapage apres absence
+  libreSeuilJours: 30,        // « quand je peux » signalee une fois passe ce delai
+  sasActif: true,
+  sasHeure: 1050,             // 17:30
+  sauvegardeAuto: true,
+  sauvegardeJours: 1,         // 1 = chaque jour, 7 = chaque semaine
+};
+
+const ITEM_DEFAUT = {
+  id: "", kind: "task", title: "",
+  placement: "day",           // "slot" | "day" | "week" | "park"
+  date: "", startMin: null, durMin: 30,
+  status: "open",             // "open" | "done" | "abandoned"
+  doneAt: null,
+  priority: "libre",
+  note: "",
+  createdAt: "", updatedAt: "",
+  origDate: "",               // date de premiere planification, jamais modifiee
+  rolloverCount: 0,
+  lastRolloverOn: "",
+  noRollover: false,
+  weekOfOrigin: "",           // lundi de la semaine ou la priorite « semaine » a ete posee
+  staleReviewedOn: "",        // date du dernier signalement « ca traine »
+};
+
+function etatVide(){
+  const now = new Date().toISOString();
+  return {
+    schemaVersion: SCHEMA_VERSION,
+    appVersion: APP_VERSION,
+    meta: {
+      createdAt: now, updatedAt: now,
+      lastRolloverOn: "", lastBackupOn: "", lastSasOn: "",
+      lastWeekReviewOn: "", lastOpenOn: "", firstRunDone: false,
+    },
+    items: {},
+    weekNotes: {},
+    settings: Object.assign({}, REGLAGES_DEFAUT),
+  };
+}
+
+/* Migrations : une fonction par saut de version, appliquees en chaine.
+   migrations[1] transforme des donnees en version 1 vers la version 2, etc. */
+const migrations = {
+  // 1: (d) => { ... ; return d; },
+};
+
+function migrer(paquet){
+  let d = paquet.data;
+  let v = paquet.version || paquet.schemaVersion || 1;
+  if (v < SCHEMA_VERSION){
+    try { localStorage.setItem(K.premig + v, JSON.stringify(paquet)); } catch(e){}
+    for (; v < SCHEMA_VERSION; v++){
+      if (typeof migrations[v] === "function") d = migrations[v](d);
+    }
+  }
+  return d;
+}
+
+/* Hydratation indulgente : on complete par les valeurs par defaut sans jamais
+   supprimer un champ inconnu. Une version plus recente du fichier peut ainsi
+   ecrire des champs qu'une version plus ancienne ne comprend pas, sans les
+   detruire au premier aller-retour. */
+function hydrater(brut){
+  const e = etatVide();
+  if (!brut || typeof brut !== "object") return e;
+  e.meta      = Object.assign(e.meta, brut.meta || {});
+  e.settings  = Object.assign(e.settings, brut.settings || {});
+  e.weekNotes = brut.weekNotes || {};
+  e.items = {};
+  const src = brut.items || {};
+  for (const id in src){
+    const it = Object.assign({}, ITEM_DEFAUT, src[id]);
+    it.id = id;
+    if (!it.origDate) it.origDate = it.date;
+    if (!it.createdAt) it.createdAt = e.meta.createdAt;
+    if (it.done === true && it.status === "open") it.status = "done";  // ancien champ
+    delete it.done;
+    e.items[id] = it;
+  }
+  return e;
+}
+
+/* =========================================================================
+   [04] PERSISTANCE
+   -------------------------------------------------------------------------
+   Trois protections superposees :
+   1. Ecriture A/B : on ecrit toujours dans l'emplacement inactif, puis on
+      bascule un pointeur. Une ecriture interrompue ou refusee ne peut donc
+      jamais detruire l'etat precedent.
+   2. Empreinte (checksum) + comptes : une sauvegarde tronquee est detectee.
+   3. Instantanes tournants : 7 quotidiens + 4 hebdomadaires.
+   ========================================================================= */
+function empreinte(s){                      // FNV-1a, largement suffisant ici
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+  return (h >>> 0).toString(16);
+}
+function enveloppe(data){
+  const p = {
+    format: "agenda-hebdo",
+    version: SCHEMA_VERSION,
+    appVersion: APP_VERSION,
+    savedAt: new Date().toISOString(),
+    counts: { items: Object.keys(data.items).length, notes: Object.keys(data.weekNotes).length },
+    data: data,
+  };
+  p.checksum = empreinte(JSON.stringify(p.data));
+  return p;
+}
+
+let stockageOK = true;
+function testerStockage(){
+  try {
+    localStorage.setItem(K.probe, "1");
+    const ok = localStorage.getItem(K.probe) === "1";
+    localStorage.removeItem(K.probe);
+    stockageOK = ok;
+  } catch(e){ stockageOK = false; }
+  return stockageOK;
+}
+
+function storeEcrire(data){
+  if (!stockageOK) return false;
+  const texte = JSON.stringify(enveloppe(data));
+  const actif = localStorage.getItem(K.slot) === "B" ? "B" : "A";
+  const cible = actif === "A" ? "B" : "A";
+  try {
+    localStorage.setItem(cible === "A" ? K.dataA : K.dataB, texte);
+    localStorage.setItem(K.slot, cible);     // bascule atomique, en dernier
+    return true;
+  } catch(e){
+    if (e && (e.name === "QuotaExceededError" || e.code === 22)){
+      purgerInstantanes(true);
+      try {
+        localStorage.setItem(cible === "A" ? K.dataA : K.dataB, texte);
+        localStorage.setItem(K.slot, cible);
+        return true;
+      } catch(e2){}
+    }
+    signaler("Enregistrement impossible. Exportez vos données tout de suite.", "bad", true);
+    return false;
+  }
+}
+
+function storeLire(){
+  if (!stockageOK) return null;
+  const actif = localStorage.getItem(K.slot) === "B" ? "B" : "A";
+  const ordre = actif === "A" ? [K.dataA, K.dataB] : [K.dataB, K.dataA];
+  for (const cle of ordre){
+    const texte = localStorage.getItem(cle);
+    if (!texte) continue;
+    const v = valider(texte);
+    if (v.ok) return v.paquet;
+  }
+  return null;
+}
+
+/* Cinq controles en cascade AVANT la moindre ecriture.
+   Utilise aussi bien a la lecture qu'a l'import d'un fichier de sauvegarde. */
+function valider(texte){
+  let p;
+  try { p = JSON.parse(texte); }
+  catch(e){ return { ok:false, msg:"Fichier illisible : ce n'est pas un fichier JSON valide." }; }
+  if (!p || p.format !== "agenda-hebdo")
+    return { ok:false, msg:"Ce fichier n'est pas une sauvegarde de l'agenda." };
+  if ((p.version || 1) > SCHEMA_VERSION)
+    return { ok:false, msg:"Cette sauvegarde vient d'une version plus récente de l'agenda. Ouvrez la dernière version du fichier pour la lire." };
+  if (!p.data || typeof p.data.items !== "object" || p.data.items === null)
+    return { ok:false, msg:"Sauvegarde incomplète : les tâches sont absentes." };
+  if (p.checksum && p.checksum !== empreinte(JSON.stringify(p.data)))
+    return { ok:false, msg:"Sauvegarde corrompue : l'empreinte de contrôle ne correspond pas." };
+  if (p.counts && typeof p.counts.items === "number" &&
+      p.counts.items !== Object.keys(p.data.items).length)
+    return { ok:false, msg:"Sauvegarde tronquée : le nombre de tâches ne correspond pas." };
+  return { ok:true, paquet:p };
+}
+
+function instantaner(data){
+  if (!stockageOK) return;
+  const jour = dateAujourdhui();
+  const cle = K.snap + jour;
+  if (localStorage.getItem(cle)) return;          // un seul par jour
+  try { localStorage.setItem(cle, JSON.stringify(enveloppe(data))); } catch(e){}
+  purgerInstantanes(false);
+}
+function listerInstantanes(){
+  const out = [];
+  for (let i = 0; i < localStorage.length; i++){
+    const c = localStorage.key(i);
+    if (c && c.indexOf(K.snap) === 0) out.push(c.slice(K.snap.length));
+  }
+  return out.sort().reverse();
+}
+function purgerInstantanes(agressif){
+  const jours = listerInstantanes();
+  const garder = new Set(jours.slice(0, agressif ? 2 : SNAP_JOURS));
+  if (!agressif){
+    const semainesVues = new Set();
+    for (const j of jours){
+      const l = dateLundi(j);
+      if (!semainesVues.has(l) && semainesVues.size < SNAP_SEMAINES){ semainesVues.add(l); garder.add(j); }
+    }
+  }
+  for (const j of jours) if (!garder.has(j)) { try { localStorage.removeItem(K.snap + j); } catch(e){} }
+}
+
+/* =========================================================================
+   [05] ETAT ET MUTATIONS
+   -------------------------------------------------------------------------
+   `etat` est l'unique source de verite. Le DOM ne stocke aucune donnee,
+   seulement des attributs data-id qui pointent vers elle.
+   Toute modification passe par commit() : un seul endroit a surveiller.
+   ========================================================================= */
+let etat = etatVide();
+let semaineAffichee = dateLundi(dateAujourdhui());
+let pileAnnulation = [];
+let sauvegardeEnAttente = null;
+let dernierEnregistrement = 0;
+let idEnEdition = null;          // element en cours de saisie : jamais re-rendu
+
+function nouvelId(){
+  return "i_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 6);
+}
+
+function commit(libelle, fn, options){
+  const opt = options || {};
+  if (!opt.sansAnnulation){
+    pileAnnulation.push({ libelle: libelle, instantane: JSON.stringify({
+      items: etat.items, weekNotes: etat.weekNotes
+    }) });
+    if (pileAnnulation.length > MAX_UNDO) pileAnnulation.shift();
+  }
+  fn(etat);
+  etat.meta.updatedAt = new Date().toISOString();
+  planifierEnregistrement();
+  if (!opt.sansRendu) rendre(opt.zone);
+}
+
+function annuler(){
+  const e = pileAnnulation.pop();
+  if (!e){ signaler("Rien à annuler."); return; }
+  const snap = JSON.parse(e.instantane);
+  etat.items = snap.items;
+  etat.weekNotes = snap.weekNotes;
+  etat.meta.updatedAt = new Date().toISOString();
+  planifierEnregistrement();
+  rendre();
+  signaler("Annulé : " + e.libelle);
+}
+
+function planifierEnregistrement(){
+  clearTimeout(sauvegardeEnAttente);
+  sauvegardeEnAttente = setTimeout(enregistrerMaintenant, 400);
+}
+function enregistrerMaintenant(){
+  clearTimeout(sauvegardeEnAttente);
+  sauvegardeEnAttente = null;
+  if (storeEcrire(etat)){ dernierEnregistrement = Date.now(); majPastilleSauvegarde(); }
+}
+
+/* =========================================================================
+   [06] METIER : report, priorites, arbitrage, sas de fin de journee
+   ========================================================================= */
+function estReportable(it){
+  return it.kind === "task"
+      && it.status === "open"
+      && !it.noRollover
+      && (it.placement === "slot" || it.placement === "day");
+}
+
+/* Cible du report : TOUJOURS aujourd'hui, jamais « demain ».
+   C'est ce qui rend l'operation idempotente : apres une passe, plus aucune
+   tache n'a de date anterieure a aujourd'hui, donc une seconde passe ne fait
+   rien. Ouvrir la page dix fois donne exactement le meme resultat, et une
+   absence de six semaines coute le meme calcul qu'une absence d'un jour. */
+function appliquerReport(){
+  if (!etat.settings.reportActif) return { deplacees: [], archivees: [] };
+  const auj = dateAujourdhui();
+
+  // Horloge systeme incoherente : on ne reporte jamais vers le passe.
+  if (etat.meta.lastRolloverOn && auj < etat.meta.lastRolloverOn){
+    signaler("La date de votre ordinateur semble antérieure à la dernière ouverture. Aucun report appliqué.", "warn", true);
+    return { deplacees: [], archivees: [] };
+  }
+
+  let cible = auj;
+  if (etat.settings.reportSauteWeekend && dateEstWeekend(auj)){
+    cible = datePlus(auj, dateIndexJour(auj) === 5 ? 2 : 1);
+  }
+
+  const deplacees = [], archivees = [];
+  for (const id in etat.items){
+    const it = etat.items[id];
+    if (!estReportable(it) || !it.date || it.date >= cible) continue;
+
+    const age = dateEcart(it.origDate || it.date, auj);
+    if (age > etat.settings.reportAgeMax){
+      it.placement = "park"; it.startMin = null;
+      it.updatedAt = new Date().toISOString();
+      archivees.push(it);
+      continue;
+    }
+    deplacees.push({ item: it, depuis: it.date });
+    it.date = cible;
+    it.placement = "day";
+    it.startMin = null;             // une tache reportee perd son heure : elle ne
+                                    // doit pas atterrir sur un creneau deja occupe
+    if (it.lastRolloverOn !== auj){ it.rolloverCount = (it.rolloverCount || 0) + 1; it.lastRolloverOn = auj; }
+    it.updatedAt = new Date().toISOString();
+  }
+
+  // Les urgences posees dans une semaine passee suivent la semaine courante.
+  const lundiAuj = dateLundi(auj);
+  for (const id in etat.items){
+    const it = etat.items[id];
+    if (it.placement === "week" && it.status === "open" && it.date < lundiAuj){
+      it.date = lundiAuj;
+      it.updatedAt = new Date().toISOString();
+    }
+  }
+
+  etat.meta.lastRolloverOn = auj;
+  return { deplacees, archivees };
+}
+
+/* Taches « cette semaine » restees ouvertes apres le dimanche : elles ne
+   franchissent pas le week-end sans decision de votre part. */
+function tachesAArbitrer(){
+  const lundiAuj = dateLundi(dateAujourdhui());
+  const out = [];
+  for (const id in etat.items){
+    const it = etat.items[id];
+    if (it.status !== "open" || it.kind !== "task") continue;
+    if (it.priority !== "semaine") continue;
+    const semOrigine = it.weekOfOrigin || dateLundi(it.origDate || it.date);
+    if (semOrigine < lundiAuj) out.push(it);
+  }
+  return out.sort((a, b) => (a.weekOfOrigin || "").localeCompare(b.weekOfOrigin || ""));
+}
+
+/* Taches « quand je peux » qui trainent depuis plus de N jours : signalees
+   une seule fois, jamais supprimees automatiquement. */
+function tachesQuiTrainent(){
+  const auj = dateAujourdhui();
+  const out = [];
+  for (const id in etat.items){
+    const it = etat.items[id];
+    if (it.status !== "open" || it.kind !== "task" || it.priority !== "libre") continue;
+    if (it.placement === "park") continue;
+    if (dateEcart(it.origDate || it.date, auj) < etat.settings.libreSeuilJours) continue;
+    if (it.staleReviewedOn && dateEcart(it.staleReviewedOn, auj) < 14) continue;
+    out.push(it);
+  }
+  return out;
+}
+
+function definirPriorite(it, prio){
+  it.priority = prio;
+  if (prio === "semaine") it.weekOfOrigin = dateLundi(dateAujourdhui());
+  if (prio === "urgent" && it.placement !== "week" && !it.date) it.date = dateAujourdhui();
+  it.staleReviewedOn = "";
+  it.updatedAt = new Date().toISOString();
+}
+function prioriteSuivante(p){
+  const i = PRIO_ORDRE.indexOf(p);
+  return PRIO_ORDRE[(i + 1) % PRIO_ORDRE.length];
+}
+
+/* =========================================================================
+   [07] SELECTEURS ET VUES DERIVEES
+   -------------------------------------------------------------------------
+   Fonctions pures : elles lisent l'etat, ne le modifient jamais et ne
+   touchent jamais au DOM. La grille 7 x 48 n'existe pas en donnees, elle est
+   recalculee ici a chaque affichage par regroupement des elements.
+   ========================================================================= */
+function joursAffiches(){
+  const n = etat.settings.afficherWeekend ? 7 : 5;
+  const out = [];
+  for (let i = 0; i < n; i++) out.push(datePlus(semaineAffichee, i));
+  return out;
+}
+function nbCreneaux(){
+  return Math.max(1, Math.round((etat.settings.finJournee - etat.settings.debutJournee) / 30));
+}
+function tousLesItems(){ return Object.keys(etat.items).map(id => etat.items[id]); }
+
+function itemsDuJour(jour, placement){
+  return tousLesItems()
+    .filter(it => it.date === jour && it.placement === placement && it.status !== "abandoned")
+    .sort(comparerItems);
+}
+function itemsUrgents(){
+  const jours = joursAffiches();
+  return tousLesItems()
+    .filter(it => it.status !== "abandoned" && it.priority === "urgent" &&
+                  (it.placement === "week" ? it.date === semaineAffichee : jours.indexOf(it.date) >= 0))
+    .sort(comparerItems);
+}
+function itemsParking(){
+  return tousLesItems()
+    .filter(it => it.placement === "park" && it.status !== "abandoned")
+    .sort(comparerItems);
+}
+function comparerItems(a, b){
+  if ((a.status === "done") !== (b.status === "done")) return a.status === "done" ? 1 : -1;
+  if (a.placement === "slot" && b.placement === "slot") return (a.startMin || 0) - (b.startMin || 0);
+  const estReporte = it => (it.rolloverCount || 0) > 0 ? 0 : 1;
+  if (estReporte(a) !== estReporte(b)) return estReporte(a) - estReporte(b);
+  const pa = PRIO_ORDRE.indexOf(a.priority), pb = PRIO_ORDRE.indexOf(b.priority);
+  if (pa !== pb) return pa - pb;
+  return (a.createdAt || "").localeCompare(b.createdAt || "");
+}
+function chargeDuJour(jour){
+  return tousLesItems().filter(it =>
+    it.date === jour && it.status === "open" &&
+    (it.placement === "day" || it.placement === "slot")).length;
+}
+function noteSemaine(){
+  const n = etat.weekNotes[semaineAffichee];
+  return n ? (n.text || "") : "";
+}
+
+/* =========================================================================
+   [08] RENDU
+   -------------------------------------------------------------------------
+   Principe : le squelette de la grille (colonnes, creneaux vides) est
+   construit UNE fois. Ensuite on re-rend une zone entiere a la fois, ce qui
+   est a la fois plus simple et assez rapide (quelques dixiemes de
+   milliseconde). Regle mnemotechnique :
+       on re-rend tout, sauf ce que l'utilisateur est en train de toucher.
+   ========================================================================= */
+const els = {};
+function $(id){ return document.getElementById(id); }
+
+function initRefs(){
+  ["boardHead","boardBins","boardGrid","boardScroll","urgentList","parkList","notes",
+   "weekLabel","weekSub","saveChip","saveText","alertBar","alertText","alertAction","alertClose",
+   "veil","panel","toast","toastText","toastAction","live","fileInput","notesCnt","parkCnt",
+   "printhead","grabber"].forEach(id => { els[id] = $(id); });
+}
+
+let squeletteSignature = "";
+function construireSquelette(){
+  const jours = joursAffiches();
+  const n = nbCreneaux();
+  const sig = jours.length + "|" + n + "|" + etat.settings.debutJournee;
+  document.documentElement.style.setProperty("--ncols", jours.length);
+  if (sig === squeletteSignature) return;
+  squeletteSignature = sig;
+
+  // Bacs « A faire »
+  els.boardBins.innerHTML = "";
+  const lab = document.createElement("div");
+  lab.className = "binlabel"; lab.textContent = "À faire";
+  els.boardBins.appendChild(lab);
+  jours.forEach((j, i) => {
+    const b = document.createElement("div");
+    b.className = "daybin"; b.dataset.jour = j; b.dataset.col = i;
+    els.boardBins.appendChild(b);
+  });
+
+  // Grille horaire
+  els.boardGrid.innerHTML = "";
+  const gut = document.createElement("div");
+  gut.className = "gutter";
+  gut.style.height = (n * etat.settings.hauteurCreneau) + "px";
+  for (let s = 0; s <= n; s++){
+    const m = etat.settings.debutJournee + s * 30;
+    if (m % 60 !== 0) continue;
+    const l = document.createElement("div");
+    l.className = "hlab";
+    l.style.top = (s * etat.settings.hauteurCreneau) + "px";
+    l.textContent = minVersHeure(m);
+    gut.appendChild(l);
+  }
+  els.boardGrid.appendChild(gut);
+
+  jours.forEach((j, i) => {
+    const col = document.createElement("div");
+    col.className = "daycol"; col.dataset.jour = j; col.dataset.col = i;
+    col.style.gridTemplateRows = "repeat(" + n + ", var(--slot-h))";
+    const frag = document.createDocumentFragment();
+    for (let s = 0; s < n; s++){
+      const m = etat.settings.debutJournee + s * 30;
+      const cell = document.createElement("div");
+      cell.className = "slot" + (m % 60 === 30 ? " half" : "");
+      cell.style.gridRow = (s + 1);
+      cell.dataset.min = m;
+      frag.appendChild(cell);
+    }
+    col.appendChild(frag);
+    els.boardGrid.appendChild(col);
+  });
+}
+
+function rendre(zone){
+  construireSquelette();
+  if (!zone || zone === "entete")  rendreEntete();
+  if (!zone || zone === "urgent")  rendreUrgent();
+  if (!zone || zone === "grille")  { rendreEnTetesJours(); rendreBacs(); rendreGrille(); }
+  if (!zone || zone === "bas")     { rendreNotes(); rendreParking(); }
+  ajusterTousLesTitres();
+  majPastilleSauvegarde();
+}
+
+function rendreEntete(){
+  const jours = joursAffiches();
+  const fin = jours[jours.length - 1];
+  els.weekLabel.textContent = "Semaine " + numeroSemaine(semaineAffichee);
+  const memeMois = dateDepuisCle(semaineAffichee).getMonth() === dateDepuisCle(fin).getMonth();
+  els.weekSub.textContent = memeMois
+    ? dateDepuisCle(semaineAffichee).getDate() + " – " + dateLisible(fin, true)
+    : dateLisible(semaineAffichee, false) + " – " + dateLisible(fin, true);
+  els.printhead.textContent = "Semaine " + numeroSemaine(semaineAffichee) + " · " +
+    dateLisible(semaineAffichee, false) + " au " + dateLisible(fin, true);
+}
+
+function rendreEnTetesJours(){
+  const auj = dateAujourdhui();
+  els.boardHead.innerHTML = "";
+  const g = document.createElement("div");
+  g.className = "gcell"; g.textContent = "";
+  els.boardHead.appendChild(g);
+  joursAffiches().forEach((j, i) => {
+    const d = document.createElement("div");
+    d.className = "dayhead" + (j === auj ? " is-today" : "") + (dateEstWeekend(j) ? " is-weekend" : "");
+    const charge = chargeDuJour(j);
+    d.innerHTML = "";
+    const dn = document.createElement("span"); dn.className = "dn"; dn.textContent = JOURS_COURTS[dateIndexJour(j)];
+    const dd = document.createElement("span"); dd.className = "dd"; dd.textContent = dateDepuisCle(j).getDate();
+    d.appendChild(dn); d.appendChild(dd);
+    if (charge > 0){
+      const c = document.createElement("span");
+      c.className = "load"; c.textContent = charge;
+      if (charge > etat.settings.seuilCharge) c.dataset.level = "warn";
+      c.title = charge + " tâche" + (charge > 1 ? "s" : "") + " ouverte" + (charge > 1 ? "s" : "");
+      d.appendChild(c);
+    }
+    els.boardHead.appendChild(d);
+  });
+}
+
+function rendreBacs(){
+  const auj = dateAujourdhui();
+  els.boardBins.querySelectorAll(".daybin").forEach((bin, i) => {
+    const jour = joursAffiches()[i];
+    bin.dataset.jour = jour;
+    bin.className = "daybin" + (jour === auj ? " is-today" : "") + (dateEstWeekend(jour) ? " is-weekend" : "");
+    const frag = document.createDocumentFragment();
+    itemsDuJour(jour, "day").forEach(it => frag.appendChild(elementItem(it, "bin")));
+    bin.replaceChildren(frag);
+  });
+}
+
+function rendreGrille(){
+  const auj = dateAujourdhui();
+  const deb = etat.settings.debutJournee, n = nbCreneaux();
+  els.boardGrid.querySelectorAll(".daycol").forEach((col, i) => {
+    const jour = joursAffiches()[i];
+    col.dataset.jour = jour;
+    col.classList.toggle("is-today", jour === auj);
+    col.classList.toggle("is-weekend", dateEstWeekend(jour));
+    col.querySelectorAll(".slotitem, .nowline").forEach(e => e.remove());
+
+    itemsDuJour(jour, "slot").forEach(it => {
+      const debut = Math.max(deb, it.startMin == null ? deb : it.startMin);
+      const ligne = Math.round((debut - deb) / 30) + 1;
+      if (ligne < 1 || ligne > n) return;
+      const span = Math.max(1, Math.min(n - ligne + 1, Math.round((it.durMin || 30) / 30)));
+      const el = elementItem(it, "slot");
+      el.style.gridRow = ligne + " / span " + span;
+      col.appendChild(el);
+    });
+
+    if (jour === auj){
+      const m = minutesMaintenant();
+      if (m >= deb && m <= etat.settings.finJournee){
+        const l = document.createElement("div");
+        l.className = "nowline";
+        l.style.top = ((m - deb) / 30 * etat.settings.hauteurCreneau) + "px";
+        l.title = "Il est " + minVersHeure(m);
+        col.appendChild(l);
+      }
+    }
+  });
+}
+
+function rendreUrgent(){
+  const liste = itemsUrgents();
+  const frag = document.createDocumentFragment();
+  if (!liste.length){
+    const p = document.createElement("span");
+    p.className = "emptyhint";
+    p.textContent = "Rien d'urgent cette semaine. Cliquez sur la pastille d'une tâche pour la marquer urgente.";
+    frag.appendChild(p);
+  }
+  liste.forEach(it => {
+    const c = document.createElement("div");
+    c.className = "uchip" + (it.status === "done" ? " done" : "");
+    c.dataset.id = it.id;
+
+    const chk = document.createElement("input");
+    chk.type = "checkbox"; chk.className = "chk"; chk.checked = it.status === "done";
+    chk.setAttribute("aria-label", "Terminer : " + (it.title || "tâche sans titre"));
+    c.appendChild(chk);
+
+    const t = document.createElement("input");
+    t.type = "text"; t.className = "utitle title"; t.value = it.title;
+    t.placeholder = "Tâche urgente…";
+    t.size = Math.max(6, Math.min(56, (it.title || "").length + 2));
+    c.appendChild(t);
+
+    if (it.placement !== "week" && it.date){
+      const d = document.createElement("span");
+      d.className = "uday"; d.textContent = JOURS_COURTS[dateIndexJour(it.date)].toLowerCase();
+      c.appendChild(d);
+    }
+    const x = document.createElement("button");
+    x.className = "del"; x.innerHTML = "&times;"; x.title = "Supprimer";
+    c.appendChild(x);
+    frag.appendChild(c);
+  });
+  els.urgentList.replaceChildren(frag);
+}
+
+function rendreNotes(){
+  if (document.activeElement === els.notes) return;   // jamais re-rendu pendant la saisie
+  els.notes.value = noteSemaine();
+  const n = els.notes.value.trim().length;
+  els.notesCnt.textContent = n ? n + " caractères" : "";
+}
+
+function rendreParking(){
+  const liste = itemsParking();
+  const frag = document.createDocumentFragment();
+  if (!liste.length){
+    const p = document.createElement("div");
+    p.className = "emptyhint";
+    p.textContent = "Glissez ici ce qui peut attendre. Rien n'est perdu, rien ne se reporte.";
+    frag.appendChild(p);
+  }
+  liste.forEach(it => frag.appendChild(elementItem(it, "park")));
+  els.parkList.replaceChildren(frag);
+  els.parkCnt.textContent = liste.length ? liste.length : "";
+}
+
+/* Fabrique d'un element. Le titre est un vrai champ de saisie, toujours
+   editable en place : aucune fenetre ne s'ouvre jamais pour ecrire une tache. */
+function elementItem(it, contexte){
+  const el = document.createElement("div");
+  el.className = "item p-" + it.priority + (it.status === "done" ? " done" : "") +
+                 (contexte === "slot" ? " slotitem" : "");
+  el.dataset.id = it.id;
+  el.dataset.ctx = contexte;
+
+  const trop = (it.rolloverCount || 0) >= 3;
+  if (trop && it.status === "open") el.classList.add("stale");
+
+  const grip = document.createElement("div");
+  grip.className = "grip"; grip.draggable = true;
+  grip.title = "Glisser pour déplacer";
+  el.appendChild(grip);
+
+  const chk = document.createElement("input");
+  chk.type = "checkbox"; chk.className = "chk";
+  chk.checked = it.status === "done";
+  chk.setAttribute("aria-label", "Terminer : " + (it.title || "tâche sans titre"));
+  el.appendChild(chk);
+
+  const t = document.createElement("textarea");
+  t.className = "title"; t.rows = 1; t.value = it.title;
+  t.spellcheck = true;
+  t.placeholder = contexte === "slot" ? "Rendez-vous…" : "Nouvelle tâche…";
+  el.appendChild(t);
+
+  if ((it.rolloverCount || 0) > 0 && it.status === "open"){
+    const r = document.createElement("span");
+    r.className = "roll";
+    r.textContent = "↩" + (it.rolloverCount > 1 ? it.rolloverCount : "");
+    r.title = "Reporté " + it.rolloverCount + " fois · prévu au départ le " +
+              dateLisibleLongue(it.origDate || it.date) +
+              " · cliquez pour la renvoyer à sa date d'origine";
+    el.appendChild(r);
+  }
+
+  const p = document.createElement("button");
+  p.className = "pdot"; p.dataset.p = it.priority;
+  p.title = "Priorité : " + PRIO[it.priority].nom + " — cliquez pour changer";
+  p.setAttribute("aria-label", "Priorité : " + PRIO[it.priority].nom);
+  el.appendChild(p);
+
+  const x = document.createElement("button");
+  x.className = "del"; x.innerHTML = "&times;"; x.title = "Supprimer";
+  el.appendChild(x);
+
+  if (contexte === "slot"){
+    const rz = document.createElement("div");
+    rz.className = "resize"; rz.title = "Étirer pour changer la durée";
+    el.appendChild(rz);
+  }
+  return el;
+}
+
+/* Un champ multi-ligne n'a pas de hauteur automatique en HTML : on la calcule.
+   C'est ce qui permet a un titre long de revenir a la ligne au lieu d'etre
+   tronque, tout en restant editable directement sur place. */
+function ajusterHauteur(el){
+  el.style.height = "auto";
+  el.style.height = Math.max(18, el.scrollHeight) + "px";
+}
+function ajusterTousLesTitres(racine){
+  (racine || document).querySelectorAll("textarea.title").forEach(ajusterHauteur);
+}
+
+/* --- Indicateurs, messages, panneaux -------------------------------------- */
+function majPastilleSauvegarde(){
+  const t = els.saveText, chip = els.saveChip;
+  if (!stockageOK){ chip.dataset.level = "bad"; t.textContent = "Stockage indisponible"; return; }
+  const dep = etat.meta.lastBackupOn ? dateEcart(etat.meta.lastBackupOn, dateAujourdhui()) : null;
+  if (dep === null){ chip.dataset.level = "warn"; t.textContent = "Jamais sauvegardé"; return; }
+  if (dep <= 1){ delete chip.dataset.level; t.textContent = dep === 0 ? "Sauvegardé aujourd'hui" : "Sauvegardé hier"; return; }
+  chip.dataset.level = dep > 13 ? "bad" : (dep > 6 ? "warn" : "");
+  if (!chip.dataset.level) delete chip.dataset.level;
+  t.textContent = "Sauvegardé il y a " + dep + " jours";
+}
+
+let toastTimer = null;
+function signaler(texte, niveau, persistant){
+  els.live.textContent = texte;
+  if (persistant){
+    els.alertText.textContent = texte;
+    els.alertBar.classList.toggle("grave", niveau === "bad");
+    els.alertBar.hidden = false;
+    els.alertAction.hidden = true;
+    return;
+  }
+  els.toastText.textContent = texte;
+  els.toastAction.hidden = true;
+  els.toast.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { els.toast.hidden = true; }, 3200);
+}
+function signalerAvecAction(texte, libelle, action){
+  els.live.textContent = texte;
+  els.toastText.textContent = texte;
+  els.toastAction.textContent = libelle;
+  els.toastAction.hidden = false;
+  els.toastAction.onclick = () => { els.toast.hidden = true; action(); };
+  els.toast.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { els.toast.hidden = true; }, 7000);
+}
+
+let fermerPanneau = null;
+function ouvrirPanneau(html, large){
+  els.panel.className = "panel" + (large ? " wide" : "");
+  els.panel.innerHTML = html;
+  els.veil.hidden = false;
+  const f = els.panel.querySelector("input,textarea,button");
+  if (f) f.focus();
+  return els.panel;
+}
+function fermerLePanneau(){
+  els.veil.hidden = true;
+  els.panel.innerHTML = "";
+  if (typeof fermerPanneau === "function"){ const f = fermerPanneau; fermerPanneau = null; f(); }
+}
+function echapper(s){
+  return String(s == null ? "" : s)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+/* =========================================================================
+   [09] EVENEMENTS
+   -------------------------------------------------------------------------
+   Un seul ecouteur pose sur un conteneur plutot qu'un par element : c'est ce
+   qu'on appelle la delegation. Sans cela il faudrait rattacher des centaines
+   d'ecouteurs a chaque re-affichage, avec une fuite de memoire a la clef.
+   ========================================================================= */
+function creerItem(props, focus){
+  const id = nouvelId();
+  const now = new Date().toISOString();
+  const base = Object.assign({}, ITEM_DEFAUT, {
+    id: id, createdAt: now, updatedAt: now,
+    date: props.date || dateAujourdhui(),
+  }, props);
+  base.origDate = base.date;
+  if (base.priority === "semaine") base.weekOfOrigin = dateLundi(base.date);
+  commit("Nouvelle tâche", e => { e.items[id] = base; });
+  if (focus !== false) focaliser(id);
+  return id;
+}
+function focaliser(id){
+  requestAnimationFrame(() => {
+    const el = document.querySelector('[data-id="' + id + '"] .title');
+    if (el){ el.focus(); el.select(); }
+  });
+}
+function itemDe(node){
+  const h = node.closest("[data-id]");
+  return h ? etat.items[h.dataset.id] : null;
+}
+
+function basculerTermine(it){
+  const fait = it.status === "done";
+  commit(fait ? "Tâche décochée" : "Tâche terminée", () => {
+    it.status = fait ? "open" : "done";
+    it.doneAt = fait ? null : new Date().toISOString();
+    it.updatedAt = new Date().toISOString();
+  }, { sansRendu: true });
+  // On ne re-rend pas la grille : cocher ne doit jamais faire sauter le scroll
+  // ni le focus. On met a jour seulement l'element concerne.
+  document.querySelectorAll('[data-id="' + it.id + '"]').forEach(el => {
+    el.classList.toggle("done", it.status === "done");
+    const c = el.querySelector(".chk"); if (c) c.checked = it.status === "done";
+  });
+  rendreEnTetesJours();
+}
+
+function supprimerItem(it){
+  const copie = JSON.parse(JSON.stringify(it));
+  commit("Suppression", e => { delete e.items[it.id]; });
+  signalerAvecAction("« " + (copie.title || "tâche sans titre") + " » supprimée.", "Annuler",
+    () => commit("Restauration", e => { e.items[copie.id] = copie; }));
+}
+
+function brancherEvenements(){
+  /* --- Navigation ------------------------------------------------------- */
+  $("prevWeek").onclick = () => allerSemaine(-1);
+  $("nextWeek").onclick = () => allerSemaine(1);
+  $("todayBtn").onclick = () => { semaineAffichee = dateLundi(dateAujourdhui()); rendre(); };
+  $("settingsBtn").onclick = panneauReglages;
+  $("helpBtn").onclick = panneauAide;
+  $("backupBtn").onclick = panneauSauvegarde;
+  els.alertClose.onclick = () => { els.alertBar.hidden = true; };
+  els.veil.onclick = e => { if (e.target === els.veil) fermerLePanneau(); };
+
+  $("addUrgent").onclick = () => creerItem({
+    placement: "week", date: semaineAffichee, priority: "urgent",
+  });
+  $("addPark").onclick = () => creerItem({ placement: "park", date: dateAujourdhui() });
+
+  /* --- Clics dans les zones d'elements ----------------------------------- */
+  document.addEventListener("click", e => {
+    const cible = e.target;
+
+    if (cible.classList.contains("chk")){ const it = itemDe(cible); if (it) basculerTermine(it); return; }
+    if (cible.classList.contains("del")){ const it = itemDe(cible); if (it) supprimerItem(it); return; }
+    if (cible.classList.contains("pdot")){
+      const it = itemDe(cible); if (!it) return;
+      const suivante = prioriteSuivante(it.priority);
+      commit("Priorité modifiée", () => definirPriorite(it, suivante));
+      signaler("Priorité : " + PRIO[suivante].nom + " — " + PRIO[suivante].desc);
+      return;
+    }
+    if (cible.classList.contains("roll")){
+      const it = itemDe(cible); if (!it) return;
+      const orig = it.origDate;
+      commit("Retour à la date d'origine", () => {
+        it.date = orig; it.rolloverCount = 0; it.lastRolloverOn = "";
+        it.updatedAt = new Date().toISOString();
+      });
+      semaineAffichee = dateLundi(orig); rendre();
+      signaler("Renvoyée au " + dateLisibleLongue(orig) + ".");
+      return;
+    }
+
+    // Clic dans le vide d'un bac « A faire » : on cree une tache tout de suite.
+    if (cible.classList.contains("daybin")){
+      creerItem({ placement: "day", date: cible.dataset.jour });
+      return;
+    }
+    if (cible.classList.contains("parklist")){
+      creerItem({ placement: "park", date: dateAujourdhui() });
+      return;
+    }
+    // Clic sur un creneau vide : on cree un element a cette heure precise.
+    if (cible.classList.contains("slot")){
+      const col = cible.closest(".daycol");
+      creerItem({ placement: "slot", date: col.dataset.jour, startMin: +cible.dataset.min, durMin: 30 });
+      return;
+    }
+  });
+
+  /* --- Saisie du titre, en place ----------------------------------------- */
+  document.addEventListener("input", e => {
+    if (!e.target.classList.contains("title")) return;
+    const it = itemDe(e.target); if (!it) return;
+    idEnEdition = it.id;
+    it.title = e.target.value;
+    it.updatedAt = new Date().toISOString();
+    if (e.target.tagName === "TEXTAREA") ajusterHauteur(e.target);
+    planifierEnregistrement();
+  });
+  document.addEventListener("focusout", e => {
+    if (!e.target.classList.contains("title")) return;
+    const it = itemDe(e.target); if (!it) return;
+    idEnEdition = null;
+    if (!it.title.trim()){                       // une ligne laissee vide disparait
+      commit("Ligne vide retirée", st => { delete st.items[it.id]; }, { sansAnnulation: true });
+    } else { rendre(); }
+  });
+  document.addEventListener("keydown", e => {
+    if (e.target.classList && e.target.classList.contains("title")){
+      const it = itemDe(e.target); if (!it) return;
+      if (e.key === "Enter"){
+        e.preventDefault(); e.target.blur();
+        if (it.title.trim()){
+          if (it.placement === "week") creerItem({ placement:"week", date: it.date, priority:"urgent" });
+          else if (it.placement === "park") creerItem({ placement:"park", date: it.date });
+          else creerItem({ placement:"day", date: it.date, priority: it.priority });
+        }
+        return;
+      }
+      if (e.key === "Escape"){ e.preventDefault(); e.target.blur(); return; }
+      if (e.key === "Backspace" && e.target.value === ""){
+        e.preventDefault();
+        commit("Ligne retirée", st => { delete st.items[it.id]; }, { sansAnnulation: true });
+        return;
+      }
+      if ((e.altKey || e.metaKey) && ["1","2","3"].indexOf(e.key) >= 0){
+        e.preventDefault();
+        const p = PRIO_ORDRE[+e.key - 1];
+        commit("Priorité modifiée", () => definirPriorite(it, p));
+        focaliser(it.id);
+        return;
+      }
+      return;
+    }
+    raccourcisGlobaux(e);
+  });
+
+  /* --- Notes de la semaine ----------------------------------------------- */
+  let tNotes = null;
+  els.notes.addEventListener("input", () => {
+    clearTimeout(tNotes);
+    const v = els.notes.value, sem = semaineAffichee;
+    tNotes = setTimeout(() => {
+      commit("Notes", e => { e.weekNotes[sem] = { text: v, updatedAt: new Date().toISOString() }; },
+             { sansRendu: true, sansAnnulation: true });
+      els.notesCnt.textContent = v.trim().length ? v.trim().length + " caractères" : "";
+    }, 300);
+  });
+
+  /* --- Glisser-deposer ---------------------------------------------------- */
+  let idGlisse = null;
+  document.addEventListener("dragstart", e => {
+    if (!e.target.classList || !e.target.classList.contains("grip")) return;
+    const it = itemDe(e.target); if (!it) return;
+    idGlisse = it.id;
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", it.id);
+    const el = e.target.closest(".item");
+    el.classList.add("dragging");
+    e.dataTransfer.setDragImage(el, 12, 10);
+  });
+  document.addEventListener("dragend", () => {
+    idGlisse = null;
+    document.querySelectorAll(".dragging").forEach(el => el.classList.remove("dragging"));
+    document.querySelectorAll(".dropok").forEach(el => el.classList.remove("dropok"));
+  });
+  document.addEventListener("dragover", e => {
+    const z = zoneDepot(e.target);
+    if (!z || !idGlisse) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (!z.classList.contains("dropok")){
+      document.querySelectorAll(".dropok").forEach(el => el.classList.remove("dropok"));
+      z.classList.add("dropok");
+    }
+  });
+  document.addEventListener("drop", e => {
+    const z = zoneDepot(e.target);
+    const id = idGlisse || e.dataTransfer.getData("text/plain");
+    if (!z || !id || !etat.items[id]) return;
+    e.preventDefault();
+    deposer(etat.items[id], z);
+  });
+  function zoneDepot(n){
+    if (!n || !n.closest) return null;
+    return n.closest(".slot, .daybin, .parklist, .urgentlist");
+  }
+  function deposer(it, z){
+    commit("Déplacement", () => {
+      if (z.classList.contains("slot")){
+        it.placement = "slot";
+        it.date = z.closest(".daycol").dataset.jour;
+        it.startMin = +z.dataset.min;
+      } else if (z.classList.contains("daybin")){
+        it.placement = "day"; it.date = z.dataset.jour; it.startMin = null;
+      } else if (z.classList.contains("parklist")){
+        it.placement = "park"; it.startMin = null;
+      } else if (z.classList.contains("urgentlist")){
+        it.placement = "week"; it.date = semaineAffichee; it.startMin = null;
+        definirPriorite(it, "urgent");
+      }
+      it.updatedAt = new Date().toISOString();
+    });
+  }
+
+  /* --- Etirer un rendez-vous pour changer sa duree ------------------------ */
+  let redim = null;
+  document.addEventListener("mousedown", e => {
+    if (!e.target.classList || !e.target.classList.contains("resize")) return;
+    const it = itemDe(e.target); if (!it) return;
+    e.preventDefault();
+    redim = { it: it, y0: e.clientY, dur0: it.durMin || 30 };
+  });
+  document.addEventListener("mousemove", e => {
+    if (!redim) return;
+    const pas = Math.round((e.clientY - redim.y0) / etat.settings.hauteurCreneau);
+    const nouvelle = Math.max(30, redim.dur0 + pas * 30);
+    if (nouvelle !== redim.it.durMin){
+      redim.it.durMin = nouvelle;
+      rendreGrille();
+    }
+  });
+  document.addEventListener("mouseup", () => {
+    if (!redim) return;
+    const it = redim.it; redim = null;
+    commit("Durée modifiée", () => { it.updatedAt = new Date().toISOString(); }, { sansAnnulation: true });
+  });
+
+  /* --- Hauteur du bas de page -------------------------------------------- */
+  let grab = null;
+  els.grabber.addEventListener("mousedown", e => {
+    grab = { y0: e.clientY, h0: etat.settings.hauteurBas }; e.preventDefault();
+  });
+  document.addEventListener("mousemove", e => {
+    if (!grab) return;
+    const h = Math.max(64, Math.min(460, grab.h0 - (e.clientY - grab.y0)));
+    etat.settings.hauteurBas = h;
+    document.querySelector(".bottom").style.height = h + "px";
+  });
+  document.addEventListener("mouseup", () => { if (grab){ grab = null; planifierEnregistrement(); } });
+
+  /* --- Enregistrement garanti a la fermeture ------------------------------ */
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") enregistrerMaintenant();
+    else verifierChangementDeJour();
+  });
+  window.addEventListener("pagehide", enregistrerMaintenant);
+
+  /* --- Deux onglets ouverts sur le meme agenda ---------------------------- */
+  window.addEventListener("storage", ev => {
+    if (!ev.key || ev.key.indexOf(PREFIX) !== 0) return;
+    if (ev.key !== K.slot) return;
+    signaler("Cet agenda est ouvert dans un autre onglet. Rechargez cette page pour éviter d'écraser vos données.", "bad", true);
+  });
+}
+
+function allerSemaine(n){
+  semaineAffichee = datePlus(semaineAffichee, n * 7);
+  rendre();
+}
+
+function raccourcisGlobaux(e){
+  const dansUnChamp = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !e.shiftKey){
+    e.preventDefault(); annuler(); return;
+  }
+  if (e.key === "Escape" && !els.veil.hidden){ e.preventDefault(); fermerLePanneau(); return; }
+  if (dansUnChamp) return;
+  if (e.key === "ArrowLeft"){ e.preventDefault(); allerSemaine(-1); return; }
+  if (e.key === "ArrowRight"){ e.preventDefault(); allerSemaine(1); return; }
+  if (e.key.toLowerCase() === "t"){ e.preventDefault(); semaineAffichee = dateLundi(dateAujourdhui()); rendre(); return; }
+  if (e.key.toLowerCase() === "n"){
+    e.preventDefault();
+    const auj = dateAujourdhui();
+    const cible = joursAffiches().indexOf(auj) >= 0 ? auj : semaineAffichee;
+    creerItem({ placement: "day", date: cible });
+    return;
+  }
+  if (e.key === "?"){ e.preventDefault(); panneauAide(); }
+}
+
+/* =========================================================================
+   [10] THEME ET REGLAGES
+   ========================================================================= */
+function appliquerReglages(){
+  const s = etat.settings;
+  const r = document.documentElement.style;
+  document.documentElement.dataset.theme = s.theme;
+  r.setProperty("--accent", s.accent);
+  r.setProperty("--fs", s.taillePolice + "px");
+  r.setProperty("--slot-h", s.hauteurCreneau + "px");
+  document.querySelector(".bottom").style.height = s.hauteurBas + "px";
+  squeletteSignature = "";     // force la reconstruction du squelette
+}
+
+function panneauReglages(){
+  const s = etat.settings;
+  const opt = (v, sel, lab) => '<option value="' + v + '"' + (v == sel ? " selected" : "") + ">" + lab + "</option>";
+  let heures = "";
+  for (let h = 0; h <= 23; h++) heures += opt(h * 60, null, minVersHeure(h * 60));
+
+  ouvrirPanneau(
+  '<div class="panelhead"><h2>Réglages</h2>' +
+  '<p>Tout est modifiable à tout moment. Rien ici ne touche à vos tâches.</p></div>' +
+  '<div class="panelbody">' +
+
+    '<div class="sectitle">Apparence</div>' +
+    '<div class="field"><label>Thème</label>' +
+      '<select id="rTheme">' + opt("clair", s.theme, "Clair") + opt("sombre", s.theme, "Sombre") + '</select></div>' +
+    '<div class="field"><label>Couleur d\'accent<small>Utilisée pour les boutons, la sélection et les surbrillances.</small></label>' +
+      '<input type="color" id="rAccent" value="' + echapper(s.accent) + '"></div>' +
+    '<div class="field"><label>Taille du texte<small><span id="rFsVal">' + s.taillePolice + '</span> pixels</small></label>' +
+      '<input type="range" id="rFs" min="12" max="18" step="1" value="' + s.taillePolice + '"></div>' +
+    '<div class="field"><label>Hauteur d\'une demi-heure<small><span id="rShVal">' + s.hauteurCreneau + '</span> pixels — plus c\'est bas, plus la journée tient à l\'écran.</small></label>' +
+      '<input type="range" id="rSh" min="14" max="44" step="2" value="' + s.hauteurCreneau + '"></div>' +
+
+    '<div class="sectitle">La grille</div>' +
+    '<div class="field"><label>Début de journée</label><select id="rDeb">' + heures + '</select></div>' +
+    '<div class="field"><label>Fin de journée</label><select id="rFin">' + heures + '</select></div>' +
+    '<div class="field"><label>Afficher samedi et dimanche</label>' +
+      '<span class="switch"><input type="checkbox" id="rWe"' + (s.afficherWeekend ? " checked" : "") + '><span></span></span></div>' +
+    '<div class="field"><label>Seuil de surcharge<small>Le compteur en haut d\'un jour passe à l\'orange au-delà de ce nombre de tâches ouvertes.</small></label>' +
+      '<input type="number" id="rSeuil" min="1" max="40" value="' + s.seuilCharge + '"></div>' +
+
+    '<div class="sectitle">Report automatique</div>' +
+    '<div class="field"><label>Reporter les tâches non faites<small>Elles reviennent sur la journée d\'aujourd\'hui, marquées d\'une flèche ↩, jamais en silence.</small></label>' +
+      '<span class="switch"><input type="checkbox" id="rRep"' + (s.reportActif ? " checked" : "") + '><span></span></span></div>' +
+    '<div class="field"><label>Le vendredi reporte au lundi<small>Sinon, une tâche du vendredi passe au samedi et personne ne la voit avant lundi.</small></label>' +
+      '<span class="switch"><input type="checkbox" id="rWeSaut"' + (s.reportSauteWeekend ? " checked" : "") + '><span></span></span></div>' +
+    '<div class="field"><label>Envoyer au parking au-delà de<small>Une tâche de mars n\'a plus rien à faire dans votre journée de septembre. Elle est rangée, jamais supprimée.</small></label>' +
+      '<input type="number" id="rAge" min="7" max="365" value="' + s.reportAgeMax + '"> jours</div>' +
+    '<div class="field"><label>Écran de rattrapage au-delà de<small>Nombre de tâches en attente après une absence à partir duquel l\'agenda vous fait trier plutôt que de tout empiler.</small></label>' +
+      '<input type="number" id="rTri" min="3" max="80" value="' + s.reportSeuilTriage + '"> tâches</div>' +
+    '<div class="field"><label>Signaler une tâche « quand je peux » après<small>Elle vous est présentée une fois pour décider : la découper, la dater ou l\'abandonner.</small></label>' +
+      '<input type="number" id="rLibre" min="7" max="365" value="' + s.libreSeuilJours + '"> jours</div>' +
+
+    '<div class="sectitle">Fin de journée</div>' +
+    '<div class="field"><label>Proposer le point de fin de journée<small>Un écran de trente secondes pour trancher sur chaque tâche non faite.</small></label>' +
+      '<span class="switch"><input type="checkbox" id="rSas"' + (s.sasActif ? " checked" : "") + '><span></span></span></div>' +
+    '<div class="field"><label>À partir de</label><input type="time" id="rSasH" value="' + minVersHeure(s.sasHeure) + '"></div>' +
+
+    '<div class="sectitle">Sauvegarde</div>' +
+    '<div class="field"><label>Sauvegarde automatique<small>Un fichier daté est déposé dans votre dossier Téléchargements. C\'est votre seule protection contre un effacement des données du navigateur.</small></label>' +
+      '<span class="switch"><input type="checkbox" id="rBak"' + (s.sauvegardeAuto ? " checked" : "") + '><span></span></span></div>' +
+    '<div class="field"><label>Fréquence</label><select id="rBakF">' +
+      opt(1, s.sauvegardeJours, "Chaque jour (recommandé)") + opt(7, s.sauvegardeJours, "Chaque semaine") + '</select></div>' +
+
+  '</div>' +
+  '<div class="panelfoot"><button class="btn ghost" id="rReset">Rétablir les valeurs par défaut</button>' +
+  '<div class="spacer"></div><button class="btn primary" id="rClose">Fermer</button></div>');
+
+  $("rDeb").value = s.debutJournee;
+  $("rFin").value = s.finJournee;
+
+  const lier = (id, cle, transf) => {
+    const el = $(id);
+    const ev = (el.type === "range" || el.type === "color") ? "input" : "change";
+    el.addEventListener(ev, () => {
+      let v = el.type === "checkbox" ? el.checked : el.value;
+      if (transf) v = transf(v);
+      etat.settings[cle] = v;
+      if (id === "rFs") $("rFsVal").textContent = v;
+      if (id === "rSh") $("rShVal").textContent = v;
+      if (cle === "debutJournee" && etat.settings.finJournee <= v){ etat.settings.finJournee = Math.min(1440, v + 60); $("rFin").value = etat.settings.finJournee; }
+      if (cle === "finJournee" && etat.settings.debutJournee >= v){ etat.settings.debutJournee = Math.max(0, v - 60); $("rDeb").value = etat.settings.debutJournee; }
+      appliquerReglages(); rendre(); planifierEnregistrement();
+    });
+  };
+  lier("rTheme","theme"); lier("rAccent","accent");
+  lier("rFs","taillePolice",Number); lier("rSh","hauteurCreneau",Number);
+  lier("rDeb","debutJournee",Number); lier("rFin","finJournee",Number);
+  lier("rWe","afficherWeekend"); lier("rSeuil","seuilCharge",Number);
+  lier("rRep","reportActif"); lier("rWeSaut","reportSauteWeekend");
+  lier("rAge","reportAgeMax",Number); lier("rTri","reportSeuilTriage",Number);
+  lier("rLibre","libreSeuilJours",Number);
+  lier("rSas","sasActif"); lier("rSasH","sasHeure",heureVersMin);
+  lier("rBak","sauvegardeAuto"); lier("rBakF","sauvegardeJours",Number);
+
+  $("rReset").onclick = () => {
+    const h = etat.settings.hauteurBas;
+    etat.settings = Object.assign({}, REGLAGES_DEFAUT, { hauteurBas: h });
+    appliquerReglages(); rendre(); planifierEnregistrement();
+    fermerLePanneau(); panneauReglages();
+  };
+  $("rClose").onclick = fermerLePanneau;
+}
+
+function panneauAide(){
+  ouvrirPanneau(
+  '<div class="panelhead"><h2>Aide et raccourcis</h2></div>' +
+  '<div class="panelbody">' +
+    '<div class="note danger"><strong>La règle à ne jamais oublier.</strong><br>' +
+    'Ce fichier contient le programme, pas vos données. Vos tâches sont rangées par le navigateur, ' +
+    'dans un espace attaché à ce fichier. Choisissez un dossier et un nom une bonne fois pour toutes, ' +
+    'et utilisez <strong>Chrome ou Edge</strong>. Sous Firefox, renommer ou déplacer le fichier fait apparaître un agenda vide ' +
+    '(vos données ne sont pas détruites : remettez le fichier à son emplacement exact et elles reviennent). ' +
+    'Safari refuse purement et simplement de stocker quoi que ce soit pour un fichier local.</div>' +
+
+    '<div class="sectitle">Les trois priorités</div>' +
+    '<div class="arbrow"><div class="txt"><strong style="color:var(--p-urgent)">● Urgent</strong>' +
+      '<small>Apparaît dans le bandeau rouge, qui traverse toute la semaine. Réservez-le à ce qui doit être fait maintenant.</small></div></div>' +
+    '<div class="arbrow"><div class="txt"><strong style="color:var(--p-semaine)">● Cette semaine</strong>' +
+      '<small>Se reporte de jour en jour, mais ne franchit pas le dimanche sans votre décision : le lundi matin, l\'agenda vous demande d\'arbitrer.</small></div></div>' +
+    '<div class="arbrow"><div class="txt"><strong style="color:var(--p-libre)">● Quand je peux</strong>' +
+      '<small>Le niveau par défaut. Report libre, aucune alerte. Signalée une seule fois si elle traîne depuis plus d\'un mois.</small></div></div>' +
+    '<p style="font-size:13px;color:var(--text-soft)">Cliquez sur la pastille ronde d\'une tâche pour passer d\'un niveau au suivant.</p>' +
+
+    '<div class="sectitle">Raccourcis clavier</div>' +
+    '<div class="arbrow"><div class="txt"><kbd>N</kbd> Nouvelle tâche aujourd\'hui</div></div>' +
+    '<div class="arbrow"><div class="txt"><kbd>Entrée</kbd> Valider et créer la ligne suivante</div></div>' +
+    '<div class="arbrow"><div class="txt"><kbd>Échap</kbd> Sortir du champ de saisie</div></div>' +
+    '<div class="arbrow"><div class="txt"><kbd>Alt</kbd>+<kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> Priorité de la tâche en cours de saisie</div></div>' +
+    '<div class="arbrow"><div class="txt"><kbd>←</kbd> <kbd>→</kbd> Semaine précédente / suivante</div></div>' +
+    '<div class="arbrow"><div class="txt"><kbd>T</kbd> Revenir à aujourd\'hui</div></div>' +
+    '<div class="arbrow"><div class="txt"><kbd>Ctrl</kbd>+<kbd>Z</kbd> Annuler la dernière action</div></div>' +
+    '<div class="arbrow"><div class="txt"><kbd>Ctrl</kbd>+<kbd>P</kbd> Imprimer la semaine (paysage, une page)</div></div>' +
+    '<div class="arbrow"><div class="txt"><kbd>?</kbd> Cette aide</div></div>' +
+
+    '<div class="sectitle">Gestes</div>' +
+    '<div class="arbrow"><div class="txt">Attraper la poignée à gauche d\'une tâche pour la déplacer<small>Vers un autre jour, un créneau horaire, le bandeau urgent ou le parking.</small></div></div>' +
+    '<div class="arbrow"><div class="txt">Étirer le bas d\'un rendez-vous pour changer sa durée</div></div>' +
+    '<div class="arbrow"><div class="txt">Cliquer sur la flèche ↩ d\'une tâche reportée<small>Elle repart à sa date d\'origine.</small></div></div>' +
+    '<p style="font-size:12px;color:var(--text-faint);text-align:right;margin-top:14px">Agenda version ' + APP_VERSION + '</p>' +
+  '</div>' +
+  '<div class="panelfoot"><div class="spacer"></div><button class="btn primary" id="aClose">Fermer</button></div>');
+  $("aClose").onclick = fermerLePanneau;
+}
+
+/* =========================================================================
+   [11] IMPORT / EXPORT / SAUVEGARDE
+   ========================================================================= */
+function nomFichierSauvegarde(suffixe){
+  return "agenda-" + (suffixe ? suffixe + "-" : "") + dateAujourdhui() + ".json";
+}
+
+function telecharger(nom, texte){
+  try {
+    const blob = new Blob([texte], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = nom;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    return true;
+  } catch(e){ return false; }
+}
+
+function exporter(auto, suffixe){
+  const texte = JSON.stringify(enveloppe(etat), null, auto ? 0 : 1);
+  const ok = telecharger(nomFichierSauvegarde(suffixe), texte);
+  if (ok && !suffixe){
+    etat.meta.lastBackupOn = dateAujourdhui();
+    planifierEnregistrement();
+    majPastilleSauvegarde();
+  }
+  return ok;
+}
+
+function panneauSauvegarde(){
+  const dep = etat.meta.lastBackupOn ? dateEcart(etat.meta.lastBackupOn, dateAujourdhui()) : null;
+  const etatTexte = dep === null ? "Aucune sauvegarde enregistrée pour l'instant."
+    : dep === 0 ? "Dernière sauvegarde : aujourd'hui."
+    : "Dernière sauvegarde il y a " + dep + " jour" + (dep > 1 ? "s" : "") + " (" + dateLisible(etat.meta.lastBackupOn, true) + ").";
+  const snaps = listerInstantanes();
+
+  ouvrirPanneau(
+  '<div class="panelhead"><h2>Sauvegarde et restauration</h2><p>' + echapper(etatTexte) + '</p></div>' +
+  '<div class="panelbody">' +
+    '<div class="note">Un fichier de sauvegarde est un vrai fichier sur votre disque. Il survit à un vidage du navigateur, ' +
+    'à un changement de navigateur et même à une réinstallation de Windows. C\'est la seule protection qui tienne dans la durée. ' +
+    'Copiez de temps en temps ces fichiers dans OneDrive, Google Drive ou sur une clé USB.</div>' +
+
+    '<div class="sectitle">Enregistrer une copie</div>' +
+    '<div class="field"><label>Télécharger un fichier de sauvegarde<small>Il arrive dans votre dossier Téléchargements, nommé avec la date du jour.</small></label>' +
+      '<button class="btn primary" id="bExp">Télécharger</button></div>' +
+    '<div class="field"><label>Copier les données dans le presse-papier<small>Solution de secours si le téléchargement est bloqué : collez le texte dans un fichier bloc-notes que vous rangez où vous voulez.</small></label>' +
+      '<button class="btn" id="bCopy">Afficher et copier</button></div>' +
+    '<div class="field"><label>Archive autonome<small>Une copie de l\'agenda avec vos données à l\'intérieur. Se rouvre toute seule dans plusieurs années, sans rien importer.</small></label>' +
+      '<button class="btn" id="bArch">Créer l\'archive</button></div>' +
+
+    '<div class="sectitle">Restaurer</div>' +
+    '<div class="field"><label>Depuis un fichier de sauvegarde<small>Vos données actuelles sont automatiquement sauvegardées avant tout remplacement.</small></label>' +
+      '<button class="btn" id="bImp">Choisir un fichier…</button></div>' +
+    '<div class="field"><label>Depuis un texte copié<small>Collez ici le contenu d\'une sauvegarde.</small></label>' +
+      '<button class="btn" id="bPaste">Coller un texte…</button></div>' +
+    (snaps.length
+      ? '<div class="field"><label>Depuis un instantané interne<small>L\'agenda garde tout seul ' + snaps.length + ' point' + (snaps.length > 1 ? "s" : "") + ' de retour dans le navigateur. Utile après une fausse manœuvre, mais pas après un effacement du navigateur.</small></label>' +
+        '<select id="bSnapSel">' + snaps.map(j => '<option value="' + j + '">' + echapper(dateLisibleLongue(j)) + '</option>').join("") + '</select> ' +
+        '<button class="btn" id="bSnap">Restaurer</button></div>'
+      : "") +
+  '</div>' +
+  '<div class="panelfoot"><div class="spacer"></div><button class="btn primary" id="bClose">Fermer</button></div>', true);
+
+  $("bExp").onclick = () => {
+    if (exporter(false)) signaler("Sauvegarde téléchargée : " + nomFichierSauvegarde());
+    else signaler("Le téléchargement a été refusé. Utilisez la copie dans le presse-papier.", "bad");
+  };
+  $("bCopy").onclick = panneauCopie;
+  $("bArch").onclick = () => { creerArchiveAutonome(); };
+  $("bImp").onclick = () => els.fileInput.click();
+  $("bPaste").onclick = panneauCollage;
+  if ($("bSnap")) $("bSnap").onclick = () => {
+    const j = $("bSnapSel").value;
+    const v = valider(localStorage.getItem(K.snap + j) || "");
+    if (!v.ok){ signaler(v.msg, "bad"); return; }
+    confirmerRestauration(v.paquet, "instantané du " + dateLisibleLongue(j));
+  };
+  $("bClose").onclick = fermerLePanneau;
+}
+
+function panneauCopie(){
+  const texte = JSON.stringify(enveloppe(etat), null, 1);
+  ouvrirPanneau(
+  '<div class="panelhead"><h2>Copier vos données</h2>' +
+  '<p>Sélectionnez tout et copiez, puis collez dans un fichier bloc-notes que vous enregistrez où vous voulez. ' +
+  'Ce chemin fonctionne toujours, même si le téléchargement est bloqué.</p></div>' +
+  '<div class="panelbody"><textarea class="mono" id="cTxt" readonly></textarea></div>' +
+  '<div class="panelfoot"><button class="btn primary" id="cSel">Tout sélectionner et copier</button>' +
+  '<span id="cMsg" style="font-size:12.5px;color:var(--text-soft)"></span>' +
+  '<div class="spacer"></div><button class="btn" id="cClose">Fermer</button></div>', true);
+  $("cTxt").value = texte;
+  $("cSel").onclick = () => {
+    const t = $("cTxt"); t.focus(); t.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch(e){}
+    if (ok) $("cMsg").textContent = "Copié.";
+    else if (navigator.clipboard){
+      navigator.clipboard.writeText(t.value)
+        .then(() => { $("cMsg").textContent = "Copié."; })
+        .catch(() => { $("cMsg").textContent = "Faites Ctrl+C maintenant."; });
+    } else $("cMsg").textContent = "Faites Ctrl+C maintenant.";
+  };
+  $("cClose").onclick = fermerLePanneau;
+}
+
+function panneauCollage(){
+  ouvrirPanneau(
+  '<div class="panelhead"><h2>Restaurer depuis un texte</h2>' +
+  '<p>Collez ci-dessous le contenu complet d\'une sauvegarde.</p></div>' +
+  '<div class="panelbody"><textarea class="mono" id="pTxt" placeholder="Collez ici…"></textarea>' +
+  '<div id="pMsg" style="font-size:13px;color:var(--bad);margin-top:8px"></div></div>' +
+  '<div class="panelfoot"><div class="spacer"></div><button class="btn" id="pCancel">Annuler</button>' +
+  '<button class="btn primary" id="pOk">Vérifier</button></div>', true);
+  $("pCancel").onclick = fermerLePanneau;
+  $("pOk").onclick = () => {
+    const v = valider($("pTxt").value.trim());
+    if (!v.ok){ $("pMsg").textContent = v.msg; return; }
+    confirmerRestauration(v.paquet, "texte collé");
+  };
+}
+
+/* Aucune donnee n'est remplacee sans un ecran de confirmation qui montre ce
+   qui va arriver, et sans une sauvegarde automatique de l'etat actuel. */
+function confirmerRestauration(paquet, origine){
+  const nNouv = Object.keys(paquet.data.items || {}).length;
+  const nAct  = Object.keys(etat.items).length;
+  const chute = nAct > 0 && nNouv < nAct / 2;
+  ouvrirPanneau(
+  '<div class="panelhead"><h2>Restaurer cette sauvegarde ?</h2>' +
+  '<p>Source : ' + echapper(origine) + '</p></div>' +
+  '<div class="panelbody">' +
+    '<div class="arbrow"><div class="txt">Date de la sauvegarde<small>' +
+      echapper(paquet.savedAt ? new Date(paquet.savedAt).toLocaleString("fr-FR") : "inconnue") + '</small></div></div>' +
+    '<div class="arbrow"><div class="txt">Contenu<small>' + nNouv + ' tâche' + (nNouv > 1 ? "s" : "") + ' · ' +
+      Object.keys(paquet.data.weekNotes || {}).length + ' semaine(s) de notes</small></div></div>' +
+    '<div class="arbrow"><div class="txt">Votre agenda actuel<small>' + nAct + ' tâche' + (nAct > 1 ? "s" : "") + '</small></div></div>' +
+    (chute ? '<div class="note danger"><strong>Attention.</strong> Cette sauvegarde contient nettement moins de tâches que votre agenda actuel ' +
+      '(' + nNouv + ' contre ' + nAct + '). C\'est peut-être une vieille sauvegarde. Vérifiez la date avant de continuer.</div>' : "") +
+    '<div class="note">Avant le remplacement, l\'agenda télécharge automatiquement une copie de votre état actuel, ' +
+    'sous le nom <code>agenda-avant-restauration-…</code>. La restauration reste donc réversible.</div>' +
+  '</div>' +
+  '<div class="panelfoot"><div class="spacer"></div><button class="btn" id="crNon">Annuler</button>' +
+  '<button class="btn primary" id="crOui">Remplacer mes données</button></div>');
+  $("crNon").onclick = fermerLePanneau;
+  $("crOui").onclick = () => {
+    exporter(false, "avant-restauration");
+    const donnees = migrer(paquet);
+    etat = hydrater(donnees);
+    etat.meta.updatedAt = new Date().toISOString();
+    pileAnnulation = [];
+    enregistrerMaintenant();
+    appliquerReglages(); rendre();
+    fermerLePanneau();
+    signaler("Restauration terminée : " + Object.keys(etat.items).length + " tâches retrouvées.");
+  };
+}
+
+/* Archive autonome : une copie du fichier avec les donnees inserees dedans.
+   Excellente photographie figee, mauvaise boucle de travail : c'est pourquoi
+   ce n'est PAS le mecanisme de sauvegarde principal. */
+function creerArchiveAutonome(){
+  // On capture la page dans un etat neutre : sans le panneau ouvert, sans
+  // message flottant et sans donnee d'archive precedente, sinon l'archive
+  // se rouvrirait sur l'ecran de sauvegarde plutot que sur l'agenda.
+  const memoPanneau = els.panel.innerHTML;
+  const memoVeil = els.veil.hidden;
+  const memoToast = els.toast.hidden;
+  const memoAlerte = els.alertBar.hidden;
+  const ancienne = document.getElementById("donneesArchive");
+  if (ancienne) ancienne.remove();
+  els.panel.innerHTML = ""; els.veil.hidden = true;
+  els.toast.hidden = true; els.alertBar.hidden = true;
+
+  const html = document.documentElement.outerHTML;
+
+  els.panel.innerHTML = memoPanneau; els.veil.hidden = memoVeil;
+  els.toast.hidden = memoToast; els.alertBar.hidden = memoAlerte;
+
+  const charge = '<script id="donneesArchive" type="application/json">' +
+    JSON.stringify(enveloppe(etat)).replace(/<\//g, "<\\/") + '<\/script>';
+  const sortie = html.replace("</head>", charge + "\n</head>");
+  const mois = dateAujourdhui().slice(0, 7);
+  const ok = telecharger("agenda-archive-" + mois + ".html", "<!DOCTYPE html>\n" + sortie);
+  signaler(ok ? "Archive créée : agenda-archive-" + mois + ".html"
+              : "Le téléchargement a été refusé.", ok ? "" : "bad");
+}
+
+function brancherImportFichier(){
+  els.fileInput.addEventListener("change", () => {
+    const f = els.fileInput.files && els.fileInput.files[0];
+    if (!f) return;
+    const lecteur = new FileReader();
+    lecteur.onload = () => {
+      const v = valider(String(lecteur.result));
+      if (!v.ok){ signaler(v.msg, "bad"); }
+      else confirmerRestauration(v.paquet, "fichier " + f.name);
+      els.fileInput.value = "";
+    };
+    lecteur.onerror = () => { signaler("Impossible de lire ce fichier.", "bad"); els.fileInput.value = ""; };
+    lecteur.readAsText(f);
+  });
+}
+
+/* =========================================================================
+   [12] DEMARRAGE, ECRANS DE DECISION, AUTO-TEST
+   ========================================================================= */
+let filePanneaux = [];
+function enfilerPanneau(fn){ filePanneaux.push(fn); }
+function panneauSuivant(){
+  fermerPanneau = null;
+  const fn = filePanneaux.shift();
+  if (fn) fn(); else fermerLePanneau();
+}
+function terminerPanneau(){ els.veil.hidden = true; els.panel.innerHTML = ""; panneauSuivant(); }
+
+/* --- Premier lancement, ou données introuvables --------------------------- */
+function panneauBienvenue(){
+  ouvrirPanneau(
+  '<div class="panelhead"><h2>Bienvenue dans votre agenda</h2>' +
+  '<p>Trois choses à savoir, puis vous n\'y penserez plus jamais.</p></div>' +
+  '<div class="panelbody">' +
+    '<div class="note danger"><strong>1. Ce fichier ne contient pas vos données.</strong><br>' +
+    'Il contient le programme. Vos tâches sont rangées par le navigateur, dans un espace attaché à ce fichier. ' +
+    'Choisissez maintenant un dossier et un nom définitifs, et n\'y touchez plus. Utilisez <strong>Chrome ou Edge</strong>.</div>' +
+    '<div class="note"><strong>2. Une sauvegarde tombe toute seule chaque jour.</strong><br>' +
+    'À la première ouverture de chaque journée, un petit fichier daté arrive dans votre dossier Téléchargements. ' +
+    'Votre navigateur demandera une seule fois l\'autorisation d\'enregistrer plusieurs fichiers : acceptez.</div>' +
+    '<div class="note"><strong>3. Écrivez, ne configurez pas.</strong><br>' +
+    'Cliquez dans un jour et tapez. La touche <kbd>Entrée</kbd> valide et ouvre la ligne suivante. ' +
+    'La pastille ronde à droite d\'une tâche change sa priorité. Tout le reste se découvre en marchant.</div>' +
+    '<div class="sectitle">Vous utilisiez déjà cet agenda ?</div>' +
+    '<p style="font-size:13px;color:var(--text-soft);line-height:1.55">Si vous voyez cet écran alors que vous aviez déjà des tâches, ' +
+    'c\'est que le navigateur a effacé ses données, ou que le fichier a changé de nom ou d\'emplacement. ' +
+    'Vos sauvegardes sont intactes dans votre dossier Téléchargements.</p>' +
+    '<button class="btn" id="wImp">Restaurer une sauvegarde…</button>' +
+  '</div>' +
+  '<div class="panelfoot"><div class="spacer"></div><button class="btn primary" id="wOk">Commencer</button></div>', true);
+  $("wImp").onclick = () => els.fileInput.click();
+  $("wOk").onclick = () => {
+    etat.meta.firstRunDone = true;
+    planifierEnregistrement();
+    terminerPanneau();
+  };
+}
+
+/* --- Rattrapage apres une absence ---------------------------------------- */
+function panneauTriage(deplacees, archivees){
+  const parJour = {};
+  deplacees.forEach(d => { (parJour[d.depuis] = parJour[d.depuis] || []).push(d.item); });
+  const jours = Object.keys(parJour).sort();
+  const lignes = jours.map(j =>
+    '<div class="arbrow"><div class="txt"><strong>' + echapper(dateLisibleLongue(j)) + '</strong>' +
+    '<small>' + parJour[j].map(it => echapper(it.title || "sans titre")).join(" · ") + '</small></div>' +
+    '<div class="acts"><span style="font-size:12px;color:var(--text-faint)">' + parJour[j].length + '</span></div></div>'
+  ).join("");
+
+  ouvrirPanneau(
+  '<div class="panelhead"><h2>Vous revenez après une absence</h2>' +
+  '<p>' + deplacees.length + ' tâche' + (deplacees.length > 1 ? "s" : "") + ' vous attendaient. ' +
+  'Elles ont été ramenées sur aujourd\'hui, dans le bac « À faire ». ' +
+  'Prenez une minute pour envoyer au parking celles qui peuvent attendre : sinon votre journée devient illisible.</p></div>' +
+  '<div class="panelbody">' + lignes +
+    (archivees.length ? '<div class="note">' + archivees.length + ' tâche' + (archivees.length > 1 ? "s" : "") +
+      ' de plus de ' + etat.settings.reportAgeMax + ' jours ' + (archivees.length > 1 ? "ont" : "a") +
+      ' été rangée' + (archivees.length > 1 ? "s" : "") + ' au parking plutôt que sur votre journée. Rien n\'a été supprimé.</div>' : "") +
+  '</div>' +
+  '<div class="panelfoot"><button class="btn" id="tPark">Tout envoyer au parking</button>' +
+  '<div class="spacer"></div><button class="btn primary" id="tOk">Garder sur aujourd\'hui</button></div>', true);
+
+  $("tPark").onclick = () => {
+    commit("Rattrapage : tout au parking", () => {
+      deplacees.forEach(d => { d.item.placement = "park"; d.item.startMin = null; d.item.updatedAt = new Date().toISOString(); });
+    });
+    terminerPanneau();
+    signaler(deplacees.length + " tâches envoyées au parking.");
+  };
+  $("tOk").onclick = terminerPanneau;
+}
+
+/* --- Arbitrage du lundi : ce qui devait etre fait la semaine derniere ----- */
+function panneauArbitrage(aArbitrer, quiTrainent){
+  const ligne = (it, groupe) =>
+    '<div class="arbrow" data-id="' + it.id + '" data-groupe="' + groupe + '">' +
+    '<div class="txt">' + echapper(it.title || "sans titre") +
+    '<small>' + (groupe === "semaine"
+      ? "Prévue pour la semaine du " + echapper(dateLisible(it.weekOfOrigin || dateLundi(it.origDate || it.date), false))
+      : "Notée le " + echapper(dateLisible(it.origDate || it.date, true)) + " — il y a " +
+        dateEcart(it.origDate || it.date, dateAujourdhui()) + " jours") +
+    '</small></div><div class="acts">' +
+    (groupe === "semaine"
+      ? '<button class="minibtn" data-act="garder">Cette semaine</button>' +
+        '<button class="minibtn b-urgent" data-act="urgent">Urgent</button>' +
+        '<button class="minibtn" data-act="libre">Quand je peux</button>'
+      : '<button class="minibtn" data-act="garder">Garder</button>' +
+        '<button class="minibtn" data-act="park">Parking</button>') +
+    '<button class="minibtn b-drop" data-act="abandon">Abandonner</button>' +
+    '</div></div>';
+
+  ouvrirPanneau(
+  '<div class="panelhead"><h2>Le point du lundi</h2>' +
+  '<p>Ces tâches n\'ont pas passé le dimanche. Deux minutes pour trancher, et votre semaine repart propre.</p></div>' +
+  '<div class="panelbody">' +
+    (aArbitrer.length
+      ? '<div class="sectitle">Devaient être faites la semaine dernière</div>' + aArbitrer.map(it => ligne(it, "semaine")).join("")
+      : "") +
+    (quiTrainent.length
+      ? '<div class="sectitle">Ça traîne depuis plus de ' + etat.settings.libreSeuilJours + ' jours</div>' +
+        '<p style="font-size:12.5px;color:var(--text-soft);margin:0 0 4px">La vraie question n\'est pas « suis-je en retard », ' +
+        'mais « cette tâche est-elle bien formulée ». Trop grosse ? Découpez-la. Mal datée ? Datez-la. Inutile ? Abandonnez-la.</p>' +
+        quiTrainent.map(it => ligne(it, "traine")).join("")
+      : "") +
+  '</div>' +
+  '<div class="panelfoot"><div class="spacer"></div><button class="btn primary" id="abOk">Tout garder pour cette semaine</button></div>', true);
+
+  els.panel.querySelector(".panelbody").addEventListener("click", ev => {
+    const b = ev.target.closest("[data-act]"); if (!b) return;
+    const rangee = b.closest(".arbrow");
+    const it = etat.items[rangee.dataset.id]; if (!it) return;
+    const act = b.dataset.act, auj = dateAujourdhui();
+    commit("Arbitrage", () => {
+      if (act === "garder"){
+        if (rangee.dataset.groupe === "semaine") it.weekOfOrigin = dateLundi(auj);
+        else it.staleReviewedOn = auj;
+        it.date = auj; it.placement = it.placement === "park" ? "park" : "day";
+      }
+      else if (act === "urgent"){ definirPriorite(it, "urgent"); it.date = auj; }
+      else if (act === "libre"){ definirPriorite(it, "libre"); it.staleReviewedOn = auj; }
+      else if (act === "park"){ it.placement = "park"; it.startMin = null; it.staleReviewedOn = auj; }
+      else if (act === "abandon"){ it.status = "abandoned"; it.updatedAt = new Date().toISOString(); }
+    });
+    rangee.remove();
+    if (!els.panel.querySelectorAll(".arbrow").length){
+      etat.meta.lastWeekReviewOn = auj; planifierEnregistrement(); terminerPanneau();
+    }
+  });
+  $("abOk").onclick = () => {
+    const auj = dateAujourdhui();
+    commit("Arbitrage : tout garder", () => {
+      aArbitrer.forEach(it => { it.weekOfOrigin = dateLundi(auj); });
+      quiTrainent.forEach(it => { it.staleReviewedOn = auj; });
+    });
+    etat.meta.lastWeekReviewOn = auj;
+    terminerPanneau();
+  };
+}
+
+/* --- Sas de fin de journee ------------------------------------------------ */
+function panneauSas(){
+  const auj = dateAujourdhui();
+  const restantes = tousLesItems().filter(it =>
+    it.date === auj && it.status === "open" && it.kind === "task" &&
+    (it.placement === "day" || it.placement === "slot")).sort(comparerItems);
+
+  if (!restantes.length){
+    etat.meta.lastSasOn = auj; planifierEnregistrement();
+    panneauSuivant(); return;
+  }
+  const lignes = restantes.map(it =>
+    '<div class="arbrow" data-id="' + it.id + '"><div class="txt">' + echapper(it.title || "sans titre") +
+    ((it.rolloverCount || 0) > 0 ? '<small>Reportée ' + it.rolloverCount + ' fois</small>' : "") +
+    '</div><div class="acts">' +
+    '<button class="minibtn" data-act="fait">✓ Fait</button>' +
+    '<button class="minibtn" data-act="demain">Demain</button>' +
+    '<input type="date" class="minibtn" data-act="date" style="padding:2px 4px">' +
+    '<button class="minibtn" data-act="park">Parking</button>' +
+    '<button class="minibtn b-drop" data-act="abandon">Abandonner</button>' +
+    '</div></div>').join("");
+
+  ouvrirPanneau(
+  '<div class="panelhead"><h2>Le point de fin de journée</h2>' +
+  '<p>' + restantes.length + ' tâche' + (restantes.length > 1 ? "s" : "") + ' non faite' + (restantes.length > 1 ? "s" : "") +
+  '. Trente secondes pour décider, plutôt que de subir le report demain matin. ' +
+  'Si vous fermez cet écran, tout sera simplement reporté à demain.</p></div>' +
+  '<div class="panelbody">' + lignes + '</div>' +
+  '<div class="panelfoot"><div class="spacer"></div><button class="btn primary" id="sOk">Tout reporter à demain</button></div>', true);
+
+  els.panel.querySelector(".panelbody").addEventListener("click", ev => {
+    const b = ev.target.closest("button[data-act]"); if (!b) return;
+    traiterSas(b.closest(".arbrow"), b.dataset.act, null);
+  });
+  els.panel.querySelector(".panelbody").addEventListener("change", ev => {
+    const d = ev.target.closest('input[data-act="date"]'); if (!d || !d.value) return;
+    traiterSas(d.closest(".arbrow"), "date", d.value);
+  });
+  function traiterSas(rangee, act, valeur){
+    const it = etat.items[rangee.dataset.id]; if (!it) return;
+    commit("Fin de journée", () => {
+      if (act === "fait"){ it.status = "done"; it.doneAt = new Date().toISOString(); }
+      else if (act === "demain"){ it.date = datePlus(auj, 1); it.placement = "day"; it.startMin = null; }
+      else if (act === "date"){ it.date = valeur; it.placement = "day"; it.startMin = null; it.noRollover = false; }
+      else if (act === "park"){ it.placement = "park"; it.startMin = null; }
+      else if (act === "abandon"){ it.status = "abandoned"; }
+      it.updatedAt = new Date().toISOString();
+    });
+    rangee.remove();
+    if (!els.panel.querySelectorAll(".arbrow").length){
+      etat.meta.lastSasOn = auj; planifierEnregistrement(); terminerPanneau();
+    }
+  }
+  $("sOk").onclick = () => {
+    etat.meta.lastSasOn = auj; planifierEnregistrement(); terminerPanneau();
+  };
+}
+
+/* --- Detection du changement de jour -------------------------------------
+   Un intervalle d'une minute qui COMPARE une date, plutot qu'un minuteur
+   calcule « d'ici a minuit ». Cette forme resiste a la mise en veille de
+   l'ordinateur, au changement d'heure et au passage dans un autre fuseau. */
+let jourConnu = "";
+function verifierChangementDeJour(){
+  const auj = dateAujourdhui();
+  if (auj !== jourConnu){
+    jourConnu = auj;
+    const r = appliquerReport();
+    if (r.deplacees.length) signaler(r.deplacees.length + " tâche(s) reportée(s) sur aujourd'hui.");
+    semaineAffichee = dateLundi(auj);
+    rendre();
+    lancerSauvegardeAutoSiNecessaire();
+  } else {
+    rendreGrille();          // la ligne d'heure courante avance
+  }
+}
+
+function lancerSauvegardeAutoSiNecessaire(){
+  const s = etat.settings;
+  if (!s.sauvegardeAuto || !stockageOK) return;
+  const auj = dateAujourdhui();
+  const dep = etat.meta.lastBackupOn ? dateEcart(etat.meta.lastBackupOn, auj) : 9999;
+  if (dep < s.sauvegardeJours) return;
+  if (exporter(true)) signaler("Sauvegarde du jour enregistrée dans votre dossier Téléchargements.");
+}
+
+/* --- Sequence de demarrage ------------------------------------------------
+   charger -> valider/migrer -> REPORT -> construire la vue -> rendre
+   Le report n'est jamais declenche depuis le rendu.                        */
+function demarrer(){
+  initRefs();
+  testerStockage();
+
+  let paquet = storeLire();
+
+  // Fichier d'archive autonome : les donnees sont incluses dans la page.
+  const archive = document.getElementById("donneesArchive");
+  if (!paquet && archive){
+    const v = valider(archive.textContent || "");
+    if (v.ok) paquet = v.paquet;
+  }
+
+  const premierLancement = !paquet;
+  etat = paquet ? hydrater(migrer(paquet)) : etatVide();
+
+  appliquerReglages();
+  brancherEvenements();
+  brancherImportFichier();
+
+  if (!stockageOK){
+    signaler("Ce navigateur refuse d'enregistrer les données de cette page. Vos modifications seront perdues à la fermeture. " +
+             "Vérifiez que vous n'êtes pas en navigation privée, et utilisez Chrome ou Edge.", "bad", true);
+  }
+
+  const auj = dateAujourdhui();
+  jourConnu = auj;
+  const lundiAuj = dateLundi(auj);
+  semaineAffichee = lundiAuj;
+
+  const rapport = appliquerReport();
+  const arbitrer = tachesAArbitrer();
+  const trainent = tachesQuiTrainent();
+  const nouvelleSemaine = etat.meta.lastWeekReviewOn ? dateLundi(etat.meta.lastWeekReviewOn) < lundiAuj : true;
+
+  rendre();
+  els.notes.value = noteSemaine();
+
+  // Ecrans de decision, presentes les uns apres les autres, jamais empiles.
+  filePanneaux = [];
+  if (premierLancement || !etat.meta.firstRunDone) enfilerPanneau(panneauBienvenue);
+  if (rapport.deplacees.length >= etat.settings.reportSeuilTriage)
+    enfilerPanneau(() => panneauTriage(rapport.deplacees, rapport.archivees));
+  if (nouvelleSemaine && (arbitrer.length || trainent.length))
+    enfilerPanneau(() => panneauArbitrage(arbitrer, trainent));
+  if (etat.settings.sasActif && minutesMaintenant() >= etat.settings.sasHeure &&
+      etat.meta.lastSasOn !== auj && !premierLancement)
+    enfilerPanneau(panneauSas);
+
+  if (rapport.deplacees.length && rapport.deplacees.length < etat.settings.reportSeuilTriage)
+    signaler(rapport.deplacees.length + " tâche" + (rapport.deplacees.length > 1 ? "s" : "") +
+             " reportée" + (rapport.deplacees.length > 1 ? "s" : "") + " sur aujourd'hui.");
+
+  etat.meta.lastOpenOn = auj;
+  enregistrerMaintenant();
+  instantaner(etat);
+  lancerSauvegardeAutoSiNecessaire();
+
+  panneauSuivant();
+  setInterval(verifierChangementDeJour, 60000);
+}
+
+/* --- Auto-test ------------------------------------------------------------
+   Tapez autoTest() dans la console du navigateur (touche F12).
+   Couvre les pieges de date : changement d'heure, fin d'annee, week-ends. */
+function autoTest(){
+  const r = [];
+  const ok = (nom, a, b) => r.push((a === b ? "OK   " : "ECHEC") + "  " + nom +
+    (a === b ? "" : "   attendu " + b + ", obtenu " + a));
+
+  ok("dateCle sur une date connue", dateCle(new Date(2026, 8, 2)), "2026-09-02");
+  ok("passage a l'heure d'hiver (25 h)", datePlus("2026-10-24", 1), "2026-10-25");
+  ok("lendemain du changement d'heure", datePlus("2026-10-25", 1), "2026-10-26");
+  ok("passage a l'heure d'ete (23 h)", datePlus("2026-03-28", 1), "2026-03-29");
+  ok("fin d'annee", datePlus("2026-12-31", 1), "2027-01-01");
+  ok("annee bissextile", datePlus("2028-02-28", 1), "2028-02-29");
+  ok("recul d'un jour", datePlus("2026-01-01", -1), "2025-12-31");
+  ok("ecart sur un changement d'heure", dateEcart("2026-10-24", "2026-10-26"), 2);
+  ok("ecart sur une annee", dateEcart("2026-01-01", "2027-01-01"), 365);
+  ok("lundi d'un mercredi", dateLundi("2026-09-02"), "2026-08-31");
+  ok("lundi d'un dimanche", dateLundi("2026-09-06"), "2026-08-31");
+  ok("lundi d'un lundi", dateLundi("2026-08-31"), "2026-08-31");
+  ok("index du samedi", dateIndexJour("2026-09-05"), 5);
+  ok("le dimanche est un week-end", dateEstWeekend("2026-09-06"), true);
+  ok("le vendredi n'est pas un week-end", dateEstWeekend("2026-09-04"), false);
+  ok("comparaison de chaines de jours", "2026-09-02" < "2026-09-10", true);
+  ok("minutes vers heure", minVersHeure(570), "09:30");
+  ok("heure vers minutes", heureVersMin("09:30"), 570);
+  ok("semaine ISO du 1er janvier 2027", numeroSemaine("2027-01-01"), 53);
+  ok("semaine ISO du 4 janvier 2027", numeroSemaine("2027-01-04"), 1);
+
+  // Idempotence du report : deux passes doivent donner le meme resultat.
+  const sauvegarde = JSON.stringify(etat.items);
+  const auj = dateAujourdhui();
+  const id = "test_" + Date.now();
+  etat.items[id] = Object.assign({}, ITEM_DEFAUT, {
+    id: id, title: "test", placement: "day", date: datePlus(auj, -9),
+    origDate: datePlus(auj, -9), status: "open",
+  });
+  const memo = etat.meta.lastRolloverOn; etat.meta.lastRolloverOn = "";
+  appliquerReport();
+  const apres1 = etat.items[id].date, cpt1 = etat.items[id].rolloverCount;
+  appliquerReport();
+  const apres2 = etat.items[id].date, cpt2 = etat.items[id].rolloverCount;
+  ok("le report vise aujourd'hui", apres1, auj);
+  ok("le report ne rejoue pas (date)", apres2, apres1);
+  ok("le report ne rejoue pas (compteur)", cpt2, cpt1);
+  ok("une tache reportee perd son heure", etat.items[id].startMin, null);
+  ok("la date d'origine n'est jamais modifiee", etat.items[id].origDate, datePlus(auj, -9));
+  etat.items = JSON.parse(sauvegarde); etat.meta.lastRolloverOn = memo;
+
+  // Integrite des sauvegardes
+  const env = enveloppe(etat);
+  ok("une sauvegarde saine est acceptee", valider(JSON.stringify(env)).ok, true);
+  const abime = JSON.parse(JSON.stringify(env));
+  abime.data.items["faux_" + Date.now()] = { id: "x", title: "injecte" };
+  ok("une sauvegarde alteree est refusee", valider(JSON.stringify(abime)).ok, false);
+  ok("un fichier etranger est refuse", valider('{"format":"autre chose"}').ok, false);
+  ok("un texte illisible est refuse", valider("pas du json").ok, false);
+
+  const echecs = r.filter(l => l.indexOf("ECHEC") === 0).length;
+  console.log(r.join("\n"));
+  console.log(echecs ? "\n>>> " + echecs + " test(s) en echec." : "\n>>> " + r.length + " tests, tous reussis.");
+  return { total: r.length, echecs: echecs, details: r };
+}
+window.autoTest = autoTest;
+
+document.addEventListener("DOMContentLoaded", demarrer);
+</script>
+</body>
+</html>
