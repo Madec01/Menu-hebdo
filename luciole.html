@@ -203,7 +203,9 @@ const CFG = {
   TRAP_RANGE: 40,
   TRAP_COOLDOWN: 6,
   GRID: 40,
-  DARKNESS: 0.965,
+  DARKNESS: 0.982,
+  BEACON_REST_GAIN: 5,            // lumière/s quand Nim se repose sur une pierre allumée
+  BEACON_REST_CAP: 72,
   SCORE_NIGHT: 1000,
   SCORE_BEACON: 150,
   SCORE_SHADOW: 25,
@@ -216,13 +218,18 @@ const CFG = {
 
 const COL = {
   bg: '#06070f',
-  ground: '#101425',
-  groundSpeck: '#1d2540',
-  trunk: '#241d2e',
-  crownA: '#1a3a2c',
-  crownB: '#143026',
-  ilo: '#4a3f58',
-  iloHood: '#615371',
+  ground: '#3e372d',
+  groundSpeck: '#565042',
+  dirt: '#4d3d29',
+  pebble: '#7a7566',
+  trunk: '#2b2018',
+  trunkLit: '#7a5233',
+  crownA: '#1e3a29',
+  crownB: '#172e22',
+  crownLit: '#587a45',
+  ilo: '#39304a',
+  iloHood: '#524668',
+  iloRim: '#ffe0b4',
   warm: '#ffb765',
   warmSoft: '#ffd9a0',
   nim: '#fff4cf',
@@ -230,7 +237,7 @@ const COL = {
   tetherTaut: '#ff7a4d',
   shadow: '#05060a',
   eye: '#cfe3ff',
-  stone: '#2a2b38',
+  stone: '#4a4b58',
   stoneLit: '#ffcf8d',
   trap: '#7fb6ff',
   text: '#efe7d8',
@@ -477,23 +484,109 @@ canvas.addEventListener('mousedown', (e) => {
 }, { passive: false });
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
-/* Motif de sol généré une fois (aucun asset externe) */
-const groundPattern = (function () {
+/* ============================================================
+   SOL — texture procédurale pré-rendue une fois par nuit
+   (herbe / mousse / cailloux / racines ; jamais recalculée en jeu)
+   ============================================================ */
+let groundCanvas = null;
+
+function buildGround(w, h, seed) {
   const c = document.createElement('canvas');
-  c.width = c.height = 96;
+  c.width = Math.max(1, Math.round(w));
+  c.height = Math.max(1, Math.round(h));
   const g = c.getContext('2d');
+  const r = mulberry32((seed ^ 0x9e3779b9) >>> 0);
+  const area = w * h;
+
   g.fillStyle = COL.ground;
-  g.fillRect(0, 0, 96, 96);
-  const r = mulberry32(20260902);
-  for (let i = 0; i < 150; i++) {
-    const x = r() * 96, y = r() * 96, s = 0.5 + r() * 1.6;
-    g.globalAlpha = 0.18 + r() * 0.4;
-    g.fillStyle = r() < 0.72 ? COL.groundSpeck : '#1c2233';
-    g.beginPath(); g.arc(x, y, s, 0, TAU); g.fill();
+  g.fillRect(0, 0, w, h);
+
+  // 1. Grandes plaques de mousse et de terre, très diffuses
+  const patches = Math.round(area / 26000);
+  for (let i = 0; i < patches; i++) {
+    const x = r() * w, y = r() * h, rr = 60 + r() * 150;
+    const moss = r() < 0.58;
+    const gr = g.createRadialGradient(x, y, 0, x, y, rr);
+    gr.addColorStop(0, (moss ? 'rgba(72,92,58,' : 'rgba(92,72,48,') + (0.30 + r() * 0.32) + ')');
+    gr.addColorStop(1, moss ? 'rgba(72,92,58,0)' : 'rgba(92,72,48,0)');
+    g.fillStyle = gr;
+    g.beginPath(); g.arc(x, y, rr, 0, TAU); g.fill();
+  }
+
+  // 2. Racines : longues courbes sombres qui traversent le sol
+  const roots = Math.round(area / 40000);
+  g.lineCap = 'round';
+  for (let i = 0; i < roots; i++) {
+    let x = r() * w, y = r() * h;
+    let a = r() * TAU;
+    const segs = 4 + Math.floor(r() * 5);
+    const wd = 2 + r() * 3.5;
+    g.strokeStyle = 'rgba(28,20,14,0.62)';
+    g.lineWidth = wd;
+    g.beginPath(); g.moveTo(x, y);
+    for (let k = 0; k < segs; k++) {
+      a += (r() - 0.5) * 0.9;
+      const l = 26 + r() * 40;
+      x += Math.cos(a) * l; y += Math.sin(a) * l;
+      g.lineTo(x, y);
+    }
+    g.stroke();
+    // liseré clair sur le dessus de la racine
+    g.strokeStyle = 'rgba(150,124,90,0.35)';
+    g.lineWidth = Math.max(0.8, wd * 0.35);
+    g.stroke();
+  }
+
+  // 3. Touffes d'herbe : petits traits verticaux groupés
+  const tufts = Math.round(area / 1500);
+  g.lineWidth = 1;
+  for (let pass = 0; pass < 2; pass++) {
+    g.strokeStyle = pass === 0 ? 'rgba(108,134,84,0.55)' : 'rgba(84,108,68,0.45)';
+    g.beginPath();
+    for (let i = 0; i < tufts; i++) {
+      const x = r() * w, y = r() * h;
+      const n = 2 + Math.floor(r() * 3);
+      const keep = (r() < 0.62) === (pass === 0);
+      for (let k = 0; k < n; k++) {
+        const bx = x + (r() - 0.5) * 7, by = y + (r() - 0.5) * 4;
+        const hh = 3 + r() * 5, bend = (r() - 0.5) * 4;
+        if (!keep) continue;
+        g.moveTo(bx, by);
+        g.quadraticCurveTo(bx + bend * 0.5, by - hh * 0.6, bx + bend, by - hh);
+      }
+    }
+    g.stroke();
+  }
+
+  // 4. Cailloux : petit disque clair + base sombre (donne du relief)
+  const stones = Math.round(area / 6000);
+  for (let i = 0; i < stones; i++) {
+    const x = r() * w, y = r() * h, rr = 1.4 + r() * 3.2;
+    g.fillStyle = 'rgba(18,16,14,0.55)';
+    g.beginPath(); g.ellipse(x, y + rr * 0.5, rr * 1.05, rr * 0.55, 0, 0, TAU); g.fill();
+    g.fillStyle = COL.pebble;
+    g.globalAlpha = 0.34 + r() * 0.3;
+    g.beginPath(); g.ellipse(x, y, rr, rr * 0.82, r() * TAU, 0, TAU); g.fill();
+    g.globalAlpha = 1;
+  }
+
+  // 5. Grain fin, pour que le halo ne révèle jamais une surface plate
+  const specks = Math.round(area / 900);
+  for (let pass = 0; pass < 3; pass++) {
+    g.globalAlpha = 0.13 + pass * 0.1;
+    g.fillStyle = pass === 2 ? COL.dirt : COL.groundSpeck;
+    g.beginPath();
+    for (let i = 0; i < specks; i++) {
+      const x = r() * w, y = r() * h, ss = 0.4 + r() * 1.3;
+      if (Math.floor(r() * 3) !== pass) continue;
+      g.moveTo(x + ss, y);
+      g.arc(x, y, ss, 0, TAU);
+    }
+    g.fill();
   }
   g.globalAlpha = 1;
-  return ctx.createPattern(c, 'repeat');
-})();
+  return c;
+}
 
 /* ============================================================
    GÉNÉRATION DU MONDE
@@ -504,11 +597,11 @@ function nightParams(n) {
     w: Math.min(2200, 1400 + 120 * (n - 1)),
     h: Math.min(1600, 1000 + 120 * (n - 1)),
     spawnInterval: Math.max(0.9, 4.2 - 0.34 * (n - 1)),
-    maxShadows: Math.min(40, Math.round(4 + 3.5 * (n - 1))),
+    maxShadows: Math.min(30, Math.round(4 + 2.6 * (n - 1))),
     speedMul: Math.min(1.4, 1 + 0.05 * (n - 1)),
     watchers: n >= 3 ? Math.min(4, n - 2) : 0,
     traps: n >= 5 ? Math.min(4, n - 4) : 0,
-    startShadows: Math.min(10, 1 + Math.floor(n * 0.8))
+    startShadows: Math.min(8, 1 + Math.floor(n * 0.7))
   };
 }
 
@@ -558,7 +651,7 @@ function cellReachable(grid, seen, x, y) {
 function generateWorld(night, seed) {
   const P = nightParams(night);
   const margin = 70;
-  const treeTarget = clamp(Math.round((P.w * P.h) / 13000), 80, 180);
+  const treeTarget = clamp(Math.round((P.w * P.h) / 15500), 80, 130);
 
   for (let attempt = 0; attempt < 16; attempt++) {
     const rng = mulberry32((seed + attempt * 7919) >>> 0);
@@ -607,7 +700,7 @@ function generateWorld(night, seed) {
       if (ok) for (const t of trees) if (dist2(tx, ty, t.x, t.y) < (t.r + tr + gap) * (t.r + tr + gap)) { ok = false; break; }
       if (!ok) continue;
       const crowns = [];
-      const nc = 3 + Math.floor(rng() * 3);
+      const nc = 2 + Math.floor(rng() * 2);
       for (let k = 0; k < nc; k++) {
         crowns.push({
           dx: (rng() - 0.5) * tr * 1.5,
@@ -706,6 +799,7 @@ const G = {
   menuHit: [],
   story: null,
   gameOverLine: '',
+  hintText: '', hintT: 0,
   uiT: 0
 };
 
@@ -793,11 +887,13 @@ function startNight(n) {
   G.night = n;
   G.world = generateWorld(n, (G.seed + n * 104729) >>> 0);
   const W = G.world;
+  groundCanvas = buildGround(W.w, W.h, (G.seed + n * 104729) >>> 0);
   G.ilo = makeIlo(W.start.x, W.start.y);
   G.nim = makeNim(W.start.x + 40, W.start.y - 20);
   G.shadows = []; G.particles = []; G.floats = []; G.bursts = [];
   G.light = CFG.LIGHT_MAX;
-  G.burstCd = 0;
+  G.burstCd = 0.55;         // les clics qui lancent la nuit ne déclenchent pas d'éclat
+  input.burstQueued = false;
   G.doorOpen = false;
   G.nightTime = 0;
   G.tookDamage = false;
@@ -824,8 +920,9 @@ function startNight(n) {
   save.unlockedNight = Math.max(save.unlockedNight, n);
   writeSave();
 
-  const st = nightStory(n);
-  if (st.hint) addFloat(G.ilo.x, G.ilo.y - 46, st.hint, COL.dim, 16);
+  const st = veilleStory(n);
+  G.hintText = st.hint || '';
+  G.hintT = st.hint ? 8 : 0;
 
   G.state = 'playing';
   G.paused = false;
@@ -924,7 +1021,18 @@ function updatePlaying(dt) {
   }
 
   /* --- Lumière --- */
-  G.light = clamp(G.light - CFG.LIGHT_DRAIN * dt, 0, CFG.LIGHT_MAX);
+  // Une pierre allumée nourrit Nim : c'est le seul endroit où l'on peut souffler.
+  let resting = false;
+  for (let i = 0; i < W.beacons.length; i++) {
+    const b = W.beacons[i];
+    if (b.lit && dist2(nim.x, nim.y, b.x, b.y) < CFG.BEACON_LIGHT_R * CFG.BEACON_LIGHT_R) { resting = true; break; }
+  }
+  if (resting && G.light < CFG.BEACON_REST_CAP) {
+    G.light = clamp(G.light + CFG.BEACON_REST_GAIN * dt, 0, CFG.BEACON_REST_CAP);
+  } else {
+    G.light = clamp(G.light - CFG.LIGHT_DRAIN * dt * (resting ? 0.25 : 1), 0, CFG.LIGHT_MAX);
+  }
+  G.resting = resting;
   if (G.burstCd > 0) G.burstCd -= dt;
   if (input.burstQueued) { input.burstQueued = false; doBurst(); }
 
@@ -987,6 +1095,7 @@ function updatePlaying(dt) {
 
   /* --- Ombres --- */
   updateShadows(dt);
+  if (G.state !== 'playing') return;   // mort pendant la mise à jour : on n'enchaîne pas
 
   /* --- Éclats --- */
   for (let i = G.bursts.length - 1; i >= 0; i--) {
@@ -998,6 +1107,8 @@ function updatePlaying(dt) {
 
   /* --- Particules et textes flottants --- */
   updateEphemera(dt);
+
+  if (G.hintT > 0) G.hintT -= dt;
 
   /* --- Caméra + secousse --- */
   const camTX = clamp(ilo.x - VW / 2, 0, Math.max(0, W.w - VW));
@@ -1147,7 +1258,7 @@ function addScore(n) {
 }
 
 function doBurst() {
-  if (G.burstCd > 0) return;
+  if (G.burstCd > 0) return;   // rechargement (et petite garde au tout début de la nuit)
   if (G.light < CFG.BURST_COST) {
     SFX.deny();
     G.lightWarn = 0.5;
@@ -1229,8 +1340,8 @@ function finishNight() {
 
   SFX.chime();
   setHum(0);
-  const st = nightStory(G.night);
-  beginStory('nightAfter', 'Nuit ' + G.night + ' — ' + st.title, st.after, '');
+  const st = veilleStory(G.night);
+  beginStory('nightAfter', nightHeading(G.night), st.after, '');
 }
 
 function gameOver() {
@@ -1262,7 +1373,7 @@ function advanceStory() {
   const s = G.state;
   if (s === 'intro') {
     const st = nightStory(1);
-    beginStory('nightBefore', 'Nuit 1 — ' + st.title, st.before, st.hint);
+    beginStory('nightBefore', nightHeading(1), st.before, st.hint);
   } else if (s === 'nightBefore') {
     startNight(G.night);
   } else if (s === 'nightAfter') {
@@ -1277,10 +1388,43 @@ function advanceStory() {
   }
 }
 
+/* Le titre narratif contient parfois déjà « Nuit … » : on ne le redouble pas. */
+function nightHeading(n) {
+  const t = nightStory(n).title;
+  if (/^\s*nuit/i.test(t)) return t;
+  if (n > CFG.STORY_NIGHTS) return t + ' — Nuit ' + n;
+  return 'Nuit ' + n + ' — ' + t;
+}
+
+/* Après la nuit 7 les textes de la veille ne se répètent pas à l'identique. */
+const VEILLE_BEFORE = [
+  ['Une forêt de plus, un village de plus qui attend son matin. Ilo connaît le chemin, maintenant.'],
+  ['La lanterne est chaude contre la hanche. Nim s\'étire, puis s\'allume sans qu\'on le lui demande.'],
+  ['Personne ne sait qu\'Ilo passe ici cette nuit. C\'est très bien ainsi.'],
+  ['Plus loin que la forêt, il y a encore de la forêt. Ilo n\'en fait pas une histoire : on marche.']
+];
+const VEILLE_AFTER = [
+  ['Les pierres tiennent. Ilo souffle une fois, puis regarde déjà l\'horizon suivant.'],
+  ['Nim se pose sur l\'anneau de la lanterne. Repos court. La nuit suivante attend.'],
+  ['Quelque part, quelqu\'un se réveillera dans une lumière qu\'il ne s\'expliquera pas.']
+];
+
+function veilleStory(n) {
+  const st = nightStory(n);
+  if (n <= CFG.STORY_NIGHTS + 1) return st;   // l'entrée en Veille éternelle garde son texte
+  const i = n - CFG.STORY_NIGHTS - 2;
+  return {
+    title: st.title,
+    before: VEILLE_BEFORE[i % VEILLE_BEFORE.length],
+    after: VEILLE_AFTER[i % VEILLE_AFTER.length],
+    hint: ''
+  };
+}
+
 function goToNightBefore(n) {
   G.night = n;
-  const st = nightStory(n);
-  beginStory('nightBefore', 'Nuit ' + n + ' — ' + st.title, st.before, st.hint);
+  const st = veilleStory(n);
+  beginStory('nightBefore', nightHeading(n), st.before, st.hint);
 }
 
 /* ============================================================
@@ -1302,7 +1446,7 @@ function activateMenu() {
     startRun(1);
     const intro = sArr(STORY && STORY.intro, []);
     if (intro.length) beginStory('intro', sStr(STORY && STORY.title, 'Luciole'), intro, '');
-    else { const st = nightStory(1); beginStory('nightBefore', 'Nuit 1 — ' + st.title, st.before, st.hint); }
+    else { const st = nightStory(1); beginStory('nightBefore', nightHeading(1), st.before, st.hint); }
   } else if (it.id === 'continue') {
     startRun(save.unlockedNight);
     goToNightBefore(save.unlockedNight);
@@ -1405,14 +1549,10 @@ function drawWorld() {
   const m = 90;
   const x0 = camX - m, x1 = camX + VW + m, y0 = camY - m, y1 = camY + VH + m;
 
-  // Sol
-  ctx.save();
+  // Sol : texture pré-rendue de la nuit, recadrée par la caméra
   ctx.fillStyle = COL.bg;
   ctx.fillRect(0, 0, VW, VH);
-  ctx.translate(-(((camX % 96) + 96) % 96), -(((camY % 96) + 96) % 96));
-  ctx.fillStyle = groundPattern;
-  ctx.fillRect(0, 0, VW + 96, VH + 96);
-  ctx.restore();
+  if (groundCanvas) ctx.drawImage(groundCanvas, Math.round(sx(0)), Math.round(sy(0)));
 
   // Limites du monde : bordure d'obscurité plus dense
   ctx.save();
@@ -1437,40 +1577,81 @@ function drawWorld() {
   drawBeacons(x0, x1, y0, y1);
   drawDoor();
   drawTrees(x0, x1, y0, y1);
-  drawShadowBodies(x0, x1, y0, y1);
   drawIlo();
+  G.cull = { x0, x1, y0, y1 };
 }
 
 function drawTrees(x0, x1, y0, y1) {
   const W = G.world;
+  const nimX = G.nim.x, nimY = G.nim.y;
   for (let i = 0; i < W.trees.length; i++) {
     const t = W.trees[i];
-    if (t.x < x0 || t.x > x1 || t.y < y0 || t.y > y1) continue;
+    if (t.x < x0 || t.x > x1 || t.y < y0 || t.y > y1) continue;   // seuls les arbres à l'écran
     const X = sx(t.x), Y = sy(t.y);
-    // Ombre portée au sol
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.beginPath(); ctx.ellipse(X, Y + t.r * 0.35, t.r * 1.15, t.r * 0.5, 0, 0, TAU); ctx.fill();
-    // Tronc
+    const r = t.r;
+
+    // Direction de la lumière : de Nim vers l'arbre (l'ombre part de l'autre côté)
+    let lx = t.x - nimX, ly = t.y - nimY;
+    const ld = Math.hypot(lx, ly) || 1;
+    lx /= ld; ly /= ld;
+    // Force d'éclairage : plein dans le halo, atténué au loin
+    const amt = clamp(lightAmount(t.x, t.y) * 1.5, 0, 1);
+
+    // 1. Ombre portée, opposée à Nim, allongée quand la lumière est rasante
+    const so = r * (0.3 + 0.5 * amt);
+    ctx.fillStyle = 'rgba(0,0,0,' + (0.26 + 0.24 * amt) + ')';
+    ctx.beginPath();
+    ctx.ellipse(X + lx * so, Y + r * 0.32 + ly * so * 0.5, r * (0.95 + 0.22 * amt), r * 0.44, Math.atan2(ly, lx), 0, TAU);
+    ctx.fill();
+
+    // 2. Tronc brun sombre, légèrement penché
+    const tl = t.lean * r;
     ctx.fillStyle = COL.trunk;
     ctx.beginPath();
-    ctx.moveTo(X - t.r * 0.32, Y + t.r * 0.3);
-    ctx.lineTo(X - t.r * 0.2 + t.lean * t.r, Y - t.r * 0.9);
-    ctx.lineTo(X + t.r * 0.2 + t.lean * t.r, Y - t.r * 0.9);
-    ctx.lineTo(X + t.r * 0.32, Y + t.r * 0.3);
-    ctx.closePath(); ctx.fill();
-    // Couronne
+    ctx.moveTo(X - r * 0.34, Y + r * 0.32);
+    ctx.lineTo(X - r * 0.19 + tl, Y - r * 0.95);
+    ctx.lineTo(X + r * 0.19 + tl, Y - r * 0.95);
+    ctx.lineTo(X + r * 0.34, Y + r * 0.32);
+    ctx.closePath();
+    ctx.fill();
+    // Bord éclairé du tronc, côté Nim
+    if (amt > 0.02) {
+      const sgn = lx > 0 ? -1 : 1;      // le côté tourné vers Nim
+      ctx.globalAlpha = 0.30 + 0.5 * amt;
+      ctx.fillStyle = COL.trunkLit;
+      ctx.beginPath();
+      ctx.moveTo(X + sgn * r * 0.34, Y + r * 0.32);
+      ctx.lineTo(X + sgn * r * 0.19 + tl, Y - r * 0.95);
+      ctx.lineTo(X + sgn * r * 0.07 + tl, Y - r * 0.95);
+      ctx.lineTo(X + sgn * r * 0.18, Y + r * 0.32);
+      ctx.closePath();
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    // 3. Couronne : 2-3 disques décalés, base sombre puis croissant chaud côté Nim
+    const cy0 = -r * 0.75;
     for (let k = 0; k < t.crowns.length; k++) {
       const c = t.crowns[k];
+      const cx = X + c.dx + tl, cyy = Y + c.dy + cy0;
       ctx.fillStyle = c.c;
-      ctx.beginPath();
-      ctx.arc(X + c.dx + t.lean * t.r, Y + c.dy - t.r * 0.75, c.r, 0, TAU);
-      ctx.fill();
+      ctx.beginPath(); ctx.arc(cx, cyy, c.r, 0, TAU); ctx.fill();
+      // creux sombre du côté opposé à la lumière
+      ctx.globalAlpha = 0.32;
+      ctx.fillStyle = '#0a1410';
+      ctx.beginPath(); ctx.arc(cx + lx * c.r * 0.34, cyy + ly * c.r * 0.34, c.r * 0.7, 0, TAU); ctx.fill();
+      ctx.globalAlpha = 1;
+      if (amt > 0.02) {
+        ctx.globalAlpha = 0.10 + 0.34 * amt;
+        ctx.fillStyle = COL.crownLit;
+        ctx.beginPath(); ctx.arc(cx - lx * c.r * 0.3, cyy - ly * c.r * 0.3, c.r * 0.6, 0, TAU); ctx.fill();
+        // fine crête chaude sur le tout premier feuillage touché
+        ctx.globalAlpha = 0.16 * amt;
+        ctx.fillStyle = '#d8b878';
+        ctx.beginPath(); ctx.arc(cx - lx * c.r * 0.52, cyy - ly * c.r * 0.52, c.r * 0.3, 0, TAU); ctx.fill();
+        ctx.globalAlpha = 1;
+      }
     }
-    // Reflet froid sur la couronne
-    ctx.fillStyle = 'rgba(150,200,180,0.10)';
-    ctx.beginPath();
-    ctx.arc(X - t.r * 0.3 + t.lean * t.r, Y - t.r * 1.15, t.r * 0.5, 0, TAU);
-    ctx.fill();
   }
 }
 
@@ -1490,22 +1671,34 @@ function drawBeacons(x0, x1, y0, y1) {
     ctx.lineTo(X + 11, Y - 22);
     ctx.lineTo(X + 17, Y + 12);
     ctx.closePath(); ctx.fill();
-    ctx.fillStyle = b.lit ? '#6b5040' : '#353646';
+    ctx.fillStyle = b.lit ? '#7d5f4a' : '#585a6b';
     ctx.fillRect(X - 13, Y - 26, 26, 6);
     // Rune
     const pulse = 0.5 + 0.5 * Math.sin(G.time * 2 + b.phase);
-    ctx.fillStyle = b.lit ? COL.stoneLit : 'rgba(150,170,210,' + (0.12 + 0.1 * pulse) + ')';
+    ctx.fillStyle = b.lit ? COL.stoneLit : 'rgba(160,182,222,' + (0.28 + 0.22 * pulse) + ')';
     ctx.beginPath(); ctx.arc(X, Y - 6, 5, 0, TAU); ctx.fill();
-    // Jauge circulaire d'allumage
-    if (!b.lit && b.prog > 0.001) {
-      ctx.strokeStyle = 'rgba(255,183,101,0.85)';
-      ctx.lineWidth = 4;
+    // entaille gravée, pour qu'on reconnaisse une pierre et pas un caillou
+    ctx.strokeStyle = b.lit ? 'rgba(255,207,141,0.6)' : 'rgba(150,168,205,0.28)';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.moveTo(X - 6, Y + 4); ctx.lineTo(X + 6, Y + 4);
+    ctx.moveTo(X, Y + 4); ctx.lineTo(X, Y + 9); ctx.stroke();
+    // Flamme : elle danse, c'est la récompense visuelle de la pierre allumée
+    if (b.lit) {
+      const f = Math.sin(G.time * 7 + b.phase) * 0.5 + Math.sin(G.time * 11.3 + b.phase * 2) * 0.5;
+      const fh = 15 + f * 3.5;
+      const fx = X + f * 1.6, fy = Y - 28;
+      ctx.fillStyle = 'rgba(255,146,54,0.85)';
       ctx.beginPath();
-      ctx.arc(X, Y - 4, 28, -Math.PI / 2, -Math.PI / 2 + TAU * clamp(b.prog, 0, 1));
-      ctx.stroke();
-      ctx.strokeStyle = 'rgba(255,255,255,0.12)';
-      ctx.lineWidth = 4;
-      ctx.beginPath(); ctx.arc(X, Y - 4, 28, 0, TAU); ctx.stroke();
+      ctx.moveTo(fx, fy - fh);
+      ctx.quadraticCurveTo(fx + 6.5, fy - fh * 0.35, fx, fy);
+      ctx.quadraticCurveTo(fx - 6.5, fy - fh * 0.35, fx, fy - fh);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,238,196,0.95)';
+      ctx.beginPath();
+      ctx.moveTo(fx, fy - fh * 0.62);
+      ctx.quadraticCurveTo(fx + 3, fy - fh * 0.2, fx, fy - 1);
+      ctx.quadraticCurveTo(fx - 3, fy - fh * 0.2, fx, fy - fh * 0.62);
+      ctx.fill();
     }
   }
 }
@@ -1544,26 +1737,65 @@ function drawShadowBodies(x0, x1, y0, y1) {
     const s = G.shadows[i];
     if (s.x < x0 || s.x > x1 || s.y < y0 || s.y > y1) continue;
     const amt = lightAmount(s.x, s.y);
-    const vis = clamp(amt * 1.9, 0, 1);
-    if (vis < 0.03) continue;
+    const vis = clamp((amt - 0.04) * 2.4, 0, 1);   // hors lumière : rien du tout
+    if (vis < 0.02) continue;
     const X = sx(s.x), Y = sy(s.y);
+    const r = s.r;
     ctx.save();
-    ctx.globalAlpha = 0.25 + 0.7 * vis;
-    // Corps fumeux : plusieurs lobes qui ondulent
-    for (let k = 0; k < 4; k++) {
-      const a = s.phase + k * (TAU / 4);
-      const rr = s.r * (0.72 + 0.3 * Math.sin(s.phase * 1.6 + k));
-      ctx.fillStyle = k === 0 ? '#0a0b12' : COL.shadow;
+
+    // Voile de fumée qui déborde : rend la silhouette menaçante et floue
+    ctx.globalAlpha = 0.5 * vis;
+    const hg = ctx.createRadialGradient(X, Y, r * 0.4, X, Y, r * 2.1);
+    hg.addColorStop(0, 'rgba(3,3,7,0.95)');
+    hg.addColorStop(1, 'rgba(3,3,7,0)');
+    ctx.fillStyle = hg;
+    ctx.beginPath(); ctx.arc(X, Y, r * 2.1, 0, TAU); ctx.fill();
+
+    // Corps : lobes qui roulent les uns sur les autres
+    ctx.globalAlpha = vis;
+    for (let k = 0; k < 5; k++) {
+      const a = s.phase * (k % 2 ? -0.7 : 0.9) + k * (TAU / 5);
+      const off = r * (0.20 + 0.22 * Math.sin(s.phase * 1.3 + k * 2.1));
+      const rr = r * (0.66 + 0.32 * Math.sin(s.phase * 1.9 + k));
+      ctx.fillStyle = k === 0 ? '#0b0c14' : COL.shadow;
       ctx.beginPath();
-      ctx.arc(X + Math.cos(a) * s.r * 0.32, Y + Math.sin(a) * s.r * 0.32, rr, 0, TAU);
+      ctx.arc(X + Math.cos(a) * off, Y + Math.sin(a) * off, rr, 0, TAU);
       ctx.fill();
     }
-    // Liseré violacé quand elle brûle
-    if (amt > 0.2) {
-      ctx.globalAlpha = 0.35 * vis * (1 - s.hp * 0.5);
-      ctx.strokeStyle = '#6d4f7a';
-      ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(X, Y, s.r * 1.05, 0, TAU); ctx.stroke();
+    // Volutes qui s'échappent vers le haut
+    ctx.globalAlpha = 0.4 * vis;
+    ctx.fillStyle = '#0d0e18';
+    for (let k = 0; k < 3; k++) {
+      const a = s.phase * 0.9 + k * 2.3;
+      const rise = (((s.phase * 0.5 + k * 0.33) % 1) + 1) % 1;
+      ctx.beginPath();
+      ctx.arc(X + Math.cos(a) * r * 0.6, Y - r * (0.5 + rise * 1.5), r * 0.3 * (1 - rise), 0, TAU);
+      ctx.fill();
+    }
+
+    // Liseré violacé : elle brûle
+    if (amt > 0.18) {
+      const burn = clamp((amt - 0.18) * 2, 0, 1) * (1 - s.hp * 0.45);
+      ctx.globalAlpha = 0.55 * vis * burn;
+      ctx.strokeStyle = '#8a5ea0';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath(); ctx.arc(X, Y, r * 1.02, 0, TAU); ctx.stroke();
+      // braises qui se détachent du bord
+      ctx.globalAlpha = 0.5 * vis * burn;
+      ctx.fillStyle = '#c79ad6';
+      for (let k = 0; k < 3; k++) {
+        const a = s.phase * 2 + k * 2.1;
+        ctx.beginPath(); ctx.arc(X + Math.cos(a) * r * 1.15, Y + Math.sin(a) * r * 1.15, 1.3, 0, TAU); ctx.fill();
+      }
+    }
+    // Veilleuse : anneau froid, on comprend qu'elle garde quelque chose
+    if (s.type === 'watcher') {
+      ctx.globalAlpha = 0.4 * vis;
+      ctx.strokeStyle = '#4c6a8e';
+      ctx.lineWidth = 1.4;
+      ctx.setLineDash([4, 5]);
+      ctx.beginPath(); ctx.arc(X, Y, r * 1.35, s.phase, s.phase + 5); ctx.stroke();
+      ctx.setLineDash([]);
     }
     ctx.restore();
   }
@@ -1574,19 +1806,41 @@ function drawIlo() {
   const X = sx(ilo.x), Y = sy(ilo.y);
   const bob = Math.sin(ilo.walk * 6) * 1.8;
   const blink = ilo.iframes > 0 && (Math.floor(G.time * 14) % 2 === 0);
+
+  // Direction de Nim : sert au bord éclairé et à l'ombre portée
+  let lx = ilo.x - G.nim.x, ly = ilo.y - G.nim.y;
+  const ld = Math.hypot(lx, ly) || 1;
+  lx /= ld; ly /= ld;
+  const amt = clamp(lightAmount(ilo.x, ilo.y) * 1.6, 0, 1);
+
   ctx.save();
-  if (blink) ctx.globalAlpha = 0.35;
-  // Ombre au sol
-  ctx.fillStyle = 'rgba(0,0,0,0.55)';
-  ctx.beginPath(); ctx.ellipse(X, Y + 10, 11, 4.5, 0, 0, TAU); ctx.fill();
-  // Corps
-  ctx.fillStyle = COL.ilo;
+  if (blink) ctx.globalAlpha = 0.4;
+
+  // Ombre au sol, projetée à l'opposé de Nim
+  const so = 5 + 9 * amt;
+  ctx.fillStyle = 'rgba(0,0,0,' + (0.42 + 0.3 * amt) + ')';
   ctx.beginPath();
-  ctx.moveTo(X - 8, Y + 10);
-  ctx.quadraticCurveTo(X - 9, Y - 6 + bob, X, Y - 10 + bob);
-  ctx.quadraticCurveTo(X + 9, Y - 6 + bob, X + 8, Y + 10);
-  ctx.closePath(); ctx.fill();
-  // Capuche
+  ctx.ellipse(X + lx * so * 0.8, Y + 10 + ly * so * 0.45, 12 + 5 * amt, 5, Math.atan2(ly, lx), 0, TAU);
+  ctx.fill();
+
+  const bodyPath = () => {
+    ctx.beginPath();
+    ctx.moveTo(X - 8, Y + 10);
+    ctx.quadraticCurveTo(X - 9.5, Y - 6 + bob, X, Y - 10 + bob);
+    ctx.quadraticCurveTo(X + 9.5, Y - 6 + bob, X + 8, Y + 10);
+    ctx.closePath();
+  };
+
+  // Contour clair : c'est lui qui détache Ilo du sol, même dans la pénombre
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = 'rgba(255,231,196,' + (0.62 + 0.32 * amt) + ')';
+  ctx.lineWidth = 2.4;
+  bodyPath(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(X, Y - 11 + bob, 7.6, Math.PI * 0.86, Math.PI * 2.14); ctx.stroke();
+
+  // Corps + capuche
+  ctx.fillStyle = COL.ilo;
+  bodyPath(); ctx.fill();
   ctx.fillStyle = COL.iloHood;
   ctx.beginPath();
   ctx.arc(X, Y - 11 + bob, 7.2, Math.PI * 0.9, Math.PI * 2.1);
@@ -1595,15 +1849,33 @@ function drawIlo() {
   ctx.moveTo(X - 7, Y - 10 + bob);
   ctx.quadraticCurveTo(X + ilo.face * 2, Y - 22 + bob, X + ilo.face * 7, Y - 9 + bob);
   ctx.closePath(); ctx.fill();
+
+  // Bord éclairé du côté de Nim
+  ctx.globalAlpha = (blink ? 0.4 : 1) * (0.35 + 0.55 * amt);
+  ctx.strokeStyle = COL.iloRim;
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  const ea = Math.atan2(-ly, -lx);
+  ctx.arc(X, Y - 1 + bob * 0.6, 9.4, ea - 0.85, ea + 0.85);
+  ctx.stroke();
+  ctx.globalAlpha = blink ? 0.4 : 1;
+
   // Visage à peine suggéré
-  ctx.fillStyle = 'rgba(230,215,190,0.5)';
-  ctx.beginPath(); ctx.ellipse(X + ilo.face * 2.2, Y - 10 + bob, 2.6, 3.1, 0, 0, TAU); ctx.fill();
-  // Lanterne éteinte
-  const lx = X - ilo.face * 8, ly = Y + 2 + bob * 0.5;
-  ctx.strokeStyle = '#4a4152'; ctx.lineWidth = 1.4;
-  ctx.beginPath(); ctx.moveTo(lx, ly - 5); ctx.lineTo(lx, ly - 8); ctx.stroke();
-  ctx.fillStyle = '#3b3446';
-  ctx.fillRect(lx - 3, ly - 5, 6, 7);
+  ctx.fillStyle = 'rgba(240,228,206,0.62)';
+  ctx.beginPath(); ctx.ellipse(X + ilo.face * 2.2, Y - 10 + bob, 2.7, 3.2, 0, 0, TAU); ctx.fill();
+
+  // Lanterne éteinte : cerclage clair + verre qui attrape le reflet de Nim
+  const lx2 = X - ilo.face * 9, ly2 = Y + 2 + bob * 0.5;
+  ctx.strokeStyle = 'rgba(214,196,168,0.75)'; ctx.lineWidth = 1.3;
+  ctx.beginPath(); ctx.moveTo(lx2, ly2 - 5.5); ctx.lineTo(lx2, ly2 - 8.5); ctx.stroke();
+  ctx.fillStyle = '#2e2836';
+  ctx.beginPath(); ctx.rect(lx2 - 3.4, ly2 - 5.5, 6.8, 7.4); ctx.fill();
+  ctx.strokeStyle = 'rgba(206,188,160,0.8)'; ctx.lineWidth = 1;
+  ctx.strokeRect(lx2 - 3.4, ly2 - 5.5, 6.8, 7.4);
+  // reflet : la lueur de Nim posée sur le verre, jamais une flamme
+  ctx.globalAlpha = (blink ? 0.4 : 1) * (0.3 + 0.6 * amt);
+  ctx.fillStyle = COL.warmSoft;
+  ctx.beginPath(); ctx.ellipse(lx2 - ilo.face * 1.1, ly2 - 2.6, 1.5, 2.2, 0, 0, TAU); ctx.fill();
   ctx.restore();
 }
 
@@ -1615,8 +1887,9 @@ function hole(x, y, r, strength) {
   if (x + r < 0 || x - r > VW || y + r < 0 || y - r > VH) return;
   const g = mctx.createRadialGradient(x, y, 0, x, y, r);
   g.addColorStop(0, 'rgba(0,0,0,' + strength + ')');
-  g.addColorStop(0.55, 'rgba(0,0,0,' + (strength * 0.72) + ')');
-  g.addColorStop(0.82, 'rgba(0,0,0,' + (strength * 0.28) + ')');
+  g.addColorStop(0.5, 'rgba(0,0,0,' + (strength * 0.92) + ')');
+  g.addColorStop(0.78, 'rgba(0,0,0,' + (strength * 0.5) + ')');
+  g.addColorStop(0.93, 'rgba(0,0,0,' + (strength * 0.14) + ')');
   g.addColorStop(1, 'rgba(0,0,0,0)');
   mctx.fillStyle = g;
   mctx.beginPath(); mctx.arc(x, y, r, 0, TAU); mctx.fill();
@@ -1637,8 +1910,8 @@ function drawDarkness() {
   const hr = haloRadius();
   const flick = 1 + 0.03 * Math.sin(G.time * 9.3) + (G.light < 20 ? 0.07 * Math.sin(G.time * 22) : 0);
   hole(sx(G.nim.x), sy(G.nim.y), hr * flick, 1);
-  // Très faible souvenir autour d'Ilo
-  hole(sx(G.ilo.x), sy(G.ilo.y), 32, 0.6);
+  // Souvenir autour d'Ilo : de quoi ne jamais le perdre, sans jamais éclairer la route
+  hole(sx(G.ilo.x), sy(G.ilo.y), 50, 0.8);
   // Balises allumées
   for (let i = 0; i < W.beacons.length; i++) {
     const b = W.beacons[i];
@@ -1678,17 +1951,27 @@ function drawLights() {
   ctx.globalCompositeOperation = 'lighter';
 
   const hr = haloRadius();
-  radialGlow(sx(G.nim.x), sy(G.nim.y), hr * 1.12, 'rgba(255,168,86,0.26)', 1);
-  radialGlow(sx(G.nim.x), sy(G.nim.y), hr * 0.42, 'rgba(255,224,170,0.30)', 1);
+  radialGlow(sx(G.nim.x), sy(G.nim.y), hr * 1.15, 'rgba(255,150,66,0.15)', 1);
+  radialGlow(sx(G.nim.x), sy(G.nim.y), hr * 0.5, 'rgba(255,206,142,0.18)', 1);
 
   for (let i = 0; i < W.beacons.length; i++) {
     const b = W.beacons[i];
     if (b.lit) {
-      radialGlow(sx(b.x), sy(b.y), CFG.BEACON_LIGHT_R * 1.1, 'rgba(255,176,92,0.26)', 1);
+      radialGlow(sx(b.x), sy(b.y), CFG.BEACON_LIGHT_R * 1.1, 'rgba(255,176,92,0.22)', 1);
+      radialGlow(sx(b.x), sy(b.y), 26, 'rgba(255,214,150,0.30)', 1);
+      // liseré de la zone sûre : discret, mais on sait où finit l'abri
+      ctx.globalAlpha = 0.10 + 0.04 * Math.sin(G.time * 1.7 + b.phase);
+      ctx.strokeStyle = COL.warm; ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.arc(sx(b.x), sy(b.y), CFG.BEACON_LIGHT_R, 0, TAU); ctx.stroke();
+      ctx.globalAlpha = 1;
     } else {
-      // Souvenir de lueur : à peine perceptible, juste de quoi deviner la direction
+      // Souvenir de lueur : assez pour deviner la direction, jamais assez pour éclairer
       const pulse = 0.5 + 0.5 * Math.sin(G.time * 1.6 + b.phase);
-      radialGlow(sx(b.x), sy(b.y), 46, 'rgba(150,180,220,0.16)', 0.20 + 0.14 * pulse);
+      radialGlow(sx(b.x), sy(b.y), 54, 'rgba(150,180,220,0.20)', 0.30 + 0.20 * pulse);
+      ctx.globalAlpha = 0.30 + 0.30 * pulse;
+      ctx.fillStyle = '#a8c2e8';
+      ctx.beginPath(); ctx.arc(sx(b.x), sy(b.y) - 6, 1.7, 0, TAU); ctx.fill();
+      ctx.globalAlpha = 1;
     }
   }
   if (G.doorOpen) {
@@ -1729,8 +2012,8 @@ function drawLights() {
     if (X < -40 || X > VW + 40 || Y < -40 || Y > VH + 40) continue;
     const amt = lightAmount(s.x, s.y);
     const d = dist(s.x, s.y, G.ilo.x, G.ilo.y);
-    const near = 1 - clamp((d - 55) / 115, 0, 1);
-    const a = Math.max(clamp(amt * 1.6, 0, 1) * 0.6, near * 0.55);
+    const near = 1 - clamp((d - 60) / 140, 0, 1);
+    const a = Math.max(clamp(amt * 1.6, 0, 1) * 0.6, near * near * 0.58);
     if (a < 0.02) continue;
     const dirx = s.vx, diry = s.vy;
     const dl = Math.hypot(dirx, diry) || 1;
@@ -1763,8 +2046,10 @@ function drawLights() {
   ctx.fillStyle = COL.nim;
   ctx.beginPath(); ctx.arc(nx, ny, 3.1 + 0.5 * Math.sin(G.time * 12), 0, TAU); ctx.fill();
 
-  // Rappel très discret d'Ilo, pour ne jamais le perdre
-  radialGlow(sx(G.ilo.x), sy(G.ilo.y), 24, 'rgba(255,198,138,0.34)', 1);
+  // Rappel d'Ilo : petite auréole tiède, comme un souvenir de chaleur
+  const ig = 0.30 + 0.05 * Math.sin(G.time * 2.1);
+  radialGlow(sx(G.ilo.x), sy(G.ilo.y), 42, 'rgba(255,190,124,' + ig.toFixed(3) + ')', 1);
+  radialGlow(sx(G.ilo.x), sy(G.ilo.y), 18, 'rgba(255,232,196,0.26)', 1);
 
   ctx.restore();
 }
@@ -1774,15 +2059,109 @@ function drawTether() {
   const t = G.tension || 0;
   const ax = sx(ilo.x), ay = sy(ilo.y - 4);
   const bx = sx(nim.x), by = sy(nim.y);
-  const mx = (ax + bx) / 2, my = (ay + by) / 2 + (1 - t) * 16;
-  ctx.globalAlpha = 0.20 + 0.55 * t;
-  ctx.strokeStyle = t > 0.6 ? COL.tetherTaut : COL.tether;
-  ctx.lineWidth = 1 + t * 1.6;
-  ctx.beginPath();
-  ctx.moveTo(ax, ay);
-  ctx.quadraticCurveTo(mx, my, bx, by);
-  ctx.stroke();
+  const mx = (ax + bx) / 2, my = (ay + by) / 2 + (1 - t) * 18;
+  const taut = t > 0.55;
+
+  // Halo du fil : c'est ce qui le rend visible sur le sol clair du halo
+  ctx.lineCap = 'round';
+  ctx.globalAlpha = 0.07 + 0.16 * t;
+  ctx.strokeStyle = taut ? COL.tetherTaut : COL.tether;
+  ctx.lineWidth = 4 + t * 3;
+  ctx.beginPath(); ctx.moveTo(ax, ay); ctx.quadraticCurveTo(mx, my, bx, by); ctx.stroke();
+
+  // Fil lui-même
+  ctx.globalAlpha = 0.30 + 0.42 * t;
+  ctx.lineWidth = 1.2 + t * 1.5;
+  ctx.beginPath(); ctx.moveTo(ax, ay); ctx.quadraticCurveTo(mx, my, bx, by); ctx.stroke();
+
+  // Perles qui remontent le fil vers Nim : montre le sens et la tension
+  const beads = 4;
+  const flow = (G.time * (0.35 + t * 0.9)) % 1;
+  ctx.fillStyle = taut ? '#ffd0b0' : COL.warmSoft;
+  for (let i = 0; i < beads; i++) {
+    const u = (flow + i / beads) % 1;
+    const iu = 1 - u;
+    const px = iu * iu * ax + 2 * iu * u * mx + u * u * bx;
+    const py = iu * iu * ay + 2 * iu * u * my + u * u * by;
+    ctx.globalAlpha = (0.18 + 0.42 * t) * Math.sin(u * Math.PI);
+    ctx.beginPath(); ctx.arc(px, py, 1.1 + t * 0.9, 0, TAU); ctx.fill();
+  }
+
+  // Laisse au maximum : court arc devant Nim, comme une paroi qu'elle ne franchit pas
+  if (t > 0.9) {
+    const a0 = Math.atan2(by - ay, bx - ax);
+    ctx.globalAlpha = 0.20 + 0.16 * Math.sin(G.time * 10);
+    ctx.strokeStyle = COL.tetherTaut;
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(ax, ay, CFG.TETHER, a0 - 0.34, a0 + 0.34); ctx.stroke();
+  }
   ctx.globalAlpha = 1;
+}
+
+/* Jauge d'allumage des balises + rappel de la portée de Nim.
+   Dessinée après le masque : toujours parfaitement lisible. */
+function drawBeaconUI() {
+  const W = G.world, ilo = G.ilo, nim = G.nim;
+  ctx.save();
+  for (let i = 0; i < W.beacons.length; i++) {
+    const b = W.beacons[i];
+    if (b.lit) continue;
+    const X = sx(b.x), Y = sy(b.y);
+    if (X < -80 || X > VW + 80 || Y < -80 || Y > VH + 80) continue;
+    const dIlo = dist(ilo.x, ilo.y, b.x, b.y);
+    const onIt = dIlo < CFG.BEACON_STAND_RANGE;
+    const near = dIlo < 130;
+    if (!near && b.prog <= 0.001) continue;
+
+    const cy = Y - 4;
+    // Cercle où Ilo doit se tenir
+    if (near) {
+      ctx.globalAlpha = onIt ? 0.5 : 0.22;
+      ctx.strokeStyle = onIt ? COL.warm : 'rgba(190,205,230,1)';
+      ctx.lineWidth = 1.6;
+      ctx.setLineDash([4, 6]);
+      ctx.beginPath(); ctx.arc(X, cy, CFG.BEACON_STAND_RANGE, 0, TAU); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+    }
+
+    if (!onIt && b.prog <= 0.001) continue;
+
+    const nimNear = dist(nim.x, nim.y, b.x, b.y) < CFG.BEACON_NIM_RANGE;
+    // Anneau de fond
+    ctx.globalAlpha = 0.9;
+    ctx.strokeStyle = 'rgba(255,255,255,0.16)';
+    ctx.lineWidth = 6;
+    ctx.beginPath(); ctx.arc(X, cy, 30, 0, TAU); ctx.stroke();
+    // Progression
+    if (b.prog > 0.002) {
+      ctx.strokeStyle = nimNear ? COL.warm : 'rgba(255,183,101,0.4)';
+      ctx.lineWidth = 6;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.arc(X, cy, 30, -Math.PI / 2, -Math.PI / 2 + TAU * clamp(b.prog, 0, 1));
+      ctx.stroke();
+      ctx.lineCap = 'butt';
+    }
+    ctx.globalAlpha = 1;
+
+    // Ilo est en place mais Nim est trop loin : on le dit clairement
+    if (onIt && !nimNear) {
+      ctx.globalAlpha = 0.30 + 0.16 * Math.sin(G.time * 5);
+      ctx.strokeStyle = '#8fc0ff';
+      ctx.lineWidth = 1.6;
+      ctx.setLineDash([6, 7]);
+      ctx.beginPath(); ctx.arc(X, cy, CFG.BEACON_NIM_RANGE, 0, TAU); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 0.85;
+      ctx.font = font(14, '700');
+      ctx.textAlign = 'center';
+      shadowText('Approche Nim', X, cy - 44, 'center', '#a8cbff');
+      ctx.textAlign = 'left';
+      ctx.globalAlpha = 1;
+    }
+  }
+  ctx.restore();
 }
 
 /* ============================================================
@@ -1853,7 +2232,13 @@ function drawHUD() {
   ctx.strokeStyle = 'rgba(255,255,255,0.22)'; ctx.lineWidth = 1;
   ctx.strokeRect(gx + 0.5, gy + 0.5, gw, gh);
   ctx.font = font(14, '600');
-  shadowText('Lumière', gx, gy + gh + 16 * uiScale, 'left', COL.dim);
+  if (G.resting) {
+    ctx.globalAlpha = 0.6 + 0.4 * Math.sin(G.time * 4);
+    shadowText('Lumière — Nim se recharge', gx, gy + gh + 16 * uiScale, 'left', COL.warm);
+    ctx.globalAlpha = 1;
+  } else {
+    shadowText('Lumière', gx, gy + gh + 16 * uiScale, 'left', COL.dim);
+  }
 
   // Balises
   let lit = 0;
@@ -1872,9 +2257,29 @@ function drawHUD() {
   ctx.font = font(15);
   shadowText('Score ' + G.score, VW - pad, top + hs * 1.25, 'right', COL.dim);
 
+  // Chrono : le bonus temps ne tombe pas du ciel, on le voit filer
+  ctx.font = font(14, '600');
+  const tsec = G.nightTime;
+  const tstr = Math.floor(tsec / 60) + ':' + String(Math.floor(tsec % 60)).padStart(2, '0');
+  shadowText(tstr, VW - pad, top + hs * 2.05, 'right',
+    tsec < CFG.TIME_BONUS_LIMIT ? COL.warm : COL.dim);
+
   if (save.muted) {
     ctx.font = font(14);
-    shadowText('son coupé (M)', VW - pad, top + hs * 2.1, 'right', COL.dim);
+    shadowText('son coupé (M)', VW - pad, top + hs * 2.9, 'right', COL.dim);
+  }
+
+  // Conseil de la nuit : quelques secondes, bien lisible, puis il s'efface
+  if (G.hintT > 0 && G.hintText) {
+    const a = clamp(G.hintT / 2, 0, 1) * 0.85;
+    ctx.globalAlpha = a;
+    ctx.font = font(15, '', true);
+    ctx.textAlign = 'center';
+    const lines = wrap(G.hintText, Math.min(760 * uiScale, VW - 80));
+    let hy = VH - 26 * uiScale - (lines.length - 1) * 21 * uiScale;
+    for (const l of lines) { shadowText(l, VW / 2, hy, 'center', '#a9bdd6'); hy += 21 * uiScale; }
+    ctx.textAlign = 'left';
+    ctx.globalAlpha = 1;
   }
 
   // Boussole vers l'objectif quand il est hors champ
@@ -1911,23 +2316,52 @@ function drawObjectiveHint() {
   }
   if (tx === null) return;
   const X = sx(tx), Y = sy(ty);
-  const m = 40;
-  if (X > m && X < VW - m && Y > m && Y < VH - m) return;
-  const cx = VW / 2, cy = VH / 2;
-  let ax = X - cx, ay = Y - cy;
+  const m = 56 * uiScale;
+  // Quand le conseil de la nuit est affiché en bas, la boussole reste au-dessus du bandeau
+  const mb = (G.hintT > 0 && G.hintText) ? 104 * uiScale : m;
+  if (X > m && X < VW - m && Y > m && Y < VH - mb) return;
+
+  // Position sur le cadre de l'écran, dans la direction de l'objectif depuis Ilo
+  const ox = sx(G.ilo.x), oy = sy(G.ilo.y);
+  let ax = X - ox, ay = Y - oy;
   const al = Math.hypot(ax, ay) || 1;
   ax /= al; ay /= al;
-  const rx = Math.min(VW / 2 - 34, VH / 2 - 34);
-  const px = cx + ax * rx, py = cy + ay * rx;
+  const hw = VW / 2 - m, hh = VH / 2 - m;
+  const k = Math.min(hw / (Math.abs(ax) || 1e-6), hh / (Math.abs(ay) || 1e-6));
+  const px = clamp(VW / 2 + ax * k, m, VW - m);
+  const py = clamp(VH / 2 + ay * k, m, VH - mb);
+
+  const warm = G.doorOpen;
+  const col = warm ? COL.warm : '#a9c1e6';
+  const pulse = 0.62 + 0.24 * Math.sin(G.time * 3.4);
+  const sc = uiScale;
+
   ctx.save();
+  // Pastille + flèche
+  ctx.globalAlpha = 0.20 * pulse;
+  ctx.fillStyle = col;
+  ctx.beginPath(); ctx.arc(px, py, 21 * sc, 0, TAU); ctx.fill();
+  ctx.globalAlpha = pulse;
   ctx.translate(px, py);
   ctx.rotate(Math.atan2(ay, ax));
-  ctx.globalAlpha = 0.35 + 0.15 * Math.sin(G.time * 3);
-  ctx.fillStyle = G.doorOpen ? COL.warm : '#93a9cc';
+  ctx.fillStyle = col;
   ctx.beginPath();
-  ctx.moveTo(9, 0); ctx.lineTo(-6, 6); ctx.lineTo(-6, -6);
+  ctx.moveTo(15 * sc, 0); ctx.lineTo(-7 * sc, 10 * sc); ctx.lineTo(-3 * sc, 0); ctx.lineTo(-7 * sc, -10 * sc);
   ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.55)'; ctx.lineWidth = 1.2; ctx.stroke();
   ctx.restore();
+
+  // Légende : quoi, et à quelle distance
+  const d = Math.round(dist(G.ilo.x, G.ilo.y, tx, ty));
+  const lx = clamp(px, 58 * sc, VW - 58 * sc);
+  // Légende sous la flèche, ou au-dessus quand la flèche touche le bas de l'écran
+  const ly = py > VH * 0.72 ? py - 30 * sc : py + 34 * sc;
+  ctx.globalAlpha = 0.55 + 0.2 * Math.sin(G.time * 3.4);
+  ctx.font = font(13, '700');
+  ctx.textAlign = 'center';
+  shadowText((warm ? 'arche' : 'pierre') + '  ' + d + ' m', lx, ly, 'center', col);
+  ctx.textAlign = 'left';
+  ctx.globalAlpha = 1;
 }
 
 /* ============================================================
@@ -2235,6 +2669,8 @@ function render() {
     camY = G.cam.y + oy;
     drawWorld();
     drawDarkness();
+    if (G.cull) drawShadowBodies(G.cull.x0, G.cull.x1, G.cull.y0, G.cull.y1);
+    drawBeaconUI();
     drawLights();
     if (G.flash > 0.001) {
       ctx.fillStyle = 'rgba(255,240,214,' + (G.flash * 0.4) + ')';
@@ -2289,6 +2725,20 @@ function frame(now) {
 /* ============================================================
    AMORÇAGE
    ============================================================ */
+/* Crochet interne de mise au point : aucun bouton, aucune mention dans le jeu.
+   Sert uniquement aux tests automatisés (sauter à une nuit, inspecter l'état). */
+try {
+  Object.defineProperty(window, '__luciole', {
+    value: {
+      G, CFG, save,
+      night(n) { startRun(n); goToNightBefore(n); },
+      generate: generateWorld,
+      params: nightParams
+    },
+    enumerable: false, writable: false, configurable: false
+  });
+} catch (e) { /* environnement verrouillé : on s'en passe */ }
+
 function boot() {
   resize();
   G.lightWarn = 0;
