@@ -199,7 +199,7 @@ const CONTENT = {
     "Un feu d’Ys ne meurt que sous un focus tenu un peu plus d’une seconde.",
     "La fusée traverse la brume et remonte la confiance de tout un secteur d’un coup.",
     "L’huile ne revient qu’avec les sauvetages : sauve d’abord, dépense ensuite.",
-    "Les barques dérivent deux fois plus vite : éclaire-les avant les caboteurs."
+    "Les barques dérivent bien plus vite : éclaire-les avant les caboteurs."
   ],
   credits: "VEILLEUR — Les nuits d’Ys. Texte, code et dessin d’une seule veille. Pour les gardiens de phares, qui n’ont jamais eu de touche R."
 };
@@ -2003,21 +2003,21 @@ function createFX() {
 
   // ---------- types de navires ----------
   var TYPES = {
-    chalutier: { speed: 37, r: 11, gain: 1.00, decay: 0.155, souls: 8, len: 30, beam: 11 },
-    caboteur: { speed: 29, r: 14, gain: 0.72, decay: 0.115, souls: 14, len: 41, beam: 15 },
-    barque: { speed: 50, r: 9, gain: 1.55, decay: 0.320, souls: 3, len: 21, beam: 8 },
-    kerloch: { speed: 21, r: 22, gain: 0.44, decay: 0.085, souls: 220, len: 66, beam: 22 },
-    aurore: { speed: 30, r: 17, gain: 0.58, decay: 0.130, souls: 40, len: 47, beam: 17 }
+    chalutier: { speed: 37, r: 11, gain: 1.00, decay: 0.100, souls: 8, len: 30, beam: 11 },
+    caboteur: { speed: 29, r: 14, gain: 0.72, decay: 0.075, souls: 14, len: 41, beam: 15 },
+    barque: { speed: 55, r: 9, gain: 1.55, decay: 0.215, souls: 3, len: 21, beam: 8 },
+    kerloch: { speed: 21, r: 22, gain: 0.44, decay: 0.055, souls: 220, len: 66, beam: 22 },
+    aurore: { speed: 30, r: 17, gain: 0.58, decay: 0.085, souls: 40, len: 47, beam: 17 }
   };
 
   var NIGHTS = [null,
-    { ships: 5, types: ['chalutier'], every: 3.0, fog: 0, wreck: 0, storm: 0.22 },
-    { ships: 7, types: ['chalutier', 'caboteur'], every: 2.8, fog: 2, wreck: 0, storm: 0.38 },
-    { ships: 8, types: ['chalutier', 'caboteur'], every: 2.6, fog: 2, wreck: 1, storm: 0.50 },
-    { ships: 9, types: ['chalutier', 'barque', 'barque'], every: 2.4, fog: 3, wreck: 1, storm: 0.62 },
-    { ships: 10, types: ['barque', 'chalutier', 'caboteur'], every: 2.2, fog: 4, wreck: 2, storm: 0.76 },
-    { ships: 11, types: ['barque', 'chalutier', 'caboteur'], every: 2.1, fog: 4, wreck: 2, storm: 0.88, special: 'kerloch' },
-    { ships: 12, types: ['barque', 'chalutier', 'caboteur'], every: 1.9, fog: 5, wreck: 3, storm: 1.00, special: 'aurore' }
+    { ships: 5, types: ['chalutier'], every: 2.8, fog: 0, wreck: 0, storm: 0.22, spd: 0.62 },
+    { ships: 7, types: ['chalutier', 'caboteur'], every: 3.0, fog: 2, wreck: 0, storm: 0.38, spd: 0.72 },
+    { ships: 8, types: ['chalutier', 'caboteur'], every: 2.7, fog: 2, wreck: 1, storm: 0.50, spd: 0.80 },
+    { ships: 9, types: ['chalutier', 'barque', 'barque'], every: 2.5, fog: 3, wreck: 1, storm: 0.62, spd: 0.88 },
+    { ships: 9, types: ['barque', 'chalutier', 'caboteur'], every: 2.0, fog: 4, wreck: 2, storm: 0.76, spd: 0.95 },
+    { ships: 10, types: ['barque', 'chalutier', 'caboteur'], every: 1.9, fog: 4, wreck: 2, storm: 0.88, spd: 1.02, special: 'kerloch' },
+    { ships: 11, types: ['barque', 'chalutier', 'caboteur'], every: 1.8, fog: 5, wreck: 3, storm: 1.00, spd: 1.10, special: 'aurore' }
   ];
 
   // ---------- réglages de sensation ----------
@@ -2028,7 +2028,7 @@ function createFX() {
     hwMin: 0.105, hwMax: 0.44,     // demi-ouverture du cône (immobile -> balayage)
     focusHw: 0.46, focusRange: 1.75, focusGain: 1.7,
     gain: 0.62, range: 0.52,       // portée = 0.52 * min(w,h)... recalculée au resize
-    heatUp: 0.42, heatStill: 0.10, heatDown: 0.30, blackout: 2.5,
+    heatUp: 0.36, heatStill: 0.10, heatDown: 0.30, blackout: 2.5,
     oilMax: 100, flareCost: 34, oilPerSave: 15, oilPerNight: 35,
     flareR: 300, flareBoost: 0.42
   };
@@ -2045,6 +2045,7 @@ function createFX() {
     oil: K.oilMax, flareFlash: 0,
     saved: 0, lostShips: 0, extinguished: 0, combo: 0, bestCombo: 0,
     auroreSaved: false, auroreSeen: false,
+    bilan: null, nSaved: 0, nLost: 0, nSouls: 0,
     t: 0, w: 0, h: 0, cx: 0, cy: 0, range: 420,
     hw: 0.2, beamRange: 420, power: 1, sweep: 0, hist: [], histT: 0,
     shake: 0, msg: null, msgT: 0, endKind: 'defeat',
@@ -2137,6 +2138,7 @@ function createFX() {
     S.ships.length = 0; S.lights.length = 0; S.fogs.length = 0; S.notes.length = 0;
     S.spawned = 0; S.spawnT = 1.2; S.wreckT = 8; S.nightT = 0;
     S.oil = K.oilMax; S.heat = 0; S.lamp = true; S.blackout = 0;
+    S.nSaved = 0; S.nLost = 0; S.nSouls = 0;
     S.angVel = 0; S.msg = null;
     buildReef();
     for (var i = 0; i < cfg.fog; i++) spawnFog(true);
@@ -2187,7 +2189,8 @@ function createFX() {
       x: S.cx + ca * R, y: S.cy + sa * R,
       hd: a + Math.PI + rnd(-0.35, 0.35),
       conf: 0, state: 'lost', lit: 0, wob: rnd(0, TAU),
-      alive: true, fade: 1, milestone: 0, panic: 0, danger: 0, born: 0
+      alive: true, fade: 1, milestone: 0, panic: 0, danger: 0, born: 0,
+      spdMul: (NIGHTS[S.night] && NIGHTS[S.night].spd) || 1
     };
     S.ships.push(sh);
     return sh;
@@ -2433,24 +2436,13 @@ function createFX() {
       }
       var want = Math.atan2(ty - sh.y, tx - sh.x);
       sh.hd = wrapPi(sh.hd + clamp(wrapPi(want - sh.hd), -0.55 * dt, 0.55 * dt));
-      var sp = t.speed * boost * (1 - sh.conf * 0.45) * (1 + sh.panic * 0.4);
+      var sp = t.speed * sh.spdMul * boost * (1 - sh.conf * 0.45) * (1 + sh.panic * 0.4);
       moveShip(sh, sp, dt, 0.35);
     } else if (sh.state === 'guided') {
       sh.lit = lerp(sh.lit, 0.55, dt * 2);
       var hy = S.h + 80, hx = S.cx + Math.sin(sh.wob * 0.3) * 30;
-      var wantG = Math.atan2(hy - sh.y, hx - sh.x);
-      // évitement des écueils
-      var ax = 0, ay = 0;
-      for (var r = 0; r < S.rocks.length; r++) {
-        var ro = S.rocks[r], ddx = sh.x - ro.x, ddy = sh.y - ro.y, dd = Math.hypot(ddx, ddy);
-        var safe = ro.r + t.r + 46;
-        if (dd < safe && dd > 0.1) { ax += (ddx / dd) * (1 - dd / safe); ay += (ddy / dd) * (1 - dd / safe); }
-      }
-      if (ax || ay) {
-        var av = Math.atan2(ay, ax);
-        wantG = wantG + wrapPi(av - wantG) * clamp(Math.hypot(ax, ay) * 1.5, 0, 0.85);
-      }
-      sh.hd = wrapPi(sh.hd + clamp(wrapPi(wantG - sh.hd), -1.6 * dt, 1.6 * dt));
+      var wantG = avoid(sh, Math.atan2(hy - sh.y, hx - sh.x));
+      sh.hd = wrapPi(sh.hd + clamp(wrapPi(wantG - sh.hd), -2.2 * dt, 2.2 * dt));
       moveShip(sh, Math.max(t.speed * 1.8, 78), dt, 0.12);
       if (sh.y > S.h + 30) return saveShip(sh);
     }
@@ -2468,6 +2460,27 @@ function createFX() {
     sh.danger = sh.state === 'lost' ? clamp(1 - (dc - 110) / 230, 0, 1) : 0;
   }
 
+  // Dévie le cap voulu pour qu'aucun obstacle ne reste dans l'axe : on sort du
+  // cône interdit par le côté le plus proche, ce qui contourne au lieu de foncer.
+  function avoid(sh, want) {
+    var turn = 0, t = sh.t;
+    for (var i = -1; i < S.rocks.length; i++) {
+      var ox, oy, orad;
+      if (i < 0) { ox = S.cx; oy = S.cy; orad = 46; }
+      else { var ro = S.rocks[i]; ox = ro.x; oy = ro.y; orad = ro.r; }
+      var dx = ox - sh.x, dy = oy - sh.y, d = Math.hypot(dx, dy);
+      var safe = orad + t.r + 30;
+      if (d < 1 || d > safe + 170) continue;
+      var rel = wrapPi(Math.atan2(dy, dx) - want);
+      var need = Math.asin(Math.min(0.999, safe / Math.max(d, safe)));
+      if (Math.abs(rel) < need) {
+        var tn = rel - (rel >= 0 ? 1 : -1) * need;
+        if (Math.abs(tn) > Math.abs(turn)) turn = tn;
+      }
+    }
+    return wrapPi(want + turn);
+  }
+
   function moveShip(sh, sp, dt, wobAmt) {
     var h = sh.hd + Math.sin(sh.wob) * wobAmt * 0.25;
     sh.x += Math.cos(h) * sp * dt;
@@ -2477,8 +2490,9 @@ function createFX() {
 
   function saveShip(sh) {
     sh.alive = false; sh.fade = 0;
-    S.saved++; S.combo++; if (S.combo > S.bestCombo) S.bestCombo = S.combo;
-    S.souls += sh.t.souls + Math.min(S.combo, 10) * 2;
+    S.saved++; S.nSaved++; S.combo++; if (S.combo > S.bestCombo) S.bestCombo = S.combo;
+    var gain = sh.t.souls + Math.min(S.combo, 10) * 2;
+    S.souls += gain; S.nSouls += gain;
     S.oil = clamp(S.oil + K.oilPerSave, 0, K.oilMax);
     if (sh.kind === 'aurore') S.auroreSaved = true;
     AU.sfx('save', { pitch: 1 + Math.min(S.combo, 8) * 0.06 });
@@ -2488,14 +2502,19 @@ function createFX() {
 
   function wreckShip(sh) {
     sh.alive = false; sh.fade = 1;
-    S.lives--; S.combo = 0; S.lostShips++;
+    S.lives--; S.combo = 0; S.lostShips++; S.nLost++;
     AU.sfx('wreck'); FX.shake(12);
     FX.debris(sh.x, sh.y, 16); FX.splash(sh.x, sh.y, 22); FX.smoke(sh.x, sh.y, 8);
     note(sh.name + ' — ' + pick(C.lost, 'perdu corps et biens'), sh.x, sh.y, '#e2715f');
   }
 
   function endNight() {
-    S.souls += 20 + S.night * 10;
+    var bonus = 20 + S.night * 10 + (S.nLost === 0 ? 40 : 0);
+    S.souls += bonus; S.nSouls += bonus;
+    var clean = S.nLost === 0 && S.nSaved > 0;
+    var regained = false;
+    if (clean && S.lives < 5) { S.lives++; regained = true; }
+    S.bilan = { night: S.night, saved: S.nSaved, lost: S.nLost, souls: S.nSouls, clean: clean, regained: regained };
     S.oil = clamp(S.oil + K.oilPerNight, 0, K.oilMax);
     AU.sfx('nightclear');
     if (S.night >= 7) { gameOver(S.auroreSaved ? 'victory' : 'bittersweet'); return; }
@@ -2797,7 +2816,7 @@ function createFX() {
     ctx.fillStyle = COL.dim;
     ctx.fillText(S.souls + ' âmes', 22, 50);
     // lanternes restantes
-    for (var i = 0; i < 3; i++) {
+    for (var i = 0; i < Math.max(3, S.lives); i++) {
       var on = i < S.lives;
       ctx.beginPath(); ctx.arc(26 + i * 15, 66, 4, 0, TAU);
       ctx.fillStyle = on ? 'rgba(255,196,107,0.9)' : 'rgba(255,255,255,0.13)'; ctx.fill();
@@ -2895,6 +2914,16 @@ function createFX() {
     ctx.fillStyle = 'rgba(220,233,247,0.72)';
     var log = nt.log || [];
     for (var i = 0; i < log.length; i++) ctx.fillText(log[i], w / 2, h * 0.32 + 96 + i * 26);
+    if (S.bilan && S.bilan.night === S.night - 1) {
+      var bl = S.bilan;
+      ctx.font = '11px ui-sans-serif, system-ui, sans-serif';
+      ctx.letterSpacing = '2px';
+      ctx.fillStyle = bl.clean ? 'rgba(255,196,107,0.75)' : 'rgba(220,233,247,0.45)';
+      ctx.fillText('NUIT ' + bl.night + ' — ' + bl.saved + ' NAVIRE' + (bl.saved > 1 ? 'S' : '') + ' À QUAI, '
+        + bl.lost + ' PERDU' + (bl.lost > 1 ? 'S' : '') + '  ·  +' + bl.souls + ' ÂMES'
+        + (bl.clean ? '  ·  QUART SANS FAUTE' + (bl.regained ? ', UNE LANTERNE RENDUE' : '') : ''), w / 2, h * 0.68);
+      ctx.letterSpacing = '0px';
+    }
     ctx.font = '12px ui-sans-serif, system-ui, sans-serif';
     ctx.fillStyle = 'rgba(255,196,107,' + (0.4 + 0.4 * Math.sin(S.t * 3)) + ')';
     ctx.fillText('CLIC OU ESPACE — PRENDRE LE QUART', w / 2, h * 0.78);
@@ -2941,6 +2970,11 @@ function createFX() {
     ctx.font = '600 13px ui-sans-serif, system-ui, sans-serif';
     ctx.fillStyle = 'rgba(255,196,107,' + (0.5 + 0.45 * Math.sin(S.t * 3)) + ')';
     ctx.fillText('R OU CLIC — REPRENDRE LE QUART', w / 2, h * 0.84);
+    if (C.credits) {
+      ctx.font = '10px ui-sans-serif, system-ui, sans-serif';
+      ctx.fillStyle = 'rgba(220,233,247,0.22)';
+      ctx.fillText(C.credits, w / 2, h - 24);
+    }
     ctx.restore();
   }
 
