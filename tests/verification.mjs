@@ -74,9 +74,51 @@ await page.keyboard.type('Relire le devis');
 await page.keyboard.press('Escape');
 await page.waitForTimeout(300);
 ok('deux tâches créées à la suite', await page.locator(`.daybin[data-jour="${auj}"] .item`).count(), 2);
-ok('un titre long revient à la ligne',
-  await page.evaluate(() => { const t = document.querySelector('.daybin .item textarea.title');
-    return t && parseInt(t.style.height) >= 18; }), true);
+/* Ce contrôle mesurait la hauteur du CHAMP de titre, qui s'est toujours
+   dimensionné correctement. Il passait donc au vert pendant que la BOÎTE qui
+   le contient était écrasée par le bac et que le texte débordait par-dessus la
+   tâche suivante. Un contrôle qui mesure le mauvais objet est pire qu'un
+   contrôle absent : il donne une confiance imméritée. On mesure désormais la
+   boîte, et on remplit le bac pour déclencher précisément la compression. */
+await injecter(() => {
+  for (let i = 0; i < 10; i++){
+    const id = creerItem({ placement:'day', date:dateAujourdhui() }, false);
+    etat.items[id].title = 'Relancer le fournisseur au sujet du devis de septembre ' + i;
+  }
+  rendre();
+});
+await page.waitForTimeout(300);
+const troncature = await page.evaluate(() => {
+  const bin = document.querySelector(`.daybin[data-jour="${dateAujourdhui()}"]`);
+  let ecrasees = 0, debordantes = 0;
+  bin.querySelectorAll('.item').forEach(el => {
+    const ta = el.querySelector('textarea.title');
+    if (!ta) return;
+    const hBoite = el.getBoundingClientRect().height;
+    const hTexte = ta.getBoundingClientRect().height;
+    if (hBoite < hTexte) ecrasees++;
+    if (ta.scrollHeight > hTexte + 1) debordantes++;
+  });
+  return { ecrasees, debordantes, taches: bin.querySelectorAll('.item').length };
+});
+ok('bac chargé : les tâches sont bien là', troncature.taches >= 10, true);
+ok('un titre long n\'est jamais coupé dans son champ', troncature.debordantes, 0);
+ok('une tâche n\'est jamais écrasée par son bac', troncature.ecrasees, 0);
+
+/* Un bac plafonné qui déborde doit le dire : sans repère, l'en-tête annonçait
+   huit tâches, le bac en montrait trois, et les cinq autres n'existaient pour
+   personne — les navigateurs masquent leur barre de défilement au repos. */
+const deborde = await page.evaluate(() => {
+  const bin = document.querySelector(`.daybin[data-jour="${dateAujourdhui()}"]`);
+  const r = bin.querySelector('.binreste');
+  const cachees = [...bin.querySelectorAll('.item')].filter(
+    el => el.offsetTop + el.offsetHeight > bin.scrollTop + bin.clientHeight + 1).length;
+  return { repere: !!r, texte: r ? r.textContent : '', annonce: r ? parseInt(r.textContent.replace(/\D+/g, '')) : 0,
+           cachees: cachees, marque: bin.classList.contains('deborde') };
+});
+ok('bac qui déborde : un repère l\'annonce', deborde.repere, true);
+ok('bac qui déborde : le bac est marqué', deborde.marque, true);
+ok('bac qui déborde : le compte annoncé est le bon', deborde.annonce, deborde.cachees);
 
 /* ---- 3. Cocher, prioriser, supprimer, annuler --------------------------- */
 await page.locator(`.daybin[data-jour="${auj}"] .item`).first().locator('.chk').check();
@@ -151,6 +193,65 @@ ok('pointeur perdu : on repart des données les plus récentes',
   await evacuerPanneaux(o3);
   ok('deux onglets : rien n\'est écrasé', await o3.evaluate(() => Object.keys(etat.items).length), 10);
   await ctxO.close();
+}
+
+/* ---- 4 ter. Rendez-vous qui se chevauchent ------------------------------- */
+/* Aucun contrôle de la version 1.0.0 ne créait deux rendez-vous simultanés.
+   C'est ce trou qui a laissé passer le défaut le plus bloquant de l'interface :
+   les cases horaires cliquables tombaient à zéro pixel de large et la journée
+   devenait impossible à cliquer. */
+{
+  const j = await injecter(() => {
+    const jour = datePlus(dateLundi(dateAujourdhui()), 1);
+    for (const id of Object.keys(etat.items)) if (id.startsWith('ch')) delete etat.items[id];
+    [[540,90,'Réunion équipe produit'],[570,60,'Appel fournisseur'],[600,90,'Comité de pilotage'],
+     [900,60,'Entretien annuel']].forEach(([m,d,t],k) => {
+      etat.items['ch'+k] = Object.assign({}, ITEM_DEFAUT, { id:'ch'+k, title:t,
+        placement:'slot', date:jour, origDate:jour, startMin:m, durMin:d, status:'open' });
+    });
+    rendre(); return jour;
+  });
+  await page.waitForTimeout(300);
+
+  const g = await page.evaluate(jour => {
+    const col = document.querySelector(`.daycol[data-jour="${jour}"]`);
+    const cases = col.querySelectorAll('.slot');
+    const rdv = [...col.querySelectorAll('.slotitem')].map(e => ({
+      titre: e.querySelector('textarea').value,
+      largeur: Math.round(e.getBoundingClientRect().width),
+      gauche: Math.round(e.getBoundingClientRect().left),
+      texte: Math.round(e.querySelector('textarea').getBoundingClientRect().width),
+    }));
+    return { largeurCase: Math.round(cases[0].getBoundingClientRect().width),
+             nbCases: cases.length, rdv: rdv,
+             largeurColonne: Math.round(col.getBoundingClientRect().width) };
+  }, j);
+
+  ok('chevauchement : les cases horaires gardent leur largeur',
+     g.largeurCase > g.largeurColonne * 0.9, true);
+  ok('chevauchement : toutes les cases sont cliquables', g.nbCases >= 20, true);
+  ok('chevauchement : les quatre rendez-vous sont affichés', g.rdv.length, 4);
+  /* Avant correctif, le texte d'un rendez-vous simultané mesurait ZÉRO pixel.
+     Un couloir partagé reste étroit — c'est la répartition de l'espace qui
+     réglera le fond — mais il doit toujours montrer du texte. */
+  ok('chevauchement : aucun rendez-vous réduit à rien',
+     g.rdv.every(r => r.texte > 30), true);
+  ok('chevauchement : le titre complet reste lisible en infobulle',
+     await page.evaluate(jour => {
+       const e = document.querySelector(`.daycol[data-jour="${jour}"] .slotitem`);
+       return /\d\d:\d\d – \d\d:\d\d/.test(e.title) && e.title.includes('Réunion équipe produit');
+     }, j), true);
+  // Les trois premiers se chevauchent et se partagent la largeur ; le
+  // quatrieme, seul a 15 h, doit reprendre toute la colonne.
+  ok('chevauchement : les simultanés se partagent la largeur',
+     g.rdv.filter(r => r.largeur < g.largeurColonne * 0.6).length, 3);
+  ok('chevauchement : un rendez-vous isolé garde toute la largeur',
+     g.rdv.filter(r => r.largeur > g.largeurColonne * 0.85).length, 1);
+  ok('chevauchement : les simultanés ne se recouvrent pas',
+     new Set(g.rdv.filter(r => r.largeur < g.largeurColonne * 0.6).map(r => r.gauche)).size, 3);
+
+  await injecter(() => { for (const id of Object.keys(etat.items)) if (id.startsWith('ch')) delete etat.items[id];
+    rendre(); });
 }
 
 /* ---- 5. Report automatique ---------------------------------------------- */

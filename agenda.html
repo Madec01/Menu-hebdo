@@ -119,11 +119,21 @@ input,textarea{font:inherit;color:inherit}
 /* =========================================================================
    [C2] STRUCTURE GENERALE
    ========================================================================= */
+/* Une colonne souple, et non une grille a rangees numerotees.
+   La grille comptait quatre rangees pour six enfants, dont un — la barre
+   d'alerte — apparait et disparait. Chaque apparition decalait donc toutes
+   les rangees d'un cran : la rangee souple tombait sur le bandeau urgent, qui
+   s'etirait, pendant que la grille des jours se tassait et que les pastilles
+   urgentes se dessinaient par-dessus les en-tetes de jours. Il suffisait d'un
+   avertissement « ouvert dans un autre onglet » pour casser tout l'ecran.
+   Une colonne souple ne compte pas ses enfants : on peut en ajouter, en
+   retirer, en masquer, la zone centrale reste la zone centrale. */
 .app{
-  display:grid;
-  grid-template-rows:auto auto minmax(0,1fr) auto;
+  display:flex;flex-direction:column;
   height:100vh;height:100dvh;
 }
+.topbar,.alertbar,.urgentbar,.grabber,.bottom{flex:none}
+.board{flex:1 1 auto;min-height:0}
 
 /* =========================================================================
    [C3] EN-TETE ET BARRE D'OUTILS
@@ -239,7 +249,21 @@ input,textarea{font:inherit;color:inherit}
 .daybin{
   border-right:1px solid var(--border);padding:4px;min-height:46px;
   max-height:190px;overflow-y:auto;display:flex;flex-direction:column;gap:2px;
+  scrollbar-width:thin;position:relative;
 }
+/* Un bac qui deborde doit le DIRE. Les navigateurs masquent leur barre de
+   defilement au repos : sans repere, l'en-tete annoncait huit taches, le bac
+   en montrait trois, et les cinq autres n'existaient pour personne. */
+.daybin.deborde{border-bottom:2px solid var(--p-semaine)}
+/* Colle en bas du bac : un repere qui defile avec le contenu qu'il annonce
+   disparaitrait exactement quand on en a besoin. */
+.binreste{
+  position:sticky;bottom:0;z-index:3;
+  flex:none;align-self:stretch;text-align:center;font-size:10px;font-weight:700;
+  letter-spacing:.04em;color:var(--p-semaine);background:var(--p-semaine-bg);
+  border:0;border-radius:4px;padding:2px;margin-top:1px;cursor:pointer;
+}
+.binreste:hover{filter:brightness(.95)}
 .daybin:last-child{border-right:0}
 .daybin.dropok{background:var(--surface-3);box-shadow:inset 0 0 0 2px var(--accent)}
 
@@ -251,9 +275,18 @@ input,textarea{font:inherit;color:inherit}
   transform:translateY(-50%);font-variant-numeric:tabular-nums;
   background:var(--surface);padding:0 1px;
 }
+/* grid-template-columns est indispensable. Sans lui, les rendez-vous — qui ne
+   recevaient qu'une rangee, jamais une colonne — etaient places par le
+   navigateur dans des colonnes IMPLICITES creees a la volee, et l'espace se
+   repartissait entre elles. Les pistes d'une journee a deux rendez-vous
+   simultanes mesuraient « 0px 98px 98px » : la premiere piste, celle des
+   quarante-huit cases horaires cliquables, tombait a zero. Des que deux
+   rendez-vous se chevauchaient, la journee devenait donc impossible a cliquer
+   pour en poser un troisieme. Aucun des controles ne creait deux rendez-vous
+   simultanes, et le defaut a traverse toute la version 1.0.0. */
 .daycol{
   border-right:1px solid var(--border);position:relative;
-  display:grid;grid-auto-rows:var(--slot-h);
+  display:grid;grid-template-columns:minmax(0,1fr);grid-auto-rows:var(--slot-h);
 }
 .daycol:last-child{border-right:0}
 .slot{border-bottom:1px solid var(--border);grid-column:1}
@@ -272,7 +305,18 @@ input,textarea{font:inherit;color:inherit}
 /* =========================================================================
    [C6] ELEMENTS (taches et rendez-vous)
    ========================================================================= */
+/* flex:0 0 auto — la declaration la plus importante de tout ce fichier.
+   Les bacs « A faire » sont des colonnes flexibles. Sans elle, une tache prend
+   la valeur par defaut flex-shrink:1 : des que le contenu du bac depasse, le
+   navigateur COMPRIME les taches au lieu de les faire defiler. Mesure : une
+   boite ecrasee a 34 pixels pour un texte qui en reclamait 53, le texte
+   debordant par-dessus la tache suivante. « Appeler le comptable pour le
+   bilan » se lisait « Appeler le comptable pour le ». Le champ de titre, lui,
+   se dimensionnait correctement depuis toujours : c'est son conteneur qui
+   l'ecrasait, et c'est pourquoi le controle qui mesurait le champ passait au
+   vert sur un defaut visible a l'oeil nu. */
 .item{
+  flex:0 0 auto;
   display:flex;align-items:flex-start;gap:5px;
   background:var(--surface-2);border:1px solid var(--border);
   border-left:3px solid var(--p-libre);
@@ -318,11 +362,43 @@ input,textarea{font:inherit;color:inherit}
 .uchip .del{opacity:.5}
 .del:hover{color:var(--bad);opacity:1;background:var(--surface-3)}
 
+/* Les rendez-vous sont poses en absolu dans la colonne du jour, et non places
+   par la grille : c'est ce qui permet de leur donner un couloir quand ils se
+   chevauchent, au lieu de laisser le navigateur inventer des colonnes qui
+   ecrasent les cases cliquables. La colonne est deja position:relative. */
 .item.slotitem{
-  position:relative;z-index:2;margin:0 3px 0 1px;align-self:stretch;
-  overflow:hidden;box-shadow:var(--shadow);
+  position:absolute;z-index:2;overflow:hidden;box-shadow:var(--shadow);
+  box-sizing:border-box;margin:0;
 }
 .item.slotitem .title{font-size:12px}
+
+/* Sur un rendez-vous, la decoration ne prend plus de place : elle se superpose.
+   Poignee, pastille de priorite, croix et marqueur de report coutaient a eux
+   seuls 84 pixels, une constante quelle que soit la largeur. Trois rendez-vous
+   simultanes dans une colonne de 175 pixels donnent des couloirs de 54 : il ne
+   restait donc RIEN pour le texte, mesure a zero pixel. Tout cela passe en
+   position absolue, reste accessible au survol, et rend sa largeur au titre.
+   Le titre complet et l'heure restent lisibles en infobulle, car un couloir
+   etroit reste un couloir etroit : c'est la repartition de l'espace qui reglera
+   le fond du probleme, pas ce correctif. */
+.item.slotitem{padding:2px 3px 2px 10px}
+.item.slotitem .grip{
+  position:absolute;left:0;top:0;bottom:0;width:9px;height:auto;
+  margin:0;border-radius:0;align-self:auto;
+}
+.item.slotitem .pdot{position:absolute;right:3px;bottom:2px;margin:0;opacity:0}
+.item.slotitem .del{position:absolute;right:2px;top:1px}
+.item.slotitem .roll{position:absolute;right:17px;top:2px}
+.item.slotitem:hover .pdot{opacity:1}
+.item.slotitem.p-urgent .pdot,.item.slotitem.p-semaine .pdot{opacity:1}
+
+/* Couloir partage : la case a cocher elle-meme sort du flux. Elle revient au
+   survol, et une fois cochee elle reste visible puisqu'elle porte alors une
+   information. C'est le dernier element qui pouvait encore etre rendu au
+   texte sans rien retirer a l'utilisateur. */
+.item.slotitem.etroit .chk{position:absolute;right:3px;top:15px;margin:0;opacity:0}
+.item.slotitem.etroit:hover .chk,.item.slotitem.etroit.done .chk{opacity:1}
+.item.slotitem.etroit{padding-right:2px}
 .resize{
   position:absolute;left:0;right:0;bottom:0;height:6px;cursor:ns-resize;
 }
@@ -1424,6 +1500,65 @@ function rendreBacs(){
     itemsDuJour(jour, "day").forEach(it => frag.appendChild(elementItem(it, "bin")));
     bin.replaceChildren(frag);
   });
+  ajusterTousLesTitres(els.boardBins);
+  signalerLesBacsQuiDebordent();
+}
+
+/* Combien de taches sont hors du cadre, et un bouton pour aller les voir.
+   Tant que le bac est plafonne, c'est le seul moyen honnete de ne pas laisser
+   croire qu'une journee est plus legere qu'elle ne l'est. */
+function signalerLesBacsQuiDebordent(){
+  els.boardBins.querySelectorAll(".daybin").forEach(bin => {
+    const ancien = bin.querySelector(".binreste");
+    if (ancien) ancien.remove();
+    bin.classList.remove("deborde");
+    if (bin.scrollHeight <= bin.clientHeight + 1) return;
+
+    const bas = bin.scrollTop + bin.clientHeight;
+    let caches = 0;
+    bin.querySelectorAll(".item").forEach(el => {
+      if (el.offsetTop + el.offsetHeight > bas + 1) caches++;
+    });
+    if (!caches) return;
+
+    bin.classList.add("deborde");
+    const b = document.createElement("button");
+    b.className = "binreste";
+    b.textContent = "+ " + caches + " autre" + (caches > 1 ? "s" : "");
+    b.title = caches + " tâche" + (caches > 1 ? "s" : "") + " de plus dans ce jour — cliquez pour les faire défiler";
+    b.onclick = () => { bin.scrollTop = bin.scrollHeight; };
+    bin.appendChild(b);
+  });
+}
+
+/* Des rendez-vous qui se chevauchent se partagent la largeur du jour.
+   On avance dans l'ordre des heures. Tant qu'un rendez-vous commence avant la
+   fin du groupe en cours, il appartient a ce groupe et prend le premier
+   couloir libre — celui d'un voisin deja termine se recycle, si bien que
+   trois rendez-vous qui se suivent en se touchant n'occupent pas trois
+   couloirs. Quand un rendez-vous commence apres la fin de tout le groupe, le
+   groupe est clos : sa largeur est fixee, et un nouveau groupe commence.
+   Chaque groupe est donc dimensionne independamment, et un seul chevauchement
+   a 9 h ne retrecit pas les rendez-vous de l'apres-midi. */
+function repartirEnCouloirs(poses){
+  poses.sort((a, b) => (a.debut - b.debut) || (a.fin - b.fin));
+  let groupe = [], finGroupe = -Infinity;
+  const clore = () => {
+    let n = 1;
+    for (const p of groupe) n = Math.max(n, p.couloir + 1);
+    for (const p of groupe) p.couloirs = n;
+    groupe = [];
+  };
+  for (const p of poses){
+    if (groupe.length && p.debut >= finGroupe){ clore(); finGroupe = -Infinity; }
+    const pris = new Set();
+    for (const q of groupe) if (q.fin > p.debut) pris.add(q.couloir);
+    let c = 0; while (pris.has(c)) c++;
+    p.couloir = c;
+    groupe.push(p);
+    finGroupe = Math.max(finGroupe, p.fin);
+  }
+  if (groupe.length) clore();
 }
 
 function rendreGrille(){
@@ -1436,13 +1571,23 @@ function rendreGrille(){
     col.classList.toggle("is-weekend", dateEstWeekend(jour));
     col.querySelectorAll(".slotitem, .nowline").forEach(e => e.remove());
 
-    itemsDuJour(jour, "slot").forEach(it => {
-      const debut = Math.max(deb, it.startMin == null ? deb : it.startMin);
-      const ligne = Math.round((debut - deb) / 30) + 1;
-      if (ligne < 1 || ligne > n) return;
-      const span = Math.max(1, Math.min(n - ligne + 1, Math.round((it.durMin || 30) / 30)));
-      const el = elementItem(it, "slot");
-      el.style.gridRow = ligne + " / span " + span;
+    const fin = etat.settings.finJournee;
+    const h = etat.settings.hauteurCreneau;
+    const poses = itemsDuJour(jour, "slot").map(it => {
+      const d = it.startMin == null ? deb : it.startMin;
+      return { it: it, debut: d, fin: d + Math.max(15, it.durMin || 30) };
+    }).filter(p => p.fin > deb && p.debut < fin);
+
+    repartirEnCouloirs(poses);
+
+    poses.forEach(p => {
+      const haut = Math.max(deb, p.debut), bas = Math.min(fin, p.fin);
+      const el = elementItem(p.it, "slot");
+      if (p.couloirs > 1) el.classList.add("etroit");
+      el.style.top    = ((haut - deb) / 30 * h) + "px";
+      el.style.height = Math.max(14, (bas - haut) / 30 * h - 2) + "px";
+      el.style.left   = (p.couloir / p.couloirs * 100) + "%";
+      el.style.width  = "calc(" + (100 / p.couloirs) + "% - 4px)";
       col.appendChild(el);
     });
 
@@ -1571,6 +1716,10 @@ function elementItem(it, contexte){
     const rz = document.createElement("div");
     rz.className = "resize"; rz.title = "Étirer pour changer la durée";
     el.appendChild(rz);
+    // Un couloir etroit ne peut pas tout montrer : l'infobulle, elle, le peut.
+    const d = it.startMin == null ? null : it.startMin;
+    el.title = (d === null ? "" : minVersHeure(d) + " – " + minVersHeure(d + (it.durMin || 30)) + "  ") +
+               (it.title || "Rendez-vous sans titre");
   }
   return el;
 }
