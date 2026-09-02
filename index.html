@@ -44,7 +44,7 @@ const CONTENT = {
   ],
   howto: [
     "Souris : le faisceau suit le curseur. Immobile il convainc, en balayage il montre large.",
-    "Shift : focus étroit et long, charge doublée — mais la lentille chauffe et la lampe peut céder.",
+    "Shift (ou clic droit) : focus étroit et long, charge doublée — mais la lentille chauffe et la lampe peut céder.",
     "Espace : fusée. Elle troue la brume, rassure tout un secteur, et coûte de l’huile."
   ],
   nights: [
@@ -2011,13 +2011,13 @@ function createFX() {
   };
 
   var NIGHTS = [null,
-    { ships: 5, types: ['chalutier'], every: 2.8, fog: 0, wreck: 0, storm: 0.22, spd: 0.62 },
-    { ships: 7, types: ['chalutier', 'caboteur'], every: 3.0, fog: 2, wreck: 0, storm: 0.38, spd: 0.72 },
-    { ships: 8, types: ['chalutier', 'caboteur'], every: 2.7, fog: 2, wreck: 1, storm: 0.50, spd: 0.80 },
-    { ships: 9, types: ['chalutier', 'barque', 'barque'], every: 2.5, fog: 3, wreck: 1, storm: 0.62, spd: 0.88 },
-    { ships: 9, types: ['barque', 'chalutier', 'caboteur'], every: 2.0, fog: 4, wreck: 2, storm: 0.76, spd: 0.95 },
-    { ships: 10, types: ['barque', 'chalutier', 'caboteur'], every: 1.9, fog: 4, wreck: 2, storm: 0.88, spd: 1.02, special: 'kerloch' },
-    { ships: 11, types: ['barque', 'chalutier', 'caboteur'], every: 1.8, fog: 5, wreck: 3, storm: 1.00, spd: 1.10, special: 'aurore' }
+    { ships: 5, types: ['chalutier'], every: 2.8, fog: 0, wreck: 0, storm: 0.22, spd: 0.70 },
+    { ships: 7, types: ['chalutier', 'caboteur'], every: 2.7, fog: 2, wreck: 0, storm: 0.38, spd: 0.80 },
+    { ships: 8, types: ['chalutier', 'caboteur'], every: 2.4, fog: 2, wreck: 1, storm: 0.50, spd: 0.90 },
+    { ships: 9, types: ['chalutier', 'barque', 'barque'], every: 2.2, fog: 3, wreck: 1, storm: 0.62, spd: 0.98 },
+    { ships: 9, types: ['barque', 'chalutier', 'caboteur'], every: 1.8, fog: 4, wreck: 2, storm: 0.76, spd: 1.06 },
+    { ships: 10, types: ['barque', 'chalutier', 'caboteur'], every: 1.7, fog: 4, wreck: 2, storm: 0.88, spd: 1.14, special: 'kerloch' },
+    { ships: 11, types: ['barque', 'chalutier', 'caboteur'], every: 1.6, fog: 5, wreck: 3, storm: 1.00, spd: 1.22, special: 'aurore' }
   ];
 
   // ---------- réglages de sensation ----------
@@ -2045,9 +2045,10 @@ function createFX() {
     oil: K.oilMax, flareFlash: 0,
     saved: 0, lostShips: 0, extinguished: 0, combo: 0, bestCombo: 0,
     auroreSaved: false, auroreSeen: false,
-    bilan: null, nSaved: 0, nLost: 0, nSouls: 0,
+    bilan: null, nSaved: 0, nLost: 0, nSouls: 0, namePool: null,
     t: 0, w: 0, h: 0, cx: 0, cy: 0, range: 420,
     hw: 0.2, beamRange: 420, power: 1, sweep: 0, hist: [], histT: 0,
+    k: 1, flareR: 300,
     shake: 0, msg: null, msgT: 0, endKind: 'defeat',
     started: false, hintT: 0
   };
@@ -2064,19 +2065,25 @@ function createFX() {
     resize();
     FX.setStorm(0.35); FX.setWind(-46);
     window.addEventListener('resize', resize);
+    document.addEventListener('visibilitychange', autoPause);
     bindInput();
     requestAnimationFrame(frame);
   }
 
   function resize() {
     var ocx = S.cx, ocy = S.cy, omin = Math.min(S.w, S.h);
-    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    var px = window.innerWidth * window.innerHeight;
+    DPR = Math.min(window.devicePixelRatio || 1, px > 2600000 ? 1 : (px > 1200000 ? 1.5 : 2));
     S.w = window.innerWidth; S.h = window.innerHeight;
     cv.width = Math.floor(S.w * DPR); cv.height = Math.floor(S.h * DPR);
     cv.style.width = S.w + 'px'; cv.style.height = S.h + 'px';
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     S.cx = S.w * 0.5; S.cy = S.h * 0.46;
     S.range = Math.max(360, Math.min(S.w, S.h) * 0.62);
+    // Tout ce qui est exprimé en pixels suit la taille de la fenêtre : sans cela
+    // la partie est injouable sur un petit portable et sans enjeu sur un 27 pouces.
+    S.k = clamp(Math.min(S.w, S.h) / 1080, 0.62, 1.30);
+    S.flareR = S.range * 0.46;
     FX.resize(S.w, S.h);
     // La scène est solidaire du phare : on la recale et on la remet à l'échelle,
     // sinon un redimensionnement laisse la moitié des récifs hors de l'écran.
@@ -2087,6 +2094,17 @@ function createFX() {
       remap(S.lights, ocx, ocy, k, false);
       remap(S.fogs, ocx, ocy, k, true);
       remap(S.notes, ocx, ocy, k, false);
+      for (var ri = 0; ri < S.rocks.length; ri++) S.rocks[ri].r *= k;
+    }
+    autoPause();
+  }
+
+  // Fenêtre trop étroite ou onglet caché : le canvas est masqué par la feuille de
+  // style, la partie ne doit pas continuer à se jouer sans que personne ne la voie.
+  var narrowMQ = window.matchMedia('(max-width:760px), (pointer:coarse)');
+  function autoPause() {
+    if ((narrowMQ.matches || document.hidden) && S.mode === 'play') {
+      S.prevMode = 'play'; S.mode = 'pause'; S.focus = false;
     }
   }
 
@@ -2103,6 +2121,9 @@ function createFX() {
   function bindInput() {
     window.addEventListener('mousemove', function (e) {
       S.aimAngle = Math.atan2(e.clientY - S.cy, e.clientX - S.cx);
+      // resynchronisation : un Shift ou un clic droit relâché hors fenêtre laissait
+      // le focus collé, la lentille chauffait toute seule.
+      if (S.focus && !e.shiftKey && !(e.buttons & 2)) S.focus = false;
     });
     window.addEventListener('mousedown', function (e) {
       AU.resume();
@@ -2110,6 +2131,7 @@ function createFX() {
       if (S.mode === 'title') { startRun(); }
       else if (S.mode === 'journal') { S.mode = 'play'; AU.sfx('foghorn'); }
       else if (S.mode === 'over') { startRun(); }
+      else if (S.mode === 'pause') { S.mode = 'play'; }
       else if (S.mode === 'play') { flare(); }
     });
     window.addEventListener('mouseup', function (e) { if (e.button === 2) S.focus = false; });
@@ -2123,6 +2145,7 @@ function createFX() {
         if (S.mode === 'title') startRun();
         else if (S.mode === 'journal') { S.mode = 'play'; AU.sfx('foghorn'); }
         else if (S.mode === 'over') startRun();
+        else if (S.mode === 'pause') S.mode = 'play';
         else flare();
         return;
       }
@@ -2174,20 +2197,22 @@ function createFX() {
     var used = [];
     for (var i = 0; i < n; i++) {
       var a, tries = 0;
+      var rr = base * rnd(0.16, 0.235);
+      // écart minimal exprimé en distance d'arc : sinon l'anneau devient un mur continu
+      var sep = clamp(86 * S.k / rr, 0.34, 0.95);
       do {
         a = rnd(-Math.PI, Math.PI); tries++;
         // laisser la passe libre vers le bas
-      } while (tries < 40 && (Math.abs(wrapPi(a - Math.PI / 2)) < 0.62 || tooClose(used, a, 0.34)));
+      } while (tries < 40 && (Math.abs(wrapPi(a - Math.PI / 2)) < 0.62 || tooClose(used, a, sep)));
       used.push(a);
-      var rr = base * rnd(0.16, 0.235);
-      S.rocks.push(makeRock(S.cx + Math.cos(a) * rr, S.cy + Math.sin(a) * rr, rnd(13, 26)));
+      S.rocks.push(makeRock(S.cx + Math.cos(a) * rr, S.cy + Math.sin(a) * rr, S.k * rnd(13, 26)));
     }
     // quelques écueils isolés au large
     for (var j = 0; j < 3; j++) {
       var ang = rnd(-Math.PI, Math.PI);
       if (Math.abs(wrapPi(ang - Math.PI / 2)) < 0.7) ang += 1.4;
       var d = base * rnd(0.34, 0.44);
-      S.rocks.push(makeRock(S.cx + Math.cos(ang) * d, S.cy + Math.sin(ang) * d, rnd(10, 18)));
+      S.rocks.push(makeRock(S.cx + Math.cos(ang) * d, S.cy + Math.sin(ang) * d, S.k * rnd(10, 18)));
     }
   }
   function tooClose(list, a, m) { for (var i = 0; i < list.length; i++) if (Math.abs(wrapPi(list[i] - a)) < m) return true; return false; }
@@ -2199,7 +2224,11 @@ function createFX() {
 
   // ---------- entités ----------
   function spawnShip(kind) {
-    var t = TYPES[kind];
+    var base0 = TYPES[kind], sk = S.k;
+    var t = {
+      speed: base0.speed * sk, r: base0.r * sk, gain: base0.gain, decay: base0.decay,
+      souls: base0.souls, len: base0.len * sk, beam: base0.beam * sk
+    };
     var a = -Math.PI / 2 + rnd(-1, 1) * 2.28;      // large éventail, jamais par la passe
     var ca = Math.cos(a), sa = Math.sin(a);
     // point d'apparition juste au-delà du bord de l'écran, dans la direction a
@@ -2215,17 +2244,25 @@ function createFX() {
     S.ships.push(sh);
     return sh;
   }
+  // Un même nom ne doit pas naviguer deux fois dans la même nuit.
   function shipName(kind) {
     if (kind === 'kerloch') return 'KERLOCH';
     if (kind === 'aurore') return 'L’AURORE';
-    return pick(C.shipNames, 'Sainte-Anne');
+    if (!S.namePool || !S.namePool.length) {
+      S.namePool = (C.shipNames || ['Sainte-Anne']).slice();
+      for (var i = S.namePool.length - 1; i > 0; i--) {
+        var j = (Math.random() * (i + 1)) | 0, tmp = S.namePool[i];
+        S.namePool[i] = S.namePool[j]; S.namePool[j] = tmp;
+      }
+    }
+    return S.namePool.pop();
   }
   function spawnFog(anywhere) {
     var a = rnd(-Math.PI, Math.PI), d = anywhere ? rnd(0.15, 0.55) : 0.62;
     var base = Math.min(S.w, S.h);
     S.fogs.push({
       x: S.cx + Math.cos(a) * base * d, y: S.cy + Math.sin(a) * base * d,
-      r: rnd(80, 150), r0: 0, vx: rnd(-14, 14), vy: rnd(-9, 9), ph: rnd(0, TAU), life: rnd(26, 48)
+      r: S.k * rnd(80, 150), r0: 0, vx: rnd(-14, 14), vy: rnd(-9, 9), ph: rnd(0, TAU), life: rnd(26, 48)
     });
     S.fogs[S.fogs.length - 1].r0 = S.fogs[S.fogs.length - 1].r;
   }
@@ -2248,7 +2285,7 @@ function createFX() {
   function flare() {
     if (S.mode !== 'play' || S.oil < K.flareCost) { if (S.mode === 'play') AU.sfx('ui', { vol: 0.3 }); return; }
     S.oil -= K.flareCost; S.flareFlash = 1;
-    FX.ring(S.cx, S.cy, COL.warm, K.flareR, 0.75, 5);
+    FX.ring(S.cx, S.cy, COL.warm, S.flareR, 0.75, 5);
     FX.spark(S.cx, S.cy, 46, COL.ember, 320);
     FX.shake(7);
     AU.sfx('flare');
@@ -2256,15 +2293,15 @@ function createFX() {
     for (i = 0; i < S.ships.length; i++) {
       var sh = S.ships[i]; if (!sh.alive || sh.state !== 'lost') continue;
       d = Math.hypot(sh.x - S.cx, sh.y - S.cy);
-      if (d < K.flareR) addConf(sh, K.flareBoost * (1 - d / K.flareR * 0.5));
+      if (d < S.flareR) addConf(sh, K.flareBoost * (1 - d / S.flareR * 0.5));
     }
     for (i = 0; i < S.fogs.length; i++) {
       var f = S.fogs[i]; d = Math.hypot(f.x - S.cx, f.y - S.cy);
-      if (d < K.flareR + f.r) { f.r *= 0.45; f.life = Math.min(f.life, 6); }
+      if (d < S.flareR + f.r) { f.r *= 0.45; f.life = Math.min(f.life, 6); }
     }
     for (i = 0; i < S.lights.length; i++) {
       var l = S.lights[i]; d = Math.hypot(l.x - S.cx, l.y - S.cy);
-      if (d < K.flareR) { l.stun = 3.2; FX.glowPulse(l.x, l.y, '#ffffff', 60, 0.5); }
+      if (d < S.flareR) { l.stun = 3.2; FX.glowPulse(l.x, l.y, '#ffffff', 60, 0.5); }
     }
   }
 
@@ -2287,7 +2324,7 @@ function createFX() {
         S.angle = wrapPi(S.angle + dt * 0.42);
         S.hw = 0.19; S.beamRange = S.range; S.power = 1; S.sweep = 0;
         S.histT += dt;
-        if (S.histT > 0.028) { S.histT = 0; S.hist.push({ a: S.angle, hw: S.hw }); if (S.hist.length > 4) S.hist.shift(); }
+        if (S.histT > 0.028) { S.histT = 0; S.hist.push({ a: S.angle, hw: S.hw }); if (S.hist.length > 2) S.hist.shift(); }
       }
       FX.update(dt);
       return;
@@ -2313,7 +2350,7 @@ function createFX() {
     if (S.histT > 0.028) {
       S.histT = 0;
       S.hist.push({ a: a2angle(), hw: hw });
-      if (S.hist.length > 4) S.hist.shift();
+      if (S.hist.length > 2) S.hist.shift();
     }
 
     // --- chaleur / lampe ---
@@ -2398,7 +2435,7 @@ function createFX() {
     for (var d2 = 0; d2 < S.ships.length; d2++) {
       var sd = S.ships[d2]; if (!sd.alive || sd.state !== 'lost') continue;
       var dist = Math.hypot(sd.x - S.cx, sd.y - S.cy);
-      danger = Math.max(danger, 1 - clamp((dist - 120) / 260, 0, 1));
+      danger = Math.max(danger, 1 - clamp((dist - 120 * S.k) / (260 * S.k), 0, 1));
     }
     AU.setDanger(danger);
 
@@ -2451,7 +2488,7 @@ function createFX() {
       for (var i = 0; i < S.lights.length; i++) {
         var l = S.lights[i]; if (l.dead || l.stun > 0) continue;
         var dl = Math.hypot(l.x - sh.x, l.y - sh.y);
-        if (dl < 300 && dl < best) { best = dl; tx = l.x; ty = l.y; boost = 1.35; }
+        if (dl < 300 * S.k && dl < best) { best = dl; tx = l.x; ty = l.y; boost = 1.35; }
       }
       var want = Math.atan2(ty - sh.y, tx - sh.x);
       sh.hd = wrapPi(sh.hd + clamp(wrapPi(want - sh.hd), -0.55 * dt, 0.55 * dt));
@@ -2462,7 +2499,7 @@ function createFX() {
       var hy = S.h + 80, hx = S.cx + Math.sin(sh.wob * 0.3) * 30;
       var wantG = avoid(sh, Math.atan2(hy - sh.y, hx - sh.x));
       sh.hd = wrapPi(sh.hd + clamp(wrapPi(wantG - sh.hd), -2.2 * dt, 2.2 * dt));
-      moveShip(sh, Math.max(t.speed * 1.8, 78), dt, 0.12);
+      moveShip(sh, Math.max(t.speed * 1.8, 78 * S.k), dt, 0.12);
       if (sh.y > S.h + 30) return saveShip(sh);
     }
 
@@ -2471,12 +2508,12 @@ function createFX() {
       var rk = S.rocks[k];
       if (Math.hypot(sh.x - rk.x, sh.y - rk.y) < rk.r * 0.92 + t.r * 0.6) return wreckShip(sh);
     }
-    if (Math.hypot(sh.x - S.cx, sh.y - S.cy) < 34 + t.r * 0.5) return wreckShip(sh);
+    if (Math.hypot(sh.x - S.cx, sh.y - S.cy) < 34 * S.k + t.r * 0.5) return wreckShip(sh);
 
     // panique : les barques s'affolent près des récifs
     var dc = Math.hypot(sh.x - S.cx, sh.y - S.cy);
-    sh.panic = (sh.kind === 'barque' && sh.state === 'lost') ? clamp(1 - (dc - 130) / 200, 0, 1) : 0;
-    sh.danger = sh.state === 'lost' ? clamp(1 - (dc - 110) / 230, 0, 1) : 0;
+    sh.panic = (sh.kind === 'barque' && sh.state === 'lost') ? clamp(1 - (dc - 130 * S.k) / (200 * S.k), 0, 1) : 0;
+    sh.danger = sh.state === 'lost' ? clamp(1 - (dc - 110 * S.k) / (230 * S.k), 0, 1) : 0;
   }
 
   // Dévie le cap voulu pour qu'aucun obstacle ne reste dans l'axe : on sort du
@@ -2485,11 +2522,11 @@ function createFX() {
     var turn = 0, t = sh.t;
     for (var i = -1; i < S.rocks.length; i++) {
       var ox, oy, orad;
-      if (i < 0) { ox = S.cx; oy = S.cy; orad = 46; }
+      if (i < 0) { ox = S.cx; oy = S.cy; orad = 46 * S.k; }
       else { var ro = S.rocks[i]; ox = ro.x; oy = ro.y; orad = ro.r; }
       var dx = ox - sh.x, dy = oy - sh.y, d = Math.hypot(dx, dy);
-      var safe = orad + t.r + 30;
-      if (d < 1 || d > safe + 170) continue;
+      var safe = orad + t.r + 30 * S.k;
+      if (d < 1 || d > safe + 170 * S.k) continue;
       var rel = wrapPi(Math.atan2(dy, dx) - want);
       var need = Math.asin(Math.min(0.999, safe / Math.max(d, safe)));
       if (Math.abs(rel) < need) {
@@ -2589,7 +2626,7 @@ function createFX() {
     ctx.restore();
     // bouées de la passe
     for (var i = -1; i <= 1; i += 2) {
-      var bx = cx + i * 175, by = h - 20;
+      var bx = cx + i * Math.max(120, S.range * 0.31), by = h - 20;
       var pulse = 0.55 + 0.45 * Math.sin(S.t * 2.2 + (i > 0 ? 1.6 : 0));
       ctx.globalCompositeOperation = 'lighter';
       var rg = ctx.createRadialGradient(bx, by, 0, bx, by, 40);
@@ -2653,9 +2690,10 @@ function createFX() {
   var CONE_K = [1.00, 0.86, 0.70, 0.54, 0.38, 0.22, 0.10];
   var CONE_A = [0.045, 0.050, 0.055, 0.062, 0.070, 0.080, 0.095];
 
-  function cone(a, hw, range, mul) {
-    for (var i = 0; i < CONE_K.length; i++) {
-      var k = CONE_K[i], al = CONE_A[i] * mul;
+  function cone(a, hw, range, mul, step) {
+    step = step || 1;
+    for (var i = 0; i < CONE_K.length; i += step) {
+      var k = CONE_K[i], al = CONE_A[i] * mul * step;
       if (al < 0.002) continue;
       var g = ctx.createRadialGradient(S.cx, S.cy, 10, S.cx, S.cy, range);
       g.addColorStop(0, 'rgba(255,214,150,' + al * 1.35 + ')');
@@ -2678,7 +2716,7 @@ function createFX() {
     for (var t = S.hist.length - 1; t >= 0; t--) {
       var h = S.hist[t];
       if (Math.abs(wrapPi(h.a - a)) < 0.02) continue;
-      cone(h.a, h.hw, range, 0.10 * (t + 1) / S.hist.length);
+      cone(h.a, h.hw, range, 0.10 * (t + 1) / S.hist.length, 3);
     }
     cone(a, hw, range, lerp(0.75, 1.5, S.power));
     // trait central
