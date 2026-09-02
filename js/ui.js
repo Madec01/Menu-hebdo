@@ -626,7 +626,7 @@ window.BP = window.BP || {};
   function startLevel(level) {
     ctx.level = level; ctx.playing = true; ctx.lastResult = null;
     ctx.extra = []; ctx.curtainUp = false; ctx.score = 0; ctx.scores = {};
-    targetOn = false;
+    targetOn = true;          // le moteur affiche le fantôme de la cible par défaut
     hideScreens();
     hudBuild(level);
     hudShow();
@@ -635,8 +635,7 @@ window.BP = window.BP || {};
     }
     if (BP.engine && BP.engine.setPaused) BP.engine.setPaused(false);
     if (BP.engine && BP.engine.setOptions) {
-      var st = S().settings;
-      try { BP.engine.setOptions({ reduceMotion: !!st.reduceMotion, showSideView: !!st.sideView }); } catch (e) { }
+      try { BP.engine.setOptions({ reduceMotion: reduceMotion(), showSideView: sideViewOn() }); } catch (e) { }
     }
     kickResize();
     if (level.type === 'performance') A('playMusic', 'performance');
@@ -718,7 +717,8 @@ window.BP = window.BP || {};
       '<div class="hud-top">' +
       '  <div class="hud-line">' +
       '    <span class="hud-title">' + esc(level.title || '') + '</span>' +
-      '    <span class="gauge">' +
+      '    <span class="gauge" title="Ressemblance de l’ombre à la cible">' +
+      '      <span class="gauge-lab">ressemblance</span>' +
       '      <span class="gauge-track"><i class="gauge-fill" data-fill></i>' +
       '        <i class="tick pass" style="left:' + ((BP.PASS || 0.9) * 100) + '%"></i>' +
       '        <i class="tick gold" style="left:' + ((BP.GOLD || 0.97) * 100) + '%"></i>' +
@@ -779,19 +779,22 @@ window.BP = window.BP || {};
     return { main: 'Ombre', red: 'Rouge', blue: 'Bleu', umbra: 'Œil nu' }[r] || r;
   }
 
-  var targetOn = false;
+  var targetOn = true;
   function onPad(name, node) {
     if (!name) return;
-    sfx('ui');
-    if (name === 'menu') { screenPause(); return; }
-    if (name === 'hint') { showHint(); return; }
-    if (name === 'target') {
-      targetOn = !targetOn;
-      node.classList.toggle('on', targetOn);
-      E('showTarget', targetOn);
-      return;
-    }
+    // Le moteur émet déjà le son de la manipulation : l'UI ne sonne que ses propres boutons.
+    if (name === 'menu') { sfx('ui'); screenPause(); return; }
+    if (name === 'hint') { sfx('ui'); showHint(); return; }
+    if (name === 'target') { E('showTarget', !targetOn); return; }   // syncTarget() suivra l'événement
     E(name);
+  }
+
+  /** Aligne le bouton « Cible » sur l'état réel du moteur (clic, touche H, chargement). */
+  function syncTarget(on) {
+    targetOn = !!on;
+    if (!hud || hud.hidden) return;
+    var b = hud.querySelector('[data-act="target"]');
+    if (b) b.classList.toggle('on', targetOn);
   }
 
   function showHint() {
@@ -910,7 +913,24 @@ window.BP = window.BP || {};
       twolamps: '.views', umbra: '.vbtn.v-umbra'
     };
     if (m[name]) { var n = hud.querySelector(m[name]); if (n && n.offsetParent !== null) return n; }
+    // « Poser une découpe » et « papier huilé » désignent le coffre, qui est dessiné dans le
+    // canvas : on fabrique une ancre sur sa première carte.
+    if (name === 'move' || name === 'oiled') { var c = coffreCardAnchor(); if (c) return c; }
     return null;   // bulle centrée : le conseil porte sur le drap lui-même
+  }
+
+  /** Fausse ancre (rectangle) sur la première carte du coffre, dans le repère de la fenêtre. */
+  function coffreCardAnchor() {
+    if (!stageCanvas || !(BP.engine && BP.engine._coffreRects)) return null;
+    var r;
+    try { r = BP.engine._coffreRects()[0]; } catch (e) { return null; }
+    if (!r || !r.w || !r.h) return null;
+    var b = stageCanvas.getBoundingClientRect();
+    var box = {
+      left: b.left + r.x, top: b.top + r.y, width: r.w, height: r.h,
+      right: b.left + r.x + r.w, bottom: b.top + r.y + r.h
+    };
+    return { getBoundingClientRect: function () { return box; } };
   }
 
   var bubbleOpts = null;
@@ -1226,13 +1246,19 @@ window.BP = window.BP || {};
     if (S().settings.reduceMotion) return true;
     try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; }
   }
+  /** La vue de côté (échelle des profondeurs) n'a de sens qu'une fois la profondeur introduite. */
+  function sideViewOn() {
+    if (!S().settings.sideView) return false;
+    if (ctx.playing && ctx.level) return !!unlockedSet(ctx.level).depth;
+    return true;
+  }
   function applySettings() {
     var st = S().settings;
     document.body.classList.toggle('reduce-motion', reduceMotion());
     A('setVolumes', { music: st.music, sfx: st.sfx });
     A('setMuted', !!st.muted);
     if (BP.engine && BP.engine.setOptions) {
-      try { BP.engine.setOptions({ reduceMotion: reduceMotion(), showSideView: !!st.sideView }); } catch (e) { }
+      try { BP.engine.setOptions({ reduceMotion: reduceMotion(), showSideView: sideViewOn() }); } catch (e) { }
     }
   }
 
@@ -1409,8 +1435,9 @@ window.BP = window.BP || {};
     BP.engine.on('score', function (d) {
       d = d || {};
       setGauge(d.score !== undefined ? d.score : 0, d.scores || {});
-      A('setIntensity', d.score || 0);
+      // L'intensité musicale est déjà pilotée par le moteur à chaque recalcul : pas de doublon.
     });
+    BP.engine.on('showTarget', syncTarget);
     BP.engine.on('won', onWon);
     BP.engine.on('lost', onLost);
     BP.engine.on('unlock', function (name) {

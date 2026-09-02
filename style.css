@@ -41,6 +41,9 @@ html, body {
 body {
   overflow: hidden;
   -webkit-tap-highlight-color: transparent;
+  /* Interface de jeu : un appui long ne doit ni sélectionner du texte ni ouvrir le menu système. */
+  -webkit-user-select: none; user-select: none;
+  -webkit-touch-callout: none;
 }
 button, input, output { font-family: inherit; color: inherit; }
 h1, h2, h3, h4, p, ul, li { margin: 0; }
@@ -105,6 +108,12 @@ svg { width: 1em; height: 1em; display: block; fill: none; stroke: currentColor;
 .hud-moves small { font-size: 11px; letter-spacing: .04em; opacity: .6; margin-left: 3px; }
 
 .gauge { grid-area: gauge; display: flex; align-items: center; gap: 9px; margin-top: 3px; }
+/* Sans étiquette, la barre ne dit pas ce qu'elle mesure. */
+.gauge-lab {
+  flex: 0 0 auto; font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--ink-dim); white-space: nowrap;
+}
+@media (max-width: 340px) { .gauge-lab { display: none; } }
 .gauge-track {
   position: relative; flex: 1 1 auto; height: 11px; border-radius: 6px;
   background: rgba(0, 0, 0, .45);
@@ -209,13 +218,13 @@ svg { width: 1em; height: 1em; display: block; fill: none; stroke: currentColor;
   backdrop-filter: blur(2px);
 }
 .sc-head h2 { flex: 1 1 auto; font-size: 20px; font-weight: normal; letter-spacing: .04em; color: var(--paper); }
-.head-sp { width: 40px; }
+.head-sp { width: 44px; }
 .head-count { font-size: 13px; color: var(--ink-dim); font-variant-numeric: tabular-nums; }
 .sc-body { flex: 1 1 auto; padding: 14px 12px 28px; width: 100%; max-width: 860px; margin: 0 auto; }
 
 .icon-btn {
   flex: 0 0 auto;
-  width: 40px; height: 40px; display: grid; place-items: center;
+  width: 44px; height: 44px; display: grid; place-items: center;   /* cible tactile minimale */
   border: 1px solid var(--rule); border-radius: 8px;
   background: rgba(255, 255, 255, .03); color: var(--ink-soft);
   cursor: pointer; transition: background .18s ease, color .18s ease;
@@ -248,7 +257,7 @@ svg { width: 1em; height: 1em; display: block; fill: none; stroke: currentColor;
 }
 .btn.primary:hover { background: linear-gradient(180deg, rgba(184, 128, 48, .68), rgba(96, 62, 24, .7)); }
 .btn.ghost { border-color: var(--rule); background: transparent; color: var(--ink-soft); }
-.btn.small { min-height: 38px; padding: 7px 13px; font-size: 14px; }
+.btn.small { min-height: 44px; padding: 7px 13px; font-size: 14px; }
 .btn.armed { border-color: var(--carmin); color: #f0c4bd; background: rgba(160, 47, 38, .3); }
 
 .row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
@@ -408,7 +417,8 @@ svg { width: 1em; height: 1em; display: block; fill: none; stroke: currentColor;
 .carnet .game-title { color: #3a2412; text-shadow: none; }
 .result-card .result-figures, .result-card .record-box { justify-content: center; }
 .big-stars { display: flex; justify-content: center; gap: 12px; margin: 14px 0 6px; }
-.bstar { color: rgba(90, 58, 24, .22); }
+/* Les étoiles éteintes disent « une sur trois » : à 22 % elles disparaissaient sur le carnet. */
+.bstar { color: rgba(90, 58, 24, .34); }
 .bstar svg { width: 42px; height: 42px; stroke-width: 1.2; }
 .bstar.on { color: #cf9c22; animation: pop .5s cubic-bezier(.2, 1.5, .4, 1); }
 .bstar.on svg { fill: #e5b73a; }
@@ -554,7 +564,7 @@ input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border-radius
   .game-title { grid-column: 2; font-size: clamp(28px, 5.2vw, 40px); }
   .tagline { grid-column: 2; margin: 8px 0 14px; font-size: 14px; }
   .menu-col { grid-column: 2; margin: 0; max-width: none; gap: 7px; }
-  .menu-col .btn { min-height: 44px; font-size: 15px; padding: 8px 16px; }
+  .menu-col .btn { min-height: 46px; font-size: 15px; padding: 8px 16px; }
   .version { grid-column: 2; text-align: left; margin-top: 11px; }
 }
 
@@ -569,7 +579,7 @@ input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border-radius
   .views { grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 5px; }
   .pbtn { min-height: 46px; font-size: 10px; }
   .pbtn .bi svg, .vbtn .bi svg { width: 18px; height: 18px; }
-  .vbtn { min-height: 40px; font-size: 9.5px; }
+  .vbtn { min-height: 44px; font-size: 9.5px; }
   .carnet { padding: 16px 18px; }
   .carnet h2, .brief-title { font-size: 21px; }
   .para { font-size: 14.5px; margin-bottom: 8px; }
@@ -577,7 +587,7 @@ input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border-radius
   .game-title { font-size: clamp(25px, 4.4vw, 34px); }
   .tagline { margin: 6px 0 10px; font-size: 13.5px; }
   .menu-col { gap: 6px; }
-  .menu-col .btn { min-height: 42px; font-size: 14.5px; }
+  .menu-col .btn { min-height: 44px; font-size: 14.5px; }
   .version { margin-top: 8px; }
 }
 

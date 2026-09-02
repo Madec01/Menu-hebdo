@@ -237,6 +237,9 @@ window.BP = window.BP || {};
       'a refermé son carnet. Il s\'appelle Delcour. Nous partons cette nuit.',
     hint: 'Anticipe : la couronne glisse d\'abord, puis se change en deux longues oreilles.',
     lamps: warmLamps(), readings: ['main'], unlocks: ['performance'],
+    // Durée des frappes : il faut au moins deux secondes pour lire la nouvelle cible, puis
+    // environ deux secondes par manipulation demandée. La dernière frappe change de pièces
+    // (sept manipulations) : huit secondes la rendaient injouable à la main.
     beats: [
       {
         seconds: 12, solution: [
@@ -253,7 +256,7 @@ window.BP = window.BP || {};
         ]
       },
       {
-        seconds: 8, solution: [
+        seconds: 15, solution: [
           p('disc', 200, 124, { d: 1 }),
           p('leaf', 172, 68, { d: 1, r: 345 }),
           p('leaf', 228, 68, { d: 1, r: 15 }),
@@ -408,7 +411,7 @@ window.BP = window.BP || {};
         ]
       },
       {
-        seconds: 8, solution: [
+        seconds: 12, solution: [
           p('blob', 200, 192),
           p('head', 236, 156, { d: 4, r: 330 }),
           p('wing', 172, 108, { d: 1, r: 345 })
@@ -538,7 +541,7 @@ window.BP = window.BP || {};
         ]
       },
       {
-        seconds: 8, solution: [
+        seconds: 15, solution: [
           p('blob', 200, 184, { d: 1 }),
           p('key', 268, 152, { d: 3, r: 15 }),
           p('claw', 168, 100, { d: 1, r: 330 }),

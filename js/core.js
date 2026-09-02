@@ -1287,6 +1287,7 @@ window.BP = window.BP || {};
         canvas.clientWidth > 0 && canvas.clientHeight > 0) resize();
     updateFlicker(clock);
     tickPerformance(dt);
+    tickCurtain(dt);
     render();
     rafId = window.requestAnimationFrame(frame);
   }
@@ -1332,11 +1333,32 @@ window.BP = window.BP || {};
     return (par && moves <= par) ? 3 : 2;
   }
 
+  // Temps d'attente avant que le rideau ne tombe quand le seuil de réussite est franchi mais
+  // que l'ombre peut encore être améliorée : le monteur doit pouvoir finir son geste (poser la
+  // dernière pièce, la tourner) et viser l'ovation sans être interrompu. Toute manipulation
+  // relance le compte ; l'ovation, elle, fait tomber le rideau tout de suite.
+  var CURTAIN_SETTLE = 5;
+  var curtainWait = 0;
+
   function checkWin() {
     if (!S.level || S.level.type === 'performance') return;
-    if (S.score < BP.PASS) return;
+    if (S.status === 'won') return;
+    if (S.score < BP.PASS) { curtainWait = 0; return; }
+    if (S.score >= BP.GOLD) { finishTableau(); return; }
+    curtainWait = CURTAIN_SETTLE;
+  }
+
+  /** Décompte du rideau (appelé par la boucle ; la pause le suspend d'elle-même). */
+  function tickCurtain(dt) {
+    if (curtainWait <= 0) return;
+    curtainWait -= dt;
+    if (curtainWait <= 0) { curtainWait = 0; finishTableau(); }
+  }
+
+  function finishTableau() {
+    curtainWait = 0;
+    if (!S.level || S.status === 'won') return;
     var stars = starsFor(S.score, S.moves, S.level.par);
-    if (stars <= S.bestStars) { S.status = 'won'; return; }
     S.bestStars = stars;
     S.status = 'won';
     saveResult(S.score, stars, S.moves);
@@ -1410,6 +1432,7 @@ window.BP = window.BP || {};
     S.undo.length = 0;
     S.status = 'playing';
     S.bestStars = 0;
+    curtainWait = 0;
     S.view = 'all';
     S.showTarget = true;
     S.beat = null;
@@ -1803,7 +1826,11 @@ window.BP = window.BP || {};
       return;
     }
 
-    if (!inDrap(pt.x, pt.y)) { return; }
+    // Hors du drap et hors du coffre (les coulisses) : on désélectionne, comme dans le vide du drap.
+    if (!inDrap(pt.x, pt.y)) {
+      if (S.selected) { setSelected(null); sfx('ui'); }
+      return;
+    }
 
     var wx = screenToWorldX(pt.x), wy = screenToWorldY(pt.y);
     var p = pickPieceAt(wx, wy);
@@ -1858,18 +1885,19 @@ window.BP = window.BP || {};
     }
 
     if (drag.kind === 'piece') {
-      var moved = drag.moved, changedPos = drag.snapshotTaken;
+      var changedPos = drag.snapshotTaken;
       var uid = drag.uid;
       endDrag();
-      if (moved && changedPos) {
+      // Seule la position après aimantation décide : sur un petit écran, un pas de grille ne
+      // représente que trois ou quatre pixels — exiger un « vrai » glisser rendrait la
+      // correction fine impossible au doigt. Un simple tap laisse la pièce à sa case : rien
+      // n'est compté.
+      if (changedPos) {
         var sn = S.undo[S.undo.length - 1];
         var p = pieceByUid(uid);
         var same = sn && sameAtUid(sn, p);
         if (same) { S.undo.pop(); }
         else { countMove(); sfx('place'); E.emit('place', { uid: uid }); recompute(); }
-      } else if (changedPos) {
-        var sn2 = S.undo.pop();
-        if (sn2) restoreSnapshot(sn2);
       }
       return;
     }
