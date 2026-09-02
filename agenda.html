@@ -197,7 +197,21 @@ input,textarea{font:inherit;color:inherit}
   font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
   color:var(--p-urgent);padding-top:4px;
 }
-.urgentlist{display:flex;flex-wrap:wrap;gap:6px;flex:1;align-items:flex-start}
+/* Deux lignes au maximum. Le bandeau pouvait s'etaler sur trois rangees et
+   138 pixels, pris directement sur la zone de travail. Le replier n'est pas
+   une economie de place : au-dela de deux lignes, « urgent » ne veut plus rien
+   dire, et une liste de douze urgences est une liste qu'on ne lit plus. */
+.urgentlist{
+  display:flex;flex-wrap:wrap;gap:6px;flex:1;align-items:flex-start;
+  max-height:56px;overflow:hidden;
+}
+.urgentlist.deplie{max-height:none;overflow:visible}
+.ureste{
+  border:1px solid var(--p-urgent);background:transparent;color:var(--p-urgent);
+  border-radius:99px;padding:1px 9px;font-size:11px;font-weight:700;cursor:pointer;
+  align-self:center;flex:none;
+}
+.ureste:hover{background:var(--p-urgent-bg)}
 .uchip{
   display:flex;align-items:center;gap:6px;
   background:var(--p-urgent-bg);border:1px solid transparent;
@@ -214,14 +228,66 @@ input,textarea{font:inherit;color:inherit}
 /* =========================================================================
    [C5] GRILLE DE LA SEMAINE
    ========================================================================= */
+/* DEUX ZONES QUI SE PARTAGENT LA HAUTEUR, PLUS UN PLAFOND.
+   -------------------------------------------------------------------------
+   Le bac « A faire » etait plafonne a 190 pixels sur TOUT ecran, pendant que
+   la grille horaire, elle, prenait tout le reste. Mesure : a 1920x1080, le bac
+   recevait 25 % de la zone centrale et la grille 75 %, alors que 81 % de ce
+   qu'on note n'a pas d'heure. Et le plafond etait a l'envers du besoin : plus
+   l'ecran est etroit, plus les titres passent a la ligne, donc plus le bac
+   aurait besoin de hauteur — le contenu reel d'un mercredi charge mesurait
+   264 pixels a 1920 mais 431 a 1280, toujours dans le meme cadre de 190.
+   Les deux zones sont donc devenues deux parts d'une meme hauteur, reglees
+   par une poignee. Aucune des deux ne peut disparaitre : chacune garde un
+   plancher, et c'est l'utilisateur qui arbitre selon sa semaine, pas une
+   constante ecrite dans le fichier. */
 .board{
-  display:grid;grid-template-rows:auto auto minmax(0,1fr);
+  display:flex;flex-direction:column;
   background:var(--surface);border-bottom:1px solid var(--border);
   min-height:0;
 }
+.board-head{flex:none}
+/* Le bac prend la hauteur de son contenu, SANS jamais depasser sa part. Une
+   part fixe serait presque aussi rigide qu'un plafond fixe : un lundi a six
+   taches occupait 230 pixels dans un bac de 350, et les 120 pixels perdus
+   manquaient a la grille, qui coupait le dejeuner de midi. Ce qui n'est pas
+   utilise par les taches revient donc aux heures, automatiquement.
+   La poignee regle la part maximale : elle agit quand une journee est chargee,
+   c'est-a-dire exactement quand on a besoin d'arbitrer. */
+.board-bins{flex:0 1 auto;min-height:96px;max-height:var(--max-bacs,60%);overflow:hidden}
+.board-scroll{flex:1 1 0;min-height:120px}
+/* Des que la poignee a ete tiree, la hauteur du bac n'est plus deduite du
+   contenu mais imposee par l'utilisateur : sinon, tirer vers le bas un bac
+   deja plus court que sa part ne produirait aucun effet visible, et une
+   poignee qui ne repond qu'a moitie est pire qu'une poignee absente.
+   Un double-clic rend la main a la mesure automatique. */
+.board.partfixe .board-bins{flex:0 0 var(--max-bacs,60%);max-height:none}
+.bingrab{
+  flex:none;height:6px;cursor:ns-resize;position:relative;z-index:6;
+  background:var(--surface-3);border-top:1px solid var(--border);
+  border-bottom:1px solid var(--border-strong);
+}
+.bingrab::after{
+  content:"";position:absolute;left:50%;top:2px;width:34px;height:2px;
+  transform:translateX(-50%);border-radius:2px;background:var(--border-strong);
+}
+.bingrab:hover{background:color-mix(in srgb,var(--accent) 24%,transparent)}
 .row{display:grid;grid-template-columns:var(--gutter) repeat(var(--ncols),minmax(0,1fr))}
 .board-head{border-bottom:1px solid var(--border);background:var(--surface)}
-.gcell{border-right:1px solid var(--border);padding:6px 4px;text-align:right;color:var(--text-faint);font-size:11px}
+.gcell{
+  border-right:1px solid var(--border);padding:4px;color:var(--text-faint);font-size:11px;
+  display:flex;align-items:center;justify-content:center;
+}
+.wetoggle{
+  border:1px solid var(--border);background:var(--surface-2);color:var(--text-faint);
+  border-radius:5px;padding:1px 5px;font-size:11px;line-height:1.4;cursor:pointer;
+  display:inline-flex;align-items:center;gap:3px;
+}
+.wetoggle:hover{border-color:var(--border-strong);color:var(--text)}
+.wetoggle .wecnt{
+  background:var(--p-semaine);color:#fff;border-radius:99px;
+  font-size:9px;font-weight:700;padding:0 4px;font-variant-numeric:tabular-nums;
+}
 
 .dayhead{
   border-right:1px solid var(--border);padding:6px 9px 5px;
@@ -248,7 +314,8 @@ input,textarea{font:inherit;color:inherit}
 }
 .daybin{
   border-right:1px solid var(--border);padding:4px;min-height:46px;
-  max-height:190px;overflow-y:auto;display:flex;flex-direction:column;gap:2px;
+  max-height:none;overflow-y:auto;
+  display:flex;flex-direction:column;gap:2px;
   scrollbar-width:thin;position:relative;
 }
 /* Un bac qui deborde doit le DIRE. Les navigateurs masquent leur barre de
@@ -257,17 +324,21 @@ input,textarea{font:inherit;color:inherit}
 .daybin.deborde{border-bottom:2px solid var(--p-semaine)}
 /* Colle en bas du bac : un repere qui defile avec le contenu qu'il annonce
    disparaitrait exactement quand on en a besoin. */
+/* Une pastille etroite, calee a droite, et non une bande sur toute la largeur :
+   collee en bas du bac, une bande pleine recouvrirait la derniere tache et
+   recevrait les clics qui lui etaient destines. */
 .binreste{
   position:sticky;bottom:0;z-index:3;
-  flex:none;align-self:stretch;text-align:center;font-size:10px;font-weight:700;
+  flex:none;align-self:flex-end;text-align:center;font-size:10px;font-weight:700;
   letter-spacing:.04em;color:var(--p-semaine);background:var(--p-semaine-bg);
-  border:0;border-radius:4px;padding:2px;margin-top:1px;cursor:pointer;
+  border:1px solid var(--p-semaine);border-radius:99px;padding:1px 7px;
+  margin-top:1px;cursor:pointer;box-shadow:0 1px 3px rgba(20,25,35,.14);
 }
 .binreste:hover{filter:brightness(.95)}
 .daybin:last-child{border-right:0}
 .daybin.dropok{background:var(--surface-3);box-shadow:inset 0 0 0 2px var(--accent)}
 
-.board-scroll{overflow-y:auto;overflow-x:hidden;min-height:0}
+.board-scroll{overflow-y:auto;overflow-x:hidden}
 .board-scroll .row{padding-top:8px}
 .gutter{border-right:1px solid var(--border);position:relative}
 .gutter .hlab{
@@ -337,6 +408,47 @@ input,textarea{font:inherit;color:inherit}
   border-radius:3px;margin-top:3px;height:12px;
 }
 .item:hover .grip{opacity:.55}
+
+/* LES 84 PIXELS.
+   -------------------------------------------------------------------------
+   Poignee, pastille de priorite et croix occupaient 84 pixels sur CHAQUE
+   tache, et cette valeur ne bougeait pas d'un ecran a l'autre : 33 % de la
+   largeur utile a 1920, 45 % a 1440, 51 % a 1280. Sur un portable, plus de la
+   moitie de la place d'une tache servait a montrer des commandes dont aucune
+   n'est utilisee en lisant. Il restait treize caracteres par ligne.
+   Elles passent donc en superposition et reviennent au survol, comme cela a
+   deja ete fait pour les rendez-vous en 1.1.0. Rien n'est retire :
+   - la case a cocher reste dans le flux, c'est l'action principale ;
+   - la pastille reste visible des que la priorite n'est pas le niveau par
+     defaut, parce qu'elle porte alors une information et non une commande ;
+   - le marqueur de report reste visible, pour la meme raison.
+   Ce qui disparait au repos ne fait qu'attendre le survol. */
+.item.binitem{position:relative;padding-right:3px}
+.item.binitem .grip{
+  position:absolute;left:0;top:0;bottom:0;width:9px;height:auto;
+  margin:0;border-radius:0;align-self:auto;
+}
+/* Les deux commandes voyagent ensemble, cote a cote, dans une petite barre
+   qui n'apparait qu'au survol. Cote a cote et non l'une sur l'autre : sur une
+   tache d'une seule ligne, une pastille en bas et une croix en haut se
+   recouvrent, et c'est la croix qui recoit le clic destine a la pastille.
+   `background:inherit` donne a la barre la couleur exacte de la tache, quelle
+   que soit sa priorite : pendant le survol elle masque proprement la fin du
+   titre au lieu de s'y superposer en transparence.
+   La pastille peut disparaitre au repos sans rien couter en information : la
+   priorite est deja portee par la bordure gauche coloree et par la teinte de
+   fond, qui, elles, sont toujours la. */
+.item.binitem .actions{
+  position:absolute;right:1px;top:1px;bottom:1px;
+  display:flex;align-items:center;gap:4px;padding:0 2px 0 7px;
+  background:inherit;border-radius:0 4px 4px 0;
+  opacity:0;pointer-events:none;
+}
+.item.binitem:hover .actions,
+.item.binitem:focus-within .actions{opacity:1;pointer-events:auto}
+.item.binitem .actions .pdot,
+.item.binitem .actions .del{margin:0;opacity:1;position:static}
+.item.binitem .title{margin-left:6px}
 .chk{flex:none;margin:2px 0 0;width:13px;height:13px;accent-color:var(--accent);cursor:pointer}
 .item .title{
   flex:1;min-width:0;border:0;background:transparent;padding:1px 0;
@@ -530,13 +642,24 @@ kbd{
 @media print{
   @page{size:A4 landscape;margin:8mm}
   body{background:#fff;overflow:visible;font-size:9pt}
-  .topbar,.grabber,.alertbar,.iconbtn,.btn,.item .grip,.item .del,.item .pdot{display:none!important}
+  /* La hauteur des creneaux n'est PAS reglable ici : elle est calculee en
+     JavaScript et posee en pixels sur la gouttiere comme sur chaque
+     rendez-vous. La changer en CSS desalignerait les rendez-vous de la grille.
+     C'est preparerImpression() qui s'en charge, juste avant l'impression. */
+  .topbar,.grabber,.bingrab,.alertbar,.iconbtn,.btn,
+  .item .grip,.item .del,.item .pdot,.binreste,.ureste,.wetoggle{display:none!important}
   .app{height:auto;display:block}
+  .board{display:block}
   .board-scroll{overflow:visible}
   .veil{display:none!important}
   .bottom{height:auto;page-break-inside:avoid}
   .item{background:#fff!important;border-color:#999!important;box-shadow:none!important}
+  /* Sur le papier, il n'y a plus de zone a se partager : ni plafond, ni part,
+     ni repli. Tout ce qui existe s'imprime, sinon une tache hors du cadre a
+     l'ecran serait simplement absente de la feuille. */
+  .board-bins{max-height:none!important;flex:none!important;overflow:visible!important}
   .daybin{max-height:none;overflow:visible}
+  .urgentlist{max-height:none!important;overflow:visible!important}
   .is-today{background:#fff}
   #printhead{display:block!important;padding:0 0 6px;font-size:11pt;font-weight:700}
 }
@@ -597,6 +720,7 @@ kbd{
     <div id="printhead"></div>
     <div class="row board-head" id="boardHead"></div>
     <div class="row board-bins" id="boardBins"></div>
+    <div class="bingrab" id="binGrab" title="Glisser pour arbitrer entre les tâches et les heures — double-cliquez pour revenir à l&#39;ajustement automatique"></div>
     <div class="board-scroll" id="boardScroll">
       <div class="row" id="boardGrid" style="min-height:100%"></div>
     </div>
@@ -736,9 +860,19 @@ const REGLAGES_DEFAUT = {
   taillePolice: 14,
   hauteurCreneau: 22,
   hauteurBas: 168,
+  /* Part de la zone centrale revenant au bac « A faire ».
+     null = automatique : le bac prend la hauteur de son contenu sans depasser
+     60 % — le rapport 80/20 du contenu reel, corrige du fait qu'un rendez-vous
+     se lit a sa position verticale alors qu'une tache doit etre lue mot a mot.
+     Un nombre entre 0 et 1 = hauteur imposee a la poignee, et memorisee. */
+  partBacs: null,
   debutJournee: 480,          // 08:00
   finJournee: 1140,           // 19:00
-  afficherWeekend: true,
+  /* Cinq colonnes au lieu de sept elargissent chaque jour de 40 %. Sur un
+     ecran de portable, c'est le plus gros gain de largeur disponible, et il
+     ne coute rien : le week-end se deplie d'un clic et rien n'y est cache,
+     puisque le bouton annonce ce qui s'y trouve. */
+  afficherWeekend: false,
   seuilCharge: 8,             // au-dela, l'indicateur de charge passe orange
   reportActif: true,
   reportSauteWeekend: false,  // vendredi -> lundi au lieu de vendredi -> samedi
@@ -747,6 +881,7 @@ const REGLAGES_DEFAUT = {
   libreSeuilJours: 30,        // « quand je peux » signalee une fois passe ce delai
   sasActif: true,
   sasHeure: 1050,             // 17:30
+  grilleRepliee: true,        // la grille ne montre que les heures occupees
   sauvegardeAuto: true,
   sauvegardeJours: 1,         // 1 = chaque jour, 7 = chaque semaine
 };
@@ -780,6 +915,7 @@ function etatVide(){
       lastBackupTryOn: "",    // derniere tentative : ne prouve rien a elle seule
       lastSasOn: "",
       lastWeekReviewOn: "", lastOpenOn: "", firstRunDone: false,
+      weekendReplieApplique: false,   // le repli du week-end n'est propose qu'une fois
     },
     items: {},
     weekNotes: {},
@@ -1329,8 +1465,62 @@ function joursAffiches(){
   for (let i = 0; i < n; i++) out.push(datePlus(semaineAffichee, i));
   return out;
 }
+/* LA GRILLE NE MONTRE QUE CE QUI EXISTE.
+   -------------------------------------------------------------------------
+   Une plage fixe de 8 h a 19 h reserve vingt-deux creneaux a longueur d'annee.
+   Mesure : 80 % de cette surface etait vide, et cette place manquait au bac.
+   La grille se replie donc sur les heures reellement occupees, avec une heure
+   de marge de chaque cote pour qu'on puisse toujours poser un rendez-vous
+   juste avant ou juste apres.
+   Trois garde-fous :
+   - une largeur minimale de quatre heures, sinon une semaine a un seul
+     rendez-vous n'offrirait plus nulle part ou cliquer ;
+   - l'heure courante est incluse quand aujourd'hui est affiche, faute de quoi
+     la ligne rouge de l'heure disparaitrait de l'ecran ;
+   - un rendez-vous pose hors de la plage reglee ETEND la plage au lieu d'etre
+     masque. C'est un defaut ancien que ce repli corrige au passage : un
+     rendez-vous a 7 h avec une journee reglee a partir de 8 h disparaissait
+     purement et simplement de l'affichage.
+   Le repli se desactive dans les reglages pour qui prefere une grille stable. */
+const PLAGE_MIN = 240;          // quatre heures
+const PLAGE_MARGE = 60;         // une heure de part et d'autre
+function plageAffichee(){
+  const s = etat.settings;
+  const fixe = { debut: s.debutJournee, fin: s.finJournee };
+  if (!s.grilleRepliee) return fixe;
+
+  const jours = joursAffiches();
+  let min = null, max = null;
+  const elargir = (d, f) => {
+    if (min === null || d < min) min = d;
+    if (max === null || f > max) max = f;
+  };
+  for (const it of tousLesItems()){
+    if (it.placement !== "slot" || it.status === "abandoned") continue;
+    if (jours.indexOf(it.date) < 0) continue;
+    const d = it.startMin == null ? s.debutJournee : it.startMin;
+    elargir(d, d + (it.durMin || 30));
+  }
+  if (jours.indexOf(dateAujourdhui()) >= 0){
+    const m = minutesMaintenant();
+    elargir(m, m);
+  }
+  if (min === null) return { debut: fixe.debut, fin: Math.min(1440, fixe.debut + PLAGE_MIN) };
+
+  let debut = Math.floor((min - PLAGE_MARGE) / 60) * 60;
+  let fin   = Math.ceil((max + PLAGE_MARGE) / 60) * 60;
+  debut = Math.max(0, debut);
+  fin   = Math.min(1440, fin);
+  if (fin - debut < PLAGE_MIN){
+    fin = Math.min(1440, debut + PLAGE_MIN);
+    debut = Math.max(0, fin - PLAGE_MIN);
+  }
+  return { debut: debut, fin: fin };
+}
+
 function nbCreneaux(){
-  return Math.max(1, Math.round((etat.settings.finJournee - etat.settings.debutJournee) / 30));
+  const p = plageAffichee();
+  return Math.max(1, Math.round((p.fin - p.debut) / 30));
 }
 function tousLesItems(){ return Object.keys(etat.items).map(id => etat.items[id]); }
 
@@ -1393,7 +1583,8 @@ let squeletteSignature = "";
 function construireSquelette(){
   const jours = joursAffiches();
   const n = nbCreneaux();
-  const sig = jours.length + "|" + n + "|" + etat.settings.debutJournee;
+  const p = plageAffichee();
+  const sig = jours.length + "|" + n + "|" + p.debut;
   document.documentElement.style.setProperty("--ncols", jours.length);
   if (sig === squeletteSignature) return;
   squeletteSignature = sig;
@@ -1415,7 +1606,7 @@ function construireSquelette(){
   gut.className = "gutter";
   gut.style.height = (n * etat.settings.hauteurCreneau) + "px";
   for (let s = 0; s <= n; s++){
-    const m = etat.settings.debutJournee + s * 30;
+    const m = p.debut + s * 30;
     if (m % 60 !== 0) continue;
     const l = document.createElement("div");
     l.className = "hlab";
@@ -1431,7 +1622,7 @@ function construireSquelette(){
     col.style.gridTemplateRows = "repeat(" + n + ", var(--slot-h))";
     const frag = document.createDocumentFragment();
     for (let s = 0; s < n; s++){
-      const m = etat.settings.debutJournee + s * 30;
+      const m = p.debut + s * 30;
       const cell = document.createElement("div");
       cell.className = "slot" + (m % 60 === 30 ? " half" : "");
       cell.style.gridRow = (s + 1);
@@ -1465,12 +1656,47 @@ function rendreEntete(){
     dateLisible(semaineAffichee, false) + " au " + dateLisible(fin, true);
 }
 
+/* La case vide au-dessus de « A FAIRE » ne servait a rien. Elle porte
+   maintenant le pliage du week-end, au seul endroit de l'ecran qui ne coute
+   aucune largeur aux jours. Replie, elle annonce ce qui attend le samedi et le
+   dimanche, pour qu'on ne masque jamais quelque chose sans le dire. */
+function boutonWeekend(){
+  const g = document.createElement("div");
+  g.className = "gcell";
+  const b = document.createElement("button");
+  b.className = "wetoggle";
+  b.dataset.ouvert = etat.settings.afficherWeekend ? "1" : "0";
+
+  if (etat.settings.afficherWeekend){
+    b.innerHTML = "&rsaquo;&rsaquo;";
+    b.title = "Replier samedi et dimanche pour élargir les autres jours";
+    b.setAttribute("aria-label", "Replier le week-end");
+  } else {
+    const lundi = semaineAffichee;
+    let n = 0;
+    for (const it of tousLesItems()){
+      if (it.status !== "open" || it.placement === "park" || it.placement === "week") continue;
+      if (it.date === datePlus(lundi, 5) || it.date === datePlus(lundi, 6)) n++;
+    }
+    b.innerHTML = "&lsaquo;&lsaquo;" + (n ? '<span class="wecnt">' + n + "</span>" : "");
+    b.title = n
+      ? n + (n > 1 ? " éléments attendent" : " élément attend") + " samedi ou dimanche — cliquez pour les afficher"
+      : "Afficher samedi et dimanche";
+    b.setAttribute("aria-label", "Afficher le week-end");
+  }
+  b.onclick = () => {
+    etat.settings.afficherWeekend = !etat.settings.afficherWeekend;
+    squeletteSignature = "";
+    rendre(); planifierEnregistrement();
+  };
+  g.appendChild(b);
+  return g;
+}
+
 function rendreEnTetesJours(){
   const auj = dateAujourdhui();
   els.boardHead.innerHTML = "";
-  const g = document.createElement("div");
-  g.className = "gcell"; g.textContent = "";
-  els.boardHead.appendChild(g);
+  els.boardHead.appendChild(boutonWeekend());
   joursAffiches().forEach((j, i) => {
     const d = document.createElement("div");
     d.className = "dayhead" + (j === auj ? " is-today" : "") + (dateEstWeekend(j) ? " is-weekend" : "");
@@ -1563,7 +1789,8 @@ function repartirEnCouloirs(poses){
 
 function rendreGrille(){
   const auj = dateAujourdhui();
-  const deb = etat.settings.debutJournee, n = nbCreneaux();
+  const plage = plageAffichee();
+  const deb = plage.debut, n = nbCreneaux();
   els.boardGrid.querySelectorAll(".daycol").forEach((col, i) => {
     const jour = joursAffiches()[i];
     col.dataset.jour = jour;
@@ -1571,7 +1798,7 @@ function rendreGrille(){
     col.classList.toggle("is-weekend", dateEstWeekend(jour));
     col.querySelectorAll(".slotitem, .nowline").forEach(e => e.remove());
 
-    const fin = etat.settings.finJournee;
+    const fin = plage.fin;
     const h = etat.settings.hauteurCreneau;
     const poses = itemsDuJour(jour, "slot").map(it => {
       const d = it.startMin == null ? deb : it.startMin;
@@ -1593,7 +1820,7 @@ function rendreGrille(){
 
     if (jour === auj){
       const m = minutesMaintenant();
-      if (m >= deb && m <= etat.settings.finJournee){
+      if (m >= deb && m <= plage.fin){
         const l = document.createElement("div");
         l.className = "nowline";
         l.style.top = ((m - deb) / 30 * etat.settings.hauteurCreneau) + "px";
@@ -1640,6 +1867,37 @@ function rendreUrgent(){
     frag.appendChild(c);
   });
   els.urgentList.replaceChildren(frag);
+  els.urgentList.classList.toggle("deplie", urgentDeplie);
+  signalerLesUrgencesCachees();
+}
+
+/* Comme pour les bacs : ce qui sort du cadre doit etre annonce, jamais
+   simplement coupe. La mesure se fait apres le rendu, une fois que le
+   navigateur a range les puces sur leurs lignes. */
+let urgentDeplie = false;
+function signalerLesUrgencesCachees(){
+  const ancien = els.urgentList.parentNode.querySelector(".ureste");
+  if (ancien) ancien.remove();
+  if (urgentDeplie){
+    if (!els.urgentList.querySelector(".uchip")) return;
+    const b = document.createElement("button");
+    b.className = "ureste"; b.textContent = "Replier";
+    b.title = "Ne montrer que les deux premières lignes";
+    b.onclick = () => { urgentDeplie = false; rendreUrgent(); };
+    els.urgentList.parentNode.insertBefore(b, els.urgentList.nextSibling);
+    return;
+  }
+  const bas = els.urgentList.getBoundingClientRect().bottom;
+  let caches = 0;
+  els.urgentList.querySelectorAll(".uchip").forEach(c => {
+    if (c.getBoundingClientRect().bottom > bas + 1) caches++;
+  });
+  if (!caches) return;
+  const b = document.createElement("button");
+  b.className = "ureste"; b.textContent = "+ " + caches;
+  b.title = caches + (caches > 1 ? " autres urgences" : " autre urgence") + " — cliquez pour tout voir";
+  b.onclick = () => { urgentDeplie = true; rendreUrgent(); };
+  els.urgentList.parentNode.insertBefore(b, els.urgentList.nextSibling);
 }
 
 function rendreNotes(){
@@ -1668,7 +1926,7 @@ function rendreParking(){
 function elementItem(it, contexte){
   const el = document.createElement("div");
   el.className = "item p-" + it.priority + (it.status === "done" ? " done" : "") +
-                 (contexte === "slot" ? " slotitem" : "");
+                 (contexte === "slot" ? " slotitem" : " binitem");
   el.dataset.id = it.id;
   el.dataset.ctx = contexte;
 
@@ -1706,11 +1964,22 @@ function elementItem(it, contexte){
   p.className = "pdot"; p.dataset.p = it.priority;
   p.title = "Priorité : " + PRIO[it.priority].nom + " — cliquez pour changer";
   p.setAttribute("aria-label", "Priorité : " + PRIO[it.priority].nom);
-  el.appendChild(p);
 
   const x = document.createElement("button");
   x.className = "del"; x.innerHTML = "&times;"; x.title = "Supprimer";
-  el.appendChild(x);
+
+  if (contexte === "slot"){
+    el.appendChild(p);
+    el.appendChild(x);
+  } else {
+    // Dans un bac, les deux commandes vivent dans une barre superposee qui ne
+    // parait qu'au survol : c'est ainsi qu'on rend leur largeur au texte.
+    const barre = document.createElement("div");
+    barre.className = "actions";
+    barre.appendChild(p);
+    barre.appendChild(x);
+    el.appendChild(barre);
+  }
 
   if (contexte === "slot"){
     const rz = document.createElement("div");
@@ -2079,13 +2348,55 @@ function brancherEvenements(){
   els.grabber.addEventListener("mousedown", e => {
     grab = { y0: e.clientY, h0: etat.settings.hauteurBas }; e.preventDefault();
   });
+
+  /* La poignee qui arbitre entre les taches et les heures. On mesure les deux
+     zones au moment de la prise, on travaille en pixels pendant le glissement
+     — c'est ce que la main attend — et on ne convertit en fraction qu'a la
+     fin, pour l'enregistrement. */
+  let arbitre = null;
+  $("binGrab").addEventListener("mousedown", e => {
+    arbitre = { y0: e.clientY,
+                bacs: els.boardBins.getBoundingClientRect().height,
+                grille: els.boardScroll.getBoundingClientRect().height };
+    document.body.style.userSelect = "none";
+    e.preventDefault();
+  });
+
+  // Double-clic : on rend la main a la mesure automatique.
+  $("binGrab").addEventListener("dblclick", () => {
+    etat.settings.partBacs = appliquerPartBacs(null);
+    signalerLesBacsQuiDebordent();
+    planifierEnregistrement();
+    signaler("Hauteur des tâches à nouveau ajustée sur leur contenu.");
+  });
+
   document.addEventListener("mousemove", e => {
+    if (arbitre){
+      const total = arbitre.bacs + arbitre.grille;
+      const voulu = arbitre.bacs + (e.clientY - arbitre.y0);
+      const borne = Math.max(96, Math.min(total - 96, voulu));
+      etat.settings.partBacs = appliquerPartBacs(borne / total);
+      signalerLesBacsQuiDebordent();
+      return;
+    }
     if (!grab) return;
     const h = Math.max(64, Math.min(460, grab.h0 - (e.clientY - grab.y0)));
     etat.settings.hauteurBas = h;
     document.querySelector(".bottom").style.height = h + "px";
   });
-  document.addEventListener("mouseup", () => { if (grab){ grab = null; planifierEnregistrement(); } });
+
+  document.addEventListener("mouseup", () => {
+    if (arbitre){ arbitre = null; document.body.style.userSelect = ""; planifierEnregistrement(); }
+    if (grab){ grab = null; planifierEnregistrement(); }
+  });
+
+  // Le partage se recalcule quand la fenetre change de taille : les zones sont
+  // proportionnelles, mais le reperage des bacs qui debordent, lui, ne l'est pas.
+  let minuteurRedim = null;
+  window.addEventListener("resize", () => {
+    clearTimeout(minuteurRedim);
+    minuteurRedim = setTimeout(signalerLesBacsQuiDebordent, 120);
+  });
 
   /* --- Enregistrement garanti a la fermeture ------------------------------ */
   document.addEventListener("visibilitychange", () => {
@@ -2093,6 +2404,10 @@ function brancherEvenements(){
     else verifierChangementDeJour();
   });
   window.addEventListener("pagehide", enregistrerMaintenant);
+
+  /* --- Impression --------------------------------------------------------- */
+  window.addEventListener("beforeprint", () => preparerImpression(true));
+  window.addEventListener("afterprint",  () => preparerImpression(false));
 
   /* --- Deux onglets ouverts sur le meme agenda ---------------------------- */
   window.addEventListener("storage", ev => {
@@ -2131,6 +2446,53 @@ function raccourcisGlobaux(e){
 /* =========================================================================
    [10] THEME ET REGLAGES
    ========================================================================= */
+/* IMPRESSION : on retrecit la grille juste le temps de la photographie.
+   -------------------------------------------------------------------------
+   Une demi-heure occupe vingt-deux pixels a l'ecran parce qu'on y clique. Sur
+   le papier on ne clique pas : quatorze suffisent a lire, et la grille perd
+   pres de moitie de sa hauteur.
+   On ne peut pas le faire en CSS : la hauteur des creneaux est calculee en
+   JavaScript et posee en pixels sur la gouttiere comme sur chaque rendez-vous.
+   La changer par une regle de style desalignerait les rendez-vous de leur
+   grille. On applique donc le meme procede que pour l'archive autonome (bug
+   B-005) : on met la page dans l'etat voulu, on laisse le navigateur la
+   photographier, et on remet tout comme avant. Rien n'est enregistre : la
+   valeur de l'utilisateur est restauree avant le moindre enregistrement. */
+const CRENEAU_IMPRESSION = 14;
+let memoImpression = null;
+function preparerImpression(actif){
+  if (actif){
+    if (memoImpression) return;
+    memoImpression = { creneau: etat.settings.hauteurCreneau, part: etat.settings.partBacs };
+    etat.settings.hauteurCreneau = CRENEAU_IMPRESSION;
+    etat.settings.partBacs = null;          // sur le papier, aucune part a arbitrer
+  } else {
+    if (!memoImpression) return;
+    etat.settings.hauteurCreneau = memoImpression.creneau;
+    etat.settings.partBacs = memoImpression.part;
+    memoImpression = null;
+  }
+  squeletteSignature = "";
+  appliquerReglages();
+  rendre();
+}
+
+/* La part est stockee en fraction, pas en pixels : elle survit ainsi a un
+   changement de taille de fenetre, au passage sur un autre ecran et au mode
+   plein ecran. Les deux zones deviennent deux facteurs de croissance dont le
+   rapport EST la part ; les planchers de la feuille de style empechent l'une
+   ou l'autre de disparaitre, meme si la part est poussee a l'extreme. */
+const PART_BACS_MIN = 0.15, PART_BACS_MAX = 0.85, PART_BACS_AUTO = 0.6;
+function appliquerPartBacs(part){
+  const auto = (part === null || part === undefined || part === "auto");
+  const p = auto ? PART_BACS_AUTO
+                 : Math.max(PART_BACS_MIN, Math.min(PART_BACS_MAX, Number(part) || PART_BACS_AUTO));
+  document.documentElement.style.setProperty("--max-bacs", (p * 100).toFixed(1) + "%");
+  const board = document.querySelector(".board");
+  if (board) board.classList.toggle("partfixe", !auto);
+  return auto ? null : p;
+}
+
 function appliquerReglages(){
   const s = etat.settings;
   const r = document.documentElement.style;
@@ -2138,6 +2500,7 @@ function appliquerReglages(){
   r.setProperty("--accent", s.accent);
   r.setProperty("--fs", s.taillePolice + "px");
   r.setProperty("--slot-h", s.hauteurCreneau + "px");
+  appliquerPartBacs(s.partBacs);
   document.querySelector(".bottom").style.height = s.hauteurBas + "px";
   squeletteSignature = "";     // force la reconstruction du squelette
 }
@@ -2166,6 +2529,8 @@ function panneauReglages(){
     '<div class="sectitle">La grille</div>' +
     '<div class="field"><label>Début de journée</label><select id="rDeb">' + heures + '</select></div>' +
     '<div class="field"><label>Fin de journée</label><select id="rFin">' + heures + '</select></div>' +
+    '<div class="field"><label>Replier la grille sur les heures occupées<small>La grille n\'affiche que la plage où vous avez des rendez-vous, plus une heure de marge. Tout l\'espace gagné revient aux tâches. Décochez pour une grille toujours identique.</small></label>' +
+      '<span class="switch"><input type="checkbox" id="rRepli"' + (s.grilleRepliee ? " checked" : "") + '><span></span></span></div>' +
     '<div class="field"><label>Afficher samedi et dimanche</label>' +
       '<span class="switch"><input type="checkbox" id="rWe"' + (s.afficherWeekend ? " checked" : "") + '><span></span></span></div>' +
     '<div class="field"><label>Seuil de surcharge<small>Le compteur en haut d\'un jour passe à l\'orange au-delà de ce nombre de tâches ouvertes.</small></label>' +
@@ -2219,6 +2584,7 @@ function panneauReglages(){
   lier("rFs","taillePolice",Number); lier("rSh","hauteurCreneau",Number);
   lier("rDeb","debutJournee",Number); lier("rFin","finJournee",Number);
   lier("rWe","afficherWeekend"); lier("rSeuil","seuilCharge",Number);
+  lier("rRepli","grilleRepliee");
   lier("rRep","reportActif"); lier("rWeSaut","reportSauteWeekend");
   lier("rAge","reportAgeMax",Number); lier("rTri","reportSeuilTriage",Number);
   lier("rLibre","libreSeuilJours",Number);
@@ -2858,7 +3224,13 @@ function verifierChangementDeJour(){
     lancerSauvegardeAutoSiNecessaire();
     demarrerLaFileSiInactive();
   } else {
-    rendreGrille();          // la ligne d'heure courante avance
+    // La ligne d'heure courante avance. Le squelette doit etre reconstruit
+    // AVANT, parce que la plage repliee suit l'heure : sans cela, les
+    // rendez-vous seraient places selon la nouvelle plage dans des cases
+    // dessinees pour l'ancienne. construireSquelette ne fait rien quand la
+    // plage n'a pas bouge, ce qui est le cas cinquante-neuf minutes sur soixante.
+    construireSquelette();
+    rendreGrille();
   }
 }
 
@@ -2913,6 +3285,18 @@ function demarrer(){
   const lundiAuj = dateLundi(auj);
   semaineAffichee = lundiAuj;
 
+  /* Changer une valeur par defaut ne change rien pour qui a deja des donnees :
+     les reglages enregistres l'emportent toujours, et c'est bien ainsi. Le
+     repli du week-end est donc applique une seule fois aux agendas existants,
+     en le disant et en laissant le retour en arriere a un clic. Le drapeau
+     garantit qu'on ne revient jamais sur un choix contraire fait ensuite. */
+  const replierLeWeekend = !premierLancement && !etat.meta.weekendReplieApplique &&
+                           etat.settings.afficherWeekend;
+  if (!etat.meta.weekendReplieApplique){
+    etat.meta.weekendReplieApplique = true;
+    if (replierLeWeekend) etat.settings.afficherWeekend = false;
+  }
+
   const rapport = appliquerReport();
   const arbitrer = tachesAArbitrer();
   const trainent = tachesQuiTrainent();
@@ -2935,6 +3319,14 @@ function demarrer(){
   if (rapport.deplacees.length && rapport.deplacees.length < etat.settings.reportSeuilTriage)
     signaler(rapport.deplacees.length + " tâche" + (rapport.deplacees.length > 1 ? "s" : "") +
              " reportée" + (rapport.deplacees.length > 1 ? "s" : "") + " sur aujourd'hui.");
+
+  if (replierLeWeekend)
+    signalerAvecAction(
+      "Samedi et dimanche sont repliés : les cinq autres jours gagnent 40 % de largeur. " +
+      "Le bouton en haut à gauche de la grille les rouvre, et dit ce qui s'y trouve.",
+      "Garder les sept jours",
+      () => { etat.settings.afficherWeekend = true; squeletteSignature = "";
+              rendre(); planifierEnregistrement(); });
 
   etat.meta.lastOpenOn = auj;
   enregistrerMaintenant();

@@ -129,14 +129,25 @@ const idCycle = await injecter(() => { const i = creerItem({ placement:'day', da
   etat.items[i].title = 'Cycle'; rendre(); return i; });
 const cycle = [];
 for (let k = 0; k < 3; k++){
-  await page.locator(`.daybin .item[data-id="${idCycle}"] .pdot`).click();
+  /* Les commandes d'une tâche ne paraissent qu'au survol : c'est ce qui rend
+     leur largeur au texte. Un test doit donc survoler avant de cliquer,
+     exactement comme le ferait une main. */
+  const ligne = page.locator(`.daybin .item[data-id="${idCycle}"]`);
+  await ligne.scrollIntoViewIfNeeded();
+  await ligne.hover();
+  await page.waitForTimeout(60);
+  await ligne.locator('.pdot').click();
   await page.waitForTimeout(120);
   cycle.push(await injecter(i => etat.items[i].priority, idCycle));
 }
 ok('cycle des trois priorités', cycle, ['urgent','semaine','libre']);
 
 const avant = await page.evaluate(() => Object.keys(etat.items).length);
-await page.locator(`.daybin[data-jour="${auj}"] .item`).first().locator('.del').click({ force:true });
+const aSupprimer = page.locator(`.daybin[data-jour="${auj}"] .item`).first();
+await aSupprimer.scrollIntoViewIfNeeded();
+await aSupprimer.hover();
+await page.waitForTimeout(60);
+await aSupprimer.locator('.del').click({ force:true });
 await page.waitForTimeout(200);
 ok('suppression', await page.evaluate(() => Object.keys(etat.items).length), avant - 1);
 await page.keyboard.press('Control+z');
@@ -229,7 +240,10 @@ ok('pointeur perdu : on repart des données les plus récentes',
 
   ok('chevauchement : les cases horaires gardent leur largeur',
      g.largeurCase > g.largeurColonne * 0.9, true);
-  ok('chevauchement : toutes les cases sont cliquables', g.nbCases >= 20, true);
+  /* La grille est repliée sur les heures occupées : le nombre de créneaux
+     suit donc le contenu. Ce qui compte est qu'ils existent et couvrent bien
+     les rendez-vous, pas qu'ils soient vingt-deux à longueur d'année. */
+  ok('chevauchement : les cases horaires existent', g.nbCases >= 8, true);
   ok('chevauchement : les quatre rendez-vous sont affichés', g.rdv.length, 4);
   /* Avant correctif, le texte d'un rendez-vous simultané mesurait ZÉRO pixel.
      Un couloir partagé reste étroit — c'est la répartition de l'espace qui
@@ -546,24 +560,212 @@ await page.click('#bClose').catch(() => {}); await page.waitForTimeout(200);
   ok('réservoir : rien ne subsiste sans instantané qui le désigne', gc, 0);
 }
 
+/* ---- 7 ter. Répartition de l'espace ------------------------------------- */
+/* Le reproche à l'origine de cette version : « la partie chose à faire est
+   trop petite ». Elle était plafonnée à 190 pixels sur TOUT écran, et le
+   plafond était à l'envers du besoin — plus l'écran est étroit, plus les
+   titres passent à la ligne, plus il faudrait de hauteur. */
+{
+  await injecter(() => {
+    for (const id of Object.keys(etat.items)) delete etat.items[id];
+    for (let i = 0; i < 14; i++){
+      const id = creerItem({ placement:'day', date:dateAujourdhui() }, false);
+      etat.items[id].title = 'Relancer le fournisseur Delmas au sujet du devis ' + i;
+    }
+    etat.settings.partBacs = appliquerPartBacs(null);
+    rendre();
+  });
+  await page.waitForTimeout(300);
+
+  const espace = await page.evaluate(() => {
+    const bacs = document.getElementById('boardBins').getBoundingClientRect().height;
+    const grille = document.getElementById('boardScroll').getBoundingClientRect().height;
+    const bin = document.querySelector(`.daybin[data-jour="${dateAujourdhui()}"]`);
+    const it = bin.querySelector('.item');
+    const ta = it.querySelector('textarea.title');
+    return { bacs, grille, part: bacs / (bacs + grille),
+             plafond: getComputedStyle(bin).maxHeight,
+             boite: it.getBoundingClientRect().width,
+             texte: ta.getBoundingClientRect().width };
+  });
+
+  ok('le bac n\'a plus de plafond en dur', espace.plafond, 'none');
+  ok('un jour chargé occupe une vraie part de l\'écran', espace.part > 0.45, true);
+  ok('la grille horaire garde toujours sa place', espace.grille >= 120, true);
+  // Avant : 84 pixels de décoration sur chaque tâche, quelle que soit la
+  // largeur de l'écran, soit la moitié de la place sur un portable.
+  ok('la décoration ne mange plus la moitié de la tâche',
+     espace.boite - espace.texte <= 40, true);
+  ok('le texte occupe l\'essentiel de la largeur',
+     espace.texte / espace.boite > 0.8, true);
+
+  // La poignée doit agir DANS LES DEUX SENS, y compris quand le bac est déjà
+  // plus court que sa part : une poignée qui ne répond qu'à moitié est pire
+  // qu'une poignée absente.
+  const boite = await page.locator('#binGrab').boundingBox();
+  await page.mouse.move(boite.x + boite.width / 2, boite.y + 3);
+  await page.mouse.down();
+  await page.mouse.move(boite.x + boite.width / 2, boite.y - 120, { steps: 8 });
+  await page.mouse.up();
+  await page.waitForTimeout(250);
+  const apresHaut = await page.evaluate(() => ({
+    bacs: document.getElementById('boardBins').getBoundingClientRect().height,
+    part: etat.settings.partBacs,
+    fixe: document.querySelector('.board').classList.contains('partfixe') }));
+  ok('la poignée réduit le bac', apresHaut.bacs < espace.bacs - 40, true);
+  ok('la poignée passe en hauteur imposée', apresHaut.fixe, true);
+
+  const boite2 = await page.locator('#binGrab').boundingBox();
+  await page.mouse.move(boite2.x + boite2.width / 2, boite2.y + 3);
+  await page.mouse.down();
+  await page.mouse.move(boite2.x + boite2.width / 2, boite2.y + 130, { steps: 8 });
+  await page.mouse.up();
+  await page.waitForTimeout(250);
+  ok('la poignée agrandit le bac',
+     await page.evaluate(() => document.getElementById('boardBins').getBoundingClientRect().height) >
+       apresHaut.bacs + 40, true);
+
+  const partAvant = await page.evaluate(() => etat.settings.partBacs);
+  await recharger();
+  ok('la répartition choisie est mémorisée',
+     await page.evaluate(() => etat.settings.partBacs), partAvant);
+
+  await page.locator('#binGrab').dblclick();
+  await page.waitForTimeout(250);
+  ok('le double-clic rend la main à l\'ajustement automatique',
+     await page.evaluate(() => etat.settings.partBacs === null &&
+       !document.querySelector('.board').classList.contains('partfixe')), true);
+
+  // Le bandeau urgent pouvait s'étaler sur trois rangées et 138 pixels, pris
+  // directement sur la zone de travail.
+  await injecter(() => {
+    for (let i = 0; i < 12; i++){
+      const id = creerItem({ placement:'day', date:dateAujourdhui() }, false);
+      etat.items[id].title = 'Urgence à traiter sans délai numéro ' + i;
+      etat.items[id].priority = 'urgent';
+    }
+    rendre();
+  });
+  await page.waitForTimeout(300);
+  const urg = await page.evaluate(() => ({
+    hauteur: document.querySelector('.urgentbar').getBoundingClientRect().height,
+    repere: !!document.querySelector('.ureste'),
+    montrees: [...document.querySelectorAll('.uchip')].filter(c =>
+      c.getBoundingClientRect().bottom <=
+      document.querySelector('.urgentlist').getBoundingClientRect().bottom + 1).length }));
+  ok('le bandeau urgent reste borné en hauteur', urg.hauteur <= 80, true);
+  ok('le bandeau urgent annonce ce qu\'il replie', urg.repere, true);
+  await page.click('.ureste'); await page.waitForTimeout(250);
+  ok('le bandeau urgent se déplie',
+     await page.evaluate(() => document.querySelector('.urgentbar').getBoundingClientRect().height) > urg.hauteur,
+     true);
+  await page.click('.ureste'); await page.waitForTimeout(250);
+  ok('et se replie',
+     await page.evaluate(() => document.querySelector('.urgentbar').getBoundingClientRect().height) <= 80, true);
+
+  await injecter(() => { for (const id of Object.keys(etat.items)) delete etat.items[id]; rendre(); });
+}
+
 /* ---- 8. Réglages, affichage, impression --------------------------------- */
 await page.click('#settingsBtn'); await page.waitForTimeout(300);
 await page.selectOption('#rTheme', 'sombre'); await page.waitForTimeout(200);
 ok('thème sombre appliqué', await page.evaluate(() => document.documentElement.dataset.theme), 'sombre');
 await page.selectOption('#rDeb', '360'); await page.waitForTimeout(250);
 ok('plage horaire modifiée', await page.evaluate(() => etat.settings.debutJournee), 360);
-ok('grille reconstruite en conséquence',
+
+/* La grille repliée ne montre que les heures occupées. Les deux comportements
+   sont contrôlés : replié, la plage suit le contenu et reste bien plus courte
+   que la plage réglée ; déplié, elle honore exactement le réglage. */
+await page.uncheck('#rRepli'); await page.waitForTimeout(300);
+ok('grille dépliée : la plage réglée est honorée à la case près',
    await page.evaluate(() => document.querySelector('.daycol').querySelectorAll('.slot').length), 26);
+await page.check('#rRepli'); await page.waitForTimeout(300);
+const repli = await page.evaluate(() => {
+  const p = plageAffichee();
+  return { creneaux: document.querySelector('.daycol').querySelectorAll('.slot').length,
+           debut: p.debut, fin: p.fin, regle: etat.settings.finJournee - etat.settings.debutJournee };
+});
+ok('grille repliée : la plage se resserre sur les heures occupées',
+   repli.fin - repli.debut < repli.regle, true);
+ok('grille repliée : jamais moins de quatre heures', repli.fin - repli.debut >= 240, true);
+ok('grille repliée : le nombre de créneaux suit la plage',
+   repli.creneaux, (repli.fin - repli.debut) / 30);
+
 await page.uncheck('#rWe'); await page.waitForTimeout(250);
 ok('week-end masqué : 5 colonnes', await page.locator('.board-head .dayhead').count(), 5);
+await page.check('#rWe'); await page.waitForTimeout(250);
+ok('week-end affiché : 7 colonnes', await page.locator('.board-head .dayhead').count(), 7);
+ok('le bouton de pliage du week-end est là', await page.locator('.wetoggle').count(), 1);
+// Le bouton vit dans la grille : il faut refermer les réglages pour l'atteindre.
+await page.click('#rClose'); await page.waitForTimeout(250);
+await page.click('.wetoggle'); await page.waitForTimeout(250);
+ok('le bouton replie le week-end', await page.locator('.board-head .dayhead').count(), 5);
+await page.click('.wetoggle'); await page.waitForTimeout(250);
+ok('le bouton le rouvre', await page.locator('.board-head .dayhead').count(), 7);
+await page.click('.wetoggle'); await page.waitForTimeout(250);
+await page.click('#settingsBtn'); await page.waitForTimeout(300);
 await page.check('#rWe'); await page.waitForTimeout(200);
 await page.selectOption('#rTheme', 'clair'); await page.waitForTimeout(150);
 await page.click('#rClose'); await page.waitForTimeout(200);
 
-await page.emulateMedia({ media:'print' }); await page.waitForTimeout(200);
+/* Sur le papier, tout ce qui existe doit s'imprimer : ni plafond, ni part
+   négociée, ni repli. Une tâche hors du cadre à l'écran serait sinon
+   purement et simplement absente de la feuille. */
+await injecter(() => {
+  for (const id of Object.keys(etat.items)) delete etat.items[id];
+  const lun = dateLundi(dateAujourdhui());
+  for (let d = 0; d < 5; d++) for (let i = 0; i < 2; i++){
+    const id = creerItem({ placement:'day', date:datePlus(lun, d) }, false);
+    etat.items[id].title = 'Relancer le fournisseur Delmas au sujet du devis ' + d + '-' + i;
+  }
+  for (let i = 0; i < 2; i++){
+    const id = creerItem({ placement:'day', date:dateAujourdhui() }, false);
+    etat.items[id].title = 'Urgence ' + i; etat.items[id].priority = 'urgent';
+  }
+  [[0,540,60,'Comité'],[1,600,45,'Entretien'],[2,840,120,'Atelier']].forEach(([d,m,du,t]) => {
+    const id = creerItem({ placement:'slot', date:datePlus(lun, d), startMin:m }, false);
+    etat.items[id].title = t; etat.items[id].durMin = du;
+  });
+  rendre();
+});
+await page.waitForTimeout(300);
+const creneauEcran = await page.evaluate(() => etat.settings.hauteurCreneau);
+
+await injecter(() => preparerImpression(true));
+await page.emulateMedia({ media:'print' }); await page.waitForTimeout(250);
 ok('impression : barre d\'outils masquée', await page.locator('.topbar').isHidden(), true);
 ok('impression : titre de la semaine visible', await page.locator('#printhead').isVisible(), true);
+
+const papier = await page.evaluate(() => {
+  let coupees = 0;
+  document.querySelectorAll('.daybin .item textarea.title').forEach(ta => {
+    if (ta.scrollHeight > ta.getBoundingClientRect().height + 1) coupees++;
+  });
+  return {
+    hauteur: document.querySelector('.app').getBoundingClientRect().height,
+    binsMax: getComputedStyle(document.getElementById('boardBins')).maxHeight,
+    binMax: getComputedStyle(document.querySelector('.daybin')).maxHeight,
+    urgMax: getComputedStyle(document.querySelector('.urgentlist')).maxHeight,
+    poignee: getComputedStyle(document.querySelector('.bingrab')).display,
+    creneau: etat.settings.hauteurCreneau,
+    coupees, taches: document.querySelectorAll('.daybin .item').length,
+  };
+});
+ok('impression : aucun plafond sur les bacs', papier.binsMax, 'none');
+ok('impression : aucun plafond sur un jour', papier.binMax, 'none');
+ok('impression : le bandeau urgent n\'est plus replié', papier.urgMax, 'none');
+ok('impression : les poignées disparaissent', papier.poignee, 'none');
+ok('impression : toutes les tâches sont là', papier.taches >= 12, true);
+ok('impression : aucun titre coupé', papier.coupees, 0);
+ok('impression : les créneaux sont resserrés', papier.creneau < creneauEcran, true);
+// A4 paysage, 8 mm de marge : environ 734 px utiles a 96 points par pouce.
+ok('impression : une semaine normale tient sur une page', papier.hauteur <= 734, true);
+
 await page.emulateMedia({ media:'screen' });
+await injecter(() => preparerImpression(false));
+await page.waitForTimeout(200);
+ok('impression : la hauteur des créneaux est rendue à l\'écran',
+   await page.evaluate(() => etat.settings.hauteurCreneau), creneauEcran);
 
 /* ---- 9. Archive autonome : aller-retour complet -------------------------- */
 await neuf();
