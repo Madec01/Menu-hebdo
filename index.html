@@ -2,17 +2,25 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<meta name="theme-color" content="#1a120b">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#140e08">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="Bêtes de Papier — un théâtre d’ombres de poche : posez des découpes entre la lampe et le drap pour composer la bête que le conteur nomme.">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Bêtes de Papier</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div id="app">
   <div id="stage-wrap"><canvas id="stage"></canvas></div>
-  <div id="hud"></div>
-  <div id="screens"></div>
+  <div id="hud" hidden></div>
+  <div id="screens" hidden></div>
+  <div id="tuto" hidden></div>
+  <div id="toast" role="status" aria-live="polite"></div>
 </div>
+<noscript><p style="padding:24px;font-family:Georgia,serif;color:#f0e4cb">Ce théâtre d’ombres a besoin de JavaScript pour allumer sa lampe.</p></noscript>
 <script src="js/bp.js"></script>
 <script src="js/shapes.js"></script>
 <script src="js/levels.js"></script>
