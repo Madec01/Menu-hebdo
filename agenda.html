@@ -572,6 +572,7 @@ const K = {
   probe:  PREFIX + "probe",
   snap:   PREFIX + "snap:",     // + AAAA-MM-JJ
   premig: PREFIX + "premigration:v",
+  stamp:  PREFIX + "stamp",     // jeton de la derniere ecriture, pour detecter un autre onglet
 };
 
 const PRIO = {
@@ -787,21 +788,68 @@ function testerStockage(){
   return stockageOK;
 }
 
+/* Jeton de la derniere ecriture connue de CET onglet.
+   Deux onglets ouverts sur le meme agenda travaillent sur deux copies
+   independantes de `etat`. Sans garde-fou, le second a fermer ecrit sa copie
+   par-dessus tout le travail du premier : un onglet ouvert le matin et ferme
+   le soir ramenait neuf taches a une. L'avertissement « ouvert dans un autre
+   onglet » prevenait l'utilisateur mais n'empechait rien.
+   On compare donc le jeton avant chaque ecriture. S'il a change, c'est qu'un
+   autre onglet a enregistre depuis : on refuse d'ecrire, definitivement, et
+   on le dit. Perdre les quelques minutes saisies dans l'onglet perime est
+   toujours preferable a detruire la journee de l'autre. */
+let empreinteConnue = null;
+let ecritureBloquee = false;
+
+function nouveauJeton(){
+  return new Date().toISOString() + "#" + Math.random().toString(36).slice(2, 10);
+}
+
+function bloquerLesEcritures(){
+  if (ecritureBloquee) return;
+  ecritureBloquee = true;
+  signalerBloquantAvecAction(
+    "Cet agenda a été modifié dans un autre onglet. Pour ne pas écraser ce qui y a été fait, " +
+    "cet onglet n'enregistre plus. Rechargez la page pour repartir des données les plus récentes.",
+    "Afficher et copier",
+    () => panneauCopie());
+}
+
 function storeEcrire(data){
-  if (!stockageOK) return false;
+  if (!stockageOK || ecritureBloquee) return false;
+
+  /* Un autre onglet a-t-il ecrit depuis notre derniere lecture ou ecriture ?
+     Une simple inegalite suffit et couvre les trois cas :
+       null === null   -> premiere ecriture, ou donnees d'une version anterieure
+                          au jeton : on laisse passer ;
+       null !== jeton  -> un jeton est apparu sans que nous l'ayons ecrit :
+                          quelqu'un d'autre est passe, on bloque ;
+       jetonA !== jetonB -> un autre onglet a ecrit depuis, on bloque.
+     Ce test synchrone est la vraie protection ; l'evenement `storage` ne fait
+     que l'anticiper, et un evenement manque ne cree donc aucun trou. */
+  if (localStorage.getItem(K.stamp) !== empreinteConnue){
+    bloquerLesEcritures();
+    return false;
+  }
+
   const texte = JSON.stringify(enveloppe(data));
+  const jeton = nouveauJeton();
   const actif = localStorage.getItem(K.slot) === "B" ? "B" : "A";
   const cible = actif === "A" ? "B" : "A";
   try {
     localStorage.setItem(cible === "A" ? K.dataA : K.dataB, texte);
+    localStorage.setItem(K.stamp, jeton);
     localStorage.setItem(K.slot, cible);     // bascule atomique, en dernier
+    empreinteConnue = jeton;
     return true;
   } catch(e){
     if (e && (e.name === "QuotaExceededError" || e.code === 22)){
       purgerInstantanes(true);
       try {
         localStorage.setItem(cible === "A" ? K.dataA : K.dataB, texte);
+        localStorage.setItem(K.stamp, jeton);
         localStorage.setItem(K.slot, cible);
+        empreinteConnue = jeton;
         return true;
       } catch(e2){}
     }
@@ -810,17 +858,30 @@ function storeEcrire(data){
   }
 }
 
+/* On ne fait PAS confiance au seul pointeur `slot`. S'il est perdu ou
+   incoherent — quota qui refuse la derniere ecriture, effacement partiel,
+   ancienne version du fichier — se rabattre aveuglement sur "A" peut
+   renvoyer l'emplacement le PLUS ANCIEN et faire disparaitre le travail
+   du jour. Chaque enveloppe porte deja son `savedAt` : on valide les deux
+   emplacements et on garde le plus recent. Le pointeur ne sert plus qu'a
+   departager deux enveloppes de meme date, ce qui n'arrive qu'entre deux
+   ecritures de la meme milliseconde. */
 function storeLire(){
   if (!stockageOK) return null;
   const actif = localStorage.getItem(K.slot) === "B" ? "B" : "A";
-  const ordre = actif === "A" ? [K.dataA, K.dataB] : [K.dataB, K.dataA];
-  for (const cle of ordre){
+  const candidats = [];
+  for (const [nom, cle] of [["A", K.dataA], ["B", K.dataB]]){
     const texte = localStorage.getItem(cle);
     if (!texte) continue;
     const v = valider(texte);
-    if (v.ok) return v.paquet;
+    if (v.ok) candidats.push({ nom: nom, paquet: v.paquet, quand: v.paquet.savedAt || "" });
   }
-  return null;
+  if (!candidats.length) return null;
+  candidats.sort((a, b) => {
+    if (a.quand !== b.quand) return a.quand < b.quand ? 1 : -1;   // le plus recent d'abord
+    return (a.nom === actif ? -1 : 1);                            // a egalite, le pointeur tranche
+  });
+  return candidats[0].paquet;
 }
 
 /* Cinq controles en cascade AVANT la moindre ecriture.
@@ -929,11 +990,23 @@ function enregistrerMaintenant(){
 /* =========================================================================
    [06] METIER : report, priorites, arbitrage, sas de fin de journee
    ========================================================================= */
+/* Un element pose sur un creneau horaire EST un rendez-vous. C'est son
+   emplacement qui le dit, et rien d'autre.
+
+   Le schema prevoit un champ `kind`, mais AUCUN code de production ne lui a
+   jamais donne d'autre valeur que sa valeur par defaut "task". Le test
+   `kind === "task"` etait donc toujours vrai : il laissait passer les
+   rendez-vous, qui se trouvaient reportes et perdaient leur heure, contre ce
+   qu'annoncent le README et le mode d'emploi. Le champ est conserve dans le
+   schema pour ne rien detruire dans les donnees existantes, mais plus aucune
+   decision ne s'appuie dessus. */
+function estUnRendezVous(it){ return it.placement === "slot"; }
+
 function estReportable(it){
-  return it.kind === "task"
+  return !estUnRendezVous(it)
       && it.status === "open"
       && !it.noRollover
-      && (it.placement === "slot" || it.placement === "day");
+      && it.placement === "day";
 }
 
 /* Cible du report : TOUJOURS aujourd'hui, jamais « demain ».
@@ -998,7 +1071,7 @@ function tachesAArbitrer(){
   const out = [];
   for (const id in etat.items){
     const it = etat.items[id];
-    if (it.status !== "open" || it.kind !== "task") continue;
+    if (it.status !== "open" || estUnRendezVous(it)) continue;
     if (it.priority !== "semaine") continue;
     const semOrigine = it.weekOfOrigin || dateLundi(it.origDate || it.date);
     if (semOrigine < lundiAuj) out.push(it);
@@ -1013,7 +1086,7 @@ function tachesQuiTrainent(){
   const out = [];
   for (const id in etat.items){
     const it = etat.items[id];
-    if (it.status !== "open" || it.kind !== "task" || it.priority !== "libre") continue;
+    if (it.status !== "open" || estUnRendezVous(it) || it.priority !== "libre") continue;
     if (it.placement === "park") continue;
     if (dateEcart(it.origDate || it.date, auj) < etat.settings.libreSeuilJours) continue;
     if (it.staleReviewedOn && dateEcart(it.staleReviewedOn, auj) < 14) continue;
@@ -1408,6 +1481,18 @@ function signaler(texte, niveau, persistant){
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { els.toast.hidden = true; }, 3200);
 }
+/* Comme signaler(..., persistant) mais avec un bouton : quand on annonce a
+   quelqu'un qu'il vient de perdre la main, il faut lui laisser une porte. */
+function signalerBloquantAvecAction(texte, libelle, action){
+  els.live.textContent = texte;
+  els.alertText.textContent = texte;
+  els.alertBar.classList.add("grave");
+  els.alertBar.hidden = false;
+  els.alertAction.textContent = libelle;
+  els.alertAction.hidden = false;
+  els.alertAction.onclick = action;
+}
+
 function signalerAvecAction(texte, libelle, action){
   els.live.textContent = texte;
   els.toastText.textContent = texte;
@@ -1712,8 +1797,9 @@ function brancherEvenements(){
   /* --- Deux onglets ouverts sur le meme agenda ---------------------------- */
   window.addEventListener("storage", ev => {
     if (!ev.key || ev.key.indexOf(PREFIX) !== 0) return;
-    if (ev.key !== K.slot) return;
-    signaler("Cet agenda est ouvert dans un autre onglet. Rechargez cette page pour éviter d'écraser vos données.", "bad", true);
+    if (ev.key !== K.stamp && ev.key !== K.slot) return;
+    if (ev.key === K.stamp && ev.newValue === empreinteConnue) return;   // c'est notre propre ecriture
+    bloquerLesEcritures();
   });
 }
 
@@ -2241,8 +2327,7 @@ function panneauArbitrage(aArbitrer, quiTrainent){
 function panneauSas(){
   const auj = dateAujourdhui();
   const restantes = tousLesItems().filter(it =>
-    it.date === auj && it.status === "open" && it.kind === "task" &&
-    (it.placement === "day" || it.placement === "slot")).sort(comparerItems);
+    it.date === auj && it.status === "open" && it.placement === "day").sort(comparerItems);
 
   if (!restantes.length){
     etat.meta.lastSasOn = auj; planifierEnregistrement();
@@ -2331,6 +2416,10 @@ function demarrer(){
   testerStockage();
 
   let paquet = storeLire();
+
+  // On adopte le jeton en place : tout jeton different apparu ensuite designe
+  // un autre onglet, et nos ecritures s'arretent aussitot.
+  empreinteConnue = localStorage.getItem(K.stamp);
 
   // Fichier d'archive autonome : les donnees sont incluses dans la page.
   const archive = document.getElementById("donneesArchive");

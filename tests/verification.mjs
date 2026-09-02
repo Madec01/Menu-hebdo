@@ -96,6 +96,51 @@ await recharger();
 ok('données conservées après rechargement', await page.evaluate(() => Object.keys(etat.items).length), avant);
 ok('notes conservées', await page.inputValue('#notes'), 'Note de test');
 
+/* Pointeur d'emplacement perdu.
+   Se rabattre aveuglement sur l'emplacement "A" pouvait renvoyer le plus
+   ANCIEN des deux et faire disparaitre le travail de la journee. */
+await injecter(() => { const i = creerItem({ placement:'day', date:dateAujourdhui() }, false);
+  etat.items[i].title = 'Ecrite juste avant la perte du pointeur'; enregistrerMaintenant(); });
+await page.waitForTimeout(300);
+const avantPerte = await page.evaluate(() => Object.keys(etat.items).length);
+await page.evaluate(() => localStorage.removeItem('agendaHebdo:slot'));
+await recharger();
+ok('pointeur perdu : on repart des données les plus récentes',
+   await page.evaluate(() => Object.keys(etat.items).length), avantPerte);
+
+/* ---- 4 bis. Deux onglets ouverts sur le meme agenda ---------------------- */
+{
+  const ctxO = await navigateur.newContext();
+  const o1 = await ctxO.newPage(); await o1.goto(ADRESSE); await o1.waitForTimeout(500);
+  if (await o1.locator('#wOk').count()) await o1.click('#wOk');
+  await o1.evaluate(() => { for (let i = 0; i < 9; i++){
+    const id = creerItem({ placement:'day', date:dateAujourdhui() }, false); etat.items[id].title = 'T' + i; }
+    enregistrerMaintenant(); });
+  await o1.waitForTimeout(300);
+
+  const o2 = await ctxO.newPage(); await o2.goto(ADRESSE); await o2.waitForTimeout(600);
+  if (await o2.locator('#wOk').count()) await o2.click('#wOk');
+  ok('deux onglets : le second voit les données du premier',
+     await o2.evaluate(() => Object.keys(etat.items).length), 9);
+
+  await o2.evaluate(() => { const id = creerItem({ placement:'day', date:dateAujourdhui() }, false);
+    etat.items[id].title = 'Saisie dans le second onglet'; enregistrerMaintenant(); });
+  await o2.waitForTimeout(400);
+
+  // Le premier onglet est desormais perime. Il ne doit plus rien ecrire.
+  const refus = await o1.evaluate(() => { etat.items = {}; return storeEcrire(etat); });
+  ok('deux onglets : l\'onglet périmé se voit refuser l\'écriture', refus, false);
+  await o1.waitForTimeout(200);
+  ok('deux onglets : l\'onglet périmé avertit', await o1.locator('#alertBar').isVisible(), true);
+  ok('deux onglets : l\'avertissement propose une porte de sortie',
+     await o1.locator('#alertAction').isVisible(), true);
+
+  const o3 = await ctxO.newPage(); await o3.goto(ADRESSE); await o3.waitForTimeout(600);
+  if (await o3.locator('#wOk').count()) await o3.click('#wOk');
+  ok('deux onglets : rien n\'est écrasé', await o3.evaluate(() => Object.keys(etat.items).length), 10);
+  await ctxO.close();
+}
+
 /* ---- 5. Report automatique ---------------------------------------------- */
 const poser = (id, jours, extra) => injecter(a => {
   const j = datePlus(dateAujourdhui(), a.jours);
@@ -104,12 +149,11 @@ const poser = (id, jours, extra) => injecter(a => {
   etat.meta.lastRolloverOn = ''; enregistrerMaintenant();
 }, { id, jours, extra });
 
-await poser('retard', -5, { placement:'slot', startMin:600 });
+await poser('retard', -5);
 await recharger();
 const t = await injecter(() => etat.items.retard);
 ok('report : arrive sur aujourd\'hui', t.date, auj);
 ok('report : compteur à 1', t.rolloverCount, 1);
-ok('report : l\'heure est perdue', t.startMin, null);
 ok('report : atterrit dans le bac À faire', t.placement, 'day');
 ok('report : la date d\'origine est intacte', t.origDate, await page.evaluate(() => datePlus(dateAujourdhui(), -5)));
 ok('report : marqueur ↩ affiché', await page.locator('.item[data-id="retard"] .roll').count(), 1);
@@ -124,10 +168,18 @@ await recharger();
 ok('tâche de 200 jours rangée au parking', await injecter(() => etat.items.fossile.placement), 'park');
 ok('tâche très ancienne jamais supprimée', await injecter(() => etat.items.fossile.status), 'open');
 
-await poser('rdv', -3, { kind:'event', placement:'slot', startMin:600 });
+/* Un rendez-vous, c'est-a-dire un element pose sur un creneau horaire.
+   Surtout PAS de kind:'event' ici : aucun geste de l'application ne produit
+   cette valeur, si bien que l'ancienne version de ce controle validait une
+   branche morte pendant que les vrais rendez-vous, eux, etaient reportes. */
+await poser('rdv', -3, { placement:'slot', startMin:600 });
 await recharger();
-ok('un rendez-vous passé ne se reporte pas', await injecter(() => etat.items.rdv.date),
+const rdv = await injecter(() => etat.items.rdv);
+ok('un rendez-vous passé ne se reporte pas', rdv.date,
    await page.evaluate(() => datePlus(dateAujourdhui(), -3)));
+ok('un rendez-vous passé garde son heure', rdv.startMin, 600);
+ok('un rendez-vous passé reste sur la grille', rdv.placement, 'slot');
+ok('un rendez-vous passé n\'est jamais compté comme reporté', rdv.rolloverCount, 0);
 
 await poser('futur', 3);
 await recharger();
