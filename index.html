@@ -1,0 +1,2972 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>VEILLEUR — Sept nuits au phare d'Ys</title>
+<meta name="description" content="Un jeu d'arcade : gardez la lampe, guidez les navires, résistez aux feux de la cité engloutie.">
+<style>
+  :root { color-scheme: dark; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { width:100%; height:100%; overflow:hidden; background:#04070d; }
+  body { cursor:none; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  canvas { display:block; width:100vw; height:100vh; }
+  #cur { position:fixed; left:0; top:0; opacity:0; transition:opacity .2s; width:22px; height:22px; margin:-11px 0 0 -11px; pointer-events:none; z-index:5; }
+  #cur::before, #cur::after { content:""; position:absolute; background:rgba(255,196,107,.75); }
+  #cur::before { left:10px; top:0; width:2px; height:22px; }
+  #cur::after { top:10px; left:0; height:2px; width:22px; }
+  #rot { position:fixed; inset:0; display:none; align-items:center; justify-content:center; text-align:center;
+         background:#04070d; color:#dce9f7; padding:32px; font-size:14px; line-height:1.6; z-index:9; }
+  @media (max-width:760px), (pointer:coarse) { #rot { display:flex; } canvas, #cur { display:none; } }
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div id="cur"></div>
+<div id="rot">
+  <div>
+    <div style="font:300 30px Georgia,serif;letter-spacing:8px;color:#ffe3b0;margin-bottom:16px">VEILLEUR</div>
+    Ce jeu se joue à la souris et au clavier.<br>Ouvrez-le sur un ordinateur.
+  </div>
+</div>
+<script>
+/* ---- curseur ---- */
+(function(){var c=document.getElementById('cur');addEventListener('mousemove',function(e){c.style.opacity=1;c.style.transform='translate('+e.clientX+'px,'+e.clientY+'px)';});})();
+</script>
+<script>
+/* === CONTENU — textes du jeu === */
+const CONTENT = {
+  title: "VEILLEUR",
+  subtitle: "Sept nuits au phare d’Ys",
+  pitch: [
+    "Sept nuits sur le phare d’Ys, seul avec la lampe.",
+    "En bas, la cité engloutie allume ses propres feux."
+  ],
+  howto: [
+    "Souris : le faisceau suit le curseur. Immobile il convainc, en balayage il montre large.",
+    "Shift : focus étroit et long, charge doublée — mais la lentille chauffe et la lampe peut céder.",
+    "Espace : fusée. Elle troue la brume, rassure tout un secteur, et coûte de l’huile."
+  ],
+  nights: [
+    {
+      n: 1,
+      title: "La relève",
+      log: [
+        "Trois nuits que L’Aurore n’est pas rentrée.",
+        "Maren était à bord. Le registre dit onze hommes.",
+        "Je tiens la lampe. C’est tout ce que je sais faire."
+      ]
+    },
+    {
+      n: 2,
+      title: "La brume",
+      log: [
+        "La brume monte de la baie, sans vent pour la pousser.",
+        "Le gardien d’avant écrivait : elle vient d’en bas.",
+        "Elle boit la lumière. Il faut la percer, pas l’attendre."
+      ]
+    },
+    {
+      n: 3,
+      title: "Les faux feux",
+      log: [
+        "Cette nuit, une lueur a bougé sur les récifs.",
+        "Ronde, basse, couleur de rouille. Ce n’est pas nous.",
+        "Ys rallume ses quais et appelle les vivants."
+      ]
+    },
+    {
+      n: 4,
+      title: "Les barques de Sein",
+      log: [
+        "Les barques sont sorties malgré l’avis de tempête.",
+        "Elles filent vite et virent au moindre reflet.",
+        "Une seule erreur de cap et les récifs les prennent."
+      ]
+    },
+    {
+      n: 5,
+      title: "Nuit sourde",
+      log: [
+        "Une bouée de L’Aurore s’est échouée sur la grève.",
+        "Peinture fraîche. Pas trois nuits passées dans l’eau.",
+        "La brume est pleine, et les faux feux sont trois."
+      ]
+    },
+    {
+      n: 6,
+      title: "Le Kerloch",
+      log: [
+        "Le Kerloch passe au large : deux cents âmes à bord.",
+        "Il vient de Brest et ne connaît pas nos récifs.",
+        "Ys l’attend. Elle n’a jamais eu tant de monde d’un coup."
+      ]
+    },
+    {
+      n: 7,
+      title: "L’Aurore",
+      log: [
+        "Un feu à l’ouest, réglé comme une horloge.",
+        "C’est son signal : trois éclats, puis un silence.",
+        "Elle remonte par le pire chenal de la côte.",
+        "Cette nuit je ne balaye plus. Je tiens l’ouest."
+      ]
+    }
+  ],
+  shipNames: [
+    "L’Iroise",
+    "Sainte-Anne d’Auray",
+    "Le Goéland",
+    "Ar Vag Wenn",
+    "La Cancalaise",
+    "Marie-Josèphe",
+    "Penn ar Bed",
+    "Notre-Dame de Rumengol",
+    "Le Grand Léon",
+    "La Nolwenn",
+    "Sainte-Barbe",
+    "Yvonne-Marie",
+    "An Heol",
+    "Le Kéréon",
+    "Les Trois-Frères",
+    "La Concarnoise",
+    "Mor Braz",
+    "Le Ponant",
+    "Gwennili",
+    "La Malouine",
+    "Le Kerloch",
+    "L’Étoile de Sein",
+    "Le Pen Bras",
+    "La Bigoudène",
+    "Saint-Guénolé",
+    "L’Armoricaine",
+    "Le Vent d’Ouest",
+    "La Jeanne-Yvonne"
+  ],
+  saved: [
+    "Elle a trouvé la passe.",
+    "Feux du port en vue.",
+    "Un de plus à l’abri.",
+    "La coque a doublé les récifs.",
+    "Cap tenu jusqu’au bout.",
+    "Amarrée avant l’aube."
+  ],
+  lost: [
+    "La mer l’a prise.",
+    "Les récifs l’ont ouverte.",
+    "Plus rien à la surface.",
+    "Elle a suivi le mauvais feu.",
+    "Le mât est passé sous l’écume.",
+    "On ne la comptera plus."
+  ],
+  wreckerLines: [
+    "Viens. La ville est éclairée.",
+    "Ici l’eau est calme, gardien.",
+    "Ta sœur est déjà descendue.",
+    "Éteins. Nous veillons pour toi."
+  ],
+  overheat: [
+    "La lentille fume. Plus rien ne sort.",
+    "Le verre a chauffé trop fort.",
+    "La lampe cède. Compte les secondes."
+  ],
+  endings: {
+    victory: {
+      title: "L’Aurore passe",
+      body: [
+        "La coque a franchi la passe à trois heures, sans un feu à bord.",
+        "Maren est montée jusqu’à la lanterne. On a regardé la mer jusqu’au jour."
+      ]
+    },
+    bittersweet: {
+      title: "Le jour se lève quand même",
+      body: [
+        "Le phare a tenu jusqu’à l’aube. L’Aurore, non.",
+        "Une lanterne, un aviron, rien qui parle. Je rallume ce soir."
+      ]
+    },
+    defeat: {
+      title: "La lampe s’est tue",
+      body: [
+        "Le feu s’est éteint avant la fin de la nuit.",
+        "En bas, la ville a éclairé ses rues. Elle sait attendre."
+      ]
+    }
+  },
+  tips: [
+    "Faisceau immobile : la confiance monte vite. Balaye pour trouver, arrête-toi pour sauver.",
+    "Shift double la charge et double la portée. Lâche avant que la jauge de chaleur ne rougisse.",
+    "Un feu d’Ys ne meurt que sous un focus tenu un peu plus d’une seconde.",
+    "La fusée traverse la brume et remonte la confiance de tout un secteur d’un coup.",
+    "L’huile ne revient qu’avec les sauvetages : sauve d’abord, dépense ensuite.",
+    "Les barques dérivent deux fois plus vite : éclaire-les avant les caboteurs."
+  ],
+  credits: "VEILLEUR — Les nuits d’Ys. Texte, code et dessin d’une seule veille. Pour les gardiens de phares, qui n’ont jamais eu de touche R."
+};
+</script>
+<script>
+/* === AUDIO — synthèse Web Audio, aucun fichier son === */
+/* =============================================================================
+ * VEILLEUR — Les nuits d'Ys
+ * Module audio : tout est synthetise avec la Web Audio API.
+ * Aucune dependance, aucun asset, aucun import/export.
+ *
+ * Usage :
+ *   var audio = createAudio();
+ *   // sur le premier geste utilisateur (clic / touche) :
+ *   audio.resume();
+ *   audio.setStorm(0.6); audio.setDanger(0.2); audio.setFocus(true);
+ *   audio.sfx('save', { vol: 0.9, pan: -0.3 });
+ *
+ * Tonalite : re mineur / re dorien (D3 = 146.83 Hz).
+ * Mix feutre : master ~0.35 + compresseur en sortie.
+ * ========================================================================== */
+
+function createAudio() {
+  'use strict';
+
+  /* ---------------------------------------------------------------- etat */
+  var ctx = null;          // cree UNIQUEMENT au premier resume()
+  var started = false;     // graphe persistant construit ?
+
+  var muted = false;
+  var storm = 0;           // 0..1
+  var danger = 0;          // 0..1
+  var focus = false;
+  var lampOn = true;
+
+  var MASTER_VOL = 0.35;
+  var D3 = 146.8324;       // tonique : re
+  var MAX_VOICES = 28;     // garde-fou CPU
+  var voices = 0;
+
+  var timers = [];         // setTimeout de nettoyage en cours
+  var swellTimer = null;
+  var confIdx = 0;         // rotation des hauteurs de 'confidence'
+
+  /* --------------------------------------------------- noeuds persistants */
+  var master = null, comp = null, ambBus = null, sfxBus = null;
+  var whiteBuf = null, pinkBuf = null;
+
+  var windSrc = null, windBp = null, windLp = null, windGain = null;
+  var windLfo = null, windLfoGain = null, windAmp = null, windAmpGain = null;
+
+  var swellSrc = null, swellLp = null, swellGain = null;
+
+  var humA = null, humB = null, humLp = null, humGain = null;
+  var humVib = null, humVibGain = null;
+
+  var droneA = null, droneB = null, droneLp = null, droneGain = null;
+
+  /* ------------------------------------------------------------- helpers */
+
+  // frequence d'un degre (en demi-tons) au-dessus de re3
+  function nf(semis) { return D3 * Math.pow(2, semis / 12); }
+
+  function clamp(x, lo, hi) {
+    x = +x;
+    if (!isFinite(x)) return lo;
+    return x < lo ? lo : (x > hi ? hi : x);
+  }
+
+  function rnd(a, b) { return a + Math.random() * (b - a); }
+
+  // rampe douce, sans empilement d'evenements d'automation
+  function glide(param, value, tc) {
+    if (!param) return;
+    try { param.setTargetAtTime(value, ctx.currentTime, tc || 0.25); } catch (e) {}
+  }
+
+  function normOpts(opts) {
+    opts = opts || {};
+    var v = +opts.vol;   if (!isFinite(v) || v < 0) v = 1;
+    var p = +opts.pan;   if (!isFinite(p)) p = 0;
+    var q = +opts.pitch; if (!isFinite(q) || q <= 0) q = 1;   // ratio de frequence
+    return { vol: clamp(v, 0, 4), pan: clamp(p, -1, 1), pitch: clamp(q, 0.25, 4) };
+  }
+
+  // nettoyage : arrete + deconnecte tous les noeuds ephemeres d'un son
+  function reap(nodes, when) {
+    voices++;
+    var delay = Math.max(0, when - ctx.currentTime) * 1000 + 180;
+    var id = setTimeout(function () {
+      for (var i = 0; i < nodes.length; i++) {
+        var n = nodes[i];
+        if (!n) continue;
+        try { if (n.stop) n.stop(); } catch (e) {}
+        try { n.disconnect(); } catch (e2) {}
+      }
+      nodes.length = 0;
+      voices--;
+      if (voices < 0) voices = 0;
+      var k = timers.indexOf(id);
+      if (k >= 0) timers.splice(k, 1);
+    }, delay);
+    timers.push(id);
+  }
+
+  // sortie d'un son ponctuel : gain de volume (+ panoramique si dispo)
+  function voiceOut(pan, vol) {
+    var g = ctx.createGain();
+    g.gain.value = vol;
+    var nodes = [g];
+    if (ctx.createStereoPanner) {
+      var p = ctx.createStereoPanner();
+      try { p.pan.value = pan; } catch (e) {}
+      g.connect(p);
+      p.connect(sfxBus);
+      nodes.push(p);
+    } else {
+      g.connect(sfxBus);
+    }
+    return { input: g, nodes: nodes };
+  }
+
+  function biquad(type, freq, q, nodes) {
+    var f = ctx.createBiquadFilter();
+    f.type = type;
+    f.frequency.value = freq;
+    if (q !== undefined && q !== null) f.Q.value = q;
+    nodes.push(f);
+    return f;
+  }
+
+  function gain(v, nodes) {
+    var g = ctx.createGain();
+    g.gain.value = v;
+    nodes.push(g);
+    return g;
+  }
+
+  // source de bruit ephemere (lit de bruit partage, lecture a offset aleatoire)
+  function noiseSrc(buf, dest, nodes, t, tEnd) {
+    var s = ctx.createBufferSource();
+    s.buffer = buf;
+    s.loop = true;
+    s.connect(dest);
+    var off = Math.random() * Math.max(0.001, buf.duration - 0.05);
+    try { s.start(t, off); } catch (e) { try { s.start(t); } catch (e2) {} }
+    try { s.stop(tEnd); } catch (e3) {}
+    nodes.push(s);
+    return s;
+  }
+
+  // oscillateur ephemere
+  function oscSrc(type, freq, dest, nodes, t, tEnd, detune) {
+    var o = ctx.createOscillator();
+    o.type = type;
+    o.frequency.value = freq;
+    if (detune) { try { o.detune.value = detune; } catch (e) {} }
+    o.connect(dest);
+    try { o.start(t); } catch (e2) {}
+    try { o.stop(tEnd); } catch (e3) {}
+    nodes.push(o);
+    return o;
+  }
+
+  // enveloppe percussive simple sur un gain
+  function pluck(g, t, peak, atk, dec) {
+    var p = g.gain;
+    var a = Math.max(0.002, atk);
+    var d = Math.max(0.01, dec);
+    p.cancelScheduledValues(t);
+    p.setValueAtTime(0.0001, t);
+    p.exponentialRampToValueAtTime(Math.max(0.0002, peak), t + a);
+    p.exponentialRampToValueAtTime(0.0001, t + a + d);
+  }
+
+  // enveloppe de nappe (attaque lente, longue extinction)
+  function pad(g, t, peak, atk, hold, rel) {
+    var p = g.gain;
+    p.cancelScheduledValues(t);
+    p.setValueAtTime(0.0001, t);
+    p.linearRampToValueAtTime(Math.max(0.0002, peak), t + atk);
+    p.setValueAtTime(Math.max(0.0002, peak), t + atk + hold);
+    p.exponentialRampToValueAtTime(0.0001, t + atk + hold + rel);
+  }
+
+  // partiel de cloche : sinus + decroissance exponentielle
+  function partial(dest, nodes, t, freq, amp, dur, detune) {
+    var g = gain(0.0001, nodes);
+    g.connect(dest);
+    oscSrc('sine', freq, g, nodes, t, t + dur + 0.06, detune || 0);
+    pluck(g, t, amp, 0.008, dur);
+    return g;
+  }
+
+  /* ------------------------------------------------------ lits de bruit */
+
+  function makeWhite(sec) {
+    var n = Math.floor(ctx.sampleRate * sec);
+    var b = ctx.createBuffer(1, n, ctx.sampleRate);
+    var d = b.getChannelData(0);
+    for (var i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    return b;
+  }
+
+  function makePink(sec) {
+    var n = Math.floor(ctx.sampleRate * sec);
+    var b = ctx.createBuffer(1, n, ctx.sampleRate);
+    var d = b.getChannelData(0);
+    var b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+    for (var i = 0; i < n; i++) {
+      var w = Math.random() * 2 - 1;
+      b0 = 0.99886 * b0 + w * 0.0555179;
+      b1 = 0.99332 * b1 + w * 0.0750759;
+      b2 = 0.96900 * b2 + w * 0.1538520;
+      b3 = 0.86650 * b3 + w * 0.3104856;
+      b4 = 0.55000 * b4 + w * 0.5329522;
+      b5 = -0.7616 * b5 - w * 0.0168980;
+      d[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * 0.5362) * 0.11;
+      b6 = w * 0.115926;
+    }
+    return b;
+  }
+
+  /* ------------------------------------------------- graphe d'ambiance */
+
+  function build() {
+    whiteBuf = makeWhite(2.0);
+    pinkBuf = makePink(4.0);
+
+    comp = ctx.createDynamicsCompressor();
+    try {
+      comp.threshold.value = -16;
+      comp.knee.value = 14;
+      comp.ratio.value = 4;
+      comp.attack.value = 0.006;
+      comp.release.value = 0.28;
+    } catch (e) {}
+
+    master = ctx.createGain();
+    master.gain.value = muted ? 0.0001 : MASTER_VOL;
+    master.connect(comp);
+    comp.connect(ctx.destination);
+
+    ambBus = ctx.createGain(); ambBus.gain.value = 1;   ambBus.connect(master);
+    sfxBus = ctx.createGain(); sfxBus.gain.value = 0.9; sfxBus.connect(master);
+
+    /* --- vent : bruit blanc passe-bande + LFO lents (frequence & gain) --- */
+    windBp = ctx.createBiquadFilter();
+    windBp.type = 'bandpass';
+    windBp.frequency.value = 900;
+    windBp.Q.value = 0.85;
+
+    windLp = ctx.createBiquadFilter();
+    windLp.type = 'lowpass';
+    windLp.frequency.value = 2400;
+    windLp.Q.value = 0.4;
+
+    windGain = ctx.createGain();
+    windGain.gain.value = 0.035;
+
+    windSrc = ctx.createBufferSource();
+    windSrc.buffer = whiteBuf;
+    windSrc.loop = true;
+    windSrc.connect(windBp);
+    windBp.connect(windLp);
+    windLp.connect(windGain);
+    windGain.connect(ambBus);
+    windSrc.start(0);
+
+    windLfo = ctx.createOscillator();
+    windLfo.type = 'sine';
+    windLfo.frequency.value = 0.061;
+    windLfoGain = ctx.createGain();
+    windLfoGain.gain.value = 150;
+    windLfo.connect(windLfoGain);
+    windLfoGain.connect(windBp.frequency);
+    windLfo.start(0);
+
+    windAmp = ctx.createOscillator();
+    windAmp.type = 'sine';
+    windAmp.frequency.value = 0.093;
+    windAmpGain = ctx.createGain();
+    windAmpGain.gain.value = 0.018;
+    windAmp.connect(windAmpGain);
+    windAmpGain.connect(windGain.gain);   // s'ajoute a la valeur intrinseque
+    windAmp.start(0);
+
+    /* --- houle : bruit rose + enveloppe lente aleatoire (4-9 s) --- */
+    swellLp = ctx.createBiquadFilter();
+    swellLp.type = 'lowpass';
+    swellLp.frequency.value = 340;
+    swellLp.Q.value = 0.5;
+
+    swellGain = ctx.createGain();
+    swellGain.gain.value = 0.004;
+
+    swellSrc = ctx.createBufferSource();
+    swellSrc.buffer = pinkBuf;
+    swellSrc.loop = true;
+    swellSrc.connect(swellLp);
+    swellLp.connect(swellGain);
+    swellGain.connect(ambBus);
+    swellSrc.start(0);
+
+    /* --- bourdon chaud de la lampe : 55 Hz + 110 Hz, leger vibrato --- */
+    humLp = ctx.createBiquadFilter();
+    humLp.type = 'lowpass';
+    humLp.frequency.value = 230;
+    humLp.Q.value = 0.7;
+
+    humGain = ctx.createGain();
+    humGain.gain.value = 0.0001;
+
+    humA = ctx.createOscillator();
+    humA.type = 'sine';
+    humA.frequency.value = 55;
+
+    humB = ctx.createOscillator();
+    humB.type = 'triangle';
+    humB.frequency.value = 110;
+
+    var humBG = ctx.createGain();
+    humBG.gain.value = 0.34;
+
+    humA.connect(humLp);
+    humB.connect(humBG);
+    humBG.connect(humLp);
+    humLp.connect(humGain);
+    humGain.connect(ambBus);
+    humA.start(0);
+    humB.start(0);
+
+    humVib = ctx.createOscillator();
+    humVib.type = 'sine';
+    humVib.frequency.value = 4.7;
+    humVibGain = ctx.createGain();
+    humVibGain.gain.value = 7;            // cents
+    humVib.connect(humVibGain);
+    humVibGain.connect(humA.detune);
+    humVibGain.connect(humB.detune);
+    humVib.start(0);
+
+    /* --- drone grave de tension (tres discret) --- */
+    droneLp = ctx.createBiquadFilter();
+    droneLp.type = 'lowpass';
+    droneLp.frequency.value = 130;
+    droneLp.Q.value = 1.1;
+
+    droneGain = ctx.createGain();
+    droneGain.gain.value = 0.0001;
+
+    droneA = ctx.createOscillator();
+    droneA.type = 'sawtooth';
+    droneA.frequency.value = nf(0) / 4;    // re 1
+    droneB = ctx.createOscillator();
+    droneB.type = 'triangle';
+    droneB.frequency.value = nf(7) / 4;    // la 1
+    droneB.detune.value = -6;
+
+    var droneBG = ctx.createGain();
+    droneBG.gain.value = 0.55;
+
+    droneA.connect(droneLp);
+    droneB.connect(droneBG);
+    droneBG.connect(droneLp);
+    droneLp.connect(droneGain);
+    droneGain.connect(ambBus);
+    droneA.start(0);
+    droneB.start(0);
+
+    applyStorm();
+    applyLamp(false);
+    applyDanger();
+    scheduleSwell(2200);
+  }
+
+  /* --------------------------------------------- application des etats */
+
+  function applyStorm() {
+    if (!started) return;
+    var base = 0.032 + storm * 0.105;
+    glide(windGain.gain, base, 0.9);
+    glide(windBp.frequency, 940 - storm * 470, 1.2);   // plus sombre
+    glide(windBp.Q, 0.85 + storm * 0.6, 1.0);
+    glide(windLp.frequency, 2600 - storm * 1250, 1.2);
+    glide(windLfoGain.gain, 130 + storm * 240, 1.0);
+    glide(windAmpGain.gain, base * 0.5, 1.0);
+    glide(swellLp.frequency, 350 - storm * 140, 1.2);
+  }
+
+  function applyDanger() {
+    if (!started) return;
+    glide(droneGain.gain, danger > 0.001 ? 0.006 + danger * 0.048 : 0.0001, 1.4);
+    glide(droneLp.frequency, 110 + danger * 90, 1.4);
+  }
+
+  function applyLamp(withClick) {
+    if (!started) return;
+    var lvl = lampOn ? (focus ? 0.058 : 0.046) : 0.0001;
+    glide(humGain.gain, lvl, lampOn ? 0.09 : 0.035);
+    glide(humLp.frequency, focus ? 150 : 235, 0.25);
+    glide(humLp.Q, focus ? 3.4 : 0.7, 0.25);
+    glide(humVibGain.gain, focus ? 4 : 7, 0.3);
+    if (withClick && !muted && ctx.state === 'running') {
+      tick(ctx.currentTime, lampOn ? 0.10 : 0.13, lampOn ? 1500 : 2400);
+    }
+  }
+
+  // petit declic (relais / interrupteur)
+  function tick(t, amp, bright) {
+    var h = voiceOut(0, amp);
+    var n = h.nodes;
+    var f = biquad('bandpass', bright, 1.4, n);
+    f.connect(h.input);
+    var g = gain(0.0001, n);
+    g.connect(f);
+    pluck(g, t, 1, 0.001, 0.035);
+    noiseSrc(whiteBuf, g, n, t, t + 0.06);
+    reap(n, t + 0.06);
+  }
+
+  function scheduleSwell(ms) {
+    if (swellTimer !== null) return;
+    swellTimer = setTimeout(function () {
+      swellTimer = null;
+      if (started && ctx && ctx.state === 'running') {
+        try {
+          var t = ctx.currentTime;
+          var peak = 0.045 + storm * 0.15;
+          var atk = rnd(1.2, 2.2);
+          var dec = rnd(1.8, 3.2);
+          var p = swellGain.gain;
+          var cur = p.value;
+          if (!isFinite(cur) || cur < 0.0005) cur = 0.0005;
+          p.cancelScheduledValues(t);
+          p.setValueAtTime(cur, t);
+          p.linearRampToValueAtTime(peak, t + atk);
+          p.linearRampToValueAtTime(0.004, t + atk + dec);
+        } catch (e) {}
+      }
+      scheduleSwell(rnd(4000, 9000));
+    }, ms);
+  }
+
+  /* ============================================================ SONS ==== */
+
+  var SFX = {};
+
+  /* fusee : whoosh + boum feutre + crepitement */
+  SFX.flare = function (t, o) {
+    var h = voiceOut(o.pan, 0.5 * o.vol);
+    var n = h.nodes;
+
+    // whoosh
+    var bp = biquad('bandpass', 320, 1.3, n);
+    var wg = gain(0.0001, n);
+    bp.connect(wg); wg.connect(h.input);
+    bp.frequency.setValueAtTime(300 * o.pitch, t);
+    bp.frequency.exponentialRampToValueAtTime(2400 * o.pitch, t + 0.26);
+    bp.frequency.exponentialRampToValueAtTime(620 * o.pitch, t + 0.75);
+    var wp = wg.gain;
+    wp.setValueAtTime(0.0001, t);
+    wp.linearRampToValueAtTime(0.5, t + 0.09);
+    wp.exponentialRampToValueAtTime(0.0001, t + 0.8);
+    noiseSrc(whiteBuf, bp, n, t, t + 0.85);
+
+    // boum feutre
+    var lp = biquad('lowpass', 220, 0.8, n);
+    var bg = gain(0.0001, n);
+    lp.connect(bg); bg.connect(h.input);
+    var bo = oscSrc('sine', 72 * o.pitch, lp, n, t + 0.02, t + 0.6);
+    bo.frequency.setValueAtTime(72 * o.pitch, t + 0.02);
+    bo.frequency.exponentialRampToValueAtTime(34 * o.pitch, t + 0.42);
+    pluck(bg, t + 0.02, 0.55, 0.02, 0.42);
+
+    // crepitement (une seule source, gain module par pics)
+    var hp = biquad('highpass', 2300, 0.8, n);
+    var cg = gain(0.0001, n);
+    hp.connect(cg); cg.connect(h.input);
+    var cp = cg.gain;
+    cp.setValueAtTime(0.0001, t);
+    var last = t + 0.1;
+    for (var i = 0; i < 9; i++) {
+      // chaque pic est entierement resolu avant le suivant : evenements ordonnes
+      var ti = last + rnd(0.025, 0.05);
+      var a = 0.16 * (1 - i / 11) * rnd(0.5, 1);
+      cp.setValueAtTime(0.0001, ti);
+      cp.linearRampToValueAtTime(a, ti + 0.004);
+      cp.exponentialRampToValueAtTime(0.0001, ti + 0.032);
+      last = ti + 0.032;
+    }
+    noiseSrc(whiteBuf, hp, n, t + 0.1, t + 0.82);
+
+    reap(n, t + 0.9);
+  };
+
+  /* surchauffe : verre qui craque puis coupure */
+  SFX.overheat = function (t, o) {
+    var h = voiceOut(o.pan, 0.42 * o.vol);
+    var n = h.nodes;
+
+    // craquements de verre
+    var bp = biquad('bandpass', 3200, 11, n);
+    var cg = gain(0.0001, n);
+    bp.connect(cg); cg.connect(h.input);
+    var cp = cg.gain;
+    cp.setValueAtTime(0.0001, t);
+    var last = t;
+    for (var i = 0; i < 6; i++) {
+      var ti = last + rnd(0.02, 0.045);
+      bp.frequency.setValueAtTime(rnd(2100, 6200) * o.pitch, ti);
+      cp.setValueAtTime(0.0001, ti);
+      cp.linearRampToValueAtTime(rnd(0.25, 0.6), ti + 0.003);
+      cp.exponentialRampToValueAtTime(0.0001, ti + 0.032);
+      last = ti + 0.032;
+    }
+    noiseSrc(whiteBuf, bp, n, t, t + 0.48);
+
+    // coupure : chute rapide + souffle qui meurt
+    var lp = biquad('lowpass', 900, 1.2, n);
+    var dg = gain(0.0001, n);
+    lp.connect(dg); dg.connect(h.input);
+    var dv = oscSrc('triangle', 420 * o.pitch, lp, n, t + 0.30, t + 0.62);
+    dv.frequency.setValueAtTime(420 * o.pitch, t + 0.30);
+    dv.frequency.exponentialRampToValueAtTime(72 * o.pitch, t + 0.52);
+    lp.frequency.setValueAtTime(900, t + 0.30);
+    lp.frequency.exponentialRampToValueAtTime(160, t + 0.55);
+    pluck(dg, t + 0.30, 0.42, 0.008, 0.26);
+
+    tick(t + 0.30, 0.11, 2200);
+    reap(n, t + 0.7);
+  };
+
+  /* rallumage : souffle + montee chaude */
+  SFX.relight = function (t, o) {
+    var h = voiceOut(o.pan, 0.42 * o.vol);
+    var n = h.nodes;
+
+    // souffle d'allumage
+    var lp = biquad('lowpass', 200, 0.9, n);
+    var sg = gain(0.0001, n);
+    lp.connect(sg); sg.connect(h.input);
+    lp.frequency.setValueAtTime(200, t);
+    lp.frequency.exponentialRampToValueAtTime(1500, t + 0.22);
+    lp.frequency.exponentialRampToValueAtTime(400, t + 0.62);
+    var sp = sg.gain;
+    sp.setValueAtTime(0.0001, t);
+    sp.linearRampToValueAtTime(0.34, t + 0.06);
+    sp.exponentialRampToValueAtTime(0.0001, t + 0.66);
+    noiseSrc(whiteBuf, lp, n, t, t + 0.7);
+
+    // montee chaude : re2 -> re3, quinte a la suite
+    var wlp = biquad('lowpass', 300, 0.9, n);
+    var wg = gain(0.0001, n);
+    wlp.connect(wg); wg.connect(h.input);
+    wlp.frequency.setValueAtTime(280, t);
+    wlp.frequency.exponentialRampToValueAtTime(1100, t + 0.7);
+    var wo = oscSrc('triangle', nf(0) / 2 * o.pitch, wlp, n, t + 0.03, t + 1.25);
+    wo.frequency.setValueAtTime(nf(0) / 2 * o.pitch, t + 0.03);
+    wo.frequency.exponentialRampToValueAtTime(nf(0) * o.pitch, t + 0.55);
+    oscSrc('sine', nf(7) * o.pitch, wlp, n, t + 0.18, t + 1.25, -4);
+    pad(wg, t + 0.03, 0.30, 0.30, 0.15, 0.7);
+
+    tick(t, 0.08, 1700);
+    reap(n, t + 1.35);
+  };
+
+  /* sauvetage : cloche de port claire, note douce */
+  SFX.save = function (t, o) {
+    var h = voiceOut(o.pan, 0.34 * o.vol);
+    var n = h.nodes;
+    var lp = biquad('lowpass', 3400, 0.6, n);
+    lp.connect(h.input);
+
+    var f1 = nf(19) * o.pitch;              // la 4
+    partial(lp, n, t, f1, 0.30, 1.5);
+    partial(lp, n, t, f1 * 2.0, 0.13, 1.0, 3);
+    partial(lp, n, t, f1 * 2.98, 0.07, 0.7, -4);
+    partial(lp, n, t, f1 * 0.5, 0.16, 1.8);  // octave grave, chaleur
+
+    var f2 = nf(24) * o.pitch;              // re 5 : resolution douce
+    partial(lp, n, t + 0.20, f2, 0.22, 1.7);
+    partial(lp, n, t + 0.20, f2 * 0.5, 0.12, 1.9);
+    partial(lp, n, t + 0.20, f2 * 2.01, 0.06, 0.8);
+
+    reap(n, t + 2.3);
+  };
+
+  /* naufrage : craquement de bois grave + fracas d'eau */
+  SFX.wreck = function (t, o) {
+    var h = voiceOut(o.pan, 0.5 * o.vol);
+    var n = h.nodes;
+
+    // craquements de bois
+    var bp = biquad('bandpass', 420, 7, n);
+    var cg = gain(0.0001, n);
+    bp.connect(cg); cg.connect(h.input);
+    var cp = cg.gain;
+    cp.setValueAtTime(0.0001, t);
+    var last = t;
+    for (var i = 0; i < 7; i++) {
+      var ti = last + rnd(0.02, 0.05);
+      bp.frequency.setValueAtTime(rnd(190, 820) * o.pitch, ti);
+      cp.setValueAtTime(0.0001, ti);
+      cp.linearRampToValueAtTime(rnd(0.3, 0.75), ti + 0.005);
+      cp.exponentialRampToValueAtTime(0.0001, ti + 0.062);
+      last = ti + 0.062;
+    }
+    noiseSrc(whiteBuf, bp, n, t, t + 0.78);
+
+    // grondement de coque
+    var glp = biquad('lowpass', 260, 1.1, n);
+    var gg = gain(0.0001, n);
+    glp.connect(gg); gg.connect(h.input);
+    var lo = oscSrc('sawtooth', 88 * o.pitch, glp, n, t, t + 0.9);
+    lo.frequency.setValueAtTime(88 * o.pitch, t);
+    lo.frequency.exponentialRampToValueAtTime(32 * o.pitch, t + 0.7);
+    pluck(gg, t, 0.34, 0.03, 0.75);
+
+    // fracas d'eau
+    var wlp = biquad('lowpass', 2600, 0.7, n);
+    var wg = gain(0.0001, n);
+    wlp.connect(wg); wg.connect(h.input);
+    wlp.frequency.setValueAtTime(2600, t + 0.18);
+    wlp.frequency.exponentialRampToValueAtTime(240, t + 1.5);
+    var wp = wg.gain;
+    wp.setValueAtTime(0.0001, t + 0.18);
+    wp.linearRampToValueAtTime(0.42, t + 0.30);
+    wp.exponentialRampToValueAtTime(0.0001, t + 1.75);
+    noiseSrc(pinkBuf, wlp, n, t + 0.18, t + 1.8);
+
+    reap(n, t + 1.9);
+  };
+
+  /* feu d'Ys qui s'allume : vitreux, desaccorde, inquietant */
+  SFX.wrecker_in = function (t, o) {
+    var h = voiceOut(o.pan, 0.3 * o.vol);
+    var n = h.nodes;
+
+    var hp = biquad('highpass', 380, 0.7, n);
+    var trem = gain(1, n);                 // module par un LFO ephemere
+    hp.connect(trem); trem.connect(h.input);
+
+    var lfoG = gain(0.28, n);
+    lfoG.connect(trem.gain);
+    oscSrc('sine', 5.3, lfoG, n, t, t + 1.9);
+
+    var g = gain(0.0001, n);
+    g.connect(hp);
+    var base = nf(12) * o.pitch;           // re 4
+    oscSrc('triangle', base, g, n, t, t + 1.9, -32);
+    oscSrc('sine', nf(18) * o.pitch, g, n, t + 0.05, t + 1.9, 26);   // triton
+    oscSrc('sine', base * 2, g, n, t + 0.1, t + 1.9, -46);
+    pad(g, t, 0.26, 0.34, 0.25, 1.1);
+
+    reap(n, t + 2.0);
+  };
+
+  /* feu d'Ys eteint : souffle inverse, soulagement */
+  SFX.wrecker_out = function (t, o) {
+    var h = voiceOut(o.pan, 0.36 * o.vol);
+    var n = h.nodes;
+
+    var bp = biquad('bandpass', 300, 1.1, n);
+    var sg = gain(0.0001, n);
+    bp.connect(sg); sg.connect(h.input);
+    bp.frequency.setValueAtTime(300 * o.pitch, t);
+    bp.frequency.exponentialRampToValueAtTime(2600 * o.pitch, t + 0.5);
+    var sp = sg.gain;
+    sp.setValueAtTime(0.0001, t);
+    sp.linearRampToValueAtTime(0.42, t + 0.5);     // souffle inverse
+    sp.exponentialRampToValueAtTime(0.0001, t + 0.58);
+    noiseSrc(whiteBuf, bp, n, t, t + 0.62);
+
+    // resolution chaude : la3 + re4
+    var lp = biquad('lowpass', 1600, 0.7, n);
+    lp.connect(h.input);
+    partial(lp, n, t + 0.48, nf(7) * o.pitch, 0.22, 1.1);
+    partial(lp, n, t + 0.48, nf(12) * o.pitch, 0.11, 1.0, -3);
+
+    reap(n, t + 1.7);
+  };
+
+  /* cloche lointaine d'Ys : spectrale, inharmonique, voilee */
+  SFX.bell = function (t, o) {
+    var h = voiceOut(o.pan, 0.24 * o.vol);
+    var n = h.nodes;
+    var lp = biquad('lowpass', 1150, 0.6, n);
+    lp.connect(h.input);
+
+    var f = nf(0) * o.pitch;                 // re 3
+    partial(lp, n, t, f, 0.26, 3.6);
+    partial(lp, n, t, f * 2.01, 0.15, 2.9, 6);
+    partial(lp, n, t, f * 2.76, 0.09, 2.1, -9);
+    partial(lp, n, t, f * 5.42, 0.04, 1.2, 11);
+    partial(lp, n, t, f * 0.5, 0.10, 3.9);
+
+    reap(n, t + 4.2);
+  };
+
+  /* corne de brume : grave, deux couches, debut de nuit */
+  SFX.foghorn = function (t, o) {
+    var h = voiceOut(o.pan, 0.3 * o.vol);
+    var n = h.nodes;
+
+    var lp = biquad('lowpass', 430, 1.6, n);
+    var g = gain(0.0001, n);
+    lp.connect(g); g.connect(h.input);
+
+    var base = nf(0) / 2 * o.pitch;          // re 2
+    var a = oscSrc('sawtooth', base, lp, n, t, t + 2.9);
+    oscSrc('sine', base / 2, lp, n, t, t + 2.9, 4);
+    oscSrc('triangle', base * 1.005, lp, n, t, t + 2.9, -7);
+    a.frequency.setValueAtTime(base, t + 1.6);
+    a.frequency.linearRampToValueAtTime(base * 0.972, t + 2.7);   // affaissement final
+
+    pad(g, t, 0.34, 0.38, 1.15, 1.2);
+    lp.frequency.setValueAtTime(300, t);
+    lp.frequency.linearRampToValueAtTime(470, t + 0.5);
+    lp.frequency.linearRampToValueAtTime(260, t + 2.8);
+
+    reap(n, t + 3.0);
+  };
+
+  /* clic d'interface : sec, discret */
+  SFX.ui = function (t, o) {
+    var h = voiceOut(o.pan, 0.24 * o.vol);
+    var n = h.nodes;
+    var bp = biquad('bandpass', 1900 * o.pitch, 1.6, n);
+    var g = gain(0.0001, n);
+    bp.connect(g); g.connect(h.input);
+    pluck(g, t, 0.55, 0.001, 0.028);
+    noiseSrc(whiteBuf, bp, n, t, t + 0.05);
+
+    var tg = gain(0.0001, n);
+    tg.connect(h.input);
+    oscSrc('sine', nf(31) * o.pitch, tg, n, t, t + 0.07);   // la 5
+    pluck(tg, t, 0.16, 0.002, 0.045);
+
+    reap(n, t + 0.1);
+  };
+
+  /* palier de confiance : ping tres court, rotation de hauteurs (re dorien) */
+  var CONF = [24, 26, 27, 31];                 // re5, mi5, fa5, la5
+  SFX.confidence = function (t, o) {
+    var h = voiceOut(o.pan, 0.16 * o.vol);
+    var n = h.nodes;
+    var lp = biquad('lowpass', 4200, 0.6, n);
+    lp.connect(h.input);
+    var f = nf(CONF[confIdx % CONF.length]) * o.pitch;
+    confIdx++;
+    var g = gain(0.0001, n);
+    g.connect(lp);
+    oscSrc('sine', f, g, n, t, t + 0.24);
+    oscSrc('triangle', f * 2, g, n, t, t + 0.16, 4);
+    pluck(g, t, 0.34, 0.004, 0.16);
+    reap(n, t + 0.3);
+  };
+
+  /* fin de nuit : accord ouvert (quintes), apaise */
+  SFX.nightclear = function (t, o) {
+    var h = voiceOut(o.pan, 0.26 * o.vol);
+    var n = h.nodes;
+    var lp = biquad('lowpass', 1900, 0.6, n);
+    lp.connect(h.input);
+    lp.frequency.setValueAtTime(900, t);
+    lp.frequency.linearRampToValueAtTime(2400, t + 1.1);
+
+    var degs = [0, 7, 14, 19];                 // re3 la3 mi4 la4
+    for (var i = 0; i < degs.length; i++) {
+      var g = gain(0.0001, n);
+      g.connect(lp);
+      var ti = t + i * 0.06;
+      oscSrc('triangle', nf(degs[i]) * o.pitch, g, n, ti, ti + 2.9, i % 2 ? 4 : -4);
+      oscSrc('sine', nf(degs[i]) * 2 * o.pitch, g, n, ti, ti + 2.4);
+      pad(g, ti, 0.13, 0.35, 0.5, 1.7);
+    }
+    reap(n, t + 3.1);
+  };
+
+  /* fin de partie : descente grave */
+  SFX.gameover = function (t, o) {
+    var h = voiceOut(o.pan, 0.4 * o.vol);
+    var n = h.nodes;
+    var lp = biquad('lowpass', 900, 1.0, n);
+    var g = gain(0.0001, n);
+    lp.connect(g); g.connect(h.input);
+    lp.frequency.setValueAtTime(900, t);
+    lp.frequency.exponentialRampToValueAtTime(130, t + 2.0);
+
+    var a = oscSrc('triangle', nf(0) * o.pitch, lp, n, t, t + 2.6);
+    a.frequency.setValueAtTime(nf(0) * o.pitch, t);
+    a.frequency.exponentialRampToValueAtTime(nf(0) / 4 * o.pitch, t + 1.9);
+
+    var b = oscSrc('sine', nf(3) * o.pitch, lp, n, t + 0.08, t + 2.6, -8);
+    b.frequency.setValueAtTime(nf(3) * o.pitch, t + 0.08);
+    b.frequency.exponentialRampToValueAtTime(nf(3) / 4 * o.pitch, t + 2.0);
+
+    pad(g, t, 0.36, 0.12, 1.1, 1.2);
+    reap(n, t + 2.7);
+  };
+
+  /* victoire : accord majeur voile (tierce picarde sur re) */
+  SFX.victory = function (t, o) {
+    var h = voiceOut(o.pan, 0.28 * o.vol);
+    var n = h.nodes;
+    var lp = biquad('lowpass', 1300, 0.7, n);
+    lp.connect(h.input);
+    lp.frequency.setValueAtTime(800, t);
+    lp.frequency.linearRampToValueAtTime(2600, t + 1.6);
+
+    var degs = [0, 7, 16, 24, 31];             // re3 la3 fa#4 re5 la5
+    var amps = [0.16, 0.13, 0.10, 0.09, 0.05];
+    for (var i = 0; i < degs.length; i++) {
+      var g = gain(0.0001, n);
+      g.connect(lp);
+      var ti = t + i * 0.11;
+      oscSrc('triangle', nf(degs[i]) * o.pitch, g, n, ti, ti + 3.4, i % 2 ? 5 : -5);
+      oscSrc('sine', nf(degs[i]) * 0.5 * o.pitch, g, n, ti, ti + 3.0);
+      pad(g, ti, amps[i], 0.4, 0.7, 2.0);
+    }
+    // petite cloche de port par-dessus
+    partial(lp, n, t + 0.5, nf(31) * o.pitch, 0.10, 2.0);
+    reap(n, t + 3.9);
+  };
+
+  /* ============================================================== API === */
+
+  function resume() {
+    try {
+      if (!ctx) {
+        var AC = (typeof window !== 'undefined')
+          ? (window.AudioContext || window.webkitAudioContext)
+          : null;
+        if (!AC) return;
+        ctx = new AC();
+        try {
+          build();
+          started = true;
+        } catch (eb) {
+          try { if (ctx.close) ctx.close(); } catch (ec) {}
+          ctx = null;
+          started = false;
+          return;
+        }
+      }
+      if (ctx.state !== 'running' && ctx.resume) {
+        var p = ctx.resume();
+        if (p && p['catch']) p['catch'](function () {});
+      }
+    } catch (e) {}
+  }
+
+  function suspend() {
+    if (!ctx) return;
+    try {
+      if (ctx.state === 'running' && ctx.suspend) {
+        var p = ctx.suspend();
+        if (p && p['catch']) p['catch'](function () {});
+      }
+    } catch (e) {}
+  }
+
+  function setMute(v) {
+    muted = !!v;
+    if (!started) return;
+    try { glide(master.gain, muted ? 0.0001 : MASTER_VOL, 0.05); } catch (e) {}
+  }
+
+  function toggleMute() {
+    setMute(!muted);
+    return muted;
+  }
+
+  function isMuted() { return muted; }
+
+  function setStorm(x) {
+    storm = clamp(x, 0, 1);
+    applyStorm();
+  }
+
+  function setDanger(x) {
+    danger = clamp(x, 0, 1);
+    applyDanger();
+  }
+
+  function setFocus(v) {
+    v = !!v;
+    if (v === focus) return;
+    focus = v;
+    applyLamp(false);
+  }
+
+  function setLamp(v) {
+    v = !!v;
+    if (v === lampOn) return;
+    lampOn = v;
+    applyLamp(true);
+  }
+
+  function sfx(name, opts) {
+    if (!ctx || !started || muted) return;
+    if (ctx.state !== 'running') return;
+    if (voices > MAX_VOICES) return;
+    if (!Object.prototype.hasOwnProperty.call(SFX, name)) return;  // pas de 'toString' & co
+    var fn = SFX[name];
+    if (typeof fn !== 'function') return;
+    try {
+      fn(ctx.currentTime + 0.005, normOpts(opts));
+    } catch (e) {}
+  }
+
+  return {
+    resume: resume,
+    suspend: suspend,
+    setMute: setMute,
+    toggleMute: toggleMute,
+    isMuted: isMuted,
+    setStorm: setStorm,
+    setFocus: setFocus,
+    setLamp: setLamp,
+    setDanger: setDanger,
+    sfx: sfx
+  };
+}
+</script>
+<script>
+/* === EFFETS — mer, pluie, particules === */
+/* =========================================================================
+   VEILLEUR — Les nuits d'Ys : module d'effets visuels (canvas 2D, vanilla)
+   Aucune dependance, aucun asset, aucun code execute au chargement.
+   Usage :  var fx = createFX();
+            fx.resize(w, h); fx.setStorm(0.6); fx.setWind(-40);
+            fx.update(dt);
+            fx.drawSea(ctx, w, h, t);   // couche arriere
+            ... jeu ...
+            fx.drawFront(ctx, w, h);    // couche avant
+   Toutes les coordonnees sont en pixels CSS.
+   ========================================================================= */
+
+function createFX() {
+  'use strict';
+
+  /* ---------------------------------------------------------------
+     Constantes / palette (chaines pre-allouees : aucune concatenation
+     de couleur dans les boucles chaudes).
+     --------------------------------------------------------------- */
+  var TAU = Math.PI * 2;
+
+  var C_NIGHT   = '#070d18';
+  var C_DEEP    = '#0d1a2e';
+  var C_CREST   = '#16304f';
+  var C_FOAM    = '#9fc4e8';
+  var C_AMBER   = '#ffc46b';
+  var C_AMBER_D = '#ff8a3c';
+  var C_RAIN    = '#9fc4e8';
+  var C_BOLT    = '#e6f0ff';
+  var C_WOOD_A  = '#2e2318';
+  var C_WOOD_B  = '#4a3726';
+  var C_SMOKE   = '#33455f';
+  var TRANSP    = 'rgba(0,0,0,0)';
+
+  // Plafonds durs
+  var MAX_P     = 1200;   // particules (spark/smoke/debris/splash)
+  var MAX_SPRAY = 260;    // embruns
+  var MAX_RAIN  = 460;    // gouttes (3 couches de parallaxe)
+  var MAX_RING  = 24;
+  var MAX_GLOW  = 24;
+  var BOLT_SEG  = 14;
+
+  // Types de particules
+  var K_SPARK = 0, K_SMOKE = 1, K_DEBRIS = 2, K_SPLASH = 3;
+
+  /* ---------------------------------------------------------------
+     Etat global
+     --------------------------------------------------------------- */
+  var W = 800, H = 600;
+  var wind = 0;          // px/s
+  var storm = 0.35;      // 0..1
+  var time = 0;
+
+  var shakeMag = 0, shakeT = 0;
+  var shPhA = Math.random() * TAU, shPhB = Math.random() * TAU;
+  var shOffX = 0, shOffY = 0;
+
+  var flash = 0;          // 0..0.25
+  var flashPeak = 0.25;
+  var restrikeT = -1;     // < 0 : pas de re-amorcage programme
+  var restrikeAmp = 0;
+  var boltLife = 0, boltDur = 0.34, boltAlpha = 0;
+  var boltPts = new Float32Array(BOLT_SEG * 2);
+  var boltBranch = new Float32Array(8); // 2 petites ramifications (2 pts chacune)
+  var nextBolt = 6 + Math.random() * 10;
+
+  // caches de degrades (recrees uniquement au resize)
+  var gSea = null, gVign = null, gHaze = null, gW = -1, gH = -1;
+
+  /* ---------------------------------------------------------------
+     Pool de particules : tableau d'objets pre-alloues, compaction par
+     swap (aucune allocation dans update/draw).
+     --------------------------------------------------------------- */
+  var P = new Array(MAX_P);
+  var pCount = 0;
+  (function () {
+    for (var i = 0; i < MAX_P; i++) {
+      P[i] = {
+        x: 0, y: 0, vx: 0, vy: 0,
+        life: 0, max: 1, size: 1, grow: 0,
+        rot: 0, vrot: 0, drag: 0, grav: 0,
+        a0: 1, kind: 0, col: C_FOAM
+      };
+    }
+  })();
+
+  function spawn() {
+    if (pCount >= MAX_P) return null;
+    return P[pCount++];
+  }
+
+  /* ---------------- embruns (pool separe) ---------------- */
+  var SP = new Array(MAX_SPRAY);
+  var spCount = 0;
+  var sprayAcc = 0;
+  (function () {
+    for (var i = 0; i < MAX_SPRAY; i++) {
+      SP[i] = { x: 0, y: 0, vx: 0, vy: 0, life: 0, max: 1, size: 1, a0: 1 };
+    }
+  })();
+
+  /* ---------------- anneaux de choc ---------------- */
+  var RG = new Array(MAX_RING);
+  var rgCount = 0;
+  (function () {
+    for (var i = 0; i < MAX_RING; i++) {
+      RG[i] = { x: 0, y: 0, life: 0, max: 1, maxR: 40, w: 2, col: C_FOAM };
+    }
+  })();
+
+  /* ---------------- halos ---------------- */
+  var GL = new Array(MAX_GLOW);
+  var glCount = 0;
+  (function () {
+    for (var i = 0; i < MAX_GLOW; i++) {
+      GL[i] = { x: 0, y: 0, life: 0, max: 1, r: 40, grad: null, col: '' };
+    }
+  })();
+
+  /* ---------------- pluie : 3 couches de parallaxe ---------------- */
+  var rainX = new Float32Array(MAX_RAIN);
+  var rainY = new Float32Array(MAX_RAIN);
+  var rainV = new Float32Array(MAX_RAIN);   // vitesse verticale px/s
+  var rainL = new Float32Array(MAX_RAIN);   // longueur du trait
+  var rainK = new Uint8Array(MAX_RAIN);     // couche 0..2
+  var rainActive = 0;
+
+  var LAYER_V  = [340, 560, 880];           // vitesse par couche
+  var LAYER_A  = [0.15, 0.27, 0.46];        // opacite par couche
+  var LAYER_W  = [0.7, 1.0, 1.5];           // epaisseur
+  var LAYER_WF = [0.35, 0.62, 1.0];         // sensibilite au vent
+
+  /* ---------------- mer : houle longue + chevrons de crete ------- */
+  var NBAND = 15;
+  var bandY  = new Float32Array(NBAND);
+  var bandPh = new Float32Array(NBAND);
+  var bandSp = new Float32Array(NBAND);
+  var bandAm = new Float32Array(NBAND);
+  var bandAl = new Float32Array(NBAND);
+
+  var NCREST = 150;
+  var crX = new Float32Array(NCREST);
+  var crY = new Float32Array(NCREST);
+  var crL = new Float32Array(NCREST);
+  var crS = new Float32Array(NCREST);
+  var crD = new Float32Array(NCREST);   // profondeur 0..1 (parallaxe)
+  var crF = new Uint8Array(NCREST);     // 1 = ecume claire
+
+  function seedSea() {
+    var i;
+    for (i = 0; i < NBAND; i++) {
+      bandY[i]  = (i + Math.random() * 0.6) * (H + 80) / NBAND - 40;
+      bandPh[i] = Math.random() * TAU;
+      bandSp[i] = 10 + Math.random() * 22;
+      bandAm[i] = 5 + Math.random() * 13;
+      bandAl[i] = 0.13 + Math.random() * 0.20;
+    }
+    for (i = 0; i < NCREST; i++) {
+      crX[i] = Math.random() * (W + 160) - 80;
+      crY[i] = Math.random() * (H + 60) - 30;
+      crD[i] = Math.random();
+      crL[i] = 16 + crD[i] * 62;
+      crS[i] = 14 + crD[i] * 46;
+      crF[i] = (Math.random() < 0.26) ? 1 : 0;
+    }
+  }
+
+  function seedRain() {
+    for (var i = 0; i < MAX_RAIN; i++) {
+      var k = i % 3;
+      rainK[i] = k;
+      rainX[i] = Math.random() * (W + 260) - 130;
+      rainY[i] = Math.random() * (H + 40) - 20;
+      rainV[i] = LAYER_V[k] * (0.85 + Math.random() * 0.3);
+      rainL[i] = (6 + k * 5) * (0.75 + Math.random() * 0.45);
+    }
+  }
+
+  /* ---------------------------------------------------------------
+     Degrades (recrees uniquement quand la taille change)
+     --------------------------------------------------------------- */
+  function buildGradients(ctx) {
+    gSea = ctx.createLinearGradient(0, 0, 0, H);
+    gSea.addColorStop(0.00, C_NIGHT);
+    gSea.addColorStop(0.42, '#0a1425');
+    gSea.addColorStop(0.72, C_DEEP);
+    gSea.addColorStop(1.00, '#060b14');
+
+    var cx = W * 0.5, cy = H * 0.5;
+    var rMax = Math.sqrt(cx * cx + cy * cy);
+    gVign = ctx.createRadialGradient(cx, cy, rMax * 0.34, cx, cy, rMax * 1.02);
+    gVign.addColorStop(0.00, 'rgba(4,8,16,0)');
+    gVign.addColorStop(0.55, 'rgba(4,8,16,0.30)');
+    gVign.addColorStop(1.00, 'rgba(3,6,12,0.80)');
+
+    gHaze = ctx.createLinearGradient(0, 0, 0, H);
+    gHaze.addColorStop(0.00, 'rgba(126,163,214,0.55)');
+    gHaze.addColorStop(0.45, 'rgba(126,163,214,0.22)');
+    gHaze.addColorStop(1.00, 'rgba(126,163,214,0.06)');
+
+    gW = W; gH = H;
+  }
+
+  function ensure(ctx, w, h) {
+    if (w && h && (w !== W || h !== H)) resize(w, h);
+    if (!gSea || gW !== W || gH !== H) buildGradients(ctx);
+  }
+
+  /* ---------------------------------------------------------------
+     API : reglages
+     --------------------------------------------------------------- */
+  function resize(w, h) {
+    var pw = W, ph = H;
+    W = Math.max(1, w | 0);
+    H = Math.max(1, h | 0);
+    gSea = gVign = gHaze = null;
+    if (pw !== W || ph !== H) {
+      var sx = W / pw, sy = H / ph, i;
+      for (i = 0; i < MAX_RAIN; i++) { rainX[i] *= sx; rainY[i] *= sy; }
+      for (i = 0; i < NCREST; i++) { crX[i] *= sx; crY[i] *= sy; }
+      for (i = 0; i < NBAND; i++) { bandY[i] *= sy; }
+    }
+    if (!isFinite(crL[0]) || crL[0] === 0) { seedSea(); seedRain(); }
+    updateRainCount();
+  }
+
+  function setWind(wx) { wind = (typeof wx === 'number' && isFinite(wx)) ? wx : 0; }
+
+  function setStorm(x) {
+    storm = x < 0 ? 0 : (x > 1 ? 1 : x);
+    updateRainCount();
+  }
+
+  function updateRainCount() {
+    rainActive = (MAX_RAIN * (0.05 + 0.95 * storm)) | 0;
+    if (rainActive > MAX_RAIN) rainActive = MAX_RAIN;
+  }
+
+  /* ---------------------------------------------------------------
+     API : emetteurs
+     --------------------------------------------------------------- */
+  function spark(x, y, n, color, speed) {
+    var c = color || C_AMBER;
+    var sp = (typeof speed === 'number' && speed > 0) ? speed : 260;
+    n = n | 0;
+    for (var i = 0; i < n; i++) {
+      var p = spawn(); if (!p) return;
+      var a = Math.random() * TAU;
+      var v = sp * (0.35 + Math.random() * 0.85);
+      p.kind = K_SPARK;
+      p.x = x; p.y = y;
+      p.vx = Math.cos(a) * v;
+      p.vy = Math.sin(a) * v;
+      p.max = 0.28 + Math.random() * 0.5;
+      p.life = p.max;
+      p.size = 0.9 + Math.random() * 1.1;
+      p.grow = -0.8;
+      p.drag = 3.4;
+      p.grav = 60;
+      p.a0 = 0.9;
+      p.rot = 0; p.vrot = 0;
+      p.col = (Math.random() < 0.28 && c === C_AMBER) ? C_AMBER_D : c;
+    }
+  }
+
+  function smoke(x, y, n) {
+    n = n | 0;
+    for (var i = 0; i < n; i++) {
+      var p = spawn(); if (!p) return;
+      p.kind = K_SMOKE;
+      p.x = x + (Math.random() - 0.5) * 12;
+      p.y = y + (Math.random() - 0.5) * 10;
+      p.vx = (Math.random() - 0.5) * 22 + wind * 0.10;
+      p.vy = -14 - Math.random() * 26;
+      p.max = 1.5 + Math.random() * 1.6;
+      p.life = p.max;
+      p.size = 3 + Math.random() * 4;
+      p.grow = 7 + Math.random() * 9;
+      p.drag = 0.45;
+      p.grav = -5;
+      p.a0 = 0.07 + Math.random() * 0.06;
+      p.rot = 0; p.vrot = 0;
+      p.col = C_SMOKE;
+    }
+  }
+
+  function debris(x, y, n) {
+    n = n | 0;
+    for (var i = 0; i < n; i++) {
+      var p = spawn(); if (!p) return;
+      var a = -Math.PI * 0.5 + (Math.random() - 0.5) * 2.2;
+      var v = 90 + Math.random() * 210;
+      p.kind = K_DEBRIS;
+      p.x = x; p.y = y;
+      p.vx = Math.cos(a) * v + wind * 0.06;
+      p.vy = Math.sin(a) * v;
+      p.max = 0.9 + Math.random() * 1.1;
+      p.life = p.max;
+      p.size = 3 + Math.random() * 6;
+      p.grow = 0;
+      p.drag = 0.7;
+      p.grav = 420;
+      p.a0 = 0.95;
+      p.rot = Math.random() * TAU;
+      p.vrot = (Math.random() - 0.5) * 9;
+      p.col = Math.random() < 0.5 ? C_WOOD_A : C_WOOD_B;
+    }
+  }
+
+  function splash(x, y, n) {
+    n = n | 0;
+    for (var i = 0; i < n; i++) {
+      var p = spawn(); if (!p) return;
+      var a = -Math.PI * 0.5 + (Math.random() - 0.5) * 2.6;
+      var v = 70 + Math.random() * 190;
+      p.kind = K_SPLASH;
+      p.x = x; p.y = y;
+      p.vx = Math.cos(a) * v + wind * 0.12;
+      p.vy = Math.sin(a) * v;
+      p.max = 0.45 + Math.random() * 0.6;
+      p.life = p.max;
+      p.size = 0.9 + Math.random() * 1.6;
+      p.grow = -0.6;
+      p.drag = 0.9;
+      p.grav = 460;
+      p.a0 = 0.55 + Math.random() * 0.35;
+      p.rot = 0; p.vrot = 0;
+      p.col = C_FOAM;
+    }
+  }
+
+  function ring(x, y, color, maxR, dur, width) {
+    if (rgCount >= MAX_RING) return;
+    var r = RG[rgCount++];
+    r.x = x; r.y = y;
+    r.maxR = (typeof maxR === 'number' && maxR > 0) ? maxR : 90;
+    r.max = (typeof dur === 'number' && dur > 0) ? dur : 0.55;
+    r.life = r.max;
+    r.w = (typeof width === 'number' && width > 0) ? width : 2.5;
+    r.col = color || C_FOAM;
+  }
+
+  function glowPulse(x, y, color, r, dur) {
+    if (glCount >= MAX_GLOW) return;
+    var g = GL[glCount++];
+    g.x = x; g.y = y;
+    g.r = (typeof r === 'number' && r > 0) ? r : 70;
+    g.max = (typeof dur === 'number' && dur > 0) ? dur : 0.6;
+    g.life = g.max;
+    // Un seul degrade alloue par couleur (unite : rayon 1), mis a l'echelle
+    // par transform au dessin -> zero allocation par frame.
+    g.col = color || C_AMBER;
+    g.grad = gradCache(g.col);
+  }
+
+  // petit cache de degrades unitaires par couleur (borne)
+  var gcKeys = new Array(12), gcVals = new Array(12), gcN = 0;
+  var gcCtx = null;
+  function gradCache(col) {
+    for (var i = 0; i < gcN; i++) if (gcKeys[i] === col) return gcVals[i];
+    if (!gcCtx) return null;
+    var g = gcCtx.createRadialGradient(0, 0, 0, 0, 0, 1);
+    g.addColorStop(0.00, col);
+    g.addColorStop(0.35, col);
+    g.addColorStop(1.00, TRANSP);
+    if (gcN < 12) { gcKeys[gcN] = col; gcVals[gcN] = g; gcN++; }
+    return g;
+  }
+
+  function shake(mag) {
+    if (!(mag > 0)) return;
+    shakeMag += mag;
+    if (shakeMag > 42) shakeMag = 42;
+  }
+
+  function lightning() {
+    // Eclair LOINTAIN : flash bref et volontairement faible.
+    var amp = flashPeak * (0.45 + 0.55 * storm);
+    if (amp > flashPeak) amp = flashPeak;
+    if (flash < amp) flash = amp;
+    restrikeT = 0.09 + Math.random() * 0.09;
+    restrikeAmp = amp * 0.55;
+    buildBolt();
+  }
+
+  function buildBolt() {
+    var x = W * (0.12 + Math.random() * 0.76);
+    var y = -6;
+    var span = H * (0.16 + Math.random() * 0.16);   // reste haut = lointain
+    var step = span / (BOLT_SEG - 1);
+    var drift = (Math.random() - 0.5) * 40;
+    for (var i = 0; i < BOLT_SEG; i++) {
+      boltPts[i * 2] = x;
+      boltPts[i * 2 + 1] = y;
+      x += drift * 0.06 + (Math.random() - 0.5) * 26;
+      y += step * (0.7 + Math.random() * 0.6);
+    }
+    // deux ramifications courtes
+    for (var b = 0; b < 2; b++) {
+      var k = 3 + ((Math.random() * (BOLT_SEG - 5)) | 0);
+      var bx = boltPts[k * 2], by = boltPts[k * 2 + 1];
+      boltBranch[b * 4] = bx;
+      boltBranch[b * 4 + 1] = by;
+      boltBranch[b * 4 + 2] = bx + (Math.random() - 0.5) * 60;
+      boltBranch[b * 4 + 3] = by + 14 + Math.random() * 34;
+    }
+    boltDur = 0.26 + Math.random() * 0.14;
+    boltLife = boltDur;
+  }
+
+  /* ---------------------------------------------------------------
+     UPDATE
+     --------------------------------------------------------------- */
+  function update(dt) {
+    if (!(dt > 0)) return;
+    if (dt > 0.05) dt = 0.05;
+    time += dt;
+
+    /* --- particules --- */
+    var i, p;
+    for (i = 0; i < pCount; i++) {
+      p = P[i];
+      p.life -= dt;
+      if (p.life <= 0) {
+        pCount--;
+        var tmp = P[i]; P[i] = P[pCount]; P[pCount] = tmp;
+        i--;
+        continue;
+      }
+      var d = 1 - p.drag * dt; if (d < 0) d = 0;
+      p.vx *= d; p.vy *= d;
+      p.vy += p.grav * dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.rot += p.vrot * dt;
+      if (p.grow !== 0) {
+        p.size += p.grow * dt;
+        if (p.size < 0.2) p.size = 0.2;
+      }
+      if (p.kind === K_SMOKE) p.vx += wind * 0.30 * dt;
+    }
+
+    /* --- embruns : emission continue pilotee par la tempete --- */
+    var rate = 8 + storm * storm * 120;
+    sprayAcc += rate * dt;
+    while (sprayAcc >= 1) {
+      sprayAcc -= 1;
+      if (spCount >= MAX_SPRAY) { sprayAcc = 0; break; }
+      var s = SP[spCount++];
+      var fromLeft = wind >= 0;
+      s.x = fromLeft ? -20 - Math.random() * 60 : W + 20 + Math.random() * 60;
+      s.y = Math.random() * H;
+      var base = 40 + Math.random() * 90 + Math.abs(wind) * 0.55;
+      s.vx = (fromLeft ? base : -base);
+      s.vy = (Math.random() - 0.25) * 40;
+      s.max = 1.1 + Math.random() * 1.5;
+      s.life = s.max;
+      s.size = 0.8 + Math.random() * 1.9;
+      s.a0 = (0.10 + Math.random() * 0.22) * (0.35 + 0.65 * storm);
+    }
+    for (i = 0; i < spCount; i++) {
+      var q = SP[i];
+      q.life -= dt;
+      if (q.life <= 0 || q.x < -140 || q.x > W + 140) {
+        spCount--;
+        var t2 = SP[i]; SP[i] = SP[spCount]; SP[spCount] = t2;
+        i--;
+        continue;
+      }
+      q.vx += (wind * 0.9 - q.vx) * 0.7 * dt;
+      q.vy += 26 * dt;
+      q.x += q.vx * dt;
+      q.y += q.vy * dt;
+    }
+
+    /* --- anneaux --- */
+    for (i = 0; i < rgCount; i++) {
+      RG[i].life -= dt;
+      if (RG[i].life <= 0) {
+        rgCount--;
+        var t3 = RG[i]; RG[i] = RG[rgCount]; RG[rgCount] = t3;
+        i--;
+      }
+    }
+    /* --- halos --- */
+    for (i = 0; i < glCount; i++) {
+      GL[i].life -= dt;
+      if (GL[i].life <= 0) {
+        glCount--;
+        var t4 = GL[i]; GL[i] = GL[glCount]; GL[glCount] = t4;
+        i--;
+      }
+    }
+
+    /* --- pluie --- */
+    for (i = 0; i < rainActive; i++) {
+      var k = rainK[i];
+      rainY[i] += rainV[i] * dt;
+      rainX[i] += (wind * LAYER_WF[k] + 245 * LAYER_WF[k]) * dt;
+      if (rainY[i] > H + 24) {
+        rainY[i] = -20 - Math.random() * 60;
+        rainX[i] = Math.random() * (W + 300) - 150;
+      }
+      if (rainX[i] > W + 150) rainX[i] -= W + 300;
+      else if (rainX[i] < -150) rainX[i] += W + 300;
+    }
+
+    /* --- houle --- */
+    var wd = wind * 0.045;
+    for (i = 0; i < NBAND; i++) {
+      bandY[i] += bandSp[i] * dt;
+      if (bandY[i] > H + 40) bandY[i] -= H + 80;
+      bandPh[i] += dt * 0.5;
+    }
+    for (i = 0; i < NCREST; i++) {
+      crY[i] += crS[i] * dt;
+      crX[i] += wd * (0.35 + crD[i]) * dt * 4;
+      if (crY[i] > H + 30) {
+        crY[i] -= H + 60;
+        crX[i] = Math.random() * (W + 160) - 80;
+      }
+      if (crX[i] > W + 80) crX[i] -= W + 160;
+      else if (crX[i] < -80) crX[i] += W + 160;
+    }
+
+    /* --- eclairs --- */
+    if (flash > 0) {
+      flash -= flash * 9 * dt + 0.02 * dt;
+      if (flash < 0.002) flash = 0;
+    }
+    if (restrikeT >= 0) {
+      restrikeT -= dt;
+      if (restrikeT < 0) {
+        if (flash < restrikeAmp) flash = restrikeAmp;
+        boltLife = boltDur * 0.7;
+        restrikeT = -1;
+      }
+    }
+    if (boltLife > 0) boltLife -= dt;
+    boltAlpha = boltLife > 0 ? (boltLife / boltDur) : 0;
+
+    if (storm > 0.04) {
+      nextBolt -= dt;
+      if (nextBolt <= 0) {
+        lightning();
+        nextBolt = 3.5 + (1 - storm) * 22 + Math.random() * (6 + (1 - storm) * 14);
+      }
+    }
+
+    /* --- tremblement --- */
+    if (shakeMag > 0.01) {
+      shakeT += dt;
+      shakeMag *= Math.exp(-6.2 * dt);
+      var e = shakeMag;
+      shOffX = e * Math.sin(shakeT * 47.3 + shPhA) * Math.sin(shakeT * 19.7 + shPhB);
+      shOffY = e * Math.sin(shakeT * 53.1 + shPhB) * Math.sin(shakeT * 23.3);
+    } else {
+      shakeMag = 0; shOffX = 0; shOffY = 0;
+    }
+  }
+
+  /* ---------------------------------------------------------------
+     DRAW : la mer (couche arriere)
+     --------------------------------------------------------------- */
+  function drawSea(ctx, w, h, t) {
+    if (!gcCtx) gcCtx = ctx;
+    ensure(ctx, w, h);
+    if (typeof t !== 'number') t = time;
+
+    ctx.save();
+
+    // fond
+    ctx.fillStyle = gSea;
+    ctx.fillRect(0, 0, W, H);
+
+    // houle longue : bandes sinusoidales qui defilent
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = C_CREST;
+    ctx.lineWidth = 1.6;
+    var step = 26;
+    var i, x, y;
+    for (i = 0; i < NBAND; i++) {
+      var by = bandY[i], ph = bandPh[i], am = bandAm[i];
+      ctx.globalAlpha = bandAl[i];
+      ctx.beginPath();
+      for (x = -20; x <= W + 20; x += step) {
+        y = by + Math.sin(x * 0.0125 + ph) * am
+               + Math.sin(x * 0.031 - ph * 1.7) * am * 0.35;
+        if (x === -20) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+
+    // chevrons de crete (deux passes : sombres puis ecume)
+    var pass, c0, c1;
+    for (pass = 0; pass < 2; pass++) {
+      ctx.strokeStyle = pass === 0 ? C_CREST : C_FOAM;
+      ctx.beginPath();
+      for (i = 0; i < NCREST; i++) {
+        if ((crF[i] === 1) !== (pass === 1)) continue;
+        var cxp = crX[i], cyp = crY[i], l = crL[i] * 0.5;
+        var bob = Math.sin(t * 1.7 + i * 0.7) * 2.2;
+        var amp = 3 + crD[i] * 5;
+        c0 = cyp + bob + amp;
+        c1 = cyp + bob;
+        ctx.moveTo(cxp - l, c0);
+        ctx.quadraticCurveTo(cxp, c1 - amp * 0.4, cxp + l, c0);
+      }
+      if (pass === 0) { ctx.globalAlpha = 0.30; ctx.lineWidth = 1.5; }
+      else            { ctx.globalAlpha = 0.24; ctx.lineWidth = 1.2; }
+      ctx.stroke();
+    }
+
+    // reflets d'ecume ponctuels sur les cretes profondes
+    ctx.globalAlpha = 0.16;
+    ctx.fillStyle = C_FOAM;
+    ctx.beginPath();
+    for (i = 0; i < NCREST; i += 3) {
+      if (crD[i] < 0.55) continue;
+      var rx = crX[i] + Math.sin(t * 2.1 + i) * 4;
+      var ry = crY[i] + Math.sin(t * 1.3 + i * 0.5) * 2;
+      ctx.moveTo(rx + 1.4, ry);
+      ctx.arc(rx, ry, 1.4, 0, TAU);
+    }
+    ctx.fill();
+
+    // eclairage rasant de l'eclair sur la mer (tres discret)
+    if (flash > 0.004) {
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = flash * 0.5;
+      ctx.fillStyle = gHaze;
+      ctx.fillRect(0, 0, W, H);
+      ctx.globalCompositeOperation = 'source-over';
+    }
+
+    ctx.restore();
+  }
+
+  /* ---------------------------------------------------------------
+     DRAW : couche avant
+     --------------------------------------------------------------- */
+  function drawFront(ctx, w, h) {
+    if (!gcCtx) gcCtx = ctx;
+    ensure(ctx, w, h);
+
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    var i;
+
+    /* --- embruns (derriere le reste) --- */
+    if (spCount > 0) {
+      ctx.fillStyle = C_FOAM;
+      for (i = 0; i < spCount; i++) {
+        var q = SP[i];
+        var qt = q.life / q.max;
+        ctx.globalAlpha = q.a0 * (qt < 0.3 ? qt / 0.3 : 1);
+        ctx.beginPath();
+        ctx.arc(q.x, q.y, q.size, 0, TAU);
+        ctx.fill();
+      }
+    }
+
+    /* --- particules opaques : fumee, debris, gouttes --- */
+    var last = null, p, lt;
+    for (i = 0; i < pCount; i++) {
+      p = P[i];
+      if (p.kind === K_SPARK) continue;
+      lt = p.life / p.max;
+      if (p.kind === K_SMOKE) {
+        ctx.globalAlpha = p.a0 * lt * lt;
+        ctx.fillStyle = p.col;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, TAU);
+        ctx.fill();
+      } else if (p.kind === K_DEBRIS) {
+        ctx.globalAlpha = p.a0 * (lt < 0.25 ? lt / 0.25 : 1);
+        ctx.strokeStyle = p.col;
+        ctx.lineWidth = 2.2;
+        var dx = Math.cos(p.rot) * p.size, dy = Math.sin(p.rot) * p.size;
+        ctx.beginPath();
+        ctx.moveTo(p.x - dx, p.y - dy);
+        ctx.lineTo(p.x + dx, p.y + dy);
+        ctx.stroke();
+      } else { // K_SPLASH
+        ctx.globalAlpha = p.a0 * lt;
+        ctx.fillStyle = p.col;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, TAU);
+        ctx.fill();
+      }
+    }
+
+    /* --- couche additive : etincelles, anneaux, halos --- */
+    ctx.globalCompositeOperation = 'lighter';
+
+    last = null;
+    for (i = 0; i < pCount; i++) {
+      p = P[i];
+      if (p.kind !== K_SPARK) continue;
+      lt = p.life / p.max;
+      ctx.globalAlpha = p.a0 * lt * lt;
+      if (last !== p.col) { ctx.strokeStyle = p.col; last = p.col; }
+      ctx.lineWidth = p.size;
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+      ctx.lineTo(p.x - p.vx * 0.012, p.y - p.vy * 0.012);
+      ctx.stroke();
+    }
+
+    for (i = 0; i < rgCount; i++) {
+      var r = RG[i];
+      var rt = 1 - r.life / r.max;                  // 0 -> 1
+      var rr = r.maxR * (1 - (1 - rt) * (1 - rt));  // ease-out
+      if (rr < 0.5) rr = 0.5;
+      var fade = (1 - rt) * (1 - rt) * (1 - rt * 0.35);
+      ctx.strokeStyle = r.col;
+      // halo large et diffus
+      ctx.globalAlpha = fade * 0.14;
+      ctx.lineWidth = r.w * 3.2 * (1 - rt * 0.5) + 1;
+      ctx.beginPath();
+      ctx.arc(r.x, r.y, rr, 0, TAU);
+      ctx.stroke();
+      // trait principal
+      ctx.globalAlpha = fade * 0.5;
+      ctx.lineWidth = r.w * (1 - rt * 0.8) + 0.25;
+      ctx.beginPath();
+      ctx.arc(r.x, r.y, rr, 0, TAU);
+      ctx.stroke();
+    }
+
+    for (i = 0; i < glCount; i++) {
+      var g = GL[i];
+      if (!g.grad) { g.grad = gradCache(g.col); if (!g.grad) continue; }
+      var gt = g.life / g.max;
+      var gr = g.r * (1.25 - 0.25 * gt) * (0.35 + 0.65 * (1 - gt * gt));
+      ctx.globalAlpha = gt * gt * 0.55;
+      ctx.save();
+      ctx.translate(g.x, g.y);
+      ctx.scale(gr, gr);
+      ctx.fillStyle = g.grad;
+      ctx.beginPath();
+      ctx.arc(0, 0, 1, 0, TAU);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    /* --- decharge lointaine --- */
+    if (boltAlpha > 0.01) {
+      ctx.strokeStyle = C_BOLT;
+      // halo large
+      ctx.globalAlpha = boltAlpha * 0.20;
+      ctx.lineWidth = 7;
+      strokeBolt(ctx);
+      // trait fin
+      ctx.globalAlpha = boltAlpha * 0.62;
+      ctx.lineWidth = 1.5;
+      strokeBolt(ctx);
+    }
+
+    /* --- flash global (jamais aveuglant : <= 0.25) --- */
+    if (flash > 0.004) {
+      ctx.globalAlpha = flash;
+      ctx.fillStyle = gHaze;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    ctx.globalCompositeOperation = 'source-over';
+
+    /* --- pluie : 3 passes de parallaxe --- */
+    ctx.strokeStyle = C_RAIN;
+    for (var k = 0; k < 3; k++) {
+      ctx.globalAlpha = LAYER_A[k] * (0.35 + 0.65 * storm);
+      ctx.lineWidth = LAYER_W[k];
+      ctx.beginPath();
+      for (i = k; i < rainActive; i += 3) {
+        var len = rainL[i];
+        var sl = (wind * LAYER_WF[k] + 245 * LAYER_WF[k]) / rainV[i];
+        var ex = rainX[i] - sl * len, ey = rainY[i] - len;
+        ctx.moveTo(rainX[i], rainY[i]);
+        ctx.lineTo(ex, ey);
+      }
+      ctx.stroke();
+    }
+
+    /* --- vignette --- */
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = gVign;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.restore();
+  }
+
+  function strokeBolt(ctx) {
+    var i;
+    ctx.beginPath();
+    ctx.moveTo(boltPts[0], boltPts[1]);
+    for (i = 1; i < BOLT_SEG; i++) ctx.lineTo(boltPts[i * 2], boltPts[i * 2 + 1]);
+    for (i = 0; i < 2; i++) {
+      ctx.moveTo(boltBranch[i * 4], boltBranch[i * 4 + 1]);
+      ctx.lineTo(boltBranch[i * 4 + 2], boltBranch[i * 4 + 3]);
+    }
+    ctx.stroke();
+  }
+
+  /* ---------------------------------------------------------------
+     Init
+     --------------------------------------------------------------- */
+  seedSea();
+  seedRain();
+  updateRainCount();
+
+  var api = {
+    resize: resize,
+    setWind: setWind,
+    setStorm: setStorm,
+    update: update,
+    drawSea: drawSea,
+    drawFront: drawFront,
+    spark: spark,
+    smoke: smoke,
+    debris: debris,
+    splash: splash,
+    ring: ring,
+    glowPulse: glowPulse,
+    shake: shake,
+    shakeX: function () { return shOffX; },
+    shakeY: function () { return shOffY; },
+    lightning: lightning,
+    flashAlpha: function () { return flash; },
+    count: function () { return pCount + spCount; }
+  };
+  return api;
+}
+</script>
+<script>
+/* === MOTEUR — règles, navires, faisceau, rendu === */
+/* ============================================================
+   VEILLEUR — Les nuits d'Ys
+   Moteur de jeu : faisceau, navires, brume, feux d'Ys.
+   ============================================================ */
+(function () {
+  'use strict';
+
+  var C = (typeof CONTENT !== 'undefined') ? CONTENT : {};
+  function pick(arr, fb) { return (arr && arr.length) ? arr[(Math.random() * arr.length) | 0] : fb; }
+
+  // ---------- utilitaires ----------
+  var TAU = Math.PI * 2;
+  function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  function wrapPi(a) { while (a > Math.PI) a -= TAU; while (a < -Math.PI) a += TAU; return a; }
+  function rnd(a, b) { return a + Math.random() * (b - a); }
+  function irnd(a, b) { return (a + Math.random() * (b - a + 1)) | 0; }
+  function smooth(e0, e1, x) { var t = clamp((x - e0) / (e1 - e0), 0, 1); return t * t * (3 - 2 * t); }
+  function segCircle(x1, y1, x2, y2, cx, cy, r) {
+    var dx = x2 - x1, dy = y2 - y1, fx = x1 - cx, fy = y1 - cy;
+    var a = dx * dx + dy * dy; if (a < 1e-6) return (fx * fx + fy * fy) <= r * r;
+    var t = clamp(-(fx * dx + fy * dy) / a, 0, 1);
+    var px = fx + dx * t, py = fy + dy * t;
+    return (px * px + py * py) <= r * r;
+  }
+
+  // ---------- palette ----------
+  var COL = {
+    sea0: '#050a13', sea1: '#0b1728', foam: '#9fc4e8',
+    warm: '#ffc46b', warm2: '#ff9a45', ember: '#ffe3b0',
+    ys: '#8ff2d4', ysDim: '#2f6f63',
+    ink: '#dce9f7', dim: 'rgba(220,233,247,0.45)'
+  };
+
+  // ---------- types de navires ----------
+  var TYPES = {
+    chalutier: { speed: 37, r: 11, gain: 1.00, decay: 0.155, souls: 8, len: 30, beam: 11 },
+    caboteur: { speed: 29, r: 14, gain: 0.72, decay: 0.115, souls: 14, len: 41, beam: 15 },
+    barque: { speed: 50, r: 9, gain: 1.55, decay: 0.320, souls: 3, len: 21, beam: 8 },
+    kerloch: { speed: 21, r: 22, gain: 0.44, decay: 0.085, souls: 220, len: 66, beam: 22 },
+    aurore: { speed: 30, r: 17, gain: 0.58, decay: 0.130, souls: 40, len: 47, beam: 17 }
+  };
+
+  var NIGHTS = [null,
+    { ships: 5, types: ['chalutier'], every: 3.0, fog: 0, wreck: 0, storm: 0.22 },
+    { ships: 7, types: ['chalutier', 'caboteur'], every: 2.8, fog: 2, wreck: 0, storm: 0.38 },
+    { ships: 8, types: ['chalutier', 'caboteur'], every: 2.6, fog: 2, wreck: 1, storm: 0.50 },
+    { ships: 9, types: ['chalutier', 'barque', 'barque'], every: 2.4, fog: 3, wreck: 1, storm: 0.62 },
+    { ships: 10, types: ['barque', 'chalutier', 'caboteur'], every: 2.2, fog: 4, wreck: 2, storm: 0.76 },
+    { ships: 11, types: ['barque', 'chalutier', 'caboteur'], every: 2.1, fog: 4, wreck: 2, storm: 0.88, special: 'kerloch' },
+    { ships: 12, types: ['barque', 'chalutier', 'caboteur'], every: 1.9, fog: 5, wreck: 3, storm: 1.00, special: 'aurore' }
+  ];
+
+  // ---------- réglages de sensation ----------
+  var K = {
+    stiff: 92, damp: 0.855,        // ressort angulaire du faisceau
+    stiffF: 34, dampF: 0.800,      // en focus : plus lourd
+    whip: 3.4,                     // rad/s au-delà desquels le faisceau se dilue
+    hwMin: 0.105, hwMax: 0.44,     // demi-ouverture du cône (immobile -> balayage)
+    focusHw: 0.46, focusRange: 1.75, focusGain: 1.7,
+    gain: 0.62, range: 0.52,       // portée = 0.52 * min(w,h)... recalculée au resize
+    heatUp: 0.42, heatStill: 0.10, heatDown: 0.30, blackout: 2.5,
+    oilMax: 100, flareCost: 34, oilPerSave: 15, oilPerNight: 35,
+    flareR: 300, flareBoost: 0.42
+  };
+
+  // ---------- état ----------
+  var S = {
+    mode: 'title',      // title | journal | play | over | pause
+    prevMode: 'play',
+    night: 1, souls: 0, lives: 3, best: 0,
+    ships: [], rocks: [], fogs: [], lights: [], notes: [],
+    spawned: 0, spawnT: 0, wreckT: 0, nightT: 0,
+    angle: -Math.PI / 2, angVel: 0, aimAngle: -Math.PI / 2,
+    focus: false, heat: 0, lamp: true, blackout: 0,
+    oil: K.oilMax, flareFlash: 0,
+    saved: 0, lostShips: 0, extinguished: 0, combo: 0, bestCombo: 0,
+    auroreSaved: false, auroreSeen: false,
+    t: 0, w: 0, h: 0, cx: 0, cy: 0, range: 420,
+    hw: 0.2, beamRange: 420, power: 1, sweep: 0, hist: [], histT: 0,
+    shake: 0, msg: null, msgT: 0, endKind: 'defeat',
+    started: false, hintT: 0
+  };
+
+  var cv, ctx, FX, AU, DPR = 1;
+
+  // ---------- initialisation ----------
+  function boot() {
+    cv = document.getElementById('cv');
+    ctx = cv.getContext('2d', { alpha: false });
+    FX = createFX();
+    AU = createAudio();
+    try { S.best = parseInt(localStorage.getItem('veilleur.best') || '0', 10) || 0; } catch (e) { S.best = 0; }
+    resize();
+    FX.setStorm(0.35); FX.setWind(-46);
+    window.addEventListener('resize', resize);
+    bindInput();
+    requestAnimationFrame(frame);
+  }
+
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    S.w = window.innerWidth; S.h = window.innerHeight;
+    cv.width = Math.floor(S.w * DPR); cv.height = Math.floor(S.h * DPR);
+    cv.style.width = S.w + 'px'; cv.style.height = S.h + 'px';
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    S.cx = S.w * 0.5; S.cy = S.h * 0.46;
+    S.range = Math.max(360, Math.min(S.w, S.h) * 0.62);
+    FX.resize(S.w, S.h);
+  }
+
+  // ---------- entrées ----------
+  function bindInput() {
+    window.addEventListener('mousemove', function (e) {
+      S.aimAngle = Math.atan2(e.clientY - S.cy, e.clientX - S.cx);
+    });
+    window.addEventListener('mousedown', function (e) {
+      AU.resume();
+      if (e.button === 2) { S.focus = true; return; }
+      if (S.mode === 'title') { startRun(); }
+      else if (S.mode === 'journal') { S.mode = 'play'; AU.sfx('foghorn'); }
+      else if (S.mode === 'over') { startRun(); }
+      else if (S.mode === 'play') { flare(); }
+    });
+    window.addEventListener('mouseup', function (e) { if (e.button === 2) S.focus = false; });
+    window.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+    window.addEventListener('keydown', function (e) {
+      AU.resume();
+      var k = e.key;
+      if (k === 'Shift') { S.focus = true; e.preventDefault(); return; }
+      if (k === ' ' || k === 'Spacebar') {
+        e.preventDefault();
+        if (S.mode === 'title') startRun();
+        else if (S.mode === 'journal') { S.mode = 'play'; AU.sfx('foghorn'); }
+        else if (S.mode === 'over') startRun();
+        else flare();
+        return;
+      }
+      if (k === 'Escape' || k === 'p' || k === 'P') {
+        if (S.mode === 'play') { S.prevMode = 'play'; S.mode = 'pause'; }
+        else if (S.mode === 'pause') S.mode = 'play';
+        return;
+      }
+      if (k === 'r' || k === 'R') { if (S.mode !== 'title') startRun(); return; }
+      if (k === 'm' || k === 'M') { AU.toggleMute(); return; }
+      if (S.mode === 'journal' || S.mode === 'over' || S.mode === 'title') {
+        if (k === 'Enter') { if (S.mode === 'journal') { S.mode = 'play'; AU.sfx('foghorn'); } else startRun(); }
+      }
+    });
+    window.addEventListener('keyup', function (e) { if (e.key === 'Shift') S.focus = false; });
+    window.addEventListener('blur', function () {
+      S.focus = false;
+      if (S.mode === 'play') { S.prevMode = 'play'; S.mode = 'pause'; }
+    });
+  }
+
+  // ---------- cycle de partie ----------
+  function startRun() {
+    S.night = 1; S.souls = 0; S.lives = 3; S.saved = 0; S.lostShips = 0;
+    S.extinguished = 0; S.combo = 0; S.bestCombo = 0;
+    S.auroreSaved = false; S.auroreSeen = false; S.started = true; S.hintT = 12;
+    beginNight();
+    AU.resume();
+  }
+
+  function beginNight() {
+    var cfg = NIGHTS[S.night];
+    S.ships.length = 0; S.lights.length = 0; S.fogs.length = 0; S.notes.length = 0;
+    S.spawned = 0; S.spawnT = 1.2; S.wreckT = 8; S.nightT = 0;
+    S.oil = K.oilMax; S.heat = 0; S.lamp = true; S.blackout = 0;
+    S.angVel = 0; S.msg = null;
+    buildReef();
+    for (var i = 0; i < cfg.fog; i++) spawnFog(true);
+    FX.setStorm(cfg.storm);
+    AU.setStorm(cfg.storm); AU.setLamp(true);
+    S.mode = 'journal';
+  }
+
+  function buildReef() {
+    S.rocks.length = 0;
+    var base = Math.min(S.w, S.h);
+    var n = irnd(9, 12);
+    var used = [];
+    for (var i = 0; i < n; i++) {
+      var a, tries = 0;
+      do {
+        a = rnd(-Math.PI, Math.PI); tries++;
+        // laisser la passe libre vers le bas
+      } while (tries < 40 && (Math.abs(wrapPi(a - Math.PI / 2)) < 0.62 || tooClose(used, a, 0.34)));
+      used.push(a);
+      var rr = base * rnd(0.16, 0.235);
+      S.rocks.push(makeRock(S.cx + Math.cos(a) * rr, S.cy + Math.sin(a) * rr, rnd(13, 26)));
+    }
+    // quelques écueils isolés au large
+    for (var j = 0; j < 3; j++) {
+      var ang = rnd(-Math.PI, Math.PI);
+      if (Math.abs(wrapPi(ang - Math.PI / 2)) < 0.7) ang += 1.4;
+      var d = base * rnd(0.34, 0.44);
+      S.rocks.push(makeRock(S.cx + Math.cos(ang) * d, S.cy + Math.sin(ang) * d, rnd(10, 18)));
+    }
+  }
+  function tooClose(list, a, m) { for (var i = 0; i < list.length; i++) if (Math.abs(wrapPi(list[i] - a)) < m) return true; return false; }
+  function makeRock(x, y, r) {
+    var pts = [], n = irnd(6, 9);
+    for (var i = 0; i < n; i++) pts.push(r * rnd(0.68, 1.25));
+    return { x: x, y: y, r: r, pts: pts, ph: rnd(0, TAU) };
+  }
+
+  // ---------- entités ----------
+  function spawnShip(kind) {
+    var t = TYPES[kind];
+    var a = -Math.PI / 2 + rnd(-1, 1) * 2.28;      // large éventail, jamais par la passe
+    var ca = Math.cos(a), sa = Math.sin(a);
+    // point d'apparition juste au-delà du bord de l'écran, dans la direction a
+    var R = Math.min(Math.abs((S.w * 0.5 + 46) / (ca || 1e-6)), Math.abs((S.h * 0.5 + 46) / (sa || 1e-6)));
+    var sh = {
+      kind: kind, t: t, name: shipName(kind),
+      x: S.cx + ca * R, y: S.cy + sa * R,
+      hd: a + Math.PI + rnd(-0.35, 0.35),
+      conf: 0, state: 'lost', lit: 0, wob: rnd(0, TAU),
+      alive: true, fade: 1, milestone: 0, panic: 0, danger: 0, born: 0
+    };
+    S.ships.push(sh);
+    return sh;
+  }
+  function shipName(kind) {
+    if (kind === 'kerloch') return 'KERLOCH';
+    if (kind === 'aurore') return 'L’AURORE';
+    return pick(C.shipNames, 'Sainte-Anne');
+  }
+  function spawnFog(anywhere) {
+    var a = rnd(-Math.PI, Math.PI), d = anywhere ? rnd(0.15, 0.55) : 0.62;
+    var base = Math.min(S.w, S.h);
+    S.fogs.push({
+      x: S.cx + Math.cos(a) * base * d, y: S.cy + Math.sin(a) * base * d,
+      r: rnd(80, 150), r0: 0, vx: rnd(-14, 14), vy: rnd(-9, 9), ph: rnd(0, TAU), life: rnd(26, 48)
+    });
+    S.fogs[S.fogs.length - 1].r0 = S.fogs[S.fogs.length - 1].r;
+  }
+  function spawnWrecker() {
+    var a = rnd(-Math.PI, Math.PI);
+    var base = Math.min(S.w, S.h);
+    var d = base * rnd(0.30, 0.46);
+    var l = { x: S.cx + Math.cos(a) * d, y: S.cy + Math.sin(a) * d, ph: rnd(0, TAU), life: rnd(20, 30), hold: 0, stun: 0, dead: 0 };
+    S.lights.push(l);
+    AU.sfx('wrecker_in');
+    note(pick(C.wreckerLines, 'Un feu s’allume sous la mer.'), l.x, l.y, COL.ys);
+    FX.glowPulse(l.x, l.y, COL.ys, 90, 0.8);
+    return l;
+  }
+  function note(text, x, y, color) {
+    S.notes.push({ text: text, x: x, y: y, t: 0, dur: 2.6, color: color || COL.ink });
+  }
+
+  // ---------- actions ----------
+  function flare() {
+    if (S.mode !== 'play' || S.oil < K.flareCost) { if (S.mode === 'play') AU.sfx('ui', { vol: 0.3 }); return; }
+    S.oil -= K.flareCost; S.flareFlash = 1;
+    FX.ring(S.cx, S.cy, COL.warm, K.flareR, 0.75, 5);
+    FX.spark(S.cx, S.cy, 46, COL.ember, 320);
+    FX.shake(7);
+    AU.sfx('flare');
+    var i, d;
+    for (i = 0; i < S.ships.length; i++) {
+      var sh = S.ships[i]; if (!sh.alive || sh.state !== 'lost') continue;
+      d = Math.hypot(sh.x - S.cx, sh.y - S.cy);
+      if (d < K.flareR) addConf(sh, K.flareBoost * (1 - d / K.flareR * 0.5));
+    }
+    for (i = 0; i < S.fogs.length; i++) {
+      var f = S.fogs[i]; d = Math.hypot(f.x - S.cx, f.y - S.cy);
+      if (d < K.flareR + f.r) { f.r *= 0.45; f.life = Math.min(f.life, 6); }
+    }
+    for (i = 0; i < S.lights.length; i++) {
+      var l = S.lights[i]; d = Math.hypot(l.x - S.cx, l.y - S.cy);
+      if (d < K.flareR) { l.stun = 3.2; FX.glowPulse(l.x, l.y, '#ffffff', 60, 0.5); }
+    }
+  }
+
+  function addConf(sh, amount) {
+    if (sh.state !== 'lost') return;
+    sh.conf = clamp(sh.conf + amount, 0, 1);
+    if (sh.conf >= 0.5 && sh.milestone < 1) { sh.milestone = 1; AU.sfx('confidence', { vol: 0.5 }); }
+    if (sh.conf >= 1) {
+      sh.state = 'guided'; sh.milestone = 2;
+      FX.glowPulse(sh.x, sh.y, COL.warm, 46, 0.6);
+      AU.sfx('confidence', { vol: 0.9, pitch: 1.5 });
+    }
+  }
+
+  // ---------- mise à jour ----------
+  function update(dt) {
+    S.t += dt;
+    if (S.mode !== 'play') {
+      if (S.mode === 'title') {
+        S.angle = wrapPi(S.angle + dt * 0.42);
+        S.hw = 0.19; S.beamRange = S.range; S.power = 1; S.sweep = 0;
+        S.histT += dt;
+        if (S.histT > 0.028) { S.histT = 0; S.hist.push({ a: S.angle, hw: S.hw }); if (S.hist.length > 4) S.hist.shift(); }
+      }
+      FX.update(dt);
+      return;
+    }
+    var cfg = NIGHTS[S.night];
+    S.nightT += dt;
+    if (S.hintT > 0) S.hintT -= dt;
+
+    // --- faisceau ---
+    var diff = wrapPi(S.aimAngle - S.angle);
+    var st = S.focus ? K.stiffF : K.stiff, dp = S.focus ? K.dampF : K.damp;
+    S.angVel += diff * st * dt;
+    S.angVel *= Math.pow(dp, dt * 60);
+    S.angle = wrapPi(S.angle + S.angVel * dt);
+    var spd = Math.abs(S.angVel);
+    var sweep = smooth(0.15, K.whip, spd);            // 0 = immobile, 1 = balayage rapide
+    var power = lerp(1, 0.22, sweep);                  // intensité utile
+    var hw = lerp(K.hwMin, K.hwMax, sweep);
+    var range = S.range;
+    if (S.focus) { hw *= K.focusHw; range *= K.focusRange; }
+    S.hw = hw; S.beamRange = range; S.power = power; S.sweep = sweep;
+    S.histT += dt;
+    if (S.histT > 0.028) {
+      S.histT = 0;
+      S.hist.push({ a: a2angle(), hw: hw });
+      if (S.hist.length > 4) S.hist.shift();
+    }
+
+    // --- chaleur / lampe ---
+    if (S.lamp) {
+      var up = 0;
+      if (S.focus) up += K.heatUp;
+      if (spd < 0.35) up += K.heatStill;
+      if (up > 0) S.heat += up * dt; else S.heat -= K.heatDown * dt;
+      S.heat = clamp(S.heat, 0, 1);
+      if (S.heat >= 1) {
+        S.lamp = false; S.blackout = K.blackout; S.focus = false;
+        AU.sfx('overheat'); AU.setLamp(false); FX.shake(9);
+        FX.smoke(S.cx, S.cy - 6, 18);
+        note(pick(C.overheat, 'La lentille a craqué.'), S.cx, S.cy - 70, COL.warm2);
+      }
+    } else {
+      S.blackout -= dt; S.heat = Math.max(0, S.heat - dt / K.blackout);
+      if (S.blackout <= 0) { S.lamp = true; S.heat = 0; AU.sfx('relight'); AU.setLamp(true); FX.glowPulse(S.cx, S.cy, COL.warm, 120, 0.7); }
+    }
+    AU.setFocus(S.focus && S.lamp);
+
+    // --- apparitions ---
+    if (S.spawned < cfg.ships) {
+      S.spawnT -= dt;
+      if (S.spawnT <= 0) {
+        S.spawnT = cfg.every * rnd(0.75, 1.25);
+        var kind;
+        if (cfg.special && S.spawned === Math.floor(cfg.ships * 0.55)) {
+          kind = cfg.special;
+          if (kind === 'aurore') { S.auroreSeen = true; AU.sfx('bell'); }
+        } else kind = pick(cfg.types, 'chalutier');
+        var nsh = spawnShip(kind);
+        S.spawned++;
+        if (kind === 'aurore' || kind === 'kerloch') { note(nsh.name, nsh.x, nsh.y, COL.ember); FX.glowPulse(nsh.x, nsh.y, COL.ember, 70, 1.2); }
+      }
+    }
+    if (cfg.wreck > 0) {
+      S.wreckT -= dt;
+      if (S.wreckT <= 0) {
+        S.wreckT = rnd(9, 15) / cfg.wreck;
+        var alive = 0; for (var q = 0; q < S.lights.length; q++) if (!S.lights[q].dead) alive++;
+        if (alive < cfg.wreck) spawnWrecker();
+      }
+    }
+    if (cfg.fog > 0 && S.fogs.length < cfg.fog && Math.random() < dt * 0.35) spawnFog(false);
+
+    // --- brume ---
+    for (var i = S.fogs.length - 1; i >= 0; i--) {
+      var f = S.fogs[i];
+      f.x += f.vx * dt; f.y += f.vy * dt; f.life -= dt; f.ph += dt * 0.6;
+      if (f.life < 4) f.r = Math.max(0, f.r - dt * 22);
+      if (f.life <= 0 || f.r < 6) S.fogs.splice(i, 1);
+    }
+
+    // --- feux d'Ys ---
+    for (var j = S.lights.length - 1; j >= 0; j--) {
+      var l = S.lights[j];
+      l.ph += dt * 2.2; l.life -= dt;
+      if (l.stun > 0) l.stun -= dt;
+      if (l.dead > 0) { l.dead += dt; if (l.dead > 0.8) S.lights.splice(j, 1); continue; }
+      // extinction au focus
+      if (S.lamp && S.focus && inBeam(l.x, l.y, 1)) {
+        l.hold += dt;
+        FX.spark(l.x, l.y, 1, COL.ys, 60);
+        if (l.hold >= 1.2) {
+          l.dead = 0.001; S.extinguished++; S.souls += 5;
+          AU.sfx('wrecker_out'); FX.ring(l.x, l.y, COL.ys, 90, 0.6, 3); FX.spark(l.x, l.y, 24, COL.ys, 200);
+        }
+      } else l.hold = Math.max(0, l.hold - dt * 0.6);
+      if (l.life <= 0) l.dead = 0.001;
+    }
+
+    // --- navires ---
+    for (var s = S.ships.length - 1; s >= 0; s--) {
+      var sh = S.ships[s];
+      if (!sh.alive) { sh.fade -= dt * 1.2; if (sh.fade <= 0) S.ships.splice(s, 1); continue; }
+      updateShip(sh, dt);
+    }
+
+    // --- notes flottantes ---
+    for (var n = S.notes.length - 1; n >= 0; n--) { S.notes[n].t += dt; if (S.notes[n].t > S.notes[n].dur) S.notes.splice(n, 1); }
+
+    // --- tension audio ---
+    var danger = 0;
+    for (var d2 = 0; d2 < S.ships.length; d2++) {
+      var sd = S.ships[d2]; if (!sd.alive || sd.state !== 'lost') continue;
+      var dist = Math.hypot(sd.x - S.cx, sd.y - S.cy);
+      danger = Math.max(danger, 1 - clamp((dist - 120) / 260, 0, 1));
+    }
+    AU.setDanger(danger);
+
+    S.flareFlash = Math.max(0, S.flareFlash - dt * 2.4);
+    FX.setWind(lerp(-30, -95, cfg.storm));
+    FX.update(dt);
+
+    // --- fin de nuit ---
+    if (S.spawned >= cfg.ships && S.ships.length === 0) endNight();
+    if (S.lives <= 0) gameOver('defeat');
+  }
+
+  function a2angle() { return S.angle; }
+
+  function inBeam(x, y, ignoreFog) {
+    if (!S.lamp) return 0;
+    var dx = x - S.cx, dy = y - S.cy;
+    var d = Math.hypot(dx, dy);
+    if (d > S.beamRange || d < 8) return 0;
+    var da = Math.abs(wrapPi(Math.atan2(dy, dx) - S.angle));
+    if (da > S.hw) return 0;
+    var edge = 1 - Math.pow(da / S.hw, 2) * 0.65;
+    var falloff = 1 - 0.3 * (d / S.beamRange);
+    var fog = 1;
+    if (!ignoreFog) {
+      for (var i = 0; i < S.fogs.length; i++) {
+        var f = S.fogs[i];
+        if (segCircle(S.cx, S.cy, x, y, f.x, f.y, f.r * 0.85)) fog *= 0.34;
+      }
+      fog = Math.max(fog, 0.06);
+    }
+    return edge * falloff * fog;
+  }
+
+  function updateShip(sh, dt) {
+    var t = sh.t;
+    sh.wob += dt * 1.6;
+    if (sh.born < 1) sh.born = Math.min(1, sh.born + dt * 1.6);
+
+    if (sh.state === 'lost') {
+      var lit = inBeam(sh.x, sh.y, 0) * S.power;
+      sh.lit = lerp(sh.lit, lit, 1 - Math.pow(0.001, dt));
+      if (lit > 0.02) addConf(sh, K.gain * lit * t.gain * (S.focus ? K.focusGain : 1) * dt);
+      else sh.conf = Math.max(0, sh.conf - t.decay * dt * (1 + sh.panic));
+
+      // cible de dérive : un feu d'Ys proche, sinon le phare
+      var tx = S.cx, ty = S.cy, best = 1e9, boost = 1;
+      for (var i = 0; i < S.lights.length; i++) {
+        var l = S.lights[i]; if (l.dead || l.stun > 0) continue;
+        var dl = Math.hypot(l.x - sh.x, l.y - sh.y);
+        if (dl < 300 && dl < best) { best = dl; tx = l.x; ty = l.y; boost = 1.35; }
+      }
+      var want = Math.atan2(ty - sh.y, tx - sh.x);
+      sh.hd = wrapPi(sh.hd + clamp(wrapPi(want - sh.hd), -0.55 * dt, 0.55 * dt));
+      var sp = t.speed * boost * (1 - sh.conf * 0.45) * (1 + sh.panic * 0.4);
+      moveShip(sh, sp, dt, 0.35);
+    } else if (sh.state === 'guided') {
+      sh.lit = lerp(sh.lit, 0.55, dt * 2);
+      var hy = S.h + 80, hx = S.cx + Math.sin(sh.wob * 0.3) * 30;
+      var wantG = Math.atan2(hy - sh.y, hx - sh.x);
+      // évitement des écueils
+      var ax = 0, ay = 0;
+      for (var r = 0; r < S.rocks.length; r++) {
+        var ro = S.rocks[r], ddx = sh.x - ro.x, ddy = sh.y - ro.y, dd = Math.hypot(ddx, ddy);
+        var safe = ro.r + t.r + 46;
+        if (dd < safe && dd > 0.1) { ax += (ddx / dd) * (1 - dd / safe); ay += (ddy / dd) * (1 - dd / safe); }
+      }
+      if (ax || ay) {
+        var av = Math.atan2(ay, ax);
+        wantG = wantG + wrapPi(av - wantG) * clamp(Math.hypot(ax, ay) * 1.5, 0, 0.85);
+      }
+      sh.hd = wrapPi(sh.hd + clamp(wrapPi(wantG - sh.hd), -1.6 * dt, 1.6 * dt));
+      moveShip(sh, Math.max(t.speed * 1.8, 78), dt, 0.12);
+      if (sh.y > S.h + 30) return saveShip(sh);
+    }
+
+    // collision écueils
+    for (var k = 0; k < S.rocks.length; k++) {
+      var rk = S.rocks[k];
+      if (Math.hypot(sh.x - rk.x, sh.y - rk.y) < rk.r * 0.92 + t.r * 0.6) return wreckShip(sh);
+    }
+    if (Math.hypot(sh.x - S.cx, sh.y - S.cy) < 34 + t.r * 0.5) return wreckShip(sh);
+
+    // panique : les barques s'affolent près des récifs
+    var dc = Math.hypot(sh.x - S.cx, sh.y - S.cy);
+    sh.panic = (sh.kind === 'barque' && sh.state === 'lost') ? clamp(1 - (dc - 130) / 200, 0, 1) : 0;
+    sh.danger = sh.state === 'lost' ? clamp(1 - (dc - 110) / 230, 0, 1) : 0;
+  }
+
+  function moveShip(sh, sp, dt, wobAmt) {
+    var h = sh.hd + Math.sin(sh.wob) * wobAmt * 0.25;
+    sh.x += Math.cos(h) * sp * dt;
+    sh.y += Math.sin(h) * sp * dt;
+    if (Math.random() < dt * 2.2) FX.splash(sh.x - Math.cos(h) * sh.t.len * 0.4, sh.y - Math.sin(h) * sh.t.len * 0.4, 1);
+  }
+
+  function saveShip(sh) {
+    sh.alive = false; sh.fade = 0;
+    S.saved++; S.combo++; if (S.combo > S.bestCombo) S.bestCombo = S.combo;
+    S.souls += sh.t.souls + Math.min(S.combo, 10) * 2;
+    S.oil = clamp(S.oil + K.oilPerSave, 0, K.oilMax);
+    if (sh.kind === 'aurore') S.auroreSaved = true;
+    AU.sfx('save', { pitch: 1 + Math.min(S.combo, 8) * 0.06 });
+    note(sh.kind === 'aurore' ? 'L’AURORE EST À QUAI' : pick(C.saved, 'À bon port.'), S.cx, S.h - 110, COL.warm);
+    FX.glowPulse(S.cx, S.h - 20, COL.warm, 120, 0.9);
+  }
+
+  function wreckShip(sh) {
+    sh.alive = false; sh.fade = 1;
+    S.lives--; S.combo = 0; S.lostShips++;
+    AU.sfx('wreck'); FX.shake(12);
+    FX.debris(sh.x, sh.y, 16); FX.splash(sh.x, sh.y, 22); FX.smoke(sh.x, sh.y, 8);
+    note(sh.name + ' — ' + pick(C.lost, 'perdu corps et biens'), sh.x, sh.y, '#e2715f');
+  }
+
+  function endNight() {
+    S.souls += 20 + S.night * 10;
+    S.oil = clamp(S.oil + K.oilPerNight, 0, K.oilMax);
+    AU.sfx('nightclear');
+    if (S.night >= 7) { gameOver(S.auroreSaved ? 'victory' : 'bittersweet'); return; }
+    S.night++;
+    beginNight();
+  }
+
+  function gameOver(kind) {
+    S.endKind = kind; S.mode = 'over';
+    AU.sfx(kind === 'victory' ? 'victory' : 'gameover');
+    AU.setDanger(0);
+    if (S.souls > S.best) { S.best = S.souls; try { localStorage.setItem('veilleur.best', String(S.best)); } catch (e) { } }
+    S.tip = pick(C.tips, 'Immobile, le faisceau convainc. En mouvement, il cherche.');
+  }
+
+  // ============================================================
+  //  RENDU
+  // ============================================================
+  function draw() {
+    var w = S.w, h = S.h;
+    ctx.save();
+    ctx.translate(FX.shakeX(), FX.shakeY());
+    FX.drawSea(ctx, w, h, S.t);
+    drawHarbour();
+    drawRocks();
+    if (S.mode === 'title') drawBeam();
+    else if (S.started) { drawBeam(); drawFog(); drawLights(); drawShips(); }
+    drawTower();
+    FX.drawFront(ctx, w, h);
+    ctx.restore();
+
+    var fl = FX.flashAlpha() + S.flareFlash * 0.20;
+    if (fl > 0.001) { ctx.fillStyle = 'rgba(190,220,255,' + Math.min(0.3, fl) + ')'; ctx.fillRect(0, 0, w, h); }
+
+    if (S.mode === 'play' || S.mode === 'pause') drawHUD();
+    drawNotes();
+    if (S.mode === 'title') drawTitle();
+    else if (S.mode === 'journal') drawJournal();
+    else if (S.mode === 'over') drawOver();
+    else if (S.mode === 'pause') drawPause();
+  }
+
+  function drawHarbour() {
+    var w = S.w, h = S.h, cx = S.cx;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    var g = ctx.createRadialGradient(cx, h + 40, 10, cx, h + 40, 300);
+    g.addColorStop(0, 'rgba(255,186,102,0.30)');
+    g.addColorStop(0.55, 'rgba(255,168,86,0.10)');
+    g.addColorStop(1, 'rgba(255,160,80,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(cx, h + 40, 300, 0, TAU); ctx.fill();
+    ctx.restore();
+    // bouées de la passe
+    for (var i = -1; i <= 1; i += 2) {
+      var bx = cx + i * 175, by = h - 20;
+      var pulse = 0.55 + 0.45 * Math.sin(S.t * 2.2 + (i > 0 ? 1.6 : 0));
+      ctx.globalCompositeOperation = 'lighter';
+      var rg = ctx.createRadialGradient(bx, by, 0, bx, by, 40);
+      rg.addColorStop(0, 'rgba(255,190,110,' + (0.5 * pulse) + ')');
+      rg.addColorStop(1, 'rgba(255,190,110,0)');
+      ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(bx, by, 40, 0, TAU); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = 'rgba(255,214,150,' + (0.55 + 0.4 * pulse) + ')';
+      ctx.beginPath(); ctx.arc(bx, by, 3.2, 0, TAU); ctx.fill();
+    }
+    ctx.save();
+    ctx.font = '11px ui-sans-serif, system-ui, sans-serif';
+    ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,214,150,0.35)';
+    ctx.letterSpacing = '3px';
+    ctx.fillText('LA PASSE', cx, h - 44);
+    ctx.restore(); ctx.save(); ctx.textAlign = 'center';
+    ctx.restore();
+  }
+
+  function drawRocks() {
+    for (var i = 0; i < S.rocks.length; i++) {
+      var r = S.rocks[i];
+      // écume
+      var fo = 0.13 + 0.07 * Math.sin(S.t * 1.7 + r.ph);
+      var fr = r.r * 1.45 + Math.sin(S.t * 2 + r.ph) * 2.5;
+      ctx.strokeStyle = 'rgba(159,196,232,' + fo + ')';
+      ctx.lineWidth = 2.2;
+      for (var a2 = 0; a2 < 3; a2++) {
+        var st2 = r.ph + a2 * 2.09 + Math.sin(S.t * 0.8 + a2) * 0.2;
+        ctx.beginPath(); ctx.arc(r.x, r.y, fr, st2, st2 + 1.25); ctx.stroke();
+      }
+      ctx.beginPath();
+      for (var p = 0; p < r.pts.length; p++) {
+        var a = p / r.pts.length * TAU;
+        var x = r.x + Math.cos(a) * r.pts[p], y = r.y + Math.sin(a) * r.pts[p] * 0.85;
+        if (p === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.fillStyle = '#060a12'; ctx.fill();
+      ctx.strokeStyle = 'rgba(120,155,195,0.22)'; ctx.lineWidth = 1; ctx.stroke();
+    }
+  }
+
+  function drawFog() {
+    ctx.save();
+    for (var i = 0; i < S.fogs.length; i++) {
+      var f = S.fogs[i];
+      var r = f.r * (1 + Math.sin(f.ph) * 0.05);
+      var g = ctx.createRadialGradient(f.x, f.y, r * 0.15, f.x, f.y, r);
+      g.addColorStop(0, 'rgba(150,175,205,0.24)');
+      g.addColorStop(0.6, 'rgba(120,145,180,0.13)');
+      g.addColorStop(1, 'rgba(110,135,170,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(f.x, f.y, r, 0, TAU); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // Le cône est peint en plusieurs couches concentriques (de la plus large et
+  // pâle à la plus étroite et vive) : les bords s'estompent au lieu de couper net.
+  var CONE_K = [1.00, 0.86, 0.70, 0.54, 0.38, 0.22, 0.10];
+  var CONE_A = [0.045, 0.050, 0.055, 0.062, 0.070, 0.080, 0.095];
+
+  function cone(a, hw, range, mul) {
+    for (var i = 0; i < CONE_K.length; i++) {
+      var k = CONE_K[i], al = CONE_A[i] * mul;
+      if (al < 0.002) continue;
+      var g = ctx.createRadialGradient(S.cx, S.cy, 10, S.cx, S.cy, range);
+      g.addColorStop(0, 'rgba(255,214,150,' + al * 1.35 + ')');
+      g.addColorStop(0.30, 'rgba(255,182,96,' + al + ')');
+      g.addColorStop(0.72, 'rgba(255,150,68,' + al * 0.5 + ')');
+      g.addColorStop(1, 'rgba(255,130,60,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.moveTo(S.cx, S.cy);
+      ctx.arc(S.cx, S.cy, range, a - hw * k, a + hw * k);
+      ctx.closePath(); ctx.fill();
+    }
+  }
+
+  function drawBeam() {
+    if (!S.lamp || !isFinite(S.beamRange) || !isFinite(S.hw) || !isFinite(S.angle)) return;
+    var range = S.beamRange, hw = S.hw, a = S.angle;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    // rémanence : la lumière traîne derrière le balayage
+    for (var t = S.hist.length - 1; t >= 0; t--) {
+      var h = S.hist[t];
+      if (Math.abs(wrapPi(h.a - a)) < 0.02) continue;
+      cone(h.a, h.hw, range, 0.10 * (t + 1) / S.hist.length);
+    }
+    cone(a, hw, range, lerp(0.75, 1.5, S.power));
+    // trait central
+    ctx.strokeStyle = 'rgba(255,240,210,' + (0.08 + 0.20 * S.power) + ')';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(S.cx, S.cy);
+    ctx.lineTo(S.cx + Math.cos(a) * range, S.cy + Math.sin(a) * range); ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawLights() {
+    for (var i = 0; i < S.lights.length; i++) {
+      var l = S.lights[i];
+      var life = l.dead ? Math.max(0, 1 - l.dead / 0.8) : 1;
+      var stun = l.stun > 0 ? 0.22 : 1;
+      var p = (0.6 + 0.4 * Math.sin(l.ph)) * life * stun;
+      var R = 34 + 10 * Math.sin(l.ph * 0.7);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      var g = ctx.createRadialGradient(l.x, l.y, 0, l.x, l.y, R * 2.4);
+      g.addColorStop(0, 'rgba(143,242,212,' + (0.55 * p) + ')');
+      g.addColorStop(0.4, 'rgba(90,200,190,' + (0.18 * p) + ')');
+      g.addColorStop(1, 'rgba(60,150,150,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(l.x, l.y, R * 2.4, 0, TAU); ctx.fill();
+      ctx.restore();
+      ctx.fillStyle = 'rgba(200,255,240,' + (0.75 * p) + ')';
+      ctx.beginPath(); ctx.arc(l.x, l.y, 3, 0, TAU); ctx.fill();
+      if (l.hold > 0.05 && !l.dead) {
+        ctx.strokeStyle = 'rgba(255,220,160,0.8)'; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.arc(l.x, l.y, 16, -Math.PI / 2, -Math.PI / 2 + TAU * (l.hold / 1.2)); ctx.stroke();
+      }
+    }
+  }
+
+  function drawShips() {
+    for (var i = 0; i < S.ships.length; i++) {
+      var sh = S.ships[i], t = sh.t;
+      var vis = sh.alive ? sh.born : Math.max(0, sh.fade);
+      if (vis <= 0) continue;
+      var glow = sh.state === 'guided' ? 0.95 : (0.42 + sh.lit * 0.5 + sh.conf * 0.25);
+      ctx.save();
+      ctx.translate(sh.x, sh.y); ctx.rotate(sh.hd);
+      var L = t.len, B = t.beam;
+      // sillage
+      ctx.strokeStyle = 'rgba(159,196,232,' + (0.16 * vis) + ')'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(-L * 0.5, 0); ctx.lineTo(-L * 1.9, 0); ctx.stroke();
+      // coque
+      ctx.beginPath();
+      ctx.moveTo(L * 0.55, 0);
+      ctx.quadraticCurveTo(L * 0.1, B * 0.55, -L * 0.5, B * 0.42);
+      ctx.lineTo(-L * 0.5, -B * 0.42);
+      ctx.quadraticCurveTo(L * 0.1, -B * 0.55, L * 0.55, 0);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(13,22,36,' + vis + ')'; ctx.fill();
+      ctx.strokeStyle = 'rgba(' + (sh.state === 'guided' ? '255,200,130' : '150,185,225') + ',' + (glow * vis) + ')';
+      ctx.lineWidth = 1.4; ctx.stroke();
+      // mât
+      ctx.strokeStyle = 'rgba(' + (sh.state === 'guided' ? '255,210,150' : '150,185,225') + ',' + (glow * 0.8 * vis) + ')';
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-2, -B * 0.9); ctx.stroke();
+      // fanal froid du navire perdu : il reste repérable dans la nuit
+      if (sh.state === 'lost') {
+        var cp = 0.55 + 0.45 * Math.sin(sh.wob * 1.7);
+        ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        var cg = ctx.createRadialGradient(0, -B * 0.9, 0, 0, -B * 0.9, 20);
+        var cc = sh.danger > 0.55 ? '226,113,95' : '150,190,235';
+        cg.addColorStop(0, 'rgba(' + cc + ',' + (0.5 * cp * vis) + ')');
+        cg.addColorStop(1, 'rgba(' + cc + ',0)');
+        ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(0, -B * 0.9, 20, 0, TAU); ctx.fill();
+        ctx.restore();
+        ctx.fillStyle = 'rgba(220,240,255,' + (0.55 * cp * vis) + ')';
+        ctx.beginPath(); ctx.arc(0, -B * 0.9, 1.6, 0, TAU); ctx.fill();
+      }
+      // fanal chaud
+      if (sh.state === 'guided' || sh.lit > 0.15) {
+        ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        var gg = ctx.createRadialGradient(L * 0.35, 0, 0, L * 0.35, 0, 26);
+        gg.addColorStop(0, 'rgba(255,205,140,' + (0.5 * glow * vis) + ')');
+        gg.addColorStop(1, 'rgba(255,180,110,0)');
+        ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(L * 0.35, 0, 26, 0, TAU); ctx.fill();
+        ctx.restore();
+      }
+      ctx.restore();
+
+      // jauge de confiance
+      if (sh.alive && sh.state === 'lost') {
+        var rr = t.r + 13;
+        ctx.strokeStyle = 'rgba(150,185,225,' + (0.20 + 0.22 * sh.danger) + ')'; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.arc(sh.x, sh.y, rr, 0, TAU); ctx.stroke();
+        if (sh.danger > 0.6) {
+          var dp = 0.5 + 0.5 * Math.sin(S.t * 7);
+          ctx.strokeStyle = 'rgba(226,113,95,' + (0.5 * dp * (sh.danger - 0.6) / 0.4) + ')';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.arc(sh.x, sh.y, rr + 5 + dp * 3, 0, TAU); ctx.stroke();
+        }
+        if (sh.conf > 0.005) {
+          ctx.strokeStyle = 'rgba(255,196,107,0.95)';
+          ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.arc(sh.x, sh.y, rr, -Math.PI / 2, -Math.PI / 2 + TAU * sh.conf); ctx.stroke();
+        }
+      }
+      // nom
+      var na = (sh.lit * 0.6 + sh.conf * 0.35 + (sh.kind === 'aurore' || sh.kind === 'kerloch' ? 0.5 : 0.2)) * vis;
+      if (na > 0.06) {
+        ctx.font = '10px ui-sans-serif, system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = 'rgba(220,233,247,' + Math.min(0.75, na) + ')';
+        ctx.fillText(sh.name, sh.x, sh.y + t.r + 26);
+      }
+    }
+  }
+
+  function drawTower() {
+    var cx = S.cx, cy = S.cy;
+    // rocher
+    ctx.beginPath(); ctx.ellipse(cx, cy + 10, 40, 26, 0, 0, TAU);
+    ctx.fillStyle = '#070c15'; ctx.fill();
+    ctx.strokeStyle = 'rgba(130,165,205,0.25)'; ctx.lineWidth = 1; ctx.stroke();
+    // tour
+    ctx.beginPath();
+    ctx.moveTo(cx - 12, cy + 12); ctx.lineTo(cx - 7, cy - 26);
+    ctx.lineTo(cx + 7, cy - 26); ctx.lineTo(cx + 12, cy + 12);
+    ctx.closePath();
+    ctx.fillStyle = '#0d1523'; ctx.fill();
+    ctx.strokeStyle = 'rgba(160,195,235,0.4)'; ctx.stroke();
+    // lanterne
+    var on = S.lamp && S.mode !== 'title' ? 1 : (S.mode === 'title' ? 0.7 : 0.12);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    var g = ctx.createRadialGradient(cx, cy - 30, 0, cx, cy - 30, 60);
+    g.addColorStop(0, 'rgba(255,225,170,' + (0.75 * on) + ')');
+    g.addColorStop(1, 'rgba(255,180,100,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy - 30, 60, 0, TAU); ctx.fill();
+    ctx.restore();
+    ctx.fillStyle = 'rgba(255,236,205,' + (0.35 + 0.6 * on) + ')';
+    ctx.beginPath(); ctx.arc(cx, cy - 30, 4.5, 0, TAU); ctx.fill();
+  }
+
+  // ---------- interface ----------
+  function bar(x, y, w, h, v, col, label, warn) {
+    ctx.fillStyle = 'rgba(255,255,255,0.07)'; ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = col; ctx.fillRect(x, y, w * clamp(v, 0, 1), h);
+    if (warn) { ctx.strokeStyle = 'rgba(255,120,90,0.9)'; ctx.lineWidth = 1; ctx.strokeRect(x - 0.5, y - 0.5, w + 1, h + 1); }
+    ctx.font = '10px ui-sans-serif, system-ui, sans-serif';
+    ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(220,233,247,0.5)';
+    ctx.fillText(label, x, y - 6);
+  }
+
+  function drawHUD() {
+    var w = S.w, h = S.h;
+    ctx.save();
+    ctx.textAlign = 'left';
+    ctx.font = '600 12px ui-sans-serif, system-ui, sans-serif';
+    ctx.fillStyle = 'rgba(220,233,247,0.85)';
+    ctx.fillText('NUIT ' + S.night + ' / 7', 22, 32);
+    ctx.font = '11px ui-sans-serif, system-ui, sans-serif';
+    ctx.fillStyle = COL.dim;
+    ctx.fillText(S.souls + ' âmes', 22, 50);
+    // lanternes restantes
+    for (var i = 0; i < 3; i++) {
+      var on = i < S.lives;
+      ctx.beginPath(); ctx.arc(26 + i * 15, 66, 4, 0, TAU);
+      ctx.fillStyle = on ? 'rgba(255,196,107,0.9)' : 'rgba(255,255,255,0.13)'; ctx.fill();
+    }
+    ctx.textAlign = 'right';
+    ctx.font = '11px ui-sans-serif, system-ui, sans-serif';
+    ctx.fillStyle = COL.dim;
+    ctx.fillText('record ' + S.best, w - 22, 32);
+    if (S.combo > 1) { ctx.fillStyle = 'rgba(255,196,107,0.8)'; ctx.fillText('série ×' + S.combo, w - 22, 50); }
+
+    bar(22, 96, 132, 6, S.oil / K.oilMax, 'rgba(255,196,107,0.85)', 'HUILE', S.oil < K.flareCost);
+    bar(22, 126, 132, 6, S.heat, S.heat > 0.75 ? 'rgba(255,110,80,0.95)' : 'rgba(255,150,90,0.7)', 'LENTILLE', S.heat > 0.85);
+    if (!S.lamp) {
+      ctx.textAlign = 'center'; ctx.font = '600 13px ui-sans-serif, system-ui, sans-serif';
+      ctx.fillStyle = 'rgba(255,140,100,' + (0.5 + 0.5 * Math.sin(S.t * 9)) + ')';
+      ctx.fillText('LAMPE ÉTEINTE — ' + S.blackout.toFixed(1) + 's', w / 2, S.cy - 96);
+    }
+    if (S.hintT > 0 && S.night === 1) {
+      ctx.textAlign = 'center'; ctx.font = '11px ui-sans-serif, system-ui, sans-serif';
+      ctx.globalAlpha = clamp(S.hintT / 3, 0, 1) * 0.75;
+      ctx.fillStyle = COL.ink;
+      ctx.fillText('Immobilisez le faisceau sur un navire pour le convaincre — balayez pour ne perdre personne', w / 2, h - 42);
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+  }
+
+  function drawNotes() {
+    ctx.save(); ctx.textAlign = 'center';
+    ctx.font = '12px ui-sans-serif, system-ui, sans-serif';
+    for (var i = 0; i < S.notes.length; i++) {
+      var n = S.notes[i], p = n.t / n.dur;
+      ctx.globalAlpha = (p < 0.15 ? p / 0.15 : 1 - smooth(0.6, 1, p)) * 0.95;
+      ctx.fillStyle = n.color;
+      ctx.fillText(n.text, n.x, n.y - p * 24);
+    }
+    ctx.restore();
+  }
+
+  function panel(x, y, w, h) {
+    ctx.fillStyle = 'rgba(4,8,15,0.82)';
+    ctx.strokeStyle = 'rgba(255,196,107,0.16)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.rect(x, y, w, h); ctx.fill(); ctx.stroke();
+  }
+
+  function drawTitle() {
+    var w = S.w, h = S.h;
+    ctx.save();
+    ctx.fillStyle = 'rgba(3,6,12,0.55)'; ctx.fillRect(0, 0, w, h);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = COL.ember;
+    ctx.font = '300 64px Georgia, "Times New Roman", serif';
+    ctx.letterSpacing = '14px';
+    ctx.fillText(C.title || 'VEILLEUR', w / 2, h * 0.28);
+    ctx.letterSpacing = '4px';
+    ctx.font = 'italic 15px Georgia, serif';
+    ctx.fillStyle = 'rgba(255,196,107,0.7)';
+    ctx.fillText(C.subtitle || 'Les nuits d’Ys', w / 2, h * 0.28 + 34);
+    ctx.letterSpacing = '0px';
+    ctx.font = '13px Georgia, serif';
+    ctx.fillStyle = 'rgba(220,233,247,0.62)';
+    var pitch = C.pitch || [];
+    for (var i = 0; i < pitch.length; i++) ctx.fillText(pitch[i], w / 2, h * 0.63 + i * 22);
+    ctx.font = '12px ui-sans-serif, system-ui, sans-serif';
+    ctx.fillStyle = 'rgba(220,233,247,0.5)';
+    var ht = C.howto || [];
+    for (var j = 0; j < ht.length; j++) ctx.fillText(ht[j], w / 2, h * 0.74 + j * 21);
+    ctx.font = '600 13px ui-sans-serif, system-ui, sans-serif';
+    ctx.fillStyle = 'rgba(255,196,107,' + (0.55 + 0.45 * Math.sin(S.t * 3)) + ')';
+    ctx.fillText('CLIQUEZ POUR ALLUMER LA LAMPE', w / 2, h * 0.90);
+    if (S.best > 0) {
+      ctx.font = '11px ui-sans-serif, system-ui, sans-serif';
+      ctx.fillStyle = COL.dim;
+      ctx.fillText('record : ' + S.best + ' âmes', w / 2, h * 0.90 + 24);
+    }
+    ctx.restore();
+  }
+
+  function drawJournal() {
+    var w = S.w, h = S.h;
+    var nt = (C.nights && C.nights[S.night - 1]) || { title: 'Nuit ' + S.night, log: [] };
+    ctx.save();
+    ctx.fillStyle = 'rgba(3,6,12,0.78)'; ctx.fillRect(0, 0, w, h);
+    ctx.textAlign = 'center';
+    ctx.font = '11px ui-sans-serif, system-ui, sans-serif';
+    ctx.fillStyle = 'rgba(255,196,107,0.6)';
+    ctx.letterSpacing = '5px';
+    ctx.fillText('NUIT ' + S.night, w / 2, h * 0.32);
+    ctx.letterSpacing = '0px';
+    ctx.font = '300 30px Georgia, serif';
+    ctx.fillStyle = COL.ember;
+    ctx.fillText(nt.title || '', w / 2, h * 0.32 + 44);
+    ctx.font = 'italic 15px Georgia, serif';
+    ctx.fillStyle = 'rgba(220,233,247,0.72)';
+    var log = nt.log || [];
+    for (var i = 0; i < log.length; i++) ctx.fillText(log[i], w / 2, h * 0.32 + 96 + i * 26);
+    ctx.font = '12px ui-sans-serif, system-ui, sans-serif';
+    ctx.fillStyle = 'rgba(255,196,107,' + (0.4 + 0.4 * Math.sin(S.t * 3)) + ')';
+    ctx.fillText('CLIC OU ESPACE — PRENDRE LE QUART', w / 2, h * 0.78);
+    ctx.restore();
+  }
+
+  function drawPause() {
+    ctx.save();
+    ctx.fillStyle = 'rgba(3,6,12,0.7)'; ctx.fillRect(0, 0, S.w, S.h);
+    ctx.textAlign = 'center';
+    ctx.font = '300 34px Georgia, serif'; ctx.fillStyle = COL.ember;
+    ctx.fillText('Quart suspendu', S.w / 2, S.h * 0.46);
+    ctx.font = '12px ui-sans-serif, system-ui, sans-serif';
+    ctx.fillStyle = COL.dim;
+    ctx.fillText('Échap pour reprendre — R pour recommencer — M pour le son', S.w / 2, S.h * 0.46 + 30);
+    ctx.restore();
+  }
+
+  function drawOver() {
+    var w = S.w, h = S.h;
+    var e = (C.endings && C.endings[S.endKind]) || { title: 'Fin', body: [] };
+    ctx.save();
+    ctx.fillStyle = 'rgba(3,6,12,0.84)'; ctx.fillRect(0, 0, w, h);
+    ctx.textAlign = 'center';
+    ctx.font = '300 40px Georgia, serif';
+    ctx.fillStyle = S.endKind === 'victory' ? COL.ember : (S.endKind === 'defeat' ? '#e2715f' : '#cbd9ea');
+    ctx.fillText(e.title || '', w / 2, h * 0.28);
+    ctx.font = 'italic 15px Georgia, serif';
+    ctx.fillStyle = 'rgba(220,233,247,0.72)';
+    var b = e.body || [];
+    for (var i = 0; i < b.length; i++) ctx.fillText(b[i], w / 2, h * 0.28 + 42 + i * 26);
+    var y = h * 0.28 + 60 + b.length * 26;
+    ctx.font = '600 15px ui-sans-serif, system-ui, sans-serif';
+    ctx.fillStyle = COL.ember;
+    ctx.fillText(S.souls + ' âmes ramenées', w / 2, y + 24);
+    ctx.font = '11px ui-sans-serif, system-ui, sans-serif';
+    ctx.fillStyle = COL.dim;
+    ctx.fillText('nuit ' + S.night + '  ·  ' + S.saved + ' navires  ·  ' + S.lostShips + ' naufrages  ·  ' + S.extinguished + ' feux éteints  ·  record ' + S.best, w / 2, y + 46);
+    if (S.tip) {
+      ctx.font = 'italic 12px Georgia, serif';
+      ctx.fillStyle = 'rgba(255,196,107,0.6)';
+      ctx.fillText('« ' + S.tip + ' »', w / 2, y + 78);
+    }
+    ctx.font = '600 13px ui-sans-serif, system-ui, sans-serif';
+    ctx.fillStyle = 'rgba(255,196,107,' + (0.5 + 0.45 * Math.sin(S.t * 3)) + ')';
+    ctx.fillText('R OU CLIC — REPRENDRE LE QUART', w / 2, h * 0.84);
+    ctx.restore();
+  }
+
+  // ---------- boucle ----------
+  var last = 0;
+  function frame(ts) {
+    var dt = Math.min(0.05, (ts - last) / 1000 || 0.016);
+    last = ts;
+    update(dt);
+    draw();
+    requestAnimationFrame(frame);
+  }
+
+
+  // --- crochet de test (inoffensif en jeu) ---
+  window.__V = {
+    S: S, K: K, NIGHTS: NIGHTS,
+    run: startRun,
+    night: function (n) { S.started = true; S.night = n; beginNight(); S.mode = 'play'; },
+    aim: function (a) { S.aimAngle = a; },
+    tick: function (dt, steps) { for (var i = 0; i < (steps || 1); i++) update(dt); }
+  };
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
+</script>
+</body>
+</html>
