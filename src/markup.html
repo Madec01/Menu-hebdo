@@ -22,6 +22,7 @@
     <div class="row">
       <button class="btn primary" id="playBtn">▶ Descendre</button>
       <button class="btn" id="metaBtn">◆ Sanctuaire</button>
+      <button class="btn" id="codexBtn">📖 Codex</button>
       <button class="btn small" id="optBtn">⚙</button>
     </div>
     <div class="help">
@@ -59,6 +60,7 @@
     <div class="tiny">Graine de la dernière partie : <span class="seed" id="lastSeed">—</span></div>
     <div class="row">
       <button class="btn" id="optBack">← Retour</button>
+      <button class="btn small" id="redoTutBtn">Revoir le tutoriel</button>
       <button class="btn ghost small" id="resetBtn">Effacer la sauvegarde</button>
     </div>
   </div>
@@ -71,6 +73,16 @@
     <p class="sub" id="chSub"></p>
     <div class="cards" id="chCards"></div>
     <div class="row" id="chFooter"></div>
+  </div>
+</div>
+
+<!-- CODEX -->
+<div id="codex" class="ov">
+  <div class="box wide">
+    <h2>Codex</h2>
+    <div class="tabs" id="codexTabs"></div>
+    <div class="codexbody" id="codexBody"></div>
+    <div class="row"><button class="btn" id="codexBack">← Retour</button></div>
   </div>
 </div>
 
@@ -93,6 +105,8 @@
     <div class="opt"><label for="sfxVol2">Effets</label><input type="range" id="sfxVol2" min="0" max="100" value="80"></div>
     <div class="row">
       <button class="btn primary" id="resumeBtn">Reprendre</button>
+      <button class="btn" id="codexBtn2">📖 Codex</button>
+      <button class="btn small ghost" id="skipTutBtn">Passer le tutoriel</button>
       <button class="btn" id="quitBtn">Abandonner</button>
     </div>
   </div>

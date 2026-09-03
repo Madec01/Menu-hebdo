@@ -325,6 +325,7 @@ function updateBoss(e, dt, ux, uy, d) {
 
 /* ---------- tirs du joueur ---------- */
 function fire(a) {
+  Tutorial.event('shoot');
   const w = curWeapon(), dmg = playerDamage();
   if (w.melee) {
     slashes.push({ x: P.x, y: P.y, a, t: 0, dur: 0.16, range: w.range + P.bSize * 2, arc: w.arc, dmg, hit: [], crit: Math.random() < P.crit });
@@ -593,6 +594,7 @@ function spawnHunter() {
   hint = { t: STORY.envers.hunter, life: 6 };
 }
 function activateSurge() {
+  Tutorial.event('surge');
   G.surge = 0; P.surgeT = 4; P.inv = Math.max(P.inv, 0.8);
   SFX('surge'); shakeIt(10); flash = 0.35; flashColor = '255,217,122';
   const dmg = playerDamage() * 1.5, n = 22;

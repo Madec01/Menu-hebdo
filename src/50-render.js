@@ -321,6 +321,7 @@ function drawHUD() {
     ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(o.sx, o.sy, 52, 0, TAU); ctx.stroke();
     ctx.fillStyle = o.side === 'L' ? 'rgba(255,255,255,0.35)' : 'rgba(255,217,122,0.5)'; ctx.beginPath(); ctx.arc(o.x, o.y, 22, 0, TAU); ctx.fill();
   }
+  drawTutorial();
   if (flash > 0) { ctx.fillStyle = `rgba(${flashColor},${flash * 0.55})`; ctx.fillRect(0, 0, W, H); }
   if (transT > 0) { ctx.fillStyle = 'rgba(0,0,0,' + clamp(transT / 0.3, 0, 1) * 0.85 + ')'; ctx.fillRect(0, 0, W, H); }
 }

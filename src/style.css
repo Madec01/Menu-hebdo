@@ -108,6 +108,9 @@ button.btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
 .help b{color:var(--text)}
 kbd{background:#0a0a12;border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:12px;color:#fff;font-family:var(--body)}
 .ess{color:var(--gold2);font-weight:800}
+.codexbody{font-size:13.5px;line-height:1.55;color:var(--text)}
+.codexbody p{margin:0 0 10px}
+.codexbody b{color:var(--gold2)}
 .storytext{font-size:16px;line-height:1.65;color:var(--text);font-style:italic;margin:6px 0 14px;text-wrap:pretty}
 #storyRow{margin-top:4px}
 .tiny{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.5}

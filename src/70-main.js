@@ -67,7 +67,7 @@ function setupProps(room) {
   }
   if (room.type === 'start' && save.echo && save.echo.floor === G.floor) room.props.push({ kind: 'echo', x: cx, y: cy - 70, used: false, world: 'envers' });
   if (room.type === 'normal' && G.tabletsThisFloor < 2 && chance(0.4)) {
-    for (let i = 0; i < 12; i++) { const tx = RI(2, RW - 3), ty = RI(2, RH - 3); if (room.tiles[ty][tx] !== T_FLOOR || (Math.abs(tx - (RW - 1) / 2) < 3 && Math.abs(ty - (RH - 1) / 2) < 3)) continue; G.tabletsThisFloor++; room.props.push({ kind: 'tablet', x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE, used: false, world: 'normal' }); break; }
+    for (let i = 0; i < 12; i++) { const tx = RI(2, RW - 3), ty = RI(2, RH - 3); if (room.tiles[ty][tx] !== T_FLOOR || (Math.abs(tx - (RW - 1) / 2) < 3 && Math.abs(ty - (RH - 1) / 2) < 4.5)) continue; G.tabletsThisFloor++; room.props.push({ kind: 'tablet', x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE, used: false, world: 'normal' }); break; }
   }
 }
 function enterRoom(room, fromDir) {
@@ -103,7 +103,7 @@ function enterRoom(room, fromDir) {
 }
 function clearRoom() {
   const room = G.room;
-  room.cleared = true; setDoors(room, true); SFX('clear'); SFX('doorOpen');
+  room.cleared = true; setDoors(room, true); SFX('clear'); SFX('doorOpen'); Tutorial.event('cleared');
   ft(P.x, P.y - 30, 'Salle nettoyée', '#7fd7ff', 14, 1.2);
   const cx = RW * TILE / 2, cy = RH * TILE / 2;
   for (let i = 0; i < 2; i++) dropPickup(cx, cy, 'coin');
@@ -148,14 +148,14 @@ function relicChoices(n) {
   while (out.length < n && pool.length) { const i = Math.floor(rng() * pool.length); out.push(pool.splice(i, 1)[0]); }
   return out;
 }
-function applyRelic(r, silent) { r.f(P); if (!r.consumable) G.relics.push(r); if (!silent) SFX('relic'); }
+function applyRelic(r, silent) { r.f(P); if (!r.consumable) G.relics.push(r); if (!silent) SFX('relic'); Tutorial.event('relic'); }
 function offerRelics(title, sub, n, cb) {
   openChoice({ title, sub, cards: relicChoices(n).map(r => ({ ic: r.ic, n: r.n, d: r.d, onPick: () => { applyRelic(r); } })), onClose: () => { if (cb) cb(); } });
 }
 function offerOath(cb) {
   const opts = shuffle(OATHS.slice()).slice(0, 2);
-  const cards = opts.map(o => ({ ic: o.ic, n: o.n, d: o.d, tag: '→ ' + o.reward, cls: 'oath', onPick: () => { G.oath = o; if (o.apply) o.apply(P); SFX('relic'); if (STORY.oaths[o.id]) hint = { t: STORY.oaths[o.id], life: 7 }; } }));
-  cards.push({ ic: '🕊️', n: 'Sans serment', d: 'Descendre librement, sans contrainte ni récompense.', cls: 'oath neutral', onPick: () => { G.oath = null; SFX('click'); } });
+  const cards = opts.map(o => ({ ic: o.ic, n: o.n, d: o.d, tag: '→ ' + o.reward, cls: 'oath', onPick: () => { G.oath = o; if (o.apply) o.apply(P); SFX('relic'); Tutorial.event('oath'); if (STORY.oaths[o.id]) hint = { t: STORY.oaths[o.id], life: 7 }; } }));
+  cards.push({ ic: '🕊️', n: 'Sans serment', d: 'Descendre librement, sans contrainte ni récompense.', cls: 'oath neutral', onPick: () => { G.oath = null; SFX('click'); Tutorial.event('oath'); } });
   openChoice({ title: 'Étage ' + G.floor + ' — Prête serment', sub: 'Un serment dure tout l\'étage. La récompense tombe au boss ou pendant la descente.', cards, onClose: cb });
 }
 function makeShopItems() {
@@ -247,7 +247,7 @@ function update(dt) {
   const sm = stick('L'); if (sm.active) { mx += sm.dx; my += sm.dy; }
   let ml = Math.hypot(mx, my); if (ml > 1) { mx /= ml; my /= ml; ml = 1; }
   if (ml > 0.05) { P.fx = mx / ml; P.fy = my / ml; }
-  P.moving = ml > 0.05; if (P.moving) P.walk += dt;
+  P.moving = ml > 0.05; if (P.moving) { P.walk += dt; Tutorial.event('move'); }
   P.dashCdT -= dt; P.inv -= dt; P.shieldT -= dt; P.fireT -= dt; P.webT -= dt; P.slowT -= dt; P.surgeT -= dt;
   const tile = tileAt(P.x, P.y);
   P.inWater = tile === T_WATER; P.onIce = tile === T_ICE;
@@ -257,7 +257,7 @@ function update(dt) {
     P.fallT -= dt;
     if (!P.fell && P.fallT <= 0.25) { P.fell = true; hurtPlayer(1, null, true); P.x = P.safeX; P.y = P.safeY; P.vx = P.vy = 0; }
   } else {
-    if (wantDash && !P.noDash && P.dashCdT <= 0 && P.dashT <= 0) { P.dashT = 0.18; P.dashCdT = P.dashCd; P.ddx = P.fx; P.ddy = P.fy; SFX('dash'); burst(P.x, P.y, 6, '#cfd8e6', 60, { life: 0.4 }); }
+    if (wantDash && !P.noDash && P.dashCdT <= 0 && P.dashT <= 0) { P.dashT = 0.18; P.dashCdT = P.dashCd; P.ddx = P.fx; P.ddy = P.fy; SFX('dash'); Tutorial.event('dash'); burst(P.x, P.y, 6, '#cfd8e6', 60, { life: 0.4 }); }
     if (P.dashT > 0) {
       P.dashT -= dt; moveCircle(P, P.ddx * 640 * dt, P.ddy * 640 * dt, 'player');
       parts.push({ x: P.x, y: P.y, vx: 0, vy: 0, life: 0.25, max: 0.25, color: '#7fd7ff', size: P.r * 2, shape: 'dot' });
@@ -321,7 +321,7 @@ function update(dt) {
   const fighting = enemies.filter(e => !e.noCount && inWorld(e));
   if (!room.cleared && room.spawned && !room.challengeOn && fighting.length === 0 && (G.world === 'normal' || room.type === 'boss')) clearRoom();
   if (G.world === 'envers' && !room.clearedE && room.refletsSpawned && room.type !== 'boss' && fighting.length === 0) clearRoomE(room);
-  updateEnvers(dt);
+  updateEnvers(dt); Tutorial.update(dt);
   if (state !== 'play') return;
   if (room.pocket && !room.gateOpen && G.world === 'normal') { const tx = Math.floor(P.x / TILE), ty = Math.floor(P.y / TILE); if (tx >= room.pocket.x0 && tx <= room.pocket.x1 && ty >= room.pocket.y0 && ty <= room.pocket.y1) openGate(room); }
   if (room.challengeOn && fighting.length === 0) {

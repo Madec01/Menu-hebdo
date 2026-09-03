@@ -49,6 +49,7 @@ function crossWorld(forced) {
   G.crossT = 0.7; shakeIt(6); flash = 0.35; flashColor = toEnvers ? '150,110,255' : '230,225,255';
   SFX(toEnvers ? 'cross' : 'crossBack');
   Audio.setEnvers(toEnvers);
+  Tutorial.event(toEnvers ? 'cross' : 'crossBack');
   if (P.enversSpeed) P.inv = Math.max(P.inv, 1.5);
   if (toEnvers) {
     G.crossings++;
