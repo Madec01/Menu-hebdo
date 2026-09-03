@@ -363,6 +363,7 @@ const Audio = (() => {
     die: t => { sample('gameover', { vol: 0.6, rate: 1, rev: 0.7 }); },
     wave: t => { sample('upgrade', { vol: 0.4, rate: 0.8, rev: 0.5 }); },
     thud: t => { sample('rockhit', { vol: 0.5, rate: 0.7, var: 0.2 }); },
+    type: t => { voice({ type: 'sine', freq: 1800 + Math.random() * 600, t, dur: 0.012, vel: 0.025, a: 0.001, d: 0.025, s: 0, r: 0.02 }); },
     cross: t => { sample('phase', { vol: 0.5, rate: 0.55, rev: 0.9 }); noise({ t, dur: 0.9, vel: 0.25, cutoff: 300, cutEnd: 5000, q: 2, a: 0.3, rev: 0.8 }); for (const f of [220, 277, 330]) voice({ type: 'sine', freq: f, t: t + 0.1, dur: 0.6, vel: 0.08, a: 0.2, d: 0.3, s: 0.5, r: 0.8, rev: 0.9 }); },
     crossBack: t => { sample('phase', { vol: 0.45, rate: 1.3, rev: 0.6 }); noise({ t, dur: 0.6, vel: 0.2, cutoff: 4000, cutEnd: 200, q: 2, rev: 0.6 }); },
     gate: t => { sample('rockhit', { vol: 0.6, rate: 0.45, rev: 0.8 }); noise({ t, dur: 0.8, vel: 0.2, cutoff: 150, cutEnd: 600, ftype: 'lowpass', q: 2, a: 0.1, rev: 0.6 }); },

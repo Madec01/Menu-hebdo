@@ -37,13 +37,16 @@ function genFloor(n) {
   if (n >= 2 && (n % 3 === 2 || chance(0.3))) specials.push('armory');
   for (const t of specials) { const r = free.shift(); if (!r) break; r.type = t; if (t !== 'challenge') r.cleared = true; }
   // Envers : salle scellée (accessible seulement par l'autre côté), énigmes, fissures
-  if (n >= 2 && chance(0.75)) { const c = list.filter(r => (r.type === 'treasure' || r.type === 'armory' || r.type === 'shop') && neighbors(r) === 1); if (c.length) pick(c).sealed = true; }
+  if (n === 1) { const c = free.filter(r => neighbors(r) === 1); const r = c.length ? c[0] : free[0]; if (r) { free.splice(free.indexOf(r), 1); r.type = 'treasure'; r.cleared = true; r.sealed = true; } }
+  else if (n >= 2 && chance(0.75)) { const c = list.filter(r => (r.type === 'treasure' || r.type === 'armory' || r.type === 'shop') && neighbors(r) === 1); if (c.length) pick(c).sealed = true; }
   const normals = shuffle(list.filter(r => r.type === 'normal'));
   if (n >= 3 && normals.length) normals.pop().puzzle = 'glyph';
   if (n >= 2 && normals.length && chance(0.8)) normals.pop().puzzle = 'alcove';
   boss.fissure = true;
-  const fisCand = shuffle(list.filter(r => r !== start && r !== boss && !r.sealed));
-  for (let i = 0; i < Math.min(2, fisCand.length); i++) fisCand[i].fissure = true;
+  const sealedRoom = list.find(r => r.sealed);
+  if (sealedRoom) { for (const [dx, dy] of DIRS) { const nb = rooms.get(key(sealedRoom.gx + dx, sealedRoom.gy + dy)); if (nb && nb !== boss) { nb.fissure = true; break; } } }
+  const fisCand = shuffle(list.filter(r => r !== start && r !== boss && !r.sealed && !r.fissure));
+  for (let i = 0; i < Math.min(sealedRoom ? 1 : 2, fisCand.length); i++) fisCand[i].fissure = true;
   for (const r of list) for (const [dx, dy] of DIRS) r.doors[dx + ',' + dy] = rooms.has(key(r.gx + dx, r.gy + dy));
   return { rooms, list, start, boss, key, biome: biomeFor(n) };
 }

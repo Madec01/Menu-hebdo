@@ -61,6 +61,7 @@
     <div class="row">
       <button class="btn" id="optBack">← Retour</button>
       <button class="btn small" id="redoTutBtn">Revoir le tutoriel</button>
+      <button class="btn small" id="debugBtn">🧪 Menu de test</button>
       <button class="btn ghost small" id="resetBtn">Effacer la sauvegarde</button>
     </div>
   </div>
@@ -86,12 +87,45 @@
   </div>
 </div>
 
-<!-- RÉCIT -->
-<div id="story" class="ov">
+<!-- RÉCIT (cinématique) -->
+<div id="story" class="ov cineov">
+  <div class="cine" id="storyBox">
+    <div class="cineTitle" id="stTitle"></div>
+    <div class="cineText" id="stText"></div>
+    <div class="cineMeta" id="stMeta"></div>
+    <div class="cineHint" id="stHint">▸ toucher pour continuer</div>
+  </div>
+</div>
+
+<!-- MENU DE TEST -->
+<div id="debug" class="ov">
   <div class="box">
-    <h2 id="stTitle"></h2>
-    <p class="storytext" id="stText"></p>
-    <div class="row"><button class="btn primary" id="stNext">Continuer</button></div>
+    <h2>Menu de test</h2>
+    <p class="sub" id="dbgInfo"></p>
+    <div class="opt"><label for="dbgFloor">Étage</label><input type="number" id="dbgFloor" min="1" max="40" value="1" class="num"><label for="dbgWeapon" style="flex:0 0 auto">Arme</label><select id="dbgWeapon" class="sel"></select></div>
+    <div class="row">
+      <button class="btn primary" id="dbgLaunch">▶ Lancer à cet étage</button>
+    </div>
+    <div class="checks">
+      <label><input type="checkbox" id="dbgGod"> Invincible</label>
+      <label><input type="checkbox" id="dbgVoile"> Voile toujours plein</label>
+      <label><input type="checkbox" id="dbgSurge"> Surcharge toujours prête</label>
+    </div>
+    <div class="lbl">Partie en cours</div>
+    <div class="row">
+      <button class="btn small" id="dbgBoss">Aller au boss</button>
+      <button class="btn small" id="dbgTreasure">Aller au coffre</button>
+      <button class="btn small" id="dbgSealed">Aller à la salle scellée</button>
+      <button class="btn small" id="dbgCross">Passer dans l'Envers</button>
+      <button class="btn small" id="dbgRelics">+3 reliques</button>
+      <button class="btn small" id="dbgHeal">Soin, Voile et Surcharge pleins</button>
+    </div>
+    <div class="lbl">Sauvegarde</div>
+    <div class="row">
+      <button class="btn small" id="dbgEssence">+500 essence</button>
+      <button class="btn small" id="dbgUnlock">Débloquer armes et bénédictions</button>
+    </div>
+    <div class="row"><button class="btn" id="dbgBack">← Retour</button></div>
   </div>
 </div>
 
@@ -107,6 +141,7 @@
       <button class="btn primary" id="resumeBtn">Reprendre</button>
       <button class="btn" id="codexBtn2">📖 Codex</button>
       <button class="btn small ghost" id="skipTutBtn">Passer le tutoriel</button>
+      <button class="btn small ghost" id="debugBtn2">🧪 Menu de test</button>
       <button class="btn" id="quitBtn">Abandonner</button>
     </div>
   </div>

@@ -136,6 +136,11 @@ function drawRoom() {
   // accessoires de la salle
   const cx = RW * TILE / 2, cy = RH * TILE / 2;
   for (const pr of room.props) if (pr.world === 'both' || (pr.world || 'normal') === G.world) drawProp(pr, tk);
+  // flèche vers la fissure quand le Voile suffit
+  if (G.world === 'normal') { const fis = room.props.find(p => p.kind === 'fissure'); if (fis && G.voile >= 30 * (P.voileCostMul || 1) && dist(fis.x, fis.y, P.x, P.y) > 110) {
+    const a = Math.atan2(fis.y - P.y, fis.x - P.x), d0 = 34 + Math.sin(tk * 5) * 4, ax = P.x + Math.cos(a) * d0, ay = P.y + Math.sin(a) * d0;
+    ctx.save(); ctx.translate(ax, ay); ctx.rotate(a); ctx.fillStyle = 'rgba(199,125,255,' + (0.55 + 0.35 * Math.sin(tk * 5)) + ')'; ctx.beginPath(); ctx.moveTo(8, 0); ctx.lineTo(-5, -6); ctx.lineTo(-2, 0); ctx.lineTo(-5, 6); ctx.closePath(); ctx.fill(); ctx.restore();
+  } }
   if (room.stairs) {
     drawSprite('stairs', 0, cx, cy, { anchor: 'center', scale: 1.25 });
     ctx.strokeStyle = 'rgba(127,215,255,' + (0.5 + 0.4 * Math.sin(tk * 5)) + ')'; ctx.lineWidth = 2; ctx.strokeRect(cx - 22, cy - 22, 44, 44);
@@ -243,7 +248,9 @@ function drawHUD() {
   const vc = G.world === 'normal' ? crossCost() : 0, vr = G.voile >= Math.max(1, vc);
   ctx.fillStyle = G.world === 'envers' ? '#e0d0ff' : vr ? '#c77dff' : 'rgba(199,125,255,0.5)'; ctx.fillRect(left, y, bw * clamp(G.voile / 100, 0, 1), 5);
   if (G.world === 'normal' && vc <= 100) { ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.fillRect(left + bw * vc / 100 - 1, y - 2, 2, 9); }
-  ctx.fillStyle = 'rgba(236,230,216,0.7)'; ctx.fillText(G.world === 'envers' ? 'VOILE (drain)' : nearFissure() ? 'VOILE — fissure : ' + vc : 'VOILE', left, y + 7);
+  const fisHere = G.world === 'normal' && G.room.props.some(p => p.kind === 'fissure');
+  ctx.fillStyle = (G.world === 'normal' && vr && fisHere) ? 'rgba(224,208,255,' + (0.6 + 0.4 * Math.sin(P.tick * 6)) + ')' : 'rgba(236,230,216,0.7)';
+  ctx.fillText(G.world === 'envers' ? 'VOILE (drain)' : nearFissure() ? (vr ? 'VOILE — V pour traverser (' + vc + ')' : 'VOILE — il manque ' + Math.ceil(vc - G.voile)) : (vr && fisHere) ? 'VOILE PRÊT — rejoins la fissure ◐' : vr ? 'VOILE PRÊT (' + vc + ' à une fissure)' : 'VOILE', left, y + 7);
   if (P.shield) { ctx.font = '10px ' + F; ctx.fillText(P.shieldT <= 0 ? '🛡️ prêt' : '🛡️ ' + Math.ceil(P.shieldT) + 's', left + bw + 10, y - 13); }
   y += 22;
   if (G.relics.length) { ctx.font = '14px system-ui, sans-serif'; let s = ''; for (const r of G.relics) s += r.ic; ctx.fillText(s, left, y); y += 20; }
@@ -300,8 +307,9 @@ function drawHUD() {
     ctx.globalAlpha = clamp(a, 0, 1); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     const g = ctx.createLinearGradient(0, 0, W, 0); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(0.2, 'rgba(0,0,0,0.6)'); g.addColorStop(0.8, 'rgba(0,0,0,0.6)'); g.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = g; ctx.fillRect(0, H * 0.3 - 34, W, 70);
-    ctx.fillStyle = banner.color; ctx.font = 'bold 26px ' + FD; ctx.fillText(banner.t, W / 2, H * 0.3 - 8);
-    ctx.fillStyle = '#ece6d8'; ctx.font = '13px ' + F; ctx.fillText(banner.s, W / 2, H * 0.3 + 18);
+    const age = banner.max - banner.life, sc = 1 + Math.max(0, 0.35 - age) * 0.6;
+    ctx.save(); ctx.translate(W / 2, H * 0.3 - 8); ctx.scale(sc, sc); ctx.fillStyle = banner.color; ctx.font = 'bold 26px ' + FD; ctx.fillText(banner.t, 0, 0); ctx.restore();
+    ctx.fillStyle = '#ece6d8'; ctx.font = '13px ' + F; ctx.fillText(banner.s.slice(0, Math.floor(Math.max(0, age - 0.25) * 60)), W / 2, H * 0.3 + 18);
     ctx.globalAlpha = 1;
   }
   if (hint) {
@@ -314,7 +322,9 @@ function drawHUD() {
     const tw = Math.min(maxW, Math.max(...lines.map(l => ctx.measureText(l).width))) + 24;
     const hy = H - 22 - SA.b - (document.body.classList.contains('touch') ? 110 : 0);
     ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(W / 2 - tw / 2, hy - 8 - 18 * lines.length, tw, 12 + 18 * lines.length);
-    ctx.fillStyle = '#ffd97a'; lines.forEach((l, i) => ctx.fillText(l, W / 2, hy - 18 * (lines.length - 1 - i))); ctx.globalAlpha = 1;
+    if (!hint.t0) hint.t0 = performance.now();
+    let budget = Math.floor((performance.now() - hint.t0) / 16);
+    ctx.fillStyle = '#ffd97a'; lines.forEach((l, i) => { const part = l.slice(0, Math.max(0, budget)); budget -= l.length + 1; ctx.textAlign = 'left'; const lw = ctx.measureText(l).width; ctx.fillText(part, W / 2 - lw / 2, hy - 18 * (lines.length - 1 - i)); }); ctx.textAlign = 'center'; ctx.globalAlpha = 1;
   }
   // joysticks
   for (const o of touches.values()) {

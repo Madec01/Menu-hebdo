@@ -32,7 +32,7 @@ function nearFissure() { return G.room.props.some(p => p.kind === 'fissure' && d
 function crossCost() {
   const fis = nearFissure();
   if (G.world === 'envers') return fis ? 0 : 25;
-  return Math.round((fis ? 34 : 70) * (P.voileCostMul || 1));
+  return Math.round((fis ? 30 : 70) * (P.voileCostMul || 1));
 }
 function tryCross() {
   if (G.room.challengeOn) { SFX('deny'); ft(P.x, P.y - 26, 'Pas pendant une épreuve', '#c77dff', 12); return; }

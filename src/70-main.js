@@ -321,7 +321,7 @@ function update(dt) {
   const fighting = enemies.filter(e => !e.noCount && inWorld(e));
   if (!room.cleared && room.spawned && !room.challengeOn && fighting.length === 0 && (G.world === 'normal' || room.type === 'boss')) clearRoom();
   if (G.world === 'envers' && !room.clearedE && room.refletsSpawned && room.type !== 'boss' && fighting.length === 0) clearRoomE(room);
-  updateEnvers(dt); Tutorial.update(dt);
+  updateEnvers(dt); Tutorial.update(dt); debugTick();
   if (state !== 'play') return;
   if (room.pocket && !room.gateOpen && G.world === 'normal') { const tx = Math.floor(P.x / TILE), ty = Math.floor(P.y / TILE); if (tx >= room.pocket.x0 && tx <= room.pocket.x1 && ty >= room.pocket.y0 && ty <= room.pocket.y1) openGate(room); }
   if (room.challengeOn && fighting.length === 0) {

@@ -374,7 +374,7 @@ function killEnemy(e) {
   // combo & surcharge
   G.combo = G.comboT > 0 ? G.combo + 1 : 1; G.comboT = 3 + P.comboWindow; G.maxCombo = Math.max(G.maxCombo, G.combo);
   // Voile
-  const vg = (e.boss ? 100 : e.elite ? 16 : e.reflet ? (P.refletBonus ? 24 : 12) : 6) * (1 + Math.min(G.combo, 20) * 0.02);
+  const vg = (e.boss ? 100 : e.elite ? 16 : e.reflet ? (P.refletBonus ? 24 : 12) : 6) * (1 + Math.min(G.combo, 20) * 0.02) * (G.floor === 1 ? 1.6 : 1);
   G.voile = Math.min(100, G.voile + vg);
   if (!G.voileHinted && G.voile >= 34 && G.world === 'normal') { G.voileHinted = true; hint = { t: 'Le Voile est assez plein : trouve une fissure (point violet sur la carte) et appuie sur V, Ctrl ou ◐.', life: 7 }; }
   if (e.reflet && P.refletBonus) for (let i = 0; i < 2; i++) dropPickup(e.x, e.y, 'coin');
@@ -402,7 +402,7 @@ function killEnemy(e) {
   if (e.hunter) { G.hunterAlive = false; G.menaceT = G.menaceMax * 0.45; ft(e.x, e.y - 30, 'Le Traqueur est repoussé', '#ff2244', 14, 1.5); }
 }
 function hurtPlayer(d, src, force) {
-  if (state !== 'play') return false;
+  if (state !== 'play' || P.god) return false;
   if (!force && (P.inv > 0 || P.dashT > 0)) return false;
   if (P.dodge && Math.random() < P.dodge) { ft(P.x, P.y - 22, 'Esquive', '#8fe388', 13); SFX('dodge'); P.inv = 0.35; return false; }
   if (P.shield && P.shieldT <= 0) {

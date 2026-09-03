@@ -125,6 +125,27 @@ kbd{background:#0a0a12;border:1px solid var(--line);border-radius:5px;padding:1p
 .codexbody{font-size:13.5px;line-height:1.55;color:var(--text)}
 .codexbody p{margin:0 0 10px}
 .codexbody b{color:var(--gold2)}
+.cineov{background:rgba(6,5,12,.93);cursor:pointer;align-items:center}
+.cine{width:100%;max-width:640px;padding:20px 26px;text-align:center}
+.cineTitle{font-family:var(--display);font-size:26px;letter-spacing:3px;text-transform:uppercase;color:var(--gold2);opacity:0;transform:translateY(8px);transition:opacity .9s ease,transform .9s ease;margin-bottom:22px;text-shadow:0 0 24px rgba(230,180,80,.35)}
+.cineTitle.show{opacity:1;transform:none}
+.cineText{font-size:19px;line-height:1.7;color:var(--text);font-style:italic;min-height:3.4em;text-wrap:pretty}
+.cineMeta{font-size:12px;color:var(--muted);letter-spacing:1px;margin-top:14px;text-transform:uppercase}
+.cineHint{margin-top:26px;font-size:13px;color:var(--muted);opacity:0;transition:opacity .5s;animation:blink 1.4s infinite}
+.cineHint.show{opacity:1}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+.cine.stele{position:fixed;left:0;right:0;bottom:0;max-width:none;background:linear-gradient(180deg,rgba(20,18,32,0),rgba(20,18,32,.97) 20%);padding:34px 22px calc(26px + var(--sab));text-align:left}
+.cine.stele .cineTitle{font-size:15px;letter-spacing:2px;margin-bottom:10px;color:#dff4ff;text-shadow:none}
+.cine.stele .cineText{font-size:16px;min-height:2.4em;max-width:640px}
+.cine.stele .cineHint{margin-top:12px}
+.cineov:has(.stele){background:rgba(6,5,12,.35);align-items:flex-end}
+@media (max-width:520px){.cineTitle{font-size:20px}.cineText{font-size:16px}}
+@media (prefers-reduced-motion: reduce){.cineHint{animation:none}}
+.num{width:70px;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-family:var(--body);font-size:14px}
+.sel{flex:1;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-family:var(--body);font-size:14px}
+.checks{display:flex;gap:14px;flex-wrap:wrap;margin:10px 0 4px;font-size:13px}
+.checks label{display:flex;align-items:center;gap:6px;cursor:pointer}
+.checks input{accent-color:var(--gold)}
 .storytext{font-size:16px;line-height:1.65;color:var(--text);font-style:italic;margin:6px 0 14px;text-wrap:pretty}
 #storyRow{margin-top:4px}
 .tiny{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.5}
@@ -198,6 +219,7 @@ kbd{background:#0a0a12;border:1px solid var(--line);border-radius:5px;padding:1p
     <div class="row">
       <button class="btn" id="optBack">← Retour</button>
       <button class="btn small" id="redoTutBtn">Revoir le tutoriel</button>
+      <button class="btn small" id="debugBtn">🧪 Menu de test</button>
       <button class="btn ghost small" id="resetBtn">Effacer la sauvegarde</button>
     </div>
   </div>
@@ -223,12 +245,45 @@ kbd{background:#0a0a12;border:1px solid var(--line);border-radius:5px;padding:1p
   </div>
 </div>
 
-<!-- RÉCIT -->
-<div id="story" class="ov">
+<!-- RÉCIT (cinématique) -->
+<div id="story" class="ov cineov">
+  <div class="cine" id="storyBox">
+    <div class="cineTitle" id="stTitle"></div>
+    <div class="cineText" id="stText"></div>
+    <div class="cineMeta" id="stMeta"></div>
+    <div class="cineHint" id="stHint">▸ toucher pour continuer</div>
+  </div>
+</div>
+
+<!-- MENU DE TEST -->
+<div id="debug" class="ov">
   <div class="box">
-    <h2 id="stTitle"></h2>
-    <p class="storytext" id="stText"></p>
-    <div class="row"><button class="btn primary" id="stNext">Continuer</button></div>
+    <h2>Menu de test</h2>
+    <p class="sub" id="dbgInfo"></p>
+    <div class="opt"><label for="dbgFloor">Étage</label><input type="number" id="dbgFloor" min="1" max="40" value="1" class="num"><label for="dbgWeapon" style="flex:0 0 auto">Arme</label><select id="dbgWeapon" class="sel"></select></div>
+    <div class="row">
+      <button class="btn primary" id="dbgLaunch">▶ Lancer à cet étage</button>
+    </div>
+    <div class="checks">
+      <label><input type="checkbox" id="dbgGod"> Invincible</label>
+      <label><input type="checkbox" id="dbgVoile"> Voile toujours plein</label>
+      <label><input type="checkbox" id="dbgSurge"> Surcharge toujours prête</label>
+    </div>
+    <div class="lbl">Partie en cours</div>
+    <div class="row">
+      <button class="btn small" id="dbgBoss">Aller au boss</button>
+      <button class="btn small" id="dbgTreasure">Aller au coffre</button>
+      <button class="btn small" id="dbgSealed">Aller à la salle scellée</button>
+      <button class="btn small" id="dbgCross">Passer dans l'Envers</button>
+      <button class="btn small" id="dbgRelics">+3 reliques</button>
+      <button class="btn small" id="dbgHeal">Soin, Voile et Surcharge pleins</button>
+    </div>
+    <div class="lbl">Sauvegarde</div>
+    <div class="row">
+      <button class="btn small" id="dbgEssence">+500 essence</button>
+      <button class="btn small" id="dbgUnlock">Débloquer armes et bénédictions</button>
+    </div>
+    <div class="row"><button class="btn" id="dbgBack">← Retour</button></div>
   </div>
 </div>
 
@@ -244,6 +299,7 @@ kbd{background:#0a0a12;border:1px solid var(--line);border-radius:5px;padding:1p
       <button class="btn primary" id="resumeBtn">Reprendre</button>
       <button class="btn" id="codexBtn2">📖 Codex</button>
       <button class="btn small ghost" id="skipTutBtn">Passer le tutoriel</button>
+      <button class="btn small ghost" id="debugBtn2">🧪 Menu de test</button>
       <button class="btn" id="quitBtn">Abandonner</button>
     </div>
   </div>
@@ -707,6 +763,7 @@ const Audio = (() => {
     die: t => { sample('gameover', { vol: 0.6, rate: 1, rev: 0.7 }); },
     wave: t => { sample('upgrade', { vol: 0.4, rate: 0.8, rev: 0.5 }); },
     thud: t => { sample('rockhit', { vol: 0.5, rate: 0.7, var: 0.2 }); },
+    type: t => { voice({ type: 'sine', freq: 1800 + Math.random() * 600, t, dur: 0.012, vel: 0.025, a: 0.001, d: 0.025, s: 0, r: 0.02 }); },
     cross: t => { sample('phase', { vol: 0.5, rate: 0.55, rev: 0.9 }); noise({ t, dur: 0.9, vel: 0.25, cutoff: 300, cutEnd: 5000, q: 2, a: 0.3, rev: 0.8 }); for (const f of [220, 277, 330]) voice({ type: 'sine', freq: f, t: t + 0.1, dur: 0.6, vel: 0.08, a: 0.2, d: 0.3, s: 0.5, r: 0.8, rev: 0.9 }); },
     crossBack: t => { sample('phase', { vol: 0.45, rate: 1.3, rev: 0.6 }); noise({ t, dur: 0.6, vel: 0.2, cutoff: 4000, cutEnd: 200, q: 2, rev: 0.6 }); },
     gate: t => { sample('rockhit', { vol: 0.6, rate: 0.45, rev: 0.8 }); noise({ t, dur: 0.8, vel: 0.2, cutoff: 150, cutEnd: 600, ftype: 'lowpass', q: 2, a: 0.1, rev: 0.6 }); },
@@ -1026,13 +1083,16 @@ function genFloor(n) {
   if (n >= 2 && (n % 3 === 2 || chance(0.3))) specials.push('armory');
   for (const t of specials) { const r = free.shift(); if (!r) break; r.type = t; if (t !== 'challenge') r.cleared = true; }
   // Envers : salle scellée (accessible seulement par l'autre côté), énigmes, fissures
-  if (n >= 2 && chance(0.75)) { const c = list.filter(r => (r.type === 'treasure' || r.type === 'armory' || r.type === 'shop') && neighbors(r) === 1); if (c.length) pick(c).sealed = true; }
+  if (n === 1) { const c = free.filter(r => neighbors(r) === 1); const r = c.length ? c[0] : free[0]; if (r) { free.splice(free.indexOf(r), 1); r.type = 'treasure'; r.cleared = true; r.sealed = true; } }
+  else if (n >= 2 && chance(0.75)) { const c = list.filter(r => (r.type === 'treasure' || r.type === 'armory' || r.type === 'shop') && neighbors(r) === 1); if (c.length) pick(c).sealed = true; }
   const normals = shuffle(list.filter(r => r.type === 'normal'));
   if (n >= 3 && normals.length) normals.pop().puzzle = 'glyph';
   if (n >= 2 && normals.length && chance(0.8)) normals.pop().puzzle = 'alcove';
   boss.fissure = true;
-  const fisCand = shuffle(list.filter(r => r !== start && r !== boss && !r.sealed));
-  for (let i = 0; i < Math.min(2, fisCand.length); i++) fisCand[i].fissure = true;
+  const sealedRoom = list.find(r => r.sealed);
+  if (sealedRoom) { for (const [dx, dy] of DIRS) { const nb = rooms.get(key(sealedRoom.gx + dx, sealedRoom.gy + dy)); if (nb && nb !== boss) { nb.fissure = true; break; } } }
+  const fisCand = shuffle(list.filter(r => r !== start && r !== boss && !r.sealed && !r.fissure));
+  for (let i = 0; i < Math.min(sealedRoom ? 1 : 2, fisCand.length); i++) fisCand[i].fissure = true;
   for (const r of list) for (const [dx, dy] of DIRS) r.doors[dx + ',' + dy] = rooms.has(key(r.gx + dx, r.gy + dy));
   return { rooms, list, start, boss, key, biome: biomeFor(n) };
 }
@@ -1576,7 +1636,7 @@ function killEnemy(e) {
   // combo & surcharge
   G.combo = G.comboT > 0 ? G.combo + 1 : 1; G.comboT = 3 + P.comboWindow; G.maxCombo = Math.max(G.maxCombo, G.combo);
   // Voile
-  const vg = (e.boss ? 100 : e.elite ? 16 : e.reflet ? (P.refletBonus ? 24 : 12) : 6) * (1 + Math.min(G.combo, 20) * 0.02);
+  const vg = (e.boss ? 100 : e.elite ? 16 : e.reflet ? (P.refletBonus ? 24 : 12) : 6) * (1 + Math.min(G.combo, 20) * 0.02) * (G.floor === 1 ? 1.6 : 1);
   G.voile = Math.min(100, G.voile + vg);
   if (!G.voileHinted && G.voile >= 34 && G.world === 'normal') { G.voileHinted = true; hint = { t: 'Le Voile est assez plein : trouve une fissure (point violet sur la carte) et appuie sur V, Ctrl ou ◐.', life: 7 }; }
   if (e.reflet && P.refletBonus) for (let i = 0; i < 2; i++) dropPickup(e.x, e.y, 'coin');
@@ -1604,7 +1664,7 @@ function killEnemy(e) {
   if (e.hunter) { G.hunterAlive = false; G.menaceT = G.menaceMax * 0.45; ft(e.x, e.y - 30, 'Le Traqueur est repoussé', '#ff2244', 14, 1.5); }
 }
 function hurtPlayer(d, src, force) {
-  if (state !== 'play') return false;
+  if (state !== 'play' || P.god) return false;
   if (!force && (P.inv > 0 || P.dashT > 0)) return false;
   if (P.dodge && Math.random() < P.dodge) { ft(P.x, P.y - 22, 'Esquive', '#8fe388', 13); SFX('dodge'); P.inv = 0.35; return false; }
   if (P.shield && P.shieldT <= 0) {
@@ -1843,7 +1903,7 @@ function nearFissure() { return G.room.props.some(p => p.kind === 'fissure' && d
 function crossCost() {
   const fis = nearFissure();
   if (G.world === 'envers') return fis ? 0 : 25;
-  return Math.round((fis ? 34 : 70) * (P.voileCostMul || 1));
+  return Math.round((fis ? 30 : 70) * (P.voileCostMul || 1));
 }
 function tryCross() {
   if (G.room.challengeOn) { SFX('deny'); ft(P.x, P.y - 26, 'Pas pendant une épreuve', '#c77dff', 12); return; }
@@ -2080,6 +2140,11 @@ function drawRoom() {
   // accessoires de la salle
   const cx = RW * TILE / 2, cy = RH * TILE / 2;
   for (const pr of room.props) if (pr.world === 'both' || (pr.world || 'normal') === G.world) drawProp(pr, tk);
+  // flèche vers la fissure quand le Voile suffit
+  if (G.world === 'normal') { const fis = room.props.find(p => p.kind === 'fissure'); if (fis && G.voile >= 30 * (P.voileCostMul || 1) && dist(fis.x, fis.y, P.x, P.y) > 110) {
+    const a = Math.atan2(fis.y - P.y, fis.x - P.x), d0 = 34 + Math.sin(tk * 5) * 4, ax = P.x + Math.cos(a) * d0, ay = P.y + Math.sin(a) * d0;
+    ctx.save(); ctx.translate(ax, ay); ctx.rotate(a); ctx.fillStyle = 'rgba(199,125,255,' + (0.55 + 0.35 * Math.sin(tk * 5)) + ')'; ctx.beginPath(); ctx.moveTo(8, 0); ctx.lineTo(-5, -6); ctx.lineTo(-2, 0); ctx.lineTo(-5, 6); ctx.closePath(); ctx.fill(); ctx.restore();
+  } }
   if (room.stairs) {
     drawSprite('stairs', 0, cx, cy, { anchor: 'center', scale: 1.25 });
     ctx.strokeStyle = 'rgba(127,215,255,' + (0.5 + 0.4 * Math.sin(tk * 5)) + ')'; ctx.lineWidth = 2; ctx.strokeRect(cx - 22, cy - 22, 44, 44);
@@ -2187,7 +2252,9 @@ function drawHUD() {
   const vc = G.world === 'normal' ? crossCost() : 0, vr = G.voile >= Math.max(1, vc);
   ctx.fillStyle = G.world === 'envers' ? '#e0d0ff' : vr ? '#c77dff' : 'rgba(199,125,255,0.5)'; ctx.fillRect(left, y, bw * clamp(G.voile / 100, 0, 1), 5);
   if (G.world === 'normal' && vc <= 100) { ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.fillRect(left + bw * vc / 100 - 1, y - 2, 2, 9); }
-  ctx.fillStyle = 'rgba(236,230,216,0.7)'; ctx.fillText(G.world === 'envers' ? 'VOILE (drain)' : nearFissure() ? 'VOILE — fissure : ' + vc : 'VOILE', left, y + 7);
+  const fisHere = G.world === 'normal' && G.room.props.some(p => p.kind === 'fissure');
+  ctx.fillStyle = (G.world === 'normal' && vr && fisHere) ? 'rgba(224,208,255,' + (0.6 + 0.4 * Math.sin(P.tick * 6)) + ')' : 'rgba(236,230,216,0.7)';
+  ctx.fillText(G.world === 'envers' ? 'VOILE (drain)' : nearFissure() ? (vr ? 'VOILE — V pour traverser (' + vc + ')' : 'VOILE — il manque ' + Math.ceil(vc - G.voile)) : (vr && fisHere) ? 'VOILE PRÊT — rejoins la fissure ◐' : vr ? 'VOILE PRÊT (' + vc + ' à une fissure)' : 'VOILE', left, y + 7);
   if (P.shield) { ctx.font = '10px ' + F; ctx.fillText(P.shieldT <= 0 ? '🛡️ prêt' : '🛡️ ' + Math.ceil(P.shieldT) + 's', left + bw + 10, y - 13); }
   y += 22;
   if (G.relics.length) { ctx.font = '14px system-ui, sans-serif'; let s = ''; for (const r of G.relics) s += r.ic; ctx.fillText(s, left, y); y += 20; }
@@ -2244,8 +2311,9 @@ function drawHUD() {
     ctx.globalAlpha = clamp(a, 0, 1); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     const g = ctx.createLinearGradient(0, 0, W, 0); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(0.2, 'rgba(0,0,0,0.6)'); g.addColorStop(0.8, 'rgba(0,0,0,0.6)'); g.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = g; ctx.fillRect(0, H * 0.3 - 34, W, 70);
-    ctx.fillStyle = banner.color; ctx.font = 'bold 26px ' + FD; ctx.fillText(banner.t, W / 2, H * 0.3 - 8);
-    ctx.fillStyle = '#ece6d8'; ctx.font = '13px ' + F; ctx.fillText(banner.s, W / 2, H * 0.3 + 18);
+    const age = banner.max - banner.life, sc = 1 + Math.max(0, 0.35 - age) * 0.6;
+    ctx.save(); ctx.translate(W / 2, H * 0.3 - 8); ctx.scale(sc, sc); ctx.fillStyle = banner.color; ctx.font = 'bold 26px ' + FD; ctx.fillText(banner.t, 0, 0); ctx.restore();
+    ctx.fillStyle = '#ece6d8'; ctx.font = '13px ' + F; ctx.fillText(banner.s.slice(0, Math.floor(Math.max(0, age - 0.25) * 60)), W / 2, H * 0.3 + 18);
     ctx.globalAlpha = 1;
   }
   if (hint) {
@@ -2258,7 +2326,9 @@ function drawHUD() {
     const tw = Math.min(maxW, Math.max(...lines.map(l => ctx.measureText(l).width))) + 24;
     const hy = H - 22 - SA.b - (document.body.classList.contains('touch') ? 110 : 0);
     ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(W / 2 - tw / 2, hy - 8 - 18 * lines.length, tw, 12 + 18 * lines.length);
-    ctx.fillStyle = '#ffd97a'; lines.forEach((l, i) => ctx.fillText(l, W / 2, hy - 18 * (lines.length - 1 - i))); ctx.globalAlpha = 1;
+    if (!hint.t0) hint.t0 = performance.now();
+    let budget = Math.floor((performance.now() - hint.t0) / 16);
+    ctx.fillStyle = '#ffd97a'; lines.forEach((l, i) => { const part = l.slice(0, Math.max(0, budget)); budget -= l.length + 1; ctx.textAlign = 'left'; const lw = ctx.measureText(l).width; ctx.fillText(part, W / 2 - lw / 2, hy - 18 * (lines.length - 1 - i)); }); ctx.textAlign = 'center'; ctx.globalAlpha = 1;
   }
   // joysticks
   for (const o of touches.values()) {
@@ -2722,28 +2792,52 @@ $('menuBtn').addEventListener('click', goMenu);
 refreshMenu();
 
 /* ===== 62-story-ui.js ===== */
-/* ---------- récit : écrans, stèles, arrivées ---------- */
+/* ---------- récit : écrans cinématiques, stèles, arrivées ---------- */
 OVS.push('story');
-let storyQueue = [], storyCb = null, storyPrevState = 'menu';
+const Cine = { queue: [], cb: null, prev: 'menu', typing: null, full: '', pos: 0, timer: 0, done: false };
 function showStory(screens, cb) {
-  storyQueue = screens.slice(); storyCb = cb || null;
-  storyPrevState = state === 'play' ? 'play' : state;
+  Cine.queue = screens.slice(); Cine.cb = cb || null;
+  Cine.prev = state === 'play' ? 'play' : state;
   if (state === 'play') { state = 'choice'; clearTouches(); keys.clear(); mouse.down = false; }
   storyNext();
 }
 function storyNext() {
-  const s = storyQueue.shift();
+  const s = Cine.queue.shift();
+  if (Cine.typing) { clearInterval(Cine.typing); Cine.typing = null; }
   if (!s) {
     hideAll();
-    if (storyPrevState === 'play') { state = 'play'; lastFrame = performance.now(); }
-    const cb = storyCb; storyCb = null; if (cb) cb();
+    if (Cine.prev === 'play') { state = 'play'; lastFrame = performance.now(); }
+    const cb = Cine.cb; Cine.cb = null; if (cb) cb();
     return;
   }
-  $('stTitle').textContent = s.title; $('stText').textContent = s.text;
-  $('stNext').textContent = storyQueue.length ? 'Continuer' : (storyPrevState === 'play' ? 'Reprendre' : 'Descendre');
+  const box = $('storyBox'), title = $('stTitle'), text = $('stText'), h = $('stHint');
+  box.className = 'cine' + (s.stele ? ' stele' : '');
+  title.textContent = s.title || ''; title.classList.remove('show'); text.textContent = ''; h.classList.remove('show');
+  $('stMeta').textContent = s.meta || '';
   show('story');
+  requestAnimationFrame(() => title.classList.add('show'));
+  Cine.full = s.text; Cine.pos = 0; Cine.done = false;
+  const speed = s.stele ? 22 : 28;
+  let wait = 380;
+  Cine.typing = setInterval(() => {
+    if (wait > 0) { wait -= speed; return; }
+    if (Cine.pos >= Cine.full.length) { storyTypedDone(); return; }
+    const ch = Cine.full[Cine.pos++];
+    text.textContent = Cine.full.slice(0, Cine.pos);
+    if ('.!?…'.includes(ch)) wait = 320; else if (',;:'.includes(ch)) wait = 140;
+    if (Cine.pos % 3 === 0 && Audio.ready) SFX('type');
+  }, speed);
 }
-$('stNext').addEventListener('click', () => { SFX('click'); storyNext(); });
+function storyTypedDone() {
+  if (Cine.typing) { clearInterval(Cine.typing); Cine.typing = null; }
+  $('stText').textContent = Cine.full; Cine.done = true;
+  $('stHint').textContent = Cine.queue.length ? '▸ toucher pour continuer' : (Cine.prev === 'play' ? '▸ toucher pour reprendre' : '▸ toucher pour descendre');
+  $('stHint').classList.add('show');
+}
+function storyAdvance() { if (!Cine.done) storyTypedDone(); else { SFX('click'); storyNext(); } }
+$('story').addEventListener('click', storyAdvance);
+$('story').addEventListener('touchend', e => { e.preventDefault(); storyAdvance(); }, { passive: false });
+window.addEventListener('keydown', e => { if ($('story').classList.contains('show') && (e.code === 'Space' || e.code === 'Enter')) { e.preventDefault(); storyAdvance(); } });
 $('introBtn').addEventListener('click', () => { uiAudio(); showStory(STORY.intro, () => goMenu()); });
 
 function storyArrival(biome) {
@@ -2761,8 +2855,7 @@ function readTablet(pr) {
   if (!t) return;
   if (!save.tabletsRead.includes(t.id)) { save.tabletsRead.push(t.id); writeSave(); }
   pr.used = true; SFX('relic'); burst(pr.x, pr.y - 10, 12, '#dff4ff', 90, { shape: 'dot', glow: 1 });
-  const total = STORY.tablets.length, read = save.tabletsRead.length;
-  openChoice({ title: 'Stèle gravée', sub: '« ' + t.text + ' »' + '   —   fragment ' + read + ' / ' + total, cards: [], footer: [{ label: 'Refermer', primary: true }] });
+  showStory([{ title: 'Stèle gravée', text: t.text, stele: true, meta: 'fragment ' + save.tabletsRead.length + ' / ' + STORY.tablets.length }]);
 }
 function drawTablet(pr, tk) {
   const { x, y } = pr;
@@ -2783,10 +2876,10 @@ const Tutorial = (() => {
     { id: 'dash', t: 'Fais un dash', h: 'Espace ou Maj sur PC, bouton DASH sur téléphone. Invulnérable pendant le dash, et il passe au-dessus des gouffres.' },
     { id: 'cleared', t: 'Nettoie une salle', h: 'Tue tout ce qui bouge : les portes s\'ouvrent. La carte en haut à droite montre les salles voisines.' },
     { id: 'relic', t: 'Prends une relique', h: 'Le coffre est jaune sur la carte, le boss rouge. Chaque relique s\'ajoute aux autres, pour toute la descente.' },
+    { id: 'cross', t: 'Traverse le Voile', h: 'Tuer remplit le Voile violet. Une salle à contour violet sur la carte est scellée : son coffre n\'est atteignable que par l\'Envers. Va à la fissure voisine (point violet) et appuie sur V, Ctrl ou ◐.' },
+    { id: 'crossBack', t: 'Reviens de l\'Envers', h: 'Dans l\'Envers, la porte scellée est ouverte et l\'essence vaut double, mais le Voile se vide. Ouvre le coffre, puis reviens par une fissure ou tue des Reflets pour tenir.' },
     { id: 'surge', t: 'Déclenche la Surcharge', h: 'Chaque kill remplit la jauge dorée. Quand elle est pleine : E, clic droit ou ⚡. Enchaîne les kills pour un combo.' },
     { id: 'oath', t: 'Prête un serment (étage 2)', h: 'À chaque étage, une contrainte contre une récompense. Tu peux aussi refuser.' },
-    { id: 'cross', t: 'Traverse le Voile', h: 'Tuer remplit aussi le Voile violet. Près d\'une fissure (point violet sur la carte) : V, Ctrl ou ◐.' },
-    { id: 'crossBack', t: 'Reviens de l\'Envers', h: 'Là-bas, le Voile se vide. Tue des Reflets pour tenir, et reviens par une fissure avant qu\'il soit à zéro.' },
   ];
   const T = { doneT: 0, hinted: -1, done: new Set(), flashT: 0 };
   const active = () => !save.tutorialDone && state === 'play' && G;
@@ -2842,7 +2935,7 @@ const CODEX = {
   salles: { t: 'Salles et carte', h: `<p>Chaque étage est un ensemble de salles. Les portes se ferment à l'entrée d'une salle habitée et s'ouvrent quand tout est mort. Le <b>boss</b> (rouge sur la carte) garde l'escalier vers l'étage suivant ; il offre une relique.</p>
 <p><b>Coffre</b> (jaune) : une relique parmi trois. <b>Marchand</b> (vert) : reliques, cœurs et armes contre de l'essence. <b>Autel</b> (violet) : sacrifice d'un cœur pour une relique, offrande de 15 ◆ pour un soin, ou prière au hasard. <b>Épreuve</b> (orange) : trois vagues pour une relique parmi quatre. <b>Armurerie</b> (bleu) : changer d'arme. <b>Stèles</b> : fragments du récit, conservés entre les parties.</p>
 <p>Terrain : l'eau ralentit, le poison et la lave blessent en restant dessus, la glace fait glisser, les gouffres font tomber (retour au dernier sol sûr, un demi-cœur perdu).</p>` },
-  voile: { t: 'Voile et Envers', h: `<p>Tuer remplit le <b>Voile</b> (jauge violette). Près d'une <b>fissure</b> (point violet sur la carte, une dans chaque salle de boss), traverser coûte 34 ; ailleurs 70. Il te reste toujours au moins 12 après une traversée.</p>
+  voile: { t: 'Voile et Envers', h: `<p>Tuer remplit le <b>Voile</b> (jauge violette). Près d'une <b>fissure</b> (point violet sur la carte, une dans chaque salle de boss), traverser coûte 30 ; ailleurs 70. Il te reste toujours au moins 12 après une traversée.</p>
 <p>Dans <b>l'Envers</b>, le Voile se vide de 4 par seconde. À zéro, tu es rejeté avec un demi-cœur en moins. Revenir par une fissure est gratuit, ailleurs 25. Tuer des <b>Reflets</b> recharge le Voile, et disperser tous les Reflets d'une salle rend 15. L'essence y vaut double. La Menace n'y monte pas, mais le Traqueur y vient au bout d'une trentaine de secondes.</p>
 <p>Là-bas, les murs intérieurs sont des ombres traversables, les gouffres des ponts, l'eau de la glace. Les <b>salles scellées</b> (contour violet) ne s'ouvrent que depuis l'Envers, puis le sceau se brise. Les <b>glyphes</b> révèlent le chemin sûr d'un champ de gouffres. Les <b>leviers</b> de l'Envers effacent un mur du monde de pierre. Les <b>boss</b> se voilent à mi-vie à partir de l'étage 2 : seul leur reflet peut être frappé. Ton <b>écho</b> attend à l'étage de ta dernière mort, dans l'Envers de la salle de départ, avec une relique.</p>` },
   serments: { t: 'Serments et Menace', h: `<p>À partir de l'étage 2, on te propose deux <b>serments</b> : une contrainte pour l'étage contre une récompense (essence, dégâts, relique bonus après le boss). Refuser est toujours possible. Le serment du miroir fait commencer l'étage dans l'Envers avec le Voile plein.</p>
@@ -2868,6 +2961,61 @@ $('codexBtn2').addEventListener('click', () => openCodex('pause'));
 $('codexBack').addEventListener('click', () => { SFX('click'); if (codexReturn === 'pause') show('pause'); else goMenu(); });
 $('skipTutBtn').addEventListener('click', () => { Tutorial.skip(); SFX('click'); $('skipTutBtn').textContent = 'Tutoriel passé'; });
 $('redoTutBtn').addEventListener('click', () => { Tutorial.reset(); SFX('click'); $('redoTutBtn').textContent = 'Tutoriel réactivé'; });
+
+/* ===== 66-debug.js ===== */
+/* ---------- menu de test ---------- */
+OVS.push('debug');
+let debugReturn = 'menu';
+const DBG = { god: false, voile: false, surge: false };
+function openDebug(from) {
+  debugReturn = from; SFX('click');
+  $('dbgFloor').value = G ? G.floor : 1;
+  const sel = $('dbgWeapon'); sel.innerHTML = '';
+  for (const id in WEAPONS) { const o = document.createElement('option'); o.value = id; o.textContent = WEAPONS[id].ic + ' ' + WEAPONS[id].name; if (P && P.weapon === id) o.selected = true; sel.appendChild(o); }
+  $('dbgGod').checked = DBG.god; $('dbgVoile').checked = DBG.voile; $('dbgSurge').checked = DBG.surge;
+  const inRun = !!(G && P && state !== 'dead');
+  for (const id of ['dbgBoss', 'dbgTreasure', 'dbgSealed', 'dbgCross', 'dbgRelics', 'dbgHeal']) $(id).disabled = !inRun;
+  $('dbgInfo').textContent = inRun ? `Partie en cours : étage ${G.floor}, ${G.floorData.biome.name}, ${G.world === 'envers' ? 'Envers' : 'monde de pierre'}.` : 'Aucune partie en cours : « Lancer » démarre une nouvelle descente à l\'étage choisi.';
+  show('debug');
+}
+function debugResume() { if (debugReturn === 'pause') show('pause'); else if (G && P && state === 'pause') show('pause'); else goMenu(); }
+function debugApplyFlags() { DBG.god = $('dbgGod').checked; DBG.voile = $('dbgVoile').checked; DBG.surge = $('dbgSurge').checked; if (P) P.god = DBG.god; }
+function debugGoto(pred, label) {
+  if (!G) return;
+  const r = G.floorData.list.find(pred);
+  if (!r) { $('dbgInfo').textContent = 'Pas de ' + label + ' sur cet étage.'; SFX('deny'); return; }
+  if (G.world === 'envers') crossWorld(false);
+  r.visited = true;
+  enterRoom(r, null);
+  hideAll(); state = 'play'; lastFrame = performance.now();
+}
+$('dbgLaunch').addEventListener('click', () => {
+  debugApplyFlags();
+  const f = clamp(parseInt($('dbgFloor').value, 10) || 1, 1, 40);
+  const w = $('dbgWeapon').value;
+  uiAudio();
+  save.introSeen = true; writeSave();
+  newRun();
+  P.weapon = w; P.god = DBG.god;
+  if (f !== 1) { G.floor = f; startFloor(); }
+});
+$('dbgBoss').addEventListener('click', () => debugGoto(r => r.type === 'boss', 'boss'));
+$('dbgTreasure').addEventListener('click', () => debugGoto(r => r.type === 'treasure' && !r.sealed, 'coffre'));
+$('dbgSealed').addEventListener('click', () => debugGoto(r => r.sealed, 'salle scellée'));
+$('dbgCross').addEventListener('click', () => { if (!G) return; G.voile = 100; crossWorld(false); hideAll(); state = 'play'; lastFrame = performance.now(); });
+$('dbgRelics').addEventListener('click', () => { if (!G) return; for (const r of relicChoices(3)) applyRelic(r, true); SFX('relic'); $('dbgInfo').textContent = 'Reliques : ' + G.relics.map(r => r.ic).join(' '); });
+$('dbgHeal').addEventListener('click', () => { if (!P) return; P.hp = P.maxHp; G.surge = 100; G.voile = 100; SFX('heart'); });
+$('dbgEssence').addEventListener('click', () => { save.essence += 500; writeSave(); SFX('coin'); $('dbgInfo').textContent = 'Essence : ' + save.essence + ' ◆'; });
+$('dbgUnlock').addEventListener('click', () => { save.weapons = Object.keys(WEAPONS); for (const m of META) save.meta[m.id] = m.max; writeSave(); SFX('relic'); $('dbgInfo').textContent = 'Armes et bénédictions débloquées.'; });
+for (const id of ['dbgGod', 'dbgVoile', 'dbgSurge']) $(id).addEventListener('change', debugApplyFlags);
+$('dbgBack').addEventListener('click', () => { SFX('click'); debugResume(); });
+$('debugBtn').addEventListener('click', () => { uiAudio(); openDebug('options'); });
+$('debugBtn2').addEventListener('click', () => openDebug('pause'));
+function debugTick() {
+  if (!G || !P) return;
+  if (DBG.voile) G.voile = 100;
+  if (DBG.surge) G.surge = 100;
+}
 
 /* ===== 70-main.js ===== */
 /* ---------- déroulement d'une partie ---------- */
@@ -3193,7 +3341,7 @@ function update(dt) {
   const fighting = enemies.filter(e => !e.noCount && inWorld(e));
   if (!room.cleared && room.spawned && !room.challengeOn && fighting.length === 0 && (G.world === 'normal' || room.type === 'boss')) clearRoom();
   if (G.world === 'envers' && !room.clearedE && room.refletsSpawned && room.type !== 'boss' && fighting.length === 0) clearRoomE(room);
-  updateEnvers(dt); Tutorial.update(dt);
+  updateEnvers(dt); Tutorial.update(dt); debugTick();
   if (state !== 'play') return;
   if (room.pocket && !room.gateOpen && G.world === 'normal') { const tx = Math.floor(P.x / TILE), ty = Math.floor(P.y / TILE); if (tx >= room.pocket.x0 && tx <= room.pocket.x1 && ty >= room.pocket.y0 && ty <= room.pocket.y1) openGate(room); }
   if (room.challengeOn && fighting.length === 0) {
