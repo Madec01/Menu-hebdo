@@ -79,7 +79,7 @@ function makeBoss() {
   const name = bd.name + (cyc ? ' ' + ROMAN[Math.min(cyc, 7)] : '');
   G.bossName = name;
   return {
-    id: nextId++, type: 'boss', name, shape: bd.shape, boss: true, x: RW * TILE / 2, y: RH * TILE / 2 - TILE * 2.5, r: bd.r, hp, maxHp: hp,
+    id: nextId++, type: 'boss', name, shape: bd.shape, boss: true, bossId: biome.boss, x: RW * TILE / 2, y: RH * TILE / 2 - TILE * 2.5, r: bd.r, hp, maxHp: hp,
     spd: bd.spd + 4 * f, color: bd.color, dark: bd.dark, contact: 2, ai: 'boss', fly: bd.shape === 'eye', attacks: bd.attacks, ak: 0,
     phase: 'idle', phT: 1.6, sub: 0, count: 0, rot: 0, tx: 0, ty: 0, dirx: 0, diry: 0, flash: 0, slowT: 0, ph: 0, alpha: 1, spawnT: 1.4,
     state: 'idle', stT: 0, fireT: 0, cd: 0, poisonT: 0, poisonTick: 0, hitCd: 0, fuse: 0, dead: false, elite: null, minion: false, noCount: false, airT: 0,

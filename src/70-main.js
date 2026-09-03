@@ -346,4 +346,4 @@ requestAnimationFrame(loop);
 
 // hook de test (non utilisé par le jeu)
 window.__crypteDebug = { get G() { return G; }, get P() { return P; }, get enemies() { return enemies; }, get state() { return state; }, get room() { return G && G.room; },
-  killAll() { for (const e of enemies.slice()) killEnemy(e); }, enterRoom, spawnHunter, activateSurge, startFloor, get bullets() { return bullets; }, get pickups() { return pickups; }, WEAPONS, RELICS, applyRelic, relicById };
+  killAll() { for (const e of enemies.slice()) killEnemy(e); }, enterRoom, spawnHunter, activateSurge, startFloor, Audio, get SPR() { return SPR; }, get bullets() { return bullets; }, get pickups() { return pickups; }, WEAPONS, RELICS, applyRelic, relicById };

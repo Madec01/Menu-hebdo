@@ -24,15 +24,16 @@ Ouvre `index.html` dans un navigateur, ou héberge le dépôt sur GitHub Pages.
 - **Salles spéciales** : coffres, marchand, autel (sacrifice, offrande, prière), épreuves en vagues, armurerie.
 - **Trente reliques** cumulables.
 - **Méta-progression** : l'essence ◆ ramassée est conservée et sert aux bénédictions permanentes, aux armes et au bestiaire (bonus de dégâts contre les ennemis souvent vaincus).
-- **Bande-son adaptative** générée en temps réel : un morceau par biome et un thème de boss, percussions et basse qui n'entrent qu'au combat, ambiances sonores et bruitages en couches avec réverbération.
-- Éclairage dynamique, torches, textures, animations par créature.
+- **Bande-son adaptative** : un morceau par biome et un thème de boss, percussions et basse qui n'entrent qu'au combat, ambiances sonores par biome, réverbération à convolution.
+- **Sprites pixel-art** dessinés pour le jeu (planche générée par `tools/sprites.py`), avec variantes recolorées par biome, animations et éclairage dynamique.
+- **Bruitages** : échantillons Kenney (CC0, voir `src/assets/sfx/LICENSE-Kenney-CC0.txt`) mélangés à de la synthèse.
+- **Musique** générée en temps réel : luth et harpe (cordes pincées Karplus-Strong), chœur à formants, cordes frottées, hautbois, flûte, percussions à main ; motifs mélodiques écrits par biome, conduite des voix, humanisation du jeu.
 
 ## Développement
 
-Le code source est découpé dans `src/` et assemblé par :
+Le code source est découpé dans `src/`, les assets (planche de sprites, sons) sont embarqués en data URI, et le tout est assemblé par :
 
 ```
-node build.js
+python3 tools/sprites.py   # régénère src/assets/sprites.png à partir des dessins ASCII
+node build.js              # régénère index.html
 ```
-
-qui régénère `index.html`.
