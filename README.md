@@ -4,6 +4,9 @@ Un roguelite d'action en HTML/JS, dans un seul fichier, jouable sur PC et sur t�
 
 ## Jouer
 
+Sur téléphone, pour jouer en plein écran : sur iPhone, ouvrir le lien dans Safari puis Partager → « Sur l'écran d'accueil » ; sur Android, Chrome propose « Ajouter à l'écran d'accueil » (ou « Installer »), sinon le bouton « ⛶ Plein écran » du menu suffit. Le fichier `manifest.webmanifest` et les icônes du dossier `icons/` servent à cette installation.
+
+
 Ouvre `index.html` dans un navigateur, ou héberge le dépôt sur GitHub Pages.
 
 ## Histoire

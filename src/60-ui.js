@@ -182,3 +182,21 @@ $('quitBtn').addEventListener('click', () => { endRun(); goMenu(); });
 $('retryBtn').addEventListener('click', () => { uiAudio(); newRun(); });
 $('menuBtn').addEventListener('click', goMenu);
 refreshMenu();
+
+/* ---------- plein écran (Android, PC) ; sur iPhone, passer par « Sur l'écran d'accueil » ---------- */
+(() => {
+  const de = document.documentElement;
+  const req = de.requestFullscreen || de.webkitRequestFullscreen;
+  const standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches) || navigator.standalone;
+  if (!req || standalone) return;
+  const isFs = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+  const toggle = () => {
+    SFX('click');
+    if (isFs()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    else { try { const p = req.call(de, { navigationUI: 'hide' }); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
+  };
+  const refresh = () => { for (const id of ['fsBtn', 'fsBtn2']) { const b = $(id); b.hidden = false; b.textContent = isFs() ? '⛶ Quitter le plein écran' : '⛶ Plein écran'; } };
+  for (const id of ['fsBtn', 'fsBtn2']) $(id).addEventListener('click', toggle);
+  document.addEventListener('fullscreenchange', refresh); document.addEventListener('webkitfullscreenchange', refresh);
+  refresh();
+})();

@@ -7,6 +7,9 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0a0a12">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
 <title>Crypte Infinie</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -182,6 +185,7 @@ kbd{background:#0a0a12;border:1px solid var(--line);border-radius:5px;padding:1p
       <button class="btn" id="metaBtn">◆ Sanctuaire</button>
       <button class="btn" id="codexBtn">📖 Codex</button>
       <button class="btn small" id="optBtn">⚙</button>
+      <button class="btn small" id="fsBtn" hidden>⛶ Plein écran</button>
     </div>
     <div class="help">
       <b>PC :</b> <kbd>ZQSD</kbd> / <kbd>WASD</kbd> / flèches pour bouger, souris pour viser (sinon visée auto), <kbd>Espace</kbd> ou <kbd>Maj</kbd> dash, <kbd>E</kbd> ou clic droit Surcharge, <kbd>V</kbd> ou <kbd>Ctrl</kbd> pour traverser le Voile, <kbd>P</kbd> pause.<br>
@@ -299,6 +303,7 @@ kbd{background:#0a0a12;border:1px solid var(--line);border-radius:5px;padding:1p
       <button class="btn primary" id="resumeBtn">Reprendre</button>
       <button class="btn" id="codexBtn2">📖 Codex</button>
       <button class="btn small ghost" id="skipTutBtn">Passer le tutoriel</button>
+      <button class="btn small ghost" id="fsBtn2" hidden>⛶ Plein écran</button>
       <button class="btn small ghost" id="debugBtn2">🧪 Menu de test</button>
       <button class="btn" id="quitBtn">Abandonner</button>
     </div>
@@ -3060,6 +3065,24 @@ $('quitBtn').addEventListener('click', () => { endRun(); goMenu(); });
 $('retryBtn').addEventListener('click', () => { uiAudio(); newRun(); });
 $('menuBtn').addEventListener('click', goMenu);
 refreshMenu();
+
+/* ---------- plein écran (Android, PC) ; sur iPhone, passer par « Sur l'écran d'accueil » ---------- */
+(() => {
+  const de = document.documentElement;
+  const req = de.requestFullscreen || de.webkitRequestFullscreen;
+  const standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches) || navigator.standalone;
+  if (!req || standalone) return;
+  const isFs = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+  const toggle = () => {
+    SFX('click');
+    if (isFs()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    else { try { const p = req.call(de, { navigationUI: 'hide' }); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
+  };
+  const refresh = () => { for (const id of ['fsBtn', 'fsBtn2']) { const b = $(id); b.hidden = false; b.textContent = isFs() ? '⛶ Quitter le plein écran' : '⛶ Plein écran'; } };
+  for (const id of ['fsBtn', 'fsBtn2']) $(id).addEventListener('click', toggle);
+  document.addEventListener('fullscreenchange', refresh); document.addEventListener('webkitfullscreenchange', refresh);
+  refresh();
+})();
 
 /* ===== 62-story-ui.js ===== */
 /* ---------- récit : écrans cinématiques, stèles, arrivées ---------- */
