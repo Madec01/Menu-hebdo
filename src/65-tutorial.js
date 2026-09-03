@@ -40,7 +40,7 @@ const Tutorial = (() => {
     const s = step(), done = T.doneT > 0, idx = (save.tutorialStep || 0) + 1;
     const F = '"Nunito", system-ui, sans-serif';
     const boss = enemies.some(e => e.boss && !e.dead), envers = G.world === 'envers';
-    const y = 14 + SA.t + (boss ? 34 : 0) + (envers ? 40 : 0) + 6;
+    const y = 14 + SA.t + (W < 520 ? 118 : 0) + (boss ? 34 : 0) + (envers ? 40 : 0) + 6;   // portrait : sous le HUD
     ctx.font = 'bold 12px ' + F; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
     const label = idx + '/' + STEPS.length + '  ' + s.t;
     const tw = ctx.measureText(label).width, w = tw + 44, x = W / 2 - w / 2;

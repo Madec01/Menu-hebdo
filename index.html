@@ -2586,16 +2586,19 @@ function drawHUD() {
   if (hint) {
     ctx.globalAlpha = clamp(hint.life, 0, 1); ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
     ctx.font = 'bold 13px ' + F;
-    const maxW = W - 40 - SA.l - SA.r, lines = [];
+    // sur tactile : en bas à gauche des boutons ronds (colonne droite d'environ 110 px), jamais au milieu de l'écran
+    const touch = document.body.classList.contains('touch');
+    const maxW = touch ? W - 150 - SA.l - SA.r : W - 40 - SA.l - SA.r, lines = [];
+    const cx = touch ? SA.l + 12 + maxW / 2 : W / 2;
     let cur = '';
     for (const word of hint.t.split(' ')) { const test = cur ? cur + ' ' + word : word; if (ctx.measureText(test).width > maxW && cur) { lines.push(cur); cur = word; } else cur = test; }
     if (cur) lines.push(cur);
     const tw = Math.min(maxW, Math.max(...lines.map(l => ctx.measureText(l).width))) + 24;
-    const hy = H - 22 - SA.b - (document.body.classList.contains('touch') ? 110 : 0);
-    ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(W / 2 - tw / 2, hy - 8 - 18 * lines.length, tw, 12 + 18 * lines.length);
+    const hy = H - 22 - SA.b;
+    ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(cx - tw / 2, hy - 8 - 18 * lines.length, tw, 12 + 18 * lines.length);
     if (!hint.t0) hint.t0 = performance.now();
     let budget = Math.floor((performance.now() - hint.t0) / 16);
-    ctx.fillStyle = '#ffd97a'; lines.forEach((l, i) => { const part = l.slice(0, Math.max(0, budget)); budget -= l.length + 1; ctx.textAlign = 'left'; const lw = ctx.measureText(l).width; ctx.fillText(part, W / 2 - lw / 2, hy - 18 * (lines.length - 1 - i)); }); ctx.textAlign = 'center'; ctx.globalAlpha = 1;
+    ctx.fillStyle = '#ffd97a'; lines.forEach((l, i) => { const part = l.slice(0, Math.max(0, budget)); budget -= l.length + 1; ctx.textAlign = 'left'; const lw = ctx.measureText(l).width; ctx.fillText(part, cx - lw / 2, hy - 18 * (lines.length - 1 - i)); }); ctx.textAlign = 'center'; ctx.globalAlpha = 1;
   }
   // joysticks
   for (const o of touches.values()) {
@@ -3177,7 +3180,7 @@ const Tutorial = (() => {
     const s = step(), done = T.doneT > 0, idx = (save.tutorialStep || 0) + 1;
     const F = '"Nunito", system-ui, sans-serif';
     const boss = enemies.some(e => e.boss && !e.dead), envers = G.world === 'envers';
-    const y = 14 + SA.t + (boss ? 34 : 0) + (envers ? 40 : 0) + 6;
+    const y = 14 + SA.t + (W < 520 ? 118 : 0) + (boss ? 34 : 0) + (envers ? 40 : 0) + 6;   // portrait : sous le HUD
     ctx.font = 'bold 12px ' + F; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
     const label = idx + '/' + STEPS.length + '  ' + s.t;
     const tw = ctx.measureText(label).width, w = tw + 44, x = W / 2 - w / 2;
