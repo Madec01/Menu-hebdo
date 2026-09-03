@@ -10,7 +10,9 @@ function resize() {
   canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
   canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
   lightC.width = Math.max(1, Math.round(W * LS)); lightC.height = Math.max(1, Math.round(H * LS));
-  ZOOM = clamp(Math.min(W, H) / 13 / TILE, 0.7, 1.9);
+  // PC : la salle entière tient à l'écran. Tactile : la salle remplit l'écran (la caméra suit le joueur), plus gros et plus lisible.
+  const touch = document.body.classList.contains('touch');
+  ZOOM = clamp(touch ? Math.max(W, H) / (RW * TILE) : Math.min(W, H) / 13 / TILE, 0.7, 1.9);
   const cs = getComputedStyle(document.documentElement);
   SA.t = parseFloat(cs.getPropertyValue('--sat')) || 0; SA.b = parseFloat(cs.getPropertyValue('--sab')) || 0;
   SA.l = parseFloat(cs.getPropertyValue('--sal')) || 0; SA.r = parseFloat(cs.getPropertyValue('--sar')) || 0;
@@ -372,7 +374,9 @@ function drawHUD() {
   if (G.relics.length) { ctx.font = '14px system-ui, sans-serif'; let s = ''; for (const r of G.relics) s += r.ic; ctx.fillText(s, left, y); y += 20; }
   if (G.oath) { ctx.font = '11px ' + F; ctx.fillStyle = '#c77dff'; ctx.fillText(G.oath.ic + ' ' + G.oath.n, left, y); }
   // droite
-  const right = W - 14 - SA.r - (document.body.classList.contains('playing') ? 44 : 0);
+  // en paysage tactile, la colonne droite passe à gauche des boutons ronds (◐ ⚡ DASH) pour ne rien recouvrir
+  const touchLand = document.body.classList.contains('touch') && W > H;
+  const right = W - SA.r - (touchLand ? 112 : 14 + (document.body.classList.contains('playing') ? 44 : 0));
   ctx.textAlign = 'right'; ctx.textBaseline = 'top';
   ctx.fillStyle = '#ffd97a'; ctx.font = 'bold 15px ' + FD; ctx.fillText('Étage ' + G.floor, right, top);
   ctx.fillStyle = 'rgba(236,230,216,0.75)'; ctx.font = '11px ' + F; ctx.fillText(biome.name, right, top + 19);

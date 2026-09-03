@@ -22,7 +22,7 @@ document.addEventListener('dblclick', e => { if (e.target === canvas) e.preventD
 function clearTouches() { touches.clear(); }
 canvas.addEventListener('touchstart', e => {
   e.preventDefault();
-  document.body.classList.add('touch');
+  if (!document.body.classList.contains('touch')) { document.body.classList.add('touch'); resize(); }
   uiAudio();
   for (const t of e.changedTouches) {
     const side = t.clientX < W / 2 ? 'L' : 'R';
@@ -45,7 +45,7 @@ function stick(side) {
   const len = clamp((l - dead) / (max - dead), 0, 1);
   return { active: true, dx: dx / l * len, dy: dy / l * len, len };
 }
-if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) document.body.classList.add('touch');
+if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) { document.body.classList.add('touch'); resize(); }
 const dashPress = e => { e.preventDefault(); wantDash = true; };
 $('dashBtn').addEventListener('touchstart', dashPress, { passive: false });
 $('dashBtn').addEventListener('mousedown', dashPress);
