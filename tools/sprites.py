@@ -743,6 +743,44 @@ VARIANTS = {
     'shaman':   ('mage',  {'1': '#d1a54a', '2': '#6e5320', '3': '#f0d79a'}),
     'hunter':   ('ghost', {'1': '#5a0a18', '2': '#2a0410', '3': '#ff2244', 'e': '#ff2244'}),
     'slime_blue': ('slime', {'1': '#5fb8ff', '2': '#2b5f9e', '3': '#c0e8ff'}),
+    # jardin suspendu
+    'thornling':  ('slime',  {'1': '#4f9a4a', '2': '#204a22', '3': '#a8e08a'}),
+    'wasp':       ('bat',    {'1': '#e8c94a', '2': '#5a4a10', '3': '#fff0a0'}),
+    'treant':     ('brute',  {'1': '#6b4a2a', '2': '#3a2812', '3': '#a8d070'}),
+    'druid':      ('mage',   {'1': '#8fbf5a', '2': '#3a5a20', '3': '#d8f0a8'}),
+    # ossuaire
+    'bonegolem':  ('brute',  {'1': '#e8e0cc', '2': '#8a8070', '3': '#ffffff'}),
+    'skullbomb':  ('bomber', {'1': '#e8e0cc', '2': '#6a6050', '3': '#ffffff'}),
+    'bonespider': ('spider', {'1': '#d8d0bc', '2': '#6a6050', '3': '#ffffff'}),
+    # cité noyée
+    'drowned':    ('mage',   {'1': '#4a8fa8', '2': '#1f4a5a', '3': '#a8e0f0'}),
+    # grottes de cristal
+    'crystalbat': ('bat',    {'1': '#ff7bd5', '2': '#8a2a6a', '3': '#ffd0f0'}),
+    'crystalturret': ('turret', {'1': '#7bffea', '2': '#1f7a6a', '3': '#d0fff8'}),
+    'crystalgolem': ('brute', {'1': '#c07bff', '2': '#5a2a8a', '3': '#ecd6ff'}),
+    # forêt des racines
+    'sanglier':   ('brute',  {'1': '#7a5236', '2': '#3e2816', '3': '#c9a27a'}),
+    'corbeau':    ('bat',    {'1': '#2e2f3a', '2': '#131418', '3': '#8a8ea8', 'e': '#ffd97a'}),
+    'sylvain':    ('archer', {'1': '#6fa05a', '2': '#2f4f26', '3': '#c2e6a0'}),
+    'loup':       ('wolf',   {'1': '#8a8478', '2': '#4a443a', '3': '#d6d0c2'}),
+    # grotte fongique
+    'myconide':   ('slime',  {'1': '#b07ad8', '2': '#5a3a80', '3': '#f0d0ff'}),
+    'sporeling':  ('bomber', {'1': '#8fd8c8', '2': '#3a7a6a', '3': '#e0fff5'}),
+    'phalene':    ('bat',    {'1': '#e8d8b0', '2': '#8a7a58', '3': '#fff8e0'}),
+    'mycomancien': ('mage',  {'1': '#c68cff', '2': '#5a2a8a', '3': '#f0e0ff'}),
+    # gorges des cascades
+    'grenouille': ('toad',   {'1': '#4a9ad0', '2': '#1e4a70', '3': '#a8e0ff'}),
+    'harpie':     ('bat',    {'1': '#e0a060', '2': '#7a4a20', '3': '#ffe0b0', 'e': '#ff5e5e'}),
+    'crabe':      ('spider', {'1': '#e06a4a', '2': '#7a2a18', '3': '#ffc0a0'}),
+    'naiade':     ('mage',   {'1': '#6ad0e0', '2': '#1f6a7a', '3': '#d0f8ff'}),
+    # boss des nouveaux biomes
+    'boss_cerf':      ('boss_colossus',  {'1': '#8a6240', '2': '#3e2816', '3': '#e0c8a0'}),
+    'boss_mycelium':  ('boss_guardian',  {'1': '#b07ad8', '2': '#4a2a70', '3': '#f0d0ff'}),
+    'boss_salamandre': ('boss_queen',    {'1': '#2f7a8a', '2': '#123a48', '3': '#ffb060'}),
+    'boss_sylve':     ('boss_guardian',  {'1': '#5fa04a', '2': '#2a4a1e', '3': '#c8f0a0'}),
+    'boss_lich':      ('boss_frostking', {'1': '#e8e0cc', '2': '#5a5040', '3': '#ffffff'}),
+    'boss_leviathan': ('boss_queen',     {'1': '#3a7fa0', '2': '#163a4a', '3': '#a8e0f0'}),
+    'boss_prism':     ('boss_eye',       {'1': '#ff7bd5', '2': '#7a2a5a', '3': '#ffe0f5'}),
 }
 
 def hexrgb(h):

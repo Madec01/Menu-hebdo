@@ -73,6 +73,8 @@ function genTiles(room) {
       case 'ring': for (let x = 5; x <= RW - 6; x++) { if (x !== mx && x !== mx - 1 && x !== mx + 1) { wall(x, 3); wall(x, RH - 4); } } for (let y = 4; y < RH - 4; y++) if (y !== my) { wall(5, y); wall(RW - 6, y); } break;
       case 'corridors': for (let x = 4; x < RW - 4; x += 5) for (let y = 2; y < RH - 2; y++) if (y !== my && y !== my - 1 && y !== my + 1 && !onLane(x, y)) wall(x, y); break;
       case 'islands': for (const [cx, cy] of [[4, 3], [RW - 5, 3], [4, RH - 4], [RW - 5, RH - 4]]) { wall(cx, cy); wall(cx + 1, cy); wall(cx, cy + 1); wall(cx + 1, cy + 1); } break;
+      case 'maze': for (let y = 2; y < RH - 2; y += 2) for (let x = 3; x < RW - 3; x += 3) { if (onLane(x, y)) continue; wall(x, y); if (chance(0.5)) wall(x + (chance(0.5) ? 1 : -1), y); else if (y + 1 < RH - 2) wall(x, y + 1); } break;
+      case 'arena': for (let i = 0; i < 12; i++) { const a = i / 12 * TAU, x = Math.round(mx + Math.cos(a) * 6), y = Math.round(my + Math.sin(a) * 4); if (!onLane(x, y)) wall(x, y); } break;
       case 'random': {
         const n = RI(3, 6);
         for (let i = 0; i < n; i++) {
@@ -89,10 +91,10 @@ function genTiles(room) {
       const nb = RI(1, 3);
       for (let b = 0; b < nb; b++) {
         const hz = pick(biome.hazards);
-        const code = { water: T_WATER, poison: T_POISON, lava: T_LAVA, ice: T_ICE, pit: T_PIT }[hz];
+        const code = { water: T_WATER, poison: T_POISON, lava: T_LAVA, ice: T_ICE, pit: T_PIT, mud: T_MUD, spikes: T_SPIKES }[hz];
         const blocking = code === T_LAVA || code === T_PIT;
         let x = RI(2, RW - 3), y = RI(2, RH - 3);
-        const len = code === T_ICE ? RI(10, 22) : RI(4, 11);
+        const len = code === T_ICE ? RI(10, 22) : code === T_MUD ? RI(6, 14) : code === T_SPIKES ? RI(3, 7) : RI(4, 11);
         for (let i = 0; i < len; i++) {
           if (t[y][x] === T_FLOOR && !nearCenter(x, y) && !nearDoor(x, y) && !(blocking && onLane(x, y))) t[y][x] = code;
           const d = pick(DIRS); x = clamp(x + d[0], 1, RW - 2); y = clamp(y + d[1], 1, RH - 2);
@@ -105,6 +107,9 @@ function genTiles(room) {
     if (biome.hazards.includes('ice')) for (let x = mx - 3; x <= mx + 3; x++) for (let y = my - 1; y <= my + 1; y++) t[y][x] = T_ICE;
     if (biome.hazards.includes('pit')) for (const [x, y] of [[6, 2], [RW - 7, 2], [6, RH - 3], [RW - 7, RH - 3]]) t[y][x] = T_PIT;
     if (biome.hazards.includes('water')) for (let x = 2; x < RW - 2; x++) { if (Math.abs(x - mx) > 4) { t[2][x] = T_WATER; t[RH - 3][x] = T_WATER; } }
+    if (biome.hazards.includes('mud')) for (const [x, y] of [[mx - 5, my - 1], [mx - 5, my], [mx - 5, my + 1], [mx + 5, my - 1], [mx + 5, my], [mx + 5, my + 1]]) if (t[y][x] === T_FLOOR) t[y][x] = T_MUD;
+    if (biome.hazards.includes('spikes')) for (const [x, y] of [[mx - 6, my - 3], [mx + 6, my - 3], [mx - 6, my + 3], [mx + 6, my + 3], [mx, my - 4], [mx, my + 4]]) if (t[y][x] === T_FLOOR) t[y][x] = T_SPIKES;
+    if (biome.hazards.includes('poison')) for (let x = 2; x < RW - 2; x++) if (Math.abs(x - mx) > 6 && t[1][x] === T_FLOOR && t[RH - 2][x] === T_FLOOR) { t[1][x] = T_POISON; t[RH - 2][x] = T_POISON; }
   } else if (room.type === 'shop' || room.type === 'shrine' || room.type === 'armory' || room.type === 'treasure') {
     for (const [x, y] of [[mx - 4, my - 3], [mx + 4, my - 3], [mx - 4, my + 3], [mx + 4, my + 3]]) t[y][x] = T_WALL;
   }

@@ -13,7 +13,7 @@ function buildEnvers(room) {
       if (v === T_WALL) n = border ? T_WALL : T_SHADOW;
       else if (v === T_PIT) n = T_BRIDGE;
       else if (v === T_GLYPH) n = T_GLYPHE;
-      else if (v === T_LAVA || v === T_POISON || v === T_ICE) n = T_FLOOR;
+      else if (v === T_LAVA || v === T_POISON || v === T_ICE || v === T_MUD || v === T_SPIKES) n = T_FLOOR;
       else if (v === T_WATER) n = T_ICE;
       else if (v === T_DOORC || v === T_SEALED) n = T_DOOR;
       e[y].push(n);
@@ -73,7 +73,7 @@ function setupEnversRoom(room) {
 }
 function spawnReflets(room) {
   room.refletsSpawned = true;
-  const pool = G.floorData.biome.enemies.filter(t => t !== 'turret' && t !== 'toad');
+  const pool = G.floorData.biome.enemies.filter(t => ETYPES[t].ai !== 'turret' && ETYPES[t].ai !== 'hop');
   const n = Math.min(6, 2 + Math.floor(G.floor / 2));
   for (let i = 0; i < n; i++) {
     const pos = randomFloorTile(TILE * 4, 'fly');

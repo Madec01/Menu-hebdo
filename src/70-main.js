@@ -17,6 +17,8 @@ function newRun() {
   hideAll(); state = 'play';
   startFloor();
 }
+// deux morceaux par biome : le premier étage du biome joue l'un, le second l'autre (et on alterne à chaque cycle)
+function biomeTrack(biome) { return biome.tracks[((G.floor - 1) % FLOORS_PER_BIOME + cycleOf(G.floor)) % biome.tracks.length]; }
 function startFloor() {
   if (G.world === 'envers') { G.world = 'normal'; Audio.setEnvers(false); }
   G.floorData = genFloor(G.floor);
@@ -26,13 +28,13 @@ function startFloor() {
   const biome = G.floorData.biome;
   const begin = () => {
     enterRoom(G.floorData.start, null);
-    Audio.play(biome.track, { root: biome.root }); Audio.setAmbience(biome.amb);
+    Audio.play(biomeTrack(biome), { root: biome.root }); Audio.setAmbience(biome.amb);
     banner = { t: 'Étage ' + G.floor + ' — ' + biome.name, s: biome.sub, color: '#ffd97a', life: 3, max: 3 };
     if (G.oath && G.oath.mirror) { G.voile = 100; crossWorld(false); }
     if (G.floor === 1 && !save.tutorial) hint = { t: 'Nettoie chaque salle pour ouvrir les portes. Le boss garde l\'escalier.', life: 6 };
     else storyArrival(biome);
-    if (G.floor === 10) showStory([{ title: 'Ce qui affleure', text: STORY.floor10 }]);
-    else if (G.floor === 11) showStory([{ title: 'La boucle', text: STORY.cycle }]);
+    if (G.floor === FLOORS_PER_BIOME * BIOMES.length) showStory([{ title: 'Ce qui affleure', text: STORY.floor10 }]);
+    else if (G.floor === FLOORS_PER_BIOME * BIOMES.length + 1) showStory([{ title: 'La boucle', text: STORY.cycle }]);
   };
   if (G.floor >= 2) { enterRoom(G.floorData.start, null); offerOath(begin); } else begin();
 }
@@ -90,7 +92,7 @@ function enterRoom(room, fromDir) {
   if (G.world === 'envers') { setupEnversRoom(room); updateCamera(true); return; }
   if (!room.cleared && (room.type === 'normal' || room.type === 'boss')) {
     setDoors(room, false); spawnEnemies(room); SFX('doorClose');
-    if (room.type === 'boss') { SFX('boss'); banner = { t: G.bossName, s: 'Boss — ' + G.floorData.biome.name, color: '#ff5e7a', life: 3.2, max: 3.2 }; shakeIt(12); Audio.play('boss', { root: G.floorData.biome.root }); hint = { t: STORY.bosses[G.floorData.biome.boss].intro, life: 5 }; }
+    if (room.type === 'boss') { SFX('boss'); banner = { t: G.bossName, s: 'Boss — ' + G.floorData.biome.name, color: '#ff5e7a', life: 3.2, max: 3.2 }; shakeIt(12); Audio.play(cycleOf(G.floor) % 2 === 1 || (G.floor % 4 === 0) ? 'boss2' : 'boss', { root: G.floorData.biome.root }); hint = { t: STORY.bosses[G.floorData.biome.boss].intro, life: 5 }; }
   } else {
     setDoors(room, true);
     if (room.type === 'shop' && !room.shopSeen) { room.shopSeen = true; hint = { t: 'Un marchand. Approche-toi de lui pour dépenser ton essence.', life: 4 }; }
@@ -112,7 +114,7 @@ function clearRoom() {
     if (G.world === 'envers') { G.voile = 100; crossWorld(false); }
     SFX('stairs'); banner = { t: 'Boss vaincu', s: 'L\'escalier est ouvert', color: '#7fd7ff', life: 3, max: 3 };
     hint = { t: STORY.bosses[G.floorData.biome.boss].death, life: 7 };
-    Audio.play(G.floorData.biome.track, { root: G.floorData.biome.root });
+    Audio.play(biomeTrack(G.floorData.biome), { root: G.floorData.biome.root });
   }
   if (G.floor === 1 && !save.tutorial) { save.tutorial = 1; writeSave(); hint = { t: 'Les portes sont ouvertes. Cherche le coffre (jaune) et le boss (rouge) sur la carte.', life: 5 }; }
 }
@@ -250,8 +252,8 @@ function update(dt) {
   P.moving = ml > 0.05; if (P.moving) { P.walk += dt; Tutorial.event('move'); }
   P.dashCdT -= dt; P.inv -= dt; P.shieldT -= dt; P.fireT -= dt; P.webT -= dt; P.slowT -= dt; P.surgeT -= dt;
   const tile = tileAt(P.x, P.y);
-  P.inWater = tile === T_WATER; P.onIce = tile === T_ICE;
-  let spd = P.spd * (P.inWater ? 0.55 : 1) * (P.webT > 0 ? 0.5 : 1) * (P.slowT > 0 ? 0.65 : 1) * (G.world === 'envers' && P.enversSpeed ? 1.25 : 1);
+  P.inWater = tile === T_WATER; P.onIce = tile === T_ICE; P.inMud = tile === T_MUD;
+  let spd = P.spd * (P.inWater ? 0.55 : 1) * (P.inMud ? 0.45 : 1) * (P.webT > 0 ? 0.5 : 1) * (P.slowT > 0 ? 0.65 : 1) * (G.world === 'envers' && P.enversSpeed ? 1.25 : 1);
   P.stunT -= dt; if (P.stunT > 0) { mx = my = 0; ml = 0; P.moving = false; }
   if (P.fallT > 0) {
     P.fallT -= dt;
@@ -273,10 +275,12 @@ function update(dt) {
     const inPoison = t2 === T_POISON || pools.some(p => p.type === 'poison' && dist(p.x, p.y, P.x, P.y) < p.r);
     if (P.dashT <= 0 && inPoison) { P.hazT += dt; if (P.hazT >= 1) { P.hazT = 0; hurtPlayer(1, null, true); SFX('poison'); burst(P.x, P.y, 8, '#b8ff6a', 80, { shape: 'dot' }); } }
     else if (P.dashT <= 0 && t2 === T_LAVA) { P.hazT += dt * 1.6; if (P.hazT >= 1) { P.hazT = 0; hurtPlayer(1, null, true); SFX('sizzle'); burst(P.x, P.y, 10, '#ff9f43', 120, { glow: 1 }); } }
+    else if (P.dashT <= 0 && t2 === T_SPIKES && spikesUp()) { if (P.inv <= 0) { hurtPlayer(1, null, true); SFX('thud'); burst(P.x, P.y, 6, '#d0d0d0', 90); } }
     else P.hazT = Math.max(0, P.hazT - dt * 2);
     if (t2 === T_PIT && P.dashT <= 0) { P.fallT = 0.5; P.fell = false; SFX('fall'); }
     else if (t2 !== T_PIT && t2 !== T_LAVA) { P.safeT += dt; if (P.safeT > 0.3 && !hitsWall(P.x, P.y, P.r, 'ground')) { P.safeX = P.x; P.safeY = P.y; } } else P.safeT = 0;
     if (P.inWater && P.moving && Math.random() < 0.2) burst(P.x, P.y + 6, 1, 'rgba(160,210,255,0.8)', 40, { shape: 'dot', life: 0.4 });
+    if (P.inMud && P.moving && Math.random() < 0.15) burst(P.x, P.y + 8, 1, 'rgba(90,60,30,0.8)', 25, { shape: 'dot', life: 0.5, size: 3 });
     if (P.inWater && !P.wasWater) SFX('splash'); P.wasWater = P.inWater;
   }
   wantDash = false;

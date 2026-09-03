@@ -58,7 +58,7 @@ function spawnEnemies(room) {
 }
 function spawnWave(n, instant) {
   const biome = G.floorData.biome, pool = biome.enemies.slice();
-  const caps = { turret: 2, toad: 2, shaman: 1, yeti: 2, golem: 2 };
+  const caps = { turret: 2, toad: 2, shaman: 1, yeti: 2, golem: 2, crystalturret: 2, grenouille: 2, treant: 2, bonegolem: 2, crystalgolem: 2, sanglier: 2, druid: 1, mycomancien: 1, sporeling: 3, skullbomb: 3 };
   const counts = {};
   for (let i = 0; i < n; i++) {
     let type = pick(pool);

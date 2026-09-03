@@ -32,7 +32,7 @@ function drawSprite(name, frame, x, y, o) {
   ctx.restore();
   return true;
 }
-const SPRITE_SCALE = { hunter: 1.25, boss_colossus: 1.15, boss_eye: 1.1, boss_queen: 1.05 };
+const SPRITE_SCALE = { hunter: 1.25, boss_colossus: 1.15, boss_eye: 1.1, boss_queen: 1.05, boss_lich: 1.05, boss_leviathan: 1.1, boss_prism: 1.05, boss_cerf: 1.1, boss_mycelium: 1.05, boss_salamandre: 1.05, treant: 1.05, crystalgolem: 1.05 };
 
 /* ---------- créatures ---------- */
 function drawEnemy(e) {
@@ -63,7 +63,7 @@ function drawEnemy(e) {
   const flip = P.x < e.x;
   const dashing = e.state === 'dash' || e.phase === 'dash';
   let frame = 0;
-  if (e.type === 'bat' || e.type === 'imp') frame = Math.floor(e.ph * 10) % 2;
+  if (e.shape === 'bat') frame = Math.floor(e.ph * 10) % 2;
   let sx = 1, sy = 1;
   if (e.shape === 'toad') { sy = winding ? 0.75 : 1 + air * 0.15; sx = winding ? 1.15 : 1; }
   else if (!flying && !e.boss) { const b = Math.sin(e.ph * 9) * (dashing ? 0.1 : 0.04); sy = 1 + b; sx = 1 - b * 0.6; }

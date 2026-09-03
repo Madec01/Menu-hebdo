@@ -31,6 +31,8 @@ const Audio = (() => {
     waves.strings = mk(14, i => 1 / Math.pow(i, 1.25));
     waves.oboe = mk(12, i => (i % 2 ? 1 : 0.35) / Math.pow(i, 0.9));
     waves.organ = mk(8, i => [1, 0.6, 0.3, 0.5, 0.15, 0.1, 0.05, 0.1][i - 1]);
+    waves.reed = mk(16, i => (i % 2 ? 1 : 0.6) / Math.pow(i, 0.7));
+    waves.cello = mk(18, i => 1 / Math.pow(i, 1.05));
     setVolumes();
     decodeSamples();
     return true;
@@ -163,7 +165,28 @@ const Audio = (() => {
     oboe(t, f, dur, vel, dest, pan) { voice({ wave: waves.oboe, freq: f, t, dur, vel: vel * 0.28, a: 0.06, d: 0.2, s: 0.8, r: 0.3, cutoff: 2600, q: 1.5, fenv: 1.6, fdec: 0.25, vib: 7, vibRate: 5.5, vibDelay: 0.4, dest, rev: 0.5, pan }); },
     bell(t, f, dur, vel, dest, pan) { voice({ type: 'sine', freq: f, t, dur: 0.08, vel: vel * 0.7, a: 0.003, d: 0.9, s: 0.06, r: 1.6, fm: true, fmRatio: 2.4, fmDepth: 0.7, dest, rev: 0.65, pan }); voice({ type: 'sine', freq: f * 3.01, t, dur: 0.05, vel: vel * 0.08, a: 0.003, d: 0.4, s: 0, r: 0.4, dest, rev: 0.4, pan }); },
     glass(t, f, dur, vel, dest, pan) { voice({ type: 'sine', freq: f, t, dur: 0.08, vel: vel * 0.6, a: 0.005, d: 1.4, s: 0.04, r: 2, fm: true, fmRatio: 5.02, fmDepth: 0.4, dest, rev: 0.8, pan }); },
+    // instruments ajoutés pour les nouveaux biomes
+    harpsi(t, f, dur, vel, dest, pan) { pluck({ t, freq: f, vel: vel * 0.5, hold: 0.3, rel: 0.5, cutoff: 6500, bright: true, dest, rev: 0.3, pan }); },
+    kalimba(t, f, dur, vel, dest, pan) { voice({ type: 'sine', freq: f, t, dur: 0.05, vel: vel * 0.6, a: 0.002, d: 0.5, s: 0.05, r: 0.6, fm: true, fmRatio: 3.3, fmDepth: 0.25, dest, rev: 0.5, pan }); noise({ t, dur: 0.02, vel: vel * 0.08, cutoff: 3000, q: 2, dest }); },
+    musicbox(t, f, dur, vel, dest, pan) { voice({ type: 'sine', freq: f, t, dur: 0.05, vel: vel * 0.55, a: 0.002, d: 0.8, s: 0.04, r: 1.2, fm: true, fmRatio: 3.5, fmDepth: 0.45, dest, rev: 0.7, pan }); voice({ type: 'sine', freq: f * 2, t, dur: 0.03, vel: vel * 0.1, a: 0.002, d: 0.3, s: 0, r: 0.3, dest, pan }); },
+    marimba(t, f, dur, vel, dest, pan) { voice({ type: 'sine', freq: f, t, dur: 0.04, vel: vel * 0.7, a: 0.002, d: 0.28, s: 0.02, r: 0.3, dest, rev: 0.45, pan }); voice({ type: 'triangle', freq: f * 4, t, dur: 0.02, vel: vel * 0.08, a: 0.001, d: 0.06, s: 0, r: 0.05, dest, pan }); },
+    brass(t, f, dur, vel, dest, pan) { for (const dt of [-5, 5]) voice({ type: 'sawtooth', freq: f, detune: dt, t, dur, vel: vel * 0.1, a: 0.07, d: 0.2, s: 0.8, r: 0.3, cutoff: 1300, q: 1.2, fenv: 2.2, fdec: 0.22, vib: 5, vibRate: 5, vibDelay: 0.35, dest, rev: 0.5, pan }); },
+    cello(t, f, dur, vel, dest, pan) { voice({ wave: waves.cello, freq: f, t, dur, vel: vel * 0.3, a: 0.14, d: 0.3, s: 0.85, r: 0.6, cutoff: 900, q: 0.8, vib: 5, vibRate: 5, vibDelay: 0.5, dest, rev: 0.6, pan }); noise({ t, dur: Math.min(dur, 0.25), vel: vel * 0.03, cutoff: 1800, q: 2, a: 0.05, dest }); },
+    drone(t, f, dur, vel, dest) { voice({ type: 'sine', freq: f, t, dur, vel: vel * 0.16, a: 1.4, d: 0.5, s: 0.9, r: 2.2, dest, rev: 0.8 }); voice({ type: 'sawtooth', freq: f, detune: 4, t, dur, vel: vel * 0.045, a: 1.8, d: 0.5, s: 0.9, r: 2.2, cutoff: 320, dest, rev: 0.8 }); },
+    accordion(t, f, dur, vel, dest) { for (const dt of [-9, 9]) voice({ wave: waves.reed, freq: f, detune: dt, t, dur, vel: vel * 0.09, a: 0.12, d: 0.3, s: 0.9, r: 0.5, cutoff: 2000, dest, rev: 0.5 }); },
+    panflute(t, f, dur, vel, dest, pan) {
+      voice({ type: 'sine', freq: f, t, dur, vel: vel * 0.55, a: 0.07, d: 0.2, s: 0.85, r: 0.3, vib: 10, vibRate: 5.5, vibDelay: 0.25, dest, rev: 0.7, pan });
+      noise({ t, dur: Math.min(dur + 0.1, 0.5), vel: vel * 0.12, cutoff: f * 1.5, q: 8, a: 0.04, dest, rev: 0.4 });
+    },
+    ocarina(t, f, dur, vel, dest, pan) { voice({ type: 'sine', freq: f, t, dur, vel: vel * 0.5, a: 0.05, d: 0.15, s: 0.9, r: 0.25, vib: 6, vibRate: 4.5, vibDelay: 0.4, dest, rev: 0.6, pan }); voice({ type: 'triangle', freq: f * 2, t, dur, vel: vel * 0.05, a: 0.06, d: 0.2, s: 0.8, r: 0.2, cutoff: 3000, dest, pan }); },
+    bass2(t, f, dur, vel, dest) { voice({ type: 'sawtooth', freq: f, t, dur, vel: vel * 0.35, a: 0.005, d: 0.15, s: 0.6, r: 0.1, cutoff: 500, q: 2, fenv: 3, fdec: 0.12, dest }); voice({ type: 'sine', freq: f / 2, t, dur, vel: vel * 0.35, a: 0.005, d: 0.2, s: 0.7, r: 0.1, dest }); },
     // percussions
+    kick(t, vel, dest) { voice({ type: 'sine', freq: 130, t, dur: 0.12, vel: vel * 1.2, a: 0.002, d: 0.25, s: 0.1, r: 0.2, slide: 0.35, dest }); noise({ t, dur: 0.03, vel: vel * 0.12, cutoff: 1500, ftype: 'lowpass', dest }); },
+    tom(t, vel, dest) { voice({ type: 'sine', freq: 160, t, dur: 0.2, vel: vel * 0.9, a: 0.003, d: 0.3, s: 0.15, r: 0.3, slide: 0.6, dest, rev: 0.4 }); noise({ t, dur: 0.08, vel: vel * 0.15, cutoff: 800, ftype: 'lowpass', dest }); },
+    cymbal(t, vel, dest) { noise({ t, dur: 0.9, vel: vel * 0.16, cutoff: 6500, ftype: 'highpass', q: 0.7, dest, rev: 0.5 }); noise({ t, dur: 0.25, vel: vel * 0.1, cutoff: 9000, q: 3, dest }); },
+    clave(t, vel, dest) { voice({ type: 'sine', freq: 2400, t, dur: 0.015, vel: vel * 0.3, a: 0.001, d: 0.05, s: 0, r: 0.04, dest, rev: 0.35 }); },
+    logdrum(t, vel, dest) { voice({ type: 'sine', freq: 220, t, dur: 0.06, vel: vel * 0.7, a: 0.002, d: 0.22, s: 0.05, r: 0.25, slide: 0.72, dest, rev: 0.5 }); noise({ t, dur: 0.03, vel: vel * 0.1, cutoff: 1200, q: 2, dest }); },
+    bones(t, vel, dest) { for (let i = 0; i < 2; i++) { voice({ type: 'triangle', freq: 1400 + i * 500, t: t + i * 0.035, dur: 0.015, vel: vel * 0.22, a: 0.001, d: 0.05, s: 0, r: 0.04, slide: 0.85, dest, rev: 0.4 }); noise({ t: t + i * 0.035, dur: 0.03, vel: vel * 0.12, cutoff: 3500, q: 3, dest }); } },
     frame(t, vel, dest) { voice({ type: 'sine', freq: 72, t, dur: 0.25, vel: vel * 1.1, a: 0.003, d: 0.35, s: 0.2, r: 0.3, slide: 0.7, dest, rev: 0.35 }); noise({ t, dur: 0.06, vel: vel * 0.18, cutoff: 900, ftype: 'lowpass', dest }); },
     taiko(t, vel, dest) { voice({ type: 'sine', freq: 95, t, dur: 0.3, vel: vel * 1.2, a: 0.003, d: 0.4, s: 0.2, r: 0.4, slide: 0.55, dest, rev: 0.5 }); noise({ t, dur: 0.12, vel: vel * 0.3, cutoff: 600, ftype: 'lowpass', q: 1, dest, rev: 0.3 }); },
     rim(t, vel, dest) { noise({ t, dur: 0.09, vel: vel * 0.5, cutoff: 2400, q: 1.2, dest, rev: 0.35 }); voice({ type: 'triangle', freq: 420, t, dur: 0.02, vel: vel * 0.25, a: 0.001, d: 0.05, s: 0, r: 0.04, slide: 0.6, dest }); },
@@ -174,18 +197,31 @@ const Audio = (() => {
   };
 
   /* ---------- écriture musicale ---------- */
-  const CHORD = { m: [0, 3, 7], M: [0, 4, 7], m7: [0, 3, 7, 10], M7: [0, 4, 7, 11], sus: [0, 5, 7], dim: [0, 3, 6], m9: [0, 3, 7, 10, 14], mM7: [0, 3, 7, 11], add9: [0, 4, 7, 14] };
-  const SCALES = { minor: [0, 2, 3, 5, 7, 8, 10], dorian: [0, 2, 3, 5, 7, 9, 10], phrygian: [0, 1, 3, 5, 7, 8, 10], harm: [0, 2, 3, 5, 7, 8, 11] };
+  const CHORD = { m: [0, 3, 7], M: [0, 4, 7], m7: [0, 3, 7, 10], M7: [0, 4, 7, 11], sus: [0, 5, 7], dim: [0, 3, 6], m9: [0, 3, 7, 10, 14], mM7: [0, 3, 7, 11], add9: [0, 4, 7, 14], M6: [0, 4, 7, 9], m6: [0, 3, 7, 9], sus2: [0, 2, 7], M9: [0, 4, 7, 11, 14], pow: [0, 7, 12] };
+  const SCALES = { minor: [0, 2, 3, 5, 7, 8, 10], dorian: [0, 2, 3, 5, 7, 9, 10], phrygian: [0, 1, 3, 5, 7, 8, 10], harm: [0, 2, 3, 5, 7, 8, 11], major: [0, 2, 4, 5, 7, 9, 11], lydian: [0, 2, 4, 6, 7, 9, 11], mixo: [0, 2, 4, 5, 7, 9, 10] };
   // motifs mélodiques : [degré (0 = tonique, 7 = octave), durée en doubles-croches], null = silence ; chaque phrase = 32 pas
   const MOTIFS = {
-    lament:  [[4, 6], [3, 2], [2, 4], [0, 4], [null, 4], [2, 3], [3, 3], [4, 6], [null, 4]],
+    lament:  [[4, 6], [3, 2], [2, 4], [0, 4], [null, 4], [2, 3], [3, 3], [4, 6]],
     rise:    [[0, 2], [2, 2], [4, 4], [7, 6], [null, 2], [6, 2], [4, 4], [2, 2], [3, 6], [null, 2]],
     hymn:    [[7, 8], [6, 4], [4, 4], [5, 6], [4, 2], [2, 8]],
     dance:   [[0, 2], [null, 2], [2, 2], [4, 2], [3, 2], [null, 2], [2, 2], [0, 2], [null, 4], [4, 2], [5, 2], [4, 2], [2, 2], [null, 4]],
     echo:    [[4, 4], [null, 4], [4, 2], [2, 2], [0, 8], [null, 4], [3, 2], [2, 2], [0, 4]],
     call:    [[7, 3], [9, 3], [7, 2], [4, 8], [null, 4], [2, 2], [4, 2], [5, 4], [4, 4]],
     stalk:   [[0, 6], [1, 2], [0, 4], [null, 4], [3, 4], [1, 2], [0, 2], [null, 8]],
-    battle:  [[7, 2], [7, 2], [null, 2], [4, 2], [7, 2], [9, 2], [7, 4], [null, 2], [4, 2], [3, 2], [4, 2], [2, 4], [null, 2], [0, 4]],
+    battle:  [[7, 2], [7, 2], [null, 2], [4, 2], [7, 2], [9, 2], [7, 4], [null, 2], [4, 2], [3, 2], [4, 2], [2, 4], [null, 2], [0, 2]],
+    pastoral: [[0, 4], [2, 2], [4, 2], [5, 4], [4, 4], [2, 2], [0, 2], [null, 4], [4, 2], [5, 2], [7, 4]],
+    lullaby: [[4, 6], [2, 2], [0, 8], [null, 4], [3, 4], [2, 2], [1, 2], [0, 4]],
+    march:   [[0, 2], [0, 2], [4, 4], [3, 2], [2, 2], [0, 4], [null, 2], [7, 2], [6, 2], [4, 4], [2, 2], [0, 4]],
+    chase:   [[0, 1], [2, 1], [4, 1], [7, 1], [4, 2], [2, 2], [0, 2], [null, 2], [3, 1], [4, 1], [5, 1], [7, 1], [5, 2], [4, 2], [2, 2], [null, 2], [0, 4], [null, 4]],
+    mystery: [[0, 3], [6, 3], [5, 2], [null, 4], [4, 3], [1, 3], [2, 2], [null, 4], [0, 8]],
+    folk:    [[4, 2], [4, 2], [5, 2], [7, 2], [4, 4], [2, 2], [0, 2], [null, 4], [2, 2], [3, 2], [4, 2], [2, 2], [0, 4]],
+    chant:   [[0, 8], [2, 4], [0, 4], [null, 4], [-1, 4], [0, 8]],
+    bird:    [[7, 1], [9, 1], [7, 2], [null, 4], [9, 1], [11, 1], [9, 2], [null, 4], [7, 1], [9, 1], [7, 1], [6, 1], [4, 4], [null, 8]],
+    drift:   [[4, 4], [7, 4], [9, 8], [null, 4], [7, 4], [5, 4], [4, 4]],
+    // valses (mesures de 12 pas, phrases de 24)
+    waltz:   [[4, 3], [5, 3], [7, 6], [null, 3], [4, 3], [2, 6]],
+    waltz2:  [[0, 3], [2, 3], [4, 3], [7, 3], [5, 6], [4, 3], [2, 3]],
+    waltz3:  [[7, 6], [6, 3], [4, 3], [2, 6], [0, 6]],
   };
   const TRACKS = {
     menu:   { bpm: 58, root: 57, scale: 'minor', prog: [[0, 'm9'], [8, 'M7'], [5, 'm7'], [7, 'sus']], pad: 'strings', arp: 'harp', arpPat: '0.2.1.3..1.2.3..', arpOct: 1, lead: 'flute', leadOct: 1, motifs: ['lament', null, 'echo', null], bass: null, drums: null, swing: 0 },
@@ -194,6 +230,27 @@ const Audio = (() => {
     forge:  { bpm: 112, root: 48, scale: 'phrygian', prog: [[0, 'm'], [1, 'M'], [0, 'm'], [8, 'M'], [0, 'm'], [1, 'M'], [3, 'm'], [7, 'M']], pad: 'choir', arp: 'lute', arpPat: '0.0.2.0.1.0.2.2.', arpOct: 0, lead: 'oboe', leadOct: 1, motifs: ['stalk', 'battle', 'stalk', 'rise'], bass: 'bass', bassPat: 'x.x.x.x.x.x.x.x.', drums: { taiko: 'x..x..x.x..x....', rim: '....x.......x...', anvil: '....x.......x..x' }, swing: 0 },
     givre:  { bpm: 68, root: 54, scale: 'minor', prog: [[0, 'm9'], [10, 'M7'], [8, 'M7'], [3, 'M']], pad: 'strings', arp: 'bell', arpPat: '0...2...1...3...', arpOct: 2, lead: 'flute', leadOct: 1, motifs: ['hymn', null, 'echo', null], bass: 'bass', bassPat: 'x.......x.......', drums: { frame: 'x.......x.......', tamb: '....x.......x...' }, swing: 0 },
     abime:  { bpm: 94, root: 47, scale: 'phrygian', prog: [[0, 'm'], [1, 'dim'], [0, 'm'], [6, 'm'], [0, 'm'], [1, 'dim'], [3, 'm'], [8, 'M']], pad: 'choirLow', arp: 'lute', arpPat: '0.2.0.1..0.2.1..', arpOct: 0, lead: 'oboe', leadOct: 1, motifs: ['stalk', null, 'lament', 'stalk'], bass: 'bass', bassPat: 'x..x....x..x..x.', drums: { taiko: 'x..x....x..x....', rim: '....x.......x...', wood: 'x..x..x..x..x..x' }, swing: 0 },
+    menu2:  { bpm: 54, root: 57, scale: 'minor', prog: [[0, 'm'], [5, 'm7'], [3, 'M7'], [7, 'sus']], pad: 'drone', arp: 'kalimba', arpPat: '0..1..2..1..3..2', arpOct: 1, lead: 'ocarina', leadOct: 1, motifs: ['lullaby', null, 'echo', null], bass: null, drums: null, swing: 0 },
+    crypte2: { bpm: 78, root: 50, scale: 'harm', prog: [[0, 'm'], [8, 'M'], [0, 'm'], [7, 'M'], [0, 'm'], [3, 'M'], [5, 'm'], [7, 'M']], pad: 'organ', arp: 'harpsi', arpPat: '0.2.1.2.0.3.1.2.', arpOct: 1, lead: 'cello', leadOct: 0, motifs: ['chant', 'lament', 'chant', null], bass: 'bass', bassPat: 'x...x...x...x...', drums: { frame: 'x.......x.......', rim: '....x.......x...', bones: '..x...x.....x.x.' }, swing: 0 },
+    foret:  { bpm: 96, root: 53, scale: 'dorian', prog: [[0, 'm7'], [10, 'M'], [5, 'M'], [0, 'm7']], pad: 'strings', arp: 'lute', arpPat: '0.2.3.2.0.1.3.1.', arpOct: 1, lead: 'panflute', leadOct: 1, motifs: ['pastoral', 'bird', 'folk', null], bass: 'bass', bassPat: 'x.....x.x.....x.', drums: { frame: 'x.....x.x.....x.', wood: '..x..x....x..x..', shaker: 'x.x.x.x.x.x.x.x.' }, swing: 0.12 },
+    foret2: { bpm: 92, root: 53, scale: 'minor', steps: 12, prog: [[0, 'm'], [3, 'M'], [8, 'M'], [10, 'M'], [0, 'm'], [5, 'm'], [8, 'M'], [7, 'M']], pad: 'accordion', arp: 'harp', arpPat: '0..2..1..3..', arpOct: 1, lead: 'oboe', leadOct: 1, motifs: ['waltz', 'waltz2', 'waltz3', 'waltz'], bass: 'bass', bassPat: 'x...........', drums: { frame: 'x...........', wood: '....x...x...', tamb: '........x...' }, swing: 0 },
+    jardin: { bpm: 72, root: 55, scale: 'lydian', prog: [[0, 'M7'], [2, 'M'], [0, 'M7'], [9, 'm7']], pad: 'choir', arp: 'kalimba', arpPat: '0.2.4.2.1.3.2.4.', arpOct: 1, lead: 'flute', leadOct: 1, motifs: ['pastoral', null, 'lullaby', null], bass: 'bass', bassPat: 'x.......x.......', drums: { shaker: 'x.x.x.x.x.x.x.x.', wood: '....x.......x...' }, swing: 0.1 },
+    jardin2: { bpm: 100, root: 55, scale: 'major', prog: [[0, 'M'], [9, 'm'], [5, 'M'], [7, 'sus']], pad: 'strings', arp: 'harp', arpPat: '0.1.2.3.2.1.0.2.', arpOct: 2, lead: 'ocarina', leadOct: 1, motifs: ['folk', 'bird', 'folk', 'pastoral'], bass: 'bass', bassPat: 'x...x...x...x...', drums: { frame: 'x.......x.......', tamb: '....x.......x...', shaker: '..x...x...x...x.' }, swing: 0.16 },
+    marais2: { bpm: 66, root: 52, scale: 'phrygian', prog: [[0, 'm'], [1, 'M'], [0, 'm'], [10, 'm']], pad: 'drone', arp: 'marimba', arpPat: '0..2..1.0..3..1.', arpOct: 1, lead: 'cello', leadOct: 0, motifs: ['mystery', null, 'stalk', null], bass: 'bass', bassPat: 'x.....x.........', drums: { logdrum: 'x.....x...x.....', bones: '..x.....x....x..', shaker: 'x...x...x...x...' }, swing: 0.2 },
+    ossuaire: { bpm: 70, root: 49, scale: 'harm', prog: [[0, 'm'], [0, 'mM7'], [8, 'M7'], [7, 'M'], [0, 'm'], [5, 'm'], [1, 'M'], [7, 'M']], pad: 'organ', arp: 'harpsi', arpPat: '0...2...1...3...', arpOct: 1, lead: 'cello', leadOct: 0, motifs: ['chant', 'lament', null, 'chant'], bass: 'bass', bassPat: 'x.......x.......', drums: { bones: 'x.x...x.x.x...x.', frame: 'x.......x.......', clave: '....x.......x...' }, swing: 0 },
+    ossuaire2: { bpm: 118, root: 49, scale: 'minor', prog: [[0, 'm'], [3, 'M'], [0, 'm'], [7, 'M']], pad: 'strings', arp: 'harpsi', arpPat: '0.2.1.2.0.2.1.3.', arpOct: 1, lead: 'harpsi', leadOct: 1, motifs: ['dance', 'march', 'dance', 'chase'], bass: 'bass', bassPat: 'x.x.x.x.x.x.x.x.', drums: { bones: 'x.xx..x.x.xx..x.', kick: 'x...x...x...x...', clave: '..x...x...x...x.', cymbal: '........x.......' }, swing: 0.1 },
+    fongique: { bpm: 62, root: 51, scale: 'dorian', prog: [[0, 'm9'], [5, 'M7'], [0, 'm9'], [10, 'add9']], pad: 'drone', arp: 'musicbox', arpPat: '0...2...1...3...', arpOct: 2, lead: 'ocarina', leadOct: 1, motifs: ['mystery', null, 'lullaby', null], bass: 'bass', bassPat: 'x.......x.......', drums: { logdrum: 'x.......x...x...', shaker: 'x...x...x...x...' }, swing: 0 },
+    fongique2: { bpm: 88, root: 51, scale: 'minor', prog: [[0, 'm'], [10, 'M'], [8, 'M'], [10, 'M']], pad: 'choirLow', arp: 'kalimba', arpPat: '0.2.1.0.3.1.2.1.', arpOct: 1, lead: 'marimba', leadOct: 1, motifs: ['echo', 'mystery', 'echo', 'dance'], bass: 'bass', bassPat: 'x..x..x.x..x..x.', drums: { logdrum: 'x..x..x.x..x..x.', wood: '..x..x....x..x..', shaker: 'x.x.x.x.x.x.x.x.' }, swing: 0.18 },
+    forge2: { bpm: 132, root: 48, scale: 'minor', prog: [[0, 'pow'], [3, 'pow'], [0, 'pow'], [10, 'pow'], [0, 'pow'], [5, 'pow'], [3, 'pow'], [7, 'pow']], pad: 'brass', arp: 'lute', arpPat: '0.0.1.0.0.2.0.1.', arpOct: 0, lead: 'brass', leadOct: 1, motifs: ['march', 'battle', 'march', 'rise'], bass: 'bass2', bassPat: 'x.x.x.x.x.x.x.x.', drums: { kick: 'x...x...x...x...', anvil: '....x.......x...', tom: '..x.....x.x.....', cymbal: 'x.......x.......' }, swing: 0 },
+    cascade: { bpm: 80, root: 56, scale: 'major', prog: [[0, 'M7'], [5, 'M7'], [9, 'm7'], [7, 'sus']], pad: 'strings', arp: 'harp', arpPat: '0.1.2.3.1.2.3.1.', arpOct: 2, lead: 'flute', leadOct: 1, motifs: ['drift', 'pastoral', 'drift', null], bass: 'bass', bassPat: 'x.......x.......', drums: { frame: 'x.......x.......', shaker: 'x.x.x.x.x.x.x.x.' }, swing: 0 },
+    cascade2: { bpm: 108, root: 56, scale: 'mixo', prog: [[0, 'M'], [10, 'M'], [5, 'M'], [0, 'M']], pad: 'accordion', arp: 'lute', arpPat: '0.2.1.2.0.3.1.2.', arpOct: 1, lead: 'panflute', leadOct: 1, motifs: ['folk', 'dance', 'folk', 'bird'], bass: 'bass', bassPat: 'x...x...x...x...', drums: { frame: 'x.....x.x.......', tamb: '....x.......x...', wood: '..x...x...x...x.' }, swing: 0.2 },
+    cristal: { bpm: 64, root: 57, scale: 'lydian', prog: [[0, 'M9'], [2, 'M'], [0, 'M9'], [7, 'M7']], pad: 'choir', arp: 'glass', arpPat: '0...2...4...1...', arpOct: 2, lead: 'musicbox', leadOct: 2, motifs: ['lullaby', null, 'echo', null], bass: 'bass', bassPat: 'x.......x.......', drums: { tamb: '....x.......x...' }, swing: 0 },
+    cristal2: { bpm: 96, root: 57, scale: 'minor', prog: [[0, 'm'], [8, 'M7'], [10, 'M'], [0, 'm']], pad: 'strings', arp: 'bell', arpPat: '0.2.1.3.0.2.1.3.', arpOct: 2, lead: 'harpsi', leadOct: 1, motifs: ['chase', 'rise', 'chase', 'call'], bass: 'bass', bassPat: 'x...x...x...x...', drums: { kick: 'x...x...x...x...', clave: '..x...x...x...x.', cymbal: '........x.......' }, swing: 0 },
+    givre2: { bpm: 84, root: 54, scale: 'harm', steps: 12, prog: [[0, 'm'], [8, 'M'], [0, 'm'], [7, 'M'], [3, 'M'], [8, 'M'], [5, 'm'], [7, 'M']], pad: 'strings', arp: 'musicbox', arpPat: '0..2..1..3..', arpOct: 2, lead: 'flute', leadOct: 1, motifs: ['waltz3', 'waltz', 'waltz2', 'waltz3'], bass: 'bass', bassPat: 'x...........', drums: { frame: 'x...........', tamb: '....x...x...' }, swing: 0 },
+    noyee:  { bpm: 58, root: 51, scale: 'dorian', prog: [[0, 'm9'], [3, 'M7'], [10, 'add9'], [0, 'm9']], pad: 'drone', arp: 'glass', arpPat: '0.....2.....1...', arpOct: 1, lead: 'cello', leadOct: 0, motifs: ['lament', null, 'chant', null], bass: 'bass', bassPat: 'x...............', drums: { logdrum: 'x.......x.......' }, swing: 0 },
+    noyee2: { bpm: 74, root: 51, scale: 'minor', prog: [[0, 'm7'], [5, 'm7'], [8, 'M7'], [10, 'M']], pad: 'choirLow', arp: 'harp', arpPat: '0.2.1..3.0.2.1..', arpOct: 1, lead: 'oboe', leadOct: 1, motifs: ['echo', 'drift', 'lament', 'drift'], bass: 'bass', bassPat: 'x.....x...x.....', drums: { frame: 'x.....x...x.....', shaker: '..x...x...x...x.' }, swing: 0.12 },
+    abime2: { bpm: 100, root: 47, scale: 'phrygian', prog: [[0, 'm'], [6, 'dim'], [0, 'm'], [1, 'M'], [0, 'm'], [8, 'm'], [6, 'dim'], [1, 'M']], pad: 'drone', arp: 'harpsi', arpPat: '0.1.0.2.0.1.3.0.', arpOct: 0, lead: 'brass', leadOct: 0, motifs: ['stalk', 'chase', 'mystery', 'chase'], bass: 'bass2', bassPat: 'x..x..x.x..x..x.', drums: { kick: 'x..x..x.x..x..x.', tom: '....x.......x...', cymbal: 'x.......x.......', clave: '..x..x..x..x..x.' }, swing: 0 },
+    boss2:  { bpm: 140, root: 50, scale: 'phrygian', prog: [[0, 'm'], [1, 'M'], [0, 'm'], [6, 'dim'], [0, 'm'], [8, 'M'], [1, 'M'], [7, 'M']], pad: 'brass', arp: 'harpsi', arpPat: '0.2.1.2.0.3.1.2.', arpOct: 1, lead: 'brass', leadOct: 1, motifs: ['chase', 'battle', 'march', 'battle'], bass: 'bass2', bassPat: 'x.x.x.x.x.x.x.x.', drums: { kick: 'x...x...x...x.x.', tom: '..x.....x.x...x.', cymbal: 'x.......x.......', anvil: '....x.......x...', shaker: 'x.x.x.x.x.x.x.x.' }, swing: 0, full: true },
     boss:   { bpm: 126, root: 50, scale: 'harm', prog: [[0, 'm'], [0, 'm'], [8, 'M'], [7, 'M'], [0, 'm'], [1, 'M'], [6, 'dim'], [7, 'M']], pad: 'choir', arp: 'lute', arpPat: '0.2.1.2.0.2.1.3.', arpOct: 1, lead: 'oboe', leadOct: 1, motifs: ['battle', 'rise', 'battle', 'call'], bass: 'bass', bassPat: 'x.x.x.x.x.x.x.x.', drums: { taiko: 'x.x.x.x.x.x.x.xx', rim: '....x.......x..x', shaker: 'x.x.x.x.x.x.x.x.', anvil: '........x.......' }, swing: 0, full: true },
   };
 
@@ -231,8 +288,8 @@ const Audio = (() => {
     return ev;
   }
   function scheduleStep(t) {
-    const T = M.tpl, s = M.step % 16, bar = M.bar, chord = T.prog[bar % T.prog.length];
-    const rootMidi = T.root + chord[0], tones = CHORD[chord[1]], stepDur = 60 / T.bpm / 4, barDur = stepDur * 16;
+    const T = M.tpl, N = T.steps || 16, s = M.step % N, bar = M.bar, chord = T.prog[bar % T.prog.length];
+    const rootMidi = T.root + chord[0], tones = CHORD[chord[1]], stepDur = 60 / T.bpm / 4, barDur = stepDur * N;
     const hum = () => (M.rand() - 0.5) * 0.02;
     const accent = s % 8 === 0 ? 1.15 : s % 4 === 0 ? 1 : 0.85;
     if (s === 0 && T.pad) { const v = voicing(rootMidi, tones); v.forEach((midi, i) => INST[T.pad](t + i * 0.03, mtof(midi), barDur, 0.5 * (i === 0 ? 1 : 0.85), layers.pad)); }
@@ -250,7 +307,7 @@ const Audio = (() => {
       if (D.shaker && s % 2 === 1) INST.shaker(t + hum(), 0.22, layers.drums);
     }
     if (T.lead && T.motifs) {
-      const phraseIdx = Math.floor(bar / 2) % T.motifs.length, inPhrase = (bar % 2) * 16 + s;
+      const phraseIdx = Math.floor(bar / 2) % T.motifs.length, inPhrase = (bar % 2) * N + s;
       if (inPhrase === 0) { const name = T.motifs[phraseIdx]; const transpose = phraseIdx === 2 && M.rand() < 0.5 ? 2 : 0; M.phraseNotes = name ? phraseEvents(T, name, transpose) : []; }
       if (M.phraseNotes) for (const ev of M.phraseNotes) if (ev.step === inPhrase) INST[T.lead](t + hum(), mtof(ev.midi), stepDur * ev.len * 0.9, (0.3 + 0.12 * M.rand()) * accent, layers.lead, 0.15);
     }
@@ -267,12 +324,18 @@ const Audio = (() => {
         scheduleStep(M.nextT);
         const sw = M.tpl.swing * stepDur;
         M.nextT += stepDur + (M.step % 2 === 0 ? sw : -sw);
-        M.step++; if (M.step % 16 === 0) M.bar++;
+        M.step++; if (M.step % (M.tpl.steps || 16) === 0) M.bar++;
       }
     }
     if (amb && amb.kind === 'drip') {
       dripT -= dt;
       if (dripT <= 0) { dripT = 1.5 + Math.random() * 4; voice({ type: 'sine', freq: 1400 + Math.random() * 1800, t: now, dur: 0.03, vel: 0.07, a: 0.002, d: 0.12, s: 0, r: 0.4, dest: layers.amb, rev: 0.9, pan: Math.random() * 1.6 - 0.8 }); }
+    } else if (amb && amb.kind === 'forest') {
+      dripT -= dt;
+      if (dripT <= 0) {
+        dripT = 2 + Math.random() * 5; const pan = Math.random() * 1.6 - 0.8, base = 2200 + Math.random() * 1800, n = 2 + Math.floor(Math.random() * 3);
+        for (let i = 0; i < n; i++) voice({ type: 'sine', freq: base * (1 + (Math.random() - 0.5) * 0.2), t: now + i * 0.11, dur: 0.05, vel: 0.035, a: 0.01, d: 0.06, s: 0.3, r: 0.05, slide: 1.25, vib: 30, vibRate: 25, dest: layers.amb, rev: 0.7, pan });
+      }
     }
   }
 
@@ -291,8 +354,10 @@ const Audio = (() => {
       if (lfoRate) { const l = ac.createOscillator(); l.frequency.value = lfoRate; const lg = ac.createGain(); lg.gain.value = lfoDepth; l.connect(lg); lg.connect(f.frequency); l.start(); nodes.push(l); }
       src.start(); nodes.push(src);
     };
-    const target = { drip: 0.45, swamp: 0.45, fire: 0.5, wind: 0.55, void: 0.45, none: 0 }[kind] || 0;
-    if (kind === 'swamp') { mkNoise('lowpass', 260, 0.7, 0.35, 0.15, 120); mkNoise('bandpass', 900, 8, 0.05, 2.3, 500); }
+    const target = { drip: 0.45, swamp: 0.45, fire: 0.5, wind: 0.55, void: 0.45, forest: 0.5, water: 0.55, none: 0 }[kind] || 0;
+    if (kind === 'forest') { mkNoise('bandpass', 700, 0.8, 0.2, 0.13, 400); mkNoise('lowpass', 200, 0.5, 0.12, 0.05, 60); dripT = 1; }
+    else if (kind === 'water') { mkNoise('lowpass', 900, 0.6, 0.32, 0.3, 200); mkNoise('bandpass', 2500, 1.5, 0.1, 0.7, 600); }
+    else if (kind === 'swamp') { mkNoise('lowpass', 260, 0.7, 0.35, 0.15, 120); mkNoise('bandpass', 900, 8, 0.05, 2.3, 500); }
     else if (kind === 'fire') { mkNoise('lowpass', 1100, 0.5, 0.25, 6.5, 700); mkNoise('bandpass', 3200, 4, 0.05, 11, 1500); }
     else if (kind === 'wind') { mkNoise('bandpass', 450, 1.2, 0.35, 0.09, 350); mkNoise('bandpass', 1400, 3, 0.08, 0.21, 800); }
     else if (kind === 'void') {

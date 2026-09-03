@@ -52,6 +52,9 @@ const OPP = { '1,0': '-1,0', '-1,0': '1,0', '0,1': '0,-1', '0,-1': '0,1' };
 const T_FLOOR = 0, T_WALL = 1, T_DOOR = 3, T_DOORC = 4, T_WATER = 5, T_POISON = 6, T_LAVA = 7, T_ICE = 8, T_PIT = 9;
 // Envers : 10 ombre traversable, 11 glyphe (faux gouffre), 12 porte scellée, 13 pont, 14 glyphe révélé
 const T_SHADOW = 10, T_GLYPH = 11, T_SEALED = 12, T_BRIDGE = 13, T_GLYPHE = 14;
+// 15 boue (ralentit fortement), 16 pieux rétractables
+const T_MUD = 15, T_SPIKES = 16;
+const spikesUp = () => ((G && G.time) || 0) % 3.2 < 1.3;
 
 let state = 'menu';   // menu | play | pause | choice | dead
 let G = null, P = null;

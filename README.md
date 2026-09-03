@@ -20,7 +20,7 @@ Le récit se découvre en jeu : quatre écrans d'introduction à la première de
 
 ## Ce qu'il y a dedans
 
-- **Cinq biomes** de deux étages chacun, qui bouclent ensuite en plus difficile : Catacombes, Marais Putride (eau qui ralentit, mares de poison), Forge Ardente (lave), Cavernes de Givre (sol glissant), Abîme (gouffres, ténèbres).
+- **Douze biomes** de deux étages chacun, qui bouclent ensuite en plus difficile, avec chacun sa palette, ses décors de sol et de murs, ses dangers, son bestiaire et son boss : Catacombes, Forêt des Racines (boue, loups, corbeaux, sangliers, le Grand Cerf), Jardin Suspendu (ronces, guêpes, tréants, la Mère des Ronces), Marais Putride (eau, poison, la Reine des Marais), Ossuaire (piques, golems d'os, la Liche), Grotte Fongique (spores, myconides luminescents, Mère Mycélium), Forge Ardente (lave, le Colosse), Gorges des Cascades (eau vive, gouffres, harpies, la Salamandre), Grottes de Cristal (glace, prismes, le Prisme Éveillé), Cavernes de Givre (le Roi de Givre), Cité Noyée (le Léviathan), Abîme (l'Œil).
 - **Cinq boss** aux patterns propres : anneaux, charges, bonds, crachats de poison, éruptions télégraphiées, murs de feu, pics de glace, téléportation, laser rotatif, spirales, invocations.
 - **Dix-neuf types d'ennemis** avec des comportements distincts (archers, araignées qui engluent, crapauds sauteurs, chamans soigneurs, spectres qui traversent les murs, kamikazes, loups en meute…) et des **élites** à modificateurs.
 - **Cinq armes** au feeling différent : baguette, arc perforant, lames de mêlée qui parent les projectiles, orbe explosif, sceptre à éclairs en chaîne. On les trouve en armurerie ou chez le marchand, et on les débloque au Sanctuaire pour commencer avec.
@@ -32,10 +32,10 @@ Le récit se découvre en jeu : quatre écrans d'introduction à la première de
 - **Énigmes entre les deux mondes** : salles scellées accessibles seulement par l'Envers, glyphes qui révèlent le chemin sûr à travers un champ de gouffres, leviers de l'Envers qui effacent des murs du monde normal, boss qui se voilent à mi-vie et ne peuvent plus être frappés que par leur reflet, Échos qui rendent une relique perdue lors d'une mort précédente.
 - **Trente-quatre reliques** cumulables, dont quatre propres à l'Envers.
 - **Méta-progression** : l'essence ◆ ramassée est conservée et sert aux bénédictions permanentes, aux armes et au bestiaire (bonus de dégâts contre les ennemis souvent vaincus).
-- **Bande-son adaptative** : un morceau par biome et un thème de boss, percussions et basse qui n'entrent qu'au combat, ambiances sonores par biome, réverbération à convolution.
+- **Bande-son adaptative** : deux morceaux par biome (le second étage et chaque nouveau cycle changent de morceau), deux thèmes de boss, deux thèmes de menu, dont des valses à trois temps, percussions et basse qui n'entrent qu'au combat, ambiances sonores par biome, réverbération à convolution.
 - **Sprites pixel-art** dessinés pour le jeu (planche générée par `tools/sprites.py`), avec variantes recolorées par biome, animations et éclairage dynamique.
 - **Bruitages** : échantillons Kenney (CC0, voir `src/assets/sfx/LICENSE-Kenney-CC0.txt`) mélangés à de la synthèse.
-- **Musique** générée en temps réel : luth et harpe (cordes pincées Karplus-Strong), chœur à formants, cordes frottées, hautbois, flûte, percussions à main ; motifs mélodiques écrits par biome, conduite des voix, humanisation du jeu.
+- **Musique** générée en temps réel : luth, harpe et clavecin (cordes pincées Karplus-Strong), chœur à formants, cordes frottées, violoncelle, hautbois, flûte, flûte de pan, ocarina, accordéon, cuivres, kalimba, marimba, boîte à musique, bourdons, percussions à main, tambours de bois, os, cymbales ; motifs mélodiques écrits par biome, conduite des voix, humanisation du jeu.
 
 ## Développement
 

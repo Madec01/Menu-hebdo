@@ -120,3 +120,23 @@ const STORY = {
 
   summary: 'Sous la ville, une crypte sans fin où l’on descend et d’où personne ne remonte. Ce qui y meurt laisse une essence que la crypte garde en mémoire, et avec laquelle elle se rebâtit sans cesse. Entre la pierre et son reflet s’étend le Voile : chaque mort le déchire, et quand il cède, on passe dans l’Envers, où rien n’est encore reflété et où tout vaut double. Le Traqueur, premier descendu et premier parjure, y chasse ceux qui traînent ; les serments se prêtent à une voix qui parle derrière le Voile et qui tient ses comptes. Au dixième étage, la vérité affleure : la pierre n’est que l’ombre de l’Envers, et derrière l’Abîme attendent une porte, trois sceaux, et celui qui tisse le Voile. Puis la boucle recommence, car la crypte se souvient.',
 };
+
+/* ---------- biomes et boss ajoutés ---------- */
+Object.assign(STORY.biomes, {
+  jardin: ['Quelque chose pousse ici sans lumière. Les racines ont trouvé les corps avant toi.', 'Le jardin te reconnaît. Les ronces s’écartent à peine.'],
+  ossuaire: ['Les murs sont faits de ceux qui sont descendus. Ils te regardent passer.', 'Tu connais ces couloirs. Certains os pourraient être les tiens.'],
+  cristal: ['Chaque paroi te renvoie ta propre lumière, et autre chose derrière elle.', 'Les cristaux vibrent à ton approche. Ils se souviennent de ta note.'],
+  noyee: ['Une ville entière, engloutie. La mer qui l’a prise ne bouge plus.', 'L’eau est immobile comme un miroir posé à plat. Ne regarde pas trop longtemps.'],
+  foret: ['Les arbres poussent à l’envers ici : les racines vers le ciel, les cimes vers le fond. Quelque chose respire entre les troncs.', 'La forêt te connaît. Les corbeaux ont annoncé ton retour bien avant que tu ne descendes.'],
+  fongique: ['Tout luit d’une lumière qui n’est pas la tienne. Ne respire pas trop fort : les spores écoutent.', 'Le mycélium court sous chaque dalle. Il a goûté ton essence la dernière fois.'],
+  cascade: ['L’eau tombe de nulle part vers nulle part. Son bruit couvre presque les pas derrière toi.', 'Les gorges rugissent toujours. Elles ne se souviennent pas de toi, et c’est reposant.'],
+});
+Object.assign(STORY.bosses, {
+  sylve: { intro: 'Elle a poussé sur tous ceux qui sont tombés ici.', death: 'Les ronces se retirent. Sous elles, des marches, et des noms.' },
+  lich: { intro: 'Quelqu’un a refusé la crypte. Il en est devenu le gardien.', death: 'La Liche s’effondre en poussière. Sa couronne, elle, reste chaude.' },
+  leviathan: { intro: 'La mer immobile se soulève.', death: 'L’eau retombe. Le silence, en dessous, n’a pas changé.' },
+  prism: { intro: 'Le cristal a appris ta lumière. Il te la rend.', death: 'Le Prisme se fend. Dans chaque éclat, un reflet de toi s’éteint.' },
+  cerf: { intro: 'Ses bois portent les noms de ceux qui ont voulu remonter par la forêt.', death: 'Le Grand Cerf s’agenouille. La forêt retient son souffle, puis reprend.' },
+  mycelium: { intro: 'Elle n’a pas de visage. Elle a des milliers de bouches, et toutes chuchotent.', death: 'Les chapeaux s’éteignent un à un. Sous la Mère, la roche est nue pour la première fois.' },
+  salamandre: { intro: 'Elle dort sous la cascade depuis avant la crypte.', death: 'La Salamandre replonge. L’eau, un instant, coule à l’envers.' },
+});

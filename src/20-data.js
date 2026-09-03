@@ -1,20 +1,41 @@
 /* ---------- biomes ---------- */
 const BIOMES = [
   { id: 'crypte', name: 'Catacombes', sub: 'Pierre froide et torches mourantes',
-    pal: { floor: '#232739', floor2: '#1d2130', deco: '#2b3048', wall: '#363c5b', wallTop: '#4a5280', wallEdge: '#5d67a0', accent: '#7fd7ff', torch: '#ffb347' },
-    hazards: [], enemies: ['slime', 'slime', 'bat', 'archer', 'brute'], boss: 'guardian', track: 'crypte', amb: 'drip', dark: 0.55, root: 50 },
+    pal: { floor: '#232739', floor2: '#1d2130', deco: '#2b3048', wall: '#363c5b', wallTop: '#4a5280', wallEdge: '#5d67a0', accent: '#7fd7ff', torch: '#ffb347', wallStyle: 'brick', decoKind: 'bones' },
+    hazards: [], enemies: ['slime', 'slime', 'bat', 'archer', 'brute'], boss: 'guardian', tracks: ['crypte', 'crypte2'], amb: 'drip', dark: 0.55, root: 50 },
+  { id: 'foret', name: 'Forêt des Racines', sub: 'Des troncs qui poussent vers le bas',
+    pal: { floor: '#24301f', floor2: '#1d271a', deco: '#31442a', wall: '#3f3120', wallTop: '#5a4a2c', wallEdge: '#7e6a3e', accent: '#9be36a', torch: '#ffd27a', wallStyle: 'roots', decoKind: 'forest' },
+    hazards: ['mud', 'water'], enemies: ['loup', 'corbeau', 'sylvain', 'sanglier', 'spider', 'corbeau'], boss: 'cerf', tracks: ['foret', 'foret2'], amb: 'forest', dark: 0.5, root: 53 },
+  { id: 'jardin', name: 'Jardin Suspendu', sub: 'Racines, spores et lumière verte',
+    pal: { floor: '#233626', floor2: '#1c2c1f', deco: '#2f4a30', wall: '#3d5a34', wallTop: '#557a48', wallEdge: '#7aa862', accent: '#b8ff7a', torch: '#c8ff9a', wallStyle: 'roots', decoKind: 'garden' },
+    hazards: ['water', 'mud'], enemies: ['thornling', 'thornling', 'wasp', 'druid', 'treant', 'spider'], boss: 'sylve', tracks: ['jardin', 'jardin2'], amb: 'swamp', dark: 0.5, root: 55, glow: '#b8ff7a' },
   { id: 'marais', name: 'Marais Putride', sub: 'Eaux mortes et bourdonnements',
-    pal: { floor: '#22301f', floor2: '#1b271a', deco: '#2c3d28', wall: '#3a4a2c', wallTop: '#546c3a', wallEdge: '#6f8f4a', accent: '#a3ff5e', torch: '#9dff7a' },
-    hazards: ['water', 'poison'], enemies: ['slime', 'spider', 'toad', 'shaman', 'bat', 'spider'], boss: 'queen', track: 'marais', amb: 'swamp', dark: 0.6, root: 52 },
+    pal: { floor: '#22301f', floor2: '#1b271a', deco: '#2c3d28', wall: '#3a4a2c', wallTop: '#546c3a', wallEdge: '#6f8f4a', accent: '#a3ff5e', torch: '#9dff7a', wallStyle: 'rough', decoKind: 'reeds' },
+    hazards: ['water', 'poison'], enemies: ['slime', 'spider', 'toad', 'shaman', 'bat', 'spider'], boss: 'queen', tracks: ['marais', 'marais2'], amb: 'swamp', dark: 0.6, root: 52 },
+  { id: 'ossuaire', name: 'Ossuaire', sub: 'Des murs faits de ceux qui sont passés',
+    pal: { floor: '#2e2a26', floor2: '#26221e', deco: '#3c3630', wall: '#5a5248', wallTop: '#8a8070', wallEdge: '#b0a898', accent: '#f0e8d0', torch: '#ffd07a', wallStyle: 'bone', decoKind: 'skulls' },
+    hazards: ['spikes'], enemies: ['archer', 'bonespider', 'skullbomb', 'bonegolem', 'bat', 'archer'], boss: 'lich', tracks: ['ossuaire', 'ossuaire2'], amb: 'drip', dark: 0.58, root: 49 },
+  { id: 'fongique', name: 'Grotte Fongique', sub: 'Chapeaux luisants et spores qui dérivent',
+    pal: { floor: '#2a2236', floor2: '#231c2e', deco: '#3a2e4a', wall: '#3a2f48', wallTop: '#55446a', wallEdge: '#7a6494', accent: '#d98cff', torch: '#8fd8c8', wallStyle: 'rough', decoKind: 'mushrooms' },
+    hazards: ['poison', 'mud'], enemies: ['myconide', 'myconide', 'phalene', 'sporeling', 'mycomancien', 'spider'], boss: 'mycelium', tracks: ['fongique', 'fongique2'], amb: 'drip', dark: 0.6, root: 51, glow: '#b07ad8' },
   { id: 'forge', name: 'Forge Ardente', sub: 'Métal en fusion et cendres',
-    pal: { floor: '#2f2424', floor2: '#271c1c', deco: '#3c2c28', wall: '#4b302b', wallTop: '#6e4238', wallEdge: '#915242', accent: '#ff7b3a', torch: '#ff9f43' },
-    hazards: ['lava'], enemies: ['imp', 'turret', 'golem', 'mage', 'bat', 'imp'], boss: 'colossus', track: 'forge', amb: 'fire', dark: 0.45, root: 48 },
+    pal: { floor: '#2f2424', floor2: '#271c1c', deco: '#3c2c28', wall: '#4b302b', wallTop: '#6e4238', wallEdge: '#915242', accent: '#ff7b3a', torch: '#ff9f43', wallStyle: 'brick', decoKind: 'forge' },
+    hazards: ['lava'], enemies: ['imp', 'turret', 'golem', 'mage', 'bat', 'imp'], boss: 'colossus', tracks: ['forge', 'forge2'], amb: 'fire', dark: 0.45, root: 48 },
+  { id: 'cascade', name: 'Gorges des Cascades', sub: 'Roche mouillée et rugissement d\'eau',
+    pal: { floor: '#2a3238', floor2: '#232a30', deco: '#364249', wall: '#3d4a52', wallTop: '#5a6c78', wallEdge: '#82a0b0', accent: '#7fe0ff', torch: '#ffd27a', wallStyle: 'rough', decoKind: 'cascade' },
+    hazards: ['water', 'pit'], enemies: ['grenouille', 'crabe', 'harpie', 'naiade', 'crabe', 'harpie'], boss: 'salamandre', tracks: ['cascade', 'cascade2'], amb: 'water', dark: 0.48, root: 56 },
+  { id: 'cristal', name: 'Grottes de Cristal', sub: 'Chaque paroi renvoie ta lumière',
+    pal: { floor: '#2a2340', floor2: '#221c36', deco: '#3a2f58', wall: '#4a3a70', wallTop: '#6a52a0', wallEdge: '#9a7ad0', accent: '#ff7bd5', torch: '#7bffea', wallStyle: 'crystal', decoKind: 'crystals' },
+    hazards: ['ice', 'spikes'], enemies: ['crystalbat', 'crystalturret', 'crystalgolem', 'icemage', 'crystalbat', 'ghost'], boss: 'prism', tracks: ['cristal', 'cristal2'], amb: 'wind', dark: 0.5, root: 57, glow: '#ff7bd5' },
   { id: 'givre', name: 'Cavernes de Givre', sub: 'Glace bleue et souffle glacial',
-    pal: { floor: '#253447', floor2: '#1f2b3c', deco: '#2f4158', wall: '#3f5772', wallTop: '#5d7d9f', wallEdge: '#82a4c8', accent: '#bfe9ff', torch: '#9fd8ff' },
-    hazards: ['ice'], enemies: ['wolf', 'wolf', 'icemage', 'ghost', 'yeti', 'archer'], boss: 'frostking', track: 'givre', amb: 'wind', dark: 0.5, root: 54 },
+    pal: { floor: '#253447', floor2: '#1f2b3c', deco: '#2f4158', wall: '#3f5772', wallTop: '#5d7d9f', wallEdge: '#82a4c8', accent: '#bfe9ff', torch: '#9fd8ff', wallStyle: 'rough', decoKind: 'ice' },
+    hazards: ['ice'], enemies: ['wolf', 'wolf', 'icemage', 'ghost', 'yeti', 'archer'], boss: 'frostking', tracks: ['givre', 'givre2'], amb: 'wind', dark: 0.5, root: 54 },
+  { id: 'noyee', name: 'Cité Noyée', sub: 'Une ville sous une mer qui ne bouge plus',
+    pal: { floor: '#1f3038', floor2: '#182830', deco: '#284048', wall: '#2f4a55', wallTop: '#456a78', wallEdge: '#6a98a8', accent: '#5fd6ff', torch: '#7fe8ff', wallStyle: 'brick', decoKind: 'drowned' },
+    hazards: ['water', 'mud', 'pit'], enemies: ['drowned', 'toad', 'ghost', 'wolf', 'drowned', 'spider'], boss: 'leviathan', tracks: ['noyee', 'noyee2'], amb: 'swamp', dark: 0.62, root: 51 },
   { id: 'abime', name: "L'Abîme", sub: 'Là où la lumière renonce',
-    pal: { floor: '#1b1727', floor2: '#160f20', deco: '#261d35', wall: '#2c2342', wallTop: '#3f3163', wallEdge: '#57448e', accent: '#c77dff', torch: '#b36bff' },
-    hazards: ['pit'], enemies: ['ghost', 'shade', 'bomber', 'voidmage', 'spider', 'wolf', 'bomber'], boss: 'eye', track: 'abime', amb: 'void', dark: 0.78, root: 47 },
+    pal: { floor: '#1b1727', floor2: '#160f20', deco: '#261d35', wall: '#2c2342', wallTop: '#3f3163', wallEdge: '#57448e', accent: '#c77dff', torch: '#b36bff', wallStyle: 'rough', decoKind: 'runes' },
+    hazards: ['pit'], enemies: ['ghost', 'shade', 'bomber', 'voidmage', 'spider', 'wolf', 'bomber'], boss: 'eye', tracks: ['abime', 'abime2'], amb: 'void', dark: 0.78, root: 47, glow: '#c77dff' },
 ];
 const FLOORS_PER_BIOME = 2;
 const biomeFor = floor => BIOMES[Math.floor((floor - 1) / FLOORS_PER_BIOME) % BIOMES.length];
@@ -40,6 +61,36 @@ const ETYPES = {
   shade:    { name: 'Ombre', shape: 'humanoid', r: 11, hp: 5, spd: 95, color: '#6a58a8', dark: '#2a2040', contact: 1, ai: 'archer', fireCd: 1.7, bSpd: 300 },
   bomber:   { name: 'Kamikaze', shape: 'bomber', r: 11, hp: 3, spd: 135, color: '#ff3b6b', dark: '#7a1030', contact: 1, ai: 'bomber' },
   voidmage: { name: 'Mage du néant', shape: 'mage', r: 13, hp: 7, spd: 80, color: '#c77dff', dark: '#5b2a8a', contact: 1, ai: 'kite', fireCd: 2.7, bSpd: 150, homing: true },
+  // jardin suspendu
+  thornling: { name: 'Ronce vive', shape: 'blob', r: 13, hp: 4, spd: 82, color: '#4f9a4a', dark: '#204a22', contact: 1, ai: 'chase' },
+  wasp:      { name: 'Guêpe', shape: 'bat', r: 9, hp: 2, spd: 170, color: '#e8c94a', dark: '#5a4a10', contact: 1, ai: 'zigzag', fly: true, shooter: true, fireCd: 2.8, bSpd: 260 },
+  treant:    { name: 'Tréant', shape: 'brute', r: 22, hp: 20, spd: 40, color: '#6b4a2a', dark: '#3a2812', contact: 2, ai: 'charge', dashSpd: 320, windT: 0.8 },
+  druid:     { name: 'Druide déchu', shape: 'mage', r: 12, hp: 6, spd: 70, color: '#8fbf5a', dark: '#3a5a20', contact: 1, ai: 'shaman', fireCd: 3 },
+  // ossuaire
+  bonegolem: { name: 'Golem d\'os', shape: 'brute', r: 21, hp: 16, spd: 50, color: '#e8e0cc', dark: '#8a8070', contact: 2, ai: 'charge', dashSpd: 400, windT: 0.5 },
+  skullbomb: { name: 'Crâne hurleur', shape: 'bomber', r: 11, hp: 3, spd: 125, color: '#e8e0cc', dark: '#6a6050', contact: 1, ai: 'bomber' },
+  bonespider: { name: 'Araignée d\'os', shape: 'spider', r: 12, hp: 5, spd: 130, color: '#d8d0bc', dark: '#6a6050', contact: 1, ai: 'spider', fireCd: 2.6 },
+  // cité noyée
+  drowned:   { name: 'Noyé', shape: 'mage', r: 12, hp: 6, spd: 75, color: '#4a8fa8', dark: '#1f4a5a', contact: 1, ai: 'kite', fireCd: 2.4, bSpd: 160, spread: 2, slowShot: true },
+  // grottes de cristal
+  crystalbat: { name: 'Chauve-souris de cristal', shape: 'bat', r: 9, hp: 3, spd: 150, color: '#ff7bd5', dark: '#8a2a6a', contact: 1, ai: 'zigzag', fly: true, shooter: true, fireCd: 3, bSpd: 240 },
+  crystalturret: { name: 'Prisme gardien', shape: 'turret', r: 14, hp: 8, spd: 0, color: '#7bffea', dark: '#1f7a6a', contact: 1, ai: 'turret', fireCd: 1.6, bSpd: 220 },
+  crystalgolem: { name: 'Golem de cristal', shape: 'brute', r: 22, hp: 22, spd: 45, color: '#c07bff', dark: '#5a2a8a', contact: 2, ai: 'charge', dashSpd: 380, windT: 0.6, ringOnWall: true },
+  // forêt des racines
+  loup:      { name: 'Loup gris', shape: 'wolf', r: 12, hp: 5, spd: 100, color: '#8a8478', dark: '#4a443a', contact: 1, ai: 'charge', dashSpd: 520, windT: 0.3 },
+  corbeau:   { name: 'Corbeau', shape: 'bat', r: 9, hp: 2, spd: 165, color: '#2e2f3a', dark: '#131418', contact: 1, ai: 'zigzag', fly: true },
+  sylvain:   { name: 'Archer sylvain', shape: 'humanoid', r: 11, hp: 4, spd: 70, color: '#6fa05a', dark: '#2f4f26', contact: 1, ai: 'archer', fireCd: 1.9, bSpd: 300 },
+  sanglier:  { name: 'Sanglier', shape: 'brute', r: 19, hp: 11, spd: 60, color: '#7a5236', dark: '#3e2816', contact: 2, ai: 'charge', dashSpd: 480, windT: 0.4 },
+  // grotte fongique
+  myconide:  { name: 'Myconide', shape: 'blob', r: 13, hp: 4, spd: 70, color: '#b07ad8', dark: '#5a3a80', contact: 1, ai: 'chase' },
+  sporeling: { name: 'Sporule', shape: 'bomber', r: 10, hp: 2, spd: 120, color: '#8fd8c8', dark: '#3a7a6a', contact: 1, ai: 'bomber' },
+  phalene:   { name: 'Phalène', shape: 'bat', r: 9, hp: 2, spd: 140, color: '#e8d8b0', dark: '#8a7a58', contact: 1, ai: 'zigzag', fly: true },
+  mycomancien: { name: 'Mycomancien', shape: 'mage', r: 12, hp: 6, spd: 72, color: '#c68cff', dark: '#5a2a8a', contact: 1, ai: 'shaman', fireCd: 3 },
+  // gorges des cascades
+  grenouille: { name: 'Grenouille des gorges', shape: 'toad', r: 15, hp: 7, spd: 0, color: '#4a9ad0', dark: '#1e4a70', contact: 1, ai: 'hop' },
+  harpie:    { name: 'Harpie', shape: 'bat', r: 10, hp: 3, spd: 155, color: '#e0a060', dark: '#7a4a20', contact: 1, ai: 'zigzag', fly: true, shooter: true, fireCd: 2.6, bSpd: 250 },
+  crabe:     { name: 'Crabe des roches', shape: 'spider', r: 12, hp: 6, spd: 95, color: '#e06a4a', dark: '#7a2a18', contact: 1, ai: 'spider', fireCd: 3 },
+  naiade:    { name: 'Naïade', shape: 'mage', r: 12, hp: 5, spd: 85, color: '#6ad0e0', dark: '#1f6a7a', contact: 1, ai: 'kite', fireCd: 2.2, bSpd: 200, spread: 2 },
   hunter:   { name: 'Le Traqueur', shape: 'ghost', r: 15, hp: 28, spd: 125, color: '#ff2244', dark: '#5a0a18', contact: 2, ai: 'ghost', fly: true, hunter: true },
 };
 const ELITES = [
@@ -56,6 +107,13 @@ const BOSSES = {
   queen:     { name: 'Reine des Marais', color: '#86bf5c', dark: '#2f5a1e', r: 32, hp: 80, spd: 30, shape: 'toad', attacks: ['hop', 'spit', 'hop', 'summon:spider', 'spit'] },
   colossus:  { name: 'Colosse de Forge', color: '#ff7b54', dark: '#8a2f12', r: 36, hp: 105, spd: 48, shape: 'brute', attacks: ['erupt', 'wall', 'dash', 'erupt', 'wall'] },
   frostking: { name: 'Roi de Givre', color: '#cfeeff', dark: '#3a6f96', r: 30, hp: 95, spd: 72, shape: 'mage', attacks: ['spikes', 'ring', 'blink', 'summon:ghost', 'spikes', 'blink'] },
+  sylve:     { name: 'Mère des Ronces', color: '#5fa04a', dark: '#2a4a1e', r: 32, hp: 75, spd: 60, shape: 'blob', attacks: ['summon:thornling', 'spit', 'ring', 'summon:wasp', 'spit', 'ring'] },
+  lich:      { name: 'La Liche', color: '#e8e0cc', dark: '#5a5040', r: 30, hp: 100, spd: 55, shape: 'mage', attacks: ['summon:archer', 'spikes', 'blink', 'ring', 'summon:skullbomb', 'blink', 'spikes'] },
+  leviathan: { name: 'Léviathan des Eaux Mortes', color: '#3a7fa0', dark: '#163a4a', r: 34, hp: 115, spd: 35, shape: 'toad', attacks: ['hop', 'wall', 'spit', 'ring', 'hop', 'wall'] },
+  prism:     { name: 'Prisme Éveillé', color: '#ff7bd5', dark: '#7a2a5a', r: 32, hp: 120, spd: 65, shape: 'eye', attacks: ['laser', 'spikes', 'blink', 'spiral', 'ring', 'blink', 'laser'] },
+  cerf:      { name: 'Le Grand Cerf', color: '#8a6240', dark: '#3e2816', r: 33, hp: 90, spd: 70, shape: 'brute', attacks: ['dash', 'summon:corbeau', 'ring', 'dash', 'wall', 'dash'] },
+  mycelium:  { name: 'Mère Mycélium', color: '#b07ad8', dark: '#4a2a70', r: 32, hp: 95, spd: 50, shape: 'blob', attacks: ['summon:sporeling', 'spit', 'ring', 'summon:myconide', 'spit', 'spiral'] },
+  salamandre: { name: 'Salamandre des Cascades', color: '#2f7a8a', dark: '#123a48', r: 32, hp: 105, spd: 40, shape: 'toad', attacks: ['hop', 'spit', 'dash', 'wall', 'hop', 'ring'] },
   eye:       { name: "Œil de l'Abîme", color: '#c77dff', dark: '#4b1f7a', r: 34, hp: 125, spd: 60, shape: 'eye', attacks: ['laser', 'blink', 'spiral', 'summon:bomber', 'laser', 'blink', 'spiral'] },
 };
 const ROMAN = ['', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
@@ -133,4 +191,4 @@ const META = [
 ];
 
 /* ---------- gabarits de salles ---------- */
-const TEMPLATES = ['open', 'pillars', 'cross', 'ring', 'random', 'corridors', 'islands'];
+const TEMPLATES = ['open', 'pillars', 'cross', 'ring', 'random', 'corridors', 'islands', 'maze', 'arena'];
