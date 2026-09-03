@@ -136,6 +136,8 @@ function drawProp(pr, tk) {
   } else if (pr.kind === 'pedestal') {
     drawSprite('pedestal', 0, x, y + 14, { alpha: pr.used ? 0.7 : 1 });
     if (!pr.used) { ctx.strokeStyle = 'rgba(255,94,122,' + (0.4 + 0.3 * Math.sin(tk * 4)) + ')'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y - 18, 12 + Math.sin(tk * 4) * 2, 0, TAU); ctx.stroke(); }
+  } else if (pr.kind === 'tablet') {
+    drawTablet(pr, tk);
   } else if (pr.kind === 'fissure') {
     const env = G.world === 'envers', a = 0.6 + 0.4 * Math.sin(tk * 4 + x);
     ctx.strokeStyle = env ? 'rgba(255,255,255,' + a + ')' : 'rgba(199,125,255,' + a + ')'; ctx.lineWidth = env ? 3.5 : 2.5; ctx.lineJoin = 'round'; ctx.shadowColor = '#c77dff'; ctx.shadowBlur = 14;

@@ -53,12 +53,13 @@ function crossWorld(forced) {
   if (toEnvers) {
     G.crossings++;
     setupEnversRoom(room);
-    if (!save.tutorialEnvers) { save.tutorialEnvers = 1; writeSave(); hint = { t: 'L\'Envers. Le Voile se vide : tue des Reflets pour tenir, ou reviens par une fissure.', life: 6 }; }
+    if (!save.tutorialEnvers) { save.tutorialEnvers = 1; writeSave(); hint = { t: STORY.envers.first, life: 8 }; }
+    else if (room.puzzle === 'alcove' && !room.gateOpen) hint = { t: STORY.envers.lever, life: 6 };
   } else {
     enemies = enemies.filter(e => !e.reflet);
     if (!room.spawned && !room.cleared && (room.type === 'normal' || room.type === 'boss')) { setDoors(room, false); spawnEnemies(room); SFX('doorClose'); }
     else setDoors(room, !room.challengeOn && (room.cleared || (room.type !== 'normal' && room.type !== 'boss')));
-    if (forced) { P.stunT = 0.5; hurtPlayer(1, null, true); ft(P.x, P.y - 30, 'Rejeté hors de l\'Envers', '#c77dff', 13, 1.5); }
+    if (forced) { P.stunT = 0.5; hurtPlayer(1, null, true); ft(P.x, P.y - 30, 'Rejeté hors de l\'Envers', '#c77dff', 13, 1.5); hint = { t: STORY.envers.forced[Math.floor(Math.random() * STORY.envers.forced.length)], life: 5 }; }
   }
   if (hitsWall(P.x, P.y, P.r, 'player')) { const p = randomFloorTile(0, 'ground'); P.x = p.x; P.y = p.y; }
   P.safeX = P.x; P.safeY = P.y; P.vx = P.vy = 0;
@@ -121,7 +122,7 @@ function interactEnvers(pr) {
   if (pr.kind === 'echo') {
     pr.used = true; const r = relicById(save.echo && save.echo.relic);
     save.echo = null; writeSave();
-    if (r) { applyRelic(r); ft(pr.x, pr.y - 30, 'Ton écho te rend ' + r.n, '#dff4ff', 13, 2); }
+    if (r) { applyRelic(r); ft(pr.x, pr.y - 30, 'Ton écho te rend ' + r.n, '#dff4ff', 13, 2); hint = { t: STORY.envers.echo, life: 7 }; }
     burst(pr.x, pr.y, 40, '#dff4ff', 220, { glow: 1, life: 1 }); SFX('revive');
     return true;
   }

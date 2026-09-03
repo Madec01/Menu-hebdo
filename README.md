@@ -6,6 +6,12 @@ Un roguelite d'action en HTML/JS, dans un seul fichier, jouable sur PC et sur t�
 
 Ouvre `index.html` dans un navigateur, ou héberge le dépôt sur GitHub Pages.
 
+## Histoire
+
+Sous la ville, une crypte sans fin où l’on descend et d’où personne ne remonte. Ce qui y meurt laisse une essence que la crypte garde en mémoire, et avec laquelle elle se rebâtit sans cesse. Entre la pierre et son reflet s’étend le Voile : chaque mort le déchire, et quand il cède, on passe dans l’Envers, où rien n’est encore reflété et où tout vaut double. Le Traqueur, premier descendu et premier parjure, y chasse ceux qui traînent ; les serments se prêtent à une voix qui parle derrière le Voile et qui tient ses comptes. Au dixième étage, la vérité affleure : la pierre n’est que l’ombre de l’Envers, et derrière l’Abîme attendent une porte, trois sceaux, et celui qui tisse le Voile. Puis la boucle recommence, car la crypte se souvient.
+
+Le récit se découvre en jeu : quatre écrans d'introduction à la première descente, un texte d'arrivée à chaque étage, vingt-quatre stèles gravées à lire dans les salles (leur lecture est conservée entre les parties), les voix des boss, des serments, du marchand et de l'autel, et une révélation au dixième étage.
+
 ## Contrôles
 
 **PC** : `ZQSD` / `WASD` / flèches pour bouger, souris pour viser (visée automatique sinon), clic gauche pour tirer, `Espace` ou `Maj` pour le dash, `E` ou clic droit pour la Surcharge, `V` ou `Ctrl` pour traverser le Voile, `P` pour la pause.

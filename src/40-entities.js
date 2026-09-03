@@ -226,6 +226,7 @@ function updateBoss(e, dt, ux, uy, d) {
       if (!e.veilDone && G.floor >= 2 && e.hp < e.maxHp * 0.5) {
         e.veilDone = true; e.veiled = true; burst(e.x, e.y, 40, '#c77dff', 260, { glow: 1, life: 0.8 }); SFX('cross');
         banner = { t: 'Le boss se voile', s: 'Frappe son reflet dans l\'Envers (V, Ctrl ou ◐)', color: '#c77dff', life: 3.5, max: 3.5 };
+        hint = { t: STORY.envers.veiled, life: 6 };
         if (G.voile < 34) G.voile = 34;
       }
       if (e.spd > 0) moveCircle(e, ux * e.spd * (enraged ? 1.3 : 1) * sm * dt, uy * e.spd * (enraged ? 1.3 : 1) * sm * dt);
@@ -588,7 +589,8 @@ function spawnHunter() {
   h.hp = h.maxHp = Math.round(28 * (1 + 0.3 * (G.floor - 1))); h.spawnT = 1.2;
   enemies.push(h); G.hunterAlive = true;
   SFX('hunter'); shakeIt(6);
-  banner = { t: 'Le Traqueur', s: 'Tu as trop traîné. Fuis ou affronte-le.', color: '#ff2244', life: 3 };
+  banner = { t: 'Le Traqueur', s: 'Tu as trop traîné. Fuis ou affronte-le.', color: '#ff2244', life: 3, max: 3 };
+  hint = { t: STORY.envers.hunter, life: 6 };
 }
 function activateSurge() {
   G.surge = 0; P.surgeT = 4; P.inv = Math.max(P.inv, 0.8);

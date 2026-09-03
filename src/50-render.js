@@ -185,7 +185,7 @@ function drawLighting() {
   for (const b of bullets) light(b.x, b.y, b.friendly ? 26 : 22, 0.6);
   for (const e of enemies) if (e.spawnT <= 0 && inWorld(e)) light(e.x, e.y, e.boss ? 120 : e.elite || e.hunter ? 70 : e.r + 34, e.boss ? 0.75 : e.elite || e.hunter ? 0.7 : 0.4);
   for (const p of pools) if (p.type === 'fire') light(p.x, p.y, p.r * 1.6, 0.6);
-  for (const pr of G.room.props) if (!pr.used && (pr.world === 'both' || (pr.world || 'normal') === G.world)) light(pr.x, pr.y, pr.kind === 'fissure' ? 60 : 80, 0.8);
+  for (const pr of G.room.props) if (!pr.used && (pr.world === 'both' || (pr.world || 'normal') === G.world)) light(pr.x, pr.y, pr.kind === 'fissure' ? 60 : pr.kind === 'tablet' ? 50 : 80, 0.8);
   if (G.room.stairs) light(RW * TILE / 2, RH * TILE / 2, 90, 0.9);
   for (const pt of parts) if (pt.glow) light(pt.x, pt.y, pt.size * 6, 0.5 * clamp(pt.life / pt.max, 0, 1));
   for (const pet of G.pets) light(pet.x, pet.y, 45, 0.7);

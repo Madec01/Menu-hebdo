@@ -122,6 +122,8 @@ button.btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
 .help b{color:var(--text)}
 kbd{background:#0a0a12;border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:12px;color:#fff;font-family:var(--body)}
 .ess{color:var(--gold2);font-weight:800}
+.storytext{font-size:16px;line-height:1.65;color:var(--text);font-style:italic;margin:6px 0 14px;text-wrap:pretty}
+#storyRow{margin-top:4px}
 .tiny{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.5}
 .seed{font-family:monospace}
 .notice{background:rgba(230,180,80,.1);border:1px solid rgba(230,180,80,.35);border-radius:10px;padding:10px 12px;font-size:13px;margin-top:10px}
@@ -148,6 +150,7 @@ kbd{background:#0a0a12;border:1px solid var(--line);border-radius:5px;padding:1p
       <div class="stat"><b id="mKills">0</b><span>Vaincus</span></div>
       <div class="stat"><b class="ess" id="mEss">0 ◆</b><span>Essence</span></div>
     </div>
+    <div class="row" id="storyRow"><button class="btn small ghost" id="introBtn">📜 Relire le récit</button></div>
     <div class="lbl">Arme de départ</div>
     <div class="chips" id="weaponChips"></div>
     <div class="row">
@@ -202,6 +205,15 @@ kbd{background:#0a0a12;border:1px solid var(--line);border-radius:5px;padding:1p
     <p class="sub" id="chSub"></p>
     <div class="cards" id="chCards"></div>
     <div class="row" id="chFooter"></div>
+  </div>
+</div>
+
+<!-- RÉCIT -->
+<div id="story" class="ov">
+  <div class="box">
+    <h2 id="stTitle"></h2>
+    <p class="storytext" id="stText"></p>
+    <div class="row"><button class="btn primary" id="stNext">Continuer</button></div>
   </div>
 </div>
 
@@ -274,7 +286,7 @@ let nextId = 1;
 /* ---------- sauvegarde ---------- */
 const SAVE_KEY = 'crypte-infinie-v2';
 const DEFAULT_SAVE = { v: 2, essence: 0, bestFloor: 0, runs: 0, kills: 0, bossKills: 0, meta: {}, weapons: ['wand'], startWeapon: 'wand',
-  bestiary: {}, musicVol: 0.6, sfxVol: 0.8, shakeAmt: 1, lastSeed: null, tutorial: 0, tutorialEnvers: 0, echo: null };
+  bestiary: {}, musicVol: 0.6, sfxVol: 0.8, shakeAmt: 1, lastSeed: null, tutorial: 0, tutorialEnvers: 0, echo: null, introSeen: false, tabletsRead: [], biomesSeen: [] };
 let save = JSON.parse(JSON.stringify(DEFAULT_SAVE));
 function loadSave() {
   try {
@@ -282,6 +294,7 @@ function loadSave() {
     if (s && typeof s === 'object') {
       save = Object.assign(save, s);
       save.meta = save.meta || {}; save.bestiary = save.bestiary || {};
+      if (!Array.isArray(save.tabletsRead)) save.tabletsRead = []; if (!Array.isArray(save.biomesSeen)) save.biomesSeen = [];
       if (!Array.isArray(save.weapons) || !save.weapons.includes('wand')) save.weapons = ['wand'].concat(Array.isArray(save.weapons) ? save.weapons : []);
       if (!save.weapons.includes(save.startWeapon)) save.startWeapon = 'wand';
     }
@@ -832,6 +845,130 @@ const META = [
 /* ---------- gabarits de salles ---------- */
 const TEMPLATES = ['open', 'pillars', 'cross', 'ring', 'random', 'corridors', 'islands'];
 
+/* ===== 22-story.js ===== */
+/* ---------- histoire ---------- */
+const STORY = {
+  intro: [
+    { title: 'La crypte', text: 'Sous la ville, une porte que personne ne ferme. Derrière, des marches qui descendent et ne remontent pas. Ceux qui les prennent ne reviennent jamais. Pourtant, chaque nuit, quelqu’un descend.' },
+    { title: 'L’essence', text: 'Tout ce qui meurt ici laisse un éclat : l’essence ◆. La crypte s’en nourrit, s’en souvient, et se rebâtit avec. Ramasse-la. Ce que tu remontes, elle ne pourra plus l’utiliser contre toi.' },
+    { title: 'Le Voile', text: 'Entre la pierre et son reflet, une toile mince : le Voile. Chaque mort le déchire un peu. Quand il s’ouvre, on peut passer de l’autre côté. Là-bas, rien ne tient. Là-bas, tout se paie double.' },
+    { title: 'Toi', text: 'Tu n’as pas de nom ici. Seulement une capuche, une arme, et ce que tu es prêt ou prête à promettre. Descends. Si tu tombes, la crypte se souviendra de toi. C’est sa seule pitié.' },
+  ],
+
+  biomes: {
+    crypte: [
+      'Les torches meurent une à une. Quelqu’un les a allumées avant toi, et il n’est jamais remonté.',
+      'Même pierre, même froid. Les catacombes t’ont reconnu. Elles n’aiment pas les visages qui reviennent.',
+    ],
+    marais: [
+      'L’eau ne coule pas : elle attend. Sous la vase, des choses bourdonnent qui n’ont plus de nom.',
+      'Le marais a gardé ton odeur. Les mares s’écartent, puis se referment derrière toi.',
+    ],
+    forge: [
+      'On forgeait ici. Plus personne ne tient le marteau, mais le métal coule encore. Pour qui ?',
+      'Les braises se souviennent de ton pas. La forge chauffe plus fort quand on revient.',
+    ],
+    givre: [
+      'Le froid ne vient pas d’en haut. Il monte des profondeurs, comme un souffle retenu.',
+      'La glace conserve tout. Sous tes pieds, des silhouettes figées, capuche baissée. Ne regarde pas trop longtemps.',
+    ],
+    abime: [
+      'Ici la lumière renonce. Les gouffres n’ont pas de fond : ils ont un autre côté.',
+      'Tu connais ce noir. Il te connaît aussi. Quelque chose y cligne, lentement, comme un œil qui s’ouvre.',
+    ],
+  },
+
+  bosses: {
+    guardian:  { intro: 'La vase se dresse. Ce qui reste des premiers descendus veille encore.', death: 'Le Gardien s’affaisse. Dans la flaque, mille petits éclats d’essence : autant de morts qu’il gardait.' },
+    queen:     { intro: 'La Reine se soulève des eaux mortes. Le marais entier est son ventre.', death: 'La Reine crève comme une outre. Ses enfants s’enfuient dans la vase, sans reine à nourrir.' },
+    colossus:  { intro: 'Le Colosse s’allume. On l’a forgé pour garder une porte qu’il a oubliée.', death: 'Le Colosse se fige, encore rouge. Le marteau qui l’a fait n’existe plus. Personne ne le rallumera.' },
+    frostking: { intro: 'Le Roi de Givre te regarde comme on regarde un souvenir.', death: 'Le Roi éclate en givre. Sous la couronne, un visage encapuchonné. Il te ressemblait.' },
+    eye:       { intro: 'L’Abîme s’ouvre. Ce n’est pas un œil. C’est ton reflet qui te regarde.', death: 'L’Œil se ferme. Derrière lui, pas de fond : un miroir. Et trois sceaux, intacts, qui attendent.' },
+  },
+
+  tablets: [
+    { id: 't01', floorMin: 1, biome: 'crypte', text: 'Ici reposent ceux qui sont descendus. On n’a jamais eu besoin d’ajouter de noms : la crypte les garde elle-même.' },
+    { id: 't02', floorMin: 1, text: 'L’essence n’est pas de l’or. C’est ce qu’il reste d’une chose quand la crypte l’a reprise. Un souvenir durci.' },
+    { id: 't03', floorMin: 1, biome: 'crypte', text: 'Les torches ne s’éteignent pas parce qu’elles meurent. Elles s’éteignent parce qu’on les regarde.' },
+    { id: 't04', floorMin: 2, text: 'On dit que la crypte n’a pas de fond. C’est faux. Elle a un fond. Il n’est simplement pas en bas.' },
+    { id: 't05', floorMin: 2, text: 'Le Voile est la peau entre la pierre et son ombre. Tue, et tu la déchires. Assez de morts, et tu passes.' },
+    { id: 't06', floorMin: 2, text: 'Ne traîne pas. Le temps ici n’est pas compté en heures, mais en patience. Et la patience de la crypte a un visage rouge.' },
+    { id: 't07', floorMin: 3, biome: 'marais', text: 'Le marais ne pourrit pas. Il digère. Ce que tu vois flotter, c’est ce qu’il n’a pas encore fini.' },
+    { id: 't08', floorMin: 3, text: 'Le premier à descendre s’appelait autrement. Il a promis à la crypte de remonter avec sa lumière. Il a menti. Elle l’a gardé.' },
+    { id: 't09', floorMin: 3, text: 'De l’autre côté du Voile, les murs sont des ombres et les gouffres des ponts. Là-bas, rien n’est encore reflété. Tout vaut double.' },
+    { id: 't10', floorMin: 4, biome: 'marais', text: 'La Reine n’a jamais été un crapaud. C’est une descendue qui a bu la vase pour ne plus avoir faim. Elle a eu ce qu’elle voulait.' },
+    { id: 't11', floorMin: 4, text: 'Un serment est une clé. On ne le prête pas à la crypte : on le prête à ce qui parle derrière elle. Et ce qui parle tient ses comptes.' },
+    { id: 't12', floorMin: 4, text: 'Le Traqueur n’a pas de tombe. Il est la tombe. Il vient chercher ceux qui restent, parce qu’il n’a jamais pu partir.' },
+    { id: 't13', floorMin: 5, biome: 'forge', text: 'Nous forgions des sceaux. Trois, pour tenir la porte. Le métal a coulé, le marteau s’est perdu. Les sceaux, eux, ont tenu.' },
+    { id: 't14', floorMin: 5, text: 'Les Reflets ne sont pas des ennemis. Ce sont les mêmes ennemis, vus du bon côté. C’est nous qui sommes à l’envers.' },
+    { id: 't15', floorMin: 5, text: 'Quand tu meurs, la crypte ne te garde pas. Elle garde ton contour. Il attend dans l’Envers, à l’étage exact, avec ce que tu tenais.' },
+    { id: 't16', floorMin: 6, biome: 'forge', text: 'Le Colosse a été forgé pour garder la porte des sceaux. On l’a construit trop loyal. Il garde toujours, même sans savoir quoi.' },
+    { id: 't17', floorMin: 6, text: 'La crypte se souvient. Ce n’est pas une consolation. C’est une description : elle est faite de mémoire, et la mémoire ne finit pas.' },
+    { id: 't18', floorMin: 6, text: 'Les boss se voilent quand ils saignent. Ils fuient dans leur reflet. Frappe l’ombre, et la chair tombe.' },
+    { id: 't19', floorMin: 7, biome: 'givre', text: 'La glace garde tout, même ce qu’elle ne devrait pas. Regarde bien les silhouettes prises dedans. Compte les capuches.' },
+    { id: 't20', floorMin: 7, text: 'Le Roi de Givre a jeté sa lumière avant de descendre. Il a cru qu’il verrait mieux dans le noir. Il a vu. Il n’a plus jamais cligné.' },
+    { id: 't21', floorMin: 8, biome: 'givre', text: 'Chaque serment prêté use un sceau. Pas beaucoup. Un grain. Mais nous sommes des milliers à être descendus, et les sceaux ne sont que trois.' },
+    { id: 't22', floorMin: 8, text: 'La pierre n’est pas la crypte. La crypte, c’est l’Envers. Ce que tu parcours n’est que son ombre portée, et une ombre repousse tant que sa source vit.' },
+    { id: 't23', floorMin: 9, biome: 'abime', text: 'Les gouffres de l’Abîme n’ont pas de fond. Ils ont un miroir. Penche-toi et tu verras quelqu’un se pencher vers toi.' },
+    { id: 't24', floorMin: 10, biome: 'abime', text: 'Derrière l’Œil, la porte. Derrière la porte, trois sceaux. Derrière les sceaux, celui qui tisse le Voile. Il attend qu’on lui rende ses clés.' },
+  ],
+
+  envers: {
+    first: 'L’Envers. Les murs sont des ombres, les gouffres des ponts. Ici, rien n’est encore reflété : l’essence vaut double, et le Voile se vide. Tiens, ou reviens.',
+    forced: [
+      'Le Voile se referme. Il te recrache dans la pierre, moins un souffle.',
+      'L’Envers ne garde pas ceux qui ne le nourrissent pas. Retour au reflet.',
+      'Trop longtemps sans mort. Le Voile te lâche comme une main fatiguée.',
+    ],
+    hunter: 'Il t’a trouvé. Le Traqueur ne remonte jamais, mais il descend très vite.',
+    echo: 'Ton écho. Il est resté là où tu es tombé, avec ce que tu tenais. Il te le rend. Il ne demande rien.',
+    sealed: 'Cette porte n’a pas de serrure. Elle a un reflet. Passe de l’autre côté et pousse.',
+    glyph: 'Des glyphes s’allument dans l’Envers. Ils dessinent le chemin sûr au-dessus des gouffres. Retiens-le.',
+    lever: 'Un levier qui n’existe que de ce côté. Tire, et un mur s’efface dans le monde de pierre.',
+    veiled: 'Il se voile. Ses coups traversent la pierre. Seul son reflet peut encore saigner.',
+  },
+
+  oaths: {
+    sang:   '« Prends ce cœur. Rends-le-moi en éclats. » La voix accepte. Le sang, elle sait le compter.',
+    ombre:  '« Je marcherai sans fuir. » La voix approuve. Ceux qui ne fuient pas frappent plus fort, et meurent plus près.',
+    fer:    '« Que l’acier soit plus dur. » La voix rit, doucement. Elle aime qu’on saigne longtemps.',
+    hate:   '« Je ne traînerai pas. » La voix se tait. Derrière elle, quelque chose de rouge accélère.',
+    brume:  '« Que la nuit se resserre. » La voix souffle sur les torches. Ce qu’on ne voit pas coûte plus cher, et rapporte autant.',
+    faim:   '« Je n’aurai pas besoin de guérir. » La voix retient les cœurs. Elle les changera en essence : c’est son commerce.',
+    miroir: '« Je commencerai du bon côté. » La voix hésite, puis ouvre le Voile en grand. Peu osent lui demander cela.',
+  },
+
+  merchant: [
+    'Tout se paie en essence. Même ici. Surtout ici.',
+    'Tu crois que je remonte vendre ça en ville ? Il n’y a pas de ville. Il n’y a que des étages.',
+    'Je ne sais plus depuis combien de descentes je tiens boutique. Le Traqueur passe, me regarde, et ne s’arrête pas. Je dois lui servir à quelque chose.',
+    'Reviens si tu survis. Sinon, ton écho passera peut-être. Ils n’achètent jamais rien.',
+  ],
+
+  altar: [
+    'L’autel ne demande pas de prière. Il demande un prix. Sang, essence ou silence : choisis ce que tu peux perdre.',
+    'Ceux qui ont sculpté cet autel ne savaient pas à qui ils parlaient. Ils savaient seulement que quelqu’un répondait.',
+    'Pose ce que tu as. La crypte s’en souviendra à ta place.',
+  ],
+
+  deaths: [
+    'La crypte se souvient. Ton contour t’attend de l’autre côté.',
+    'Une torche de plus s’éteint. Quelqu’un la rallumera.',
+    'Tu n’es pas remonté. Personne ne remonte. Mais tu es descendu loin.',
+    'Ce que tu tenais n’est pas perdu. Il attend, à l’étage exact, dans l’Envers.',
+    'Le Voile s’est refermé sur toi comme de l’eau.',
+    'L’essence remonte au Sanctuaire. Toi, pas encore.',
+    'La glace garde tout. Elle garde aussi cette chute.',
+    'Un éclat ◆ de plus dans la mémoire de la crypte. Elle en fera une marche.',
+  ],
+
+  floor10: 'Tu croyais descendre. Tu t’enfonçais dans un reflet. La pierre n’est que l’ombre portée de l’Envers, et une ombre repousse tant que sa source vit. Derrière l’Œil, il n’y a pas de fond : un miroir, une porte, trois sceaux. Et derrière les sceaux, celui qui tisse le Voile et reçoit les serments. Il attend qu’on lui rende ses clés. Pas encore. Pas toi. Pas cette fois.',
+
+  cycle: 'La crypte se souvient. Elle t’a reflété, toi aussi. Les marches recommencent, plus froides, plus profondes : ce sont les mêmes, vues d’un peu plus près du miroir. Descends encore.',
+
+  summary: 'Sous la ville, une crypte sans fin où l’on descend et d’où personne ne remonte. Ce qui y meurt laisse une essence que la crypte garde en mémoire, et avec laquelle elle se rebâtit sans cesse. Entre la pierre et son reflet s’étend le Voile : chaque mort le déchire, et quand il cède, on passe dans l’Envers, où rien n’est encore reflété et où tout vaut double. Le Traqueur, premier descendu et premier parjure, y chasse ceux qui traînent ; les serments se prêtent à une voix qui parle derrière le Voile et qui tient ses comptes. Au dixième étage, la vérité affleure : la pierre n’est que l’ombre de l’Envers, et derrière l’Abîme attendent une porte, trois sceaux, et celui qui tisse le Voile. Puis la boucle recommence, car la crypte se souvient.',
+};
+
 /* ===== 30-world.js ===== */
 /* ---------- génération d'un étage ---------- */
 function genFloor(n) {
@@ -1274,6 +1411,7 @@ function updateBoss(e, dt, ux, uy, d) {
       if (!e.veilDone && G.floor >= 2 && e.hp < e.maxHp * 0.5) {
         e.veilDone = true; e.veiled = true; burst(e.x, e.y, 40, '#c77dff', 260, { glow: 1, life: 0.8 }); SFX('cross');
         banner = { t: 'Le boss se voile', s: 'Frappe son reflet dans l\'Envers (V, Ctrl ou ◐)', color: '#c77dff', life: 3.5, max: 3.5 };
+        hint = { t: STORY.envers.veiled, life: 6 };
         if (G.voile < 34) G.voile = 34;
       }
       if (e.spd > 0) moveCircle(e, ux * e.spd * (enraged ? 1.3 : 1) * sm * dt, uy * e.spd * (enraged ? 1.3 : 1) * sm * dt);
@@ -1636,7 +1774,8 @@ function spawnHunter() {
   h.hp = h.maxHp = Math.round(28 * (1 + 0.3 * (G.floor - 1))); h.spawnT = 1.2;
   enemies.push(h); G.hunterAlive = true;
   SFX('hunter'); shakeIt(6);
-  banner = { t: 'Le Traqueur', s: 'Tu as trop traîné. Fuis ou affronte-le.', color: '#ff2244', life: 3 };
+  banner = { t: 'Le Traqueur', s: 'Tu as trop traîné. Fuis ou affronte-le.', color: '#ff2244', life: 3, max: 3 };
+  hint = { t: STORY.envers.hunter, life: 6 };
 }
 function activateSurge() {
   G.surge = 0; P.surgeT = 4; P.inv = Math.max(P.inv, 0.8);
@@ -1706,12 +1845,13 @@ function crossWorld(forced) {
   if (toEnvers) {
     G.crossings++;
     setupEnversRoom(room);
-    if (!save.tutorialEnvers) { save.tutorialEnvers = 1; writeSave(); hint = { t: 'L\'Envers. Le Voile se vide : tue des Reflets pour tenir, ou reviens par une fissure.', life: 6 }; }
+    if (!save.tutorialEnvers) { save.tutorialEnvers = 1; writeSave(); hint = { t: STORY.envers.first, life: 8 }; }
+    else if (room.puzzle === 'alcove' && !room.gateOpen) hint = { t: STORY.envers.lever, life: 6 };
   } else {
     enemies = enemies.filter(e => !e.reflet);
     if (!room.spawned && !room.cleared && (room.type === 'normal' || room.type === 'boss')) { setDoors(room, false); spawnEnemies(room); SFX('doorClose'); }
     else setDoors(room, !room.challengeOn && (room.cleared || (room.type !== 'normal' && room.type !== 'boss')));
-    if (forced) { P.stunT = 0.5; hurtPlayer(1, null, true); ft(P.x, P.y - 30, 'Rejeté hors de l\'Envers', '#c77dff', 13, 1.5); }
+    if (forced) { P.stunT = 0.5; hurtPlayer(1, null, true); ft(P.x, P.y - 30, 'Rejeté hors de l\'Envers', '#c77dff', 13, 1.5); hint = { t: STORY.envers.forced[Math.floor(Math.random() * STORY.envers.forced.length)], life: 5 }; }
   }
   if (hitsWall(P.x, P.y, P.r, 'player')) { const p = randomFloorTile(0, 'ground'); P.x = p.x; P.y = p.y; }
   P.safeX = P.x; P.safeY = P.y; P.vx = P.vy = 0;
@@ -1774,7 +1914,7 @@ function interactEnvers(pr) {
   if (pr.kind === 'echo') {
     pr.used = true; const r = relicById(save.echo && save.echo.relic);
     save.echo = null; writeSave();
-    if (r) { applyRelic(r); ft(pr.x, pr.y - 30, 'Ton écho te rend ' + r.n, '#dff4ff', 13, 2); }
+    if (r) { applyRelic(r); ft(pr.x, pr.y - 30, 'Ton écho te rend ' + r.n, '#dff4ff', 13, 2); hint = { t: STORY.envers.echo, life: 7 }; }
     burst(pr.x, pr.y, 40, '#dff4ff', 220, { glow: 1, life: 1 }); SFX('revive');
     return true;
   }
@@ -1969,7 +2109,7 @@ function drawLighting() {
   for (const b of bullets) light(b.x, b.y, b.friendly ? 26 : 22, 0.6);
   for (const e of enemies) if (e.spawnT <= 0 && inWorld(e)) light(e.x, e.y, e.boss ? 120 : e.elite || e.hunter ? 70 : e.r + 34, e.boss ? 0.75 : e.elite || e.hunter ? 0.7 : 0.4);
   for (const p of pools) if (p.type === 'fire') light(p.x, p.y, p.r * 1.6, 0.6);
-  for (const pr of G.room.props) if (!pr.used && (pr.world === 'both' || (pr.world || 'normal') === G.world)) light(pr.x, pr.y, pr.kind === 'fissure' ? 60 : 80, 0.8);
+  for (const pr of G.room.props) if (!pr.used && (pr.world === 'both' || (pr.world || 'normal') === G.world)) light(pr.x, pr.y, pr.kind === 'fissure' ? 60 : pr.kind === 'tablet' ? 50 : 80, 0.8);
   if (G.room.stairs) light(RW * TILE / 2, RH * TILE / 2, 90, 0.9);
   for (const pt of parts) if (pt.glow) light(pt.x, pt.y, pt.size * 6, 0.5 * clamp(pt.life / pt.max, 0, 1));
   for (const pet of G.pets) light(pet.x, pet.y, 45, 0.7);
@@ -2332,6 +2472,8 @@ function drawProp(pr, tk) {
   } else if (pr.kind === 'pedestal') {
     drawSprite('pedestal', 0, x, y + 14, { alpha: pr.used ? 0.7 : 1 });
     if (!pr.used) { ctx.strokeStyle = 'rgba(255,94,122,' + (0.4 + 0.3 * Math.sin(tk * 4)) + ')'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y - 18, 12 + Math.sin(tk * 4) * 2, 0, TAU); ctx.stroke(); }
+  } else if (pr.kind === 'tablet') {
+    drawTablet(pr, tk);
   } else if (pr.kind === 'fissure') {
     const env = G.world === 'envers', a = 0.6 + 0.4 * Math.sin(tk * 4 + x);
     ctx.strokeStyle = env ? 'rgba(255,255,255,' + a + ')' : 'rgba(199,125,255,' + a + ')'; ctx.lineWidth = env ? 3.5 : 2.5; ctx.lineJoin = 'round'; ctx.shadowColor = '#c77dff'; ctx.shadowBlur = 14;
@@ -2546,7 +2688,7 @@ function pauseGame() {
   refreshMenu(); show('pause');
 }
 function resumeGame() { if (state !== 'pause') return; state = 'play'; hideAll(); lastFrame = performance.now(); Audio.resume(); }
-$('playBtn').addEventListener('click', () => { uiAudio(); newRun(); });
+$('playBtn').addEventListener('click', () => { uiAudio(); if (!save.introSeen) showStory(STORY.intro, () => { save.introSeen = true; writeSave(); newRun(); }); else newRun(); });
 $('metaBtn').addEventListener('click', () => { uiAudio(); refreshMeta(); show('meta'); });
 $('metaBack').addEventListener('click', () => { SFX('click'); goMenu(); });
 $('optBtn').addEventListener('click', () => { uiAudio(); refreshMenu(); show('options'); });
@@ -2557,6 +2699,59 @@ $('quitBtn').addEventListener('click', () => { endRun(); goMenu(); });
 $('retryBtn').addEventListener('click', () => { uiAudio(); newRun(); });
 $('menuBtn').addEventListener('click', goMenu);
 refreshMenu();
+
+/* ===== 62-story-ui.js ===== */
+/* ---------- récit : écrans, stèles, arrivées ---------- */
+OVS.push('story');
+let storyQueue = [], storyCb = null, storyPrevState = 'menu';
+function showStory(screens, cb) {
+  storyQueue = screens.slice(); storyCb = cb || null;
+  storyPrevState = state === 'play' ? 'play' : state;
+  if (state === 'play') { state = 'choice'; clearTouches(); keys.clear(); mouse.down = false; }
+  storyNext();
+}
+function storyNext() {
+  const s = storyQueue.shift();
+  if (!s) {
+    hideAll();
+    if (storyPrevState === 'play') { state = 'play'; lastFrame = performance.now(); }
+    const cb = storyCb; storyCb = null; if (cb) cb();
+    return;
+  }
+  $('stTitle').textContent = s.title; $('stText').textContent = s.text;
+  $('stNext').textContent = storyQueue.length ? 'Continuer' : (storyPrevState === 'play' ? 'Reprendre' : 'Descendre');
+  show('story');
+}
+$('stNext').addEventListener('click', () => { SFX('click'); storyNext(); });
+$('introBtn').addEventListener('click', () => { uiAudio(); showStory(STORY.intro, () => goMenu()); });
+
+function storyArrival(biome) {
+  const seen = save.biomesSeen.includes(biome.id);
+  if (!seen) { save.biomesSeen.push(biome.id); writeSave(); }
+  const lines = STORY.biomes[biome.id] || [];
+  const t = lines[seen ? 1 : 0] || lines[0];
+  if (t) hint = { t, life: 7 };
+}
+function readTablet(pr) {
+  const biome = G.floorData.biome;
+  const unread = STORY.tablets.filter(t => t.floorMin <= G.floor && !save.tabletsRead.includes(t.id) && (!t.biome || t.biome === biome.id));
+  const pool = unread.length ? unread : STORY.tablets.filter(t => t.floorMin <= G.floor);
+  const t = unread.length ? unread[0] : pool[Math.floor(Math.random() * pool.length)];
+  if (!t) return;
+  if (!save.tabletsRead.includes(t.id)) { save.tabletsRead.push(t.id); writeSave(); }
+  pr.used = true; SFX('relic'); burst(pr.x, pr.y - 10, 12, '#dff4ff', 90, { shape: 'dot', glow: 1 });
+  const total = STORY.tablets.length, read = save.tabletsRead.length;
+  openChoice({ title: 'Stèle gravée', sub: '« ' + t.text + ' »' + '   —   fragment ' + read + ' / ' + total, cards: [], footer: [{ label: 'Refermer', primary: true }] });
+}
+function drawTablet(pr, tk) {
+  const { x, y } = pr;
+  ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.ellipse(x, y + 12, 14, 5, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#4d4768'; ctx.fillRect(x - 10, y - 18, 20, 30);
+  ctx.fillStyle = '#6b6488'; ctx.fillRect(x - 10, y - 18, 20, 3); ctx.fillRect(x - 10, y - 18, 3, 30);
+  ctx.fillStyle = pr.used ? '#8a84a8' : '#dff4ff';
+  for (let i = 0; i < 4; i++) ctx.fillRect(x - 6, y - 12 + i * 6, 6 + (i % 2) * 5, 2);
+  if (!pr.used) { ctx.strokeStyle = 'rgba(223,244,255,' + (0.35 + 0.3 * Math.sin(tk * 3 + x)) + ')'; ctx.lineWidth = 2; ctx.strokeRect(x - 12, y - 20, 24, 34); }
+}
 
 /* ===== 70-main.js ===== */
 /* ---------- déroulement d'une partie ---------- */
@@ -2581,7 +2776,7 @@ function newRun() {
 function startFloor() {
   if (G.world === 'envers') { G.world = 'normal'; Audio.setEnvers(false); }
   G.floorData = genFloor(G.floor);
-  G.menaceT = 0; G.floorT = 0; G.hunterAlive = false; G.enversT = 0;
+  G.menaceT = 0; G.floorT = 0; G.hunterAlive = false; G.enversT = 0; G.tabletsThisFloor = 0;
   G.menaceMax = (150 + 10 * G.floor) * (1 + 0.25 * metaLv('calm'));
   if (metaLv('spark')) G.surge = Math.max(G.surge, 40);
   const biome = G.floorData.biome;
@@ -2591,6 +2786,9 @@ function startFloor() {
     banner = { t: 'Étage ' + G.floor + ' — ' + biome.name, s: biome.sub, color: '#ffd97a', life: 3, max: 3 };
     if (G.oath && G.oath.mirror) { G.voile = 100; crossWorld(false); }
     if (G.floor === 1 && !save.tutorial) hint = { t: 'Nettoie chaque salle pour ouvrir les portes. Le boss garde l\'escalier.', life: 6 };
+    else storyArrival(biome);
+    if (G.floor === 10) showStory([{ title: 'Ce qui affleure', text: STORY.floor10 }]);
+    else if (G.floor === 11) showStory([{ title: 'La boucle', text: STORY.cycle }]);
   };
   if (G.floor >= 2) { enterRoom(G.floorData.start, null); offerOath(begin); } else begin();
 }
@@ -2624,6 +2822,9 @@ function setupProps(room) {
     room.props.push({ kind: 'lever', x: (room.pocket.x0 + 1.5) * TILE, y: 4.7 * TILE, used: false, world: 'envers' });
   }
   if (room.type === 'start' && save.echo && save.echo.floor === G.floor) room.props.push({ kind: 'echo', x: cx, y: cy - 70, used: false, world: 'envers' });
+  if (room.type === 'normal' && G.tabletsThisFloor < 2 && chance(0.4)) {
+    for (let i = 0; i < 12; i++) { const tx = RI(2, RW - 3), ty = RI(2, RH - 3); if (room.tiles[ty][tx] !== T_FLOOR || (Math.abs(tx - (RW - 1) / 2) < 3 && Math.abs(ty - (RH - 1) / 2) < 3)) continue; G.tabletsThisFloor++; room.props.push({ kind: 'tablet', x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE, used: false, world: 'normal' }); break; }
+  }
 }
 function enterRoom(room, fromDir) {
   // le Traqueur suit le joueur
@@ -2645,13 +2846,15 @@ function enterRoom(room, fromDir) {
   if (G.world === 'envers') { setupEnversRoom(room); updateCamera(true); return; }
   if (!room.cleared && (room.type === 'normal' || room.type === 'boss')) {
     setDoors(room, false); spawnEnemies(room); SFX('doorClose');
-    if (room.type === 'boss') { SFX('boss'); banner = { t: G.bossName, s: 'Boss — ' + G.floorData.biome.name, color: '#ff5e7a', life: 3.2, max: 3.2 }; shakeIt(12); Audio.play('boss', { root: G.floorData.biome.root }); }
+    if (room.type === 'boss') { SFX('boss'); banner = { t: G.bossName, s: 'Boss — ' + G.floorData.biome.name, color: '#ff5e7a', life: 3.2, max: 3.2 }; shakeIt(12); Audio.play('boss', { root: G.floorData.biome.root }); hint = { t: STORY.bosses[G.floorData.biome.boss].intro, life: 5 }; }
   } else {
     setDoors(room, true);
     if (room.type === 'shop' && !room.shopSeen) { room.shopSeen = true; hint = { t: 'Un marchand. Approche-toi de lui pour dépenser ton essence.', life: 4 }; }
     if (room.type === 'shrine' && !room.seen) { room.seen = true; hint = { t: 'Un autel ancien. Il demande, et il donne.', life: 4 }; }
     if (room.type === 'challenge' && !room.seen && !room.cleared) { room.seen = true; hint = { t: 'Une épreuve : touche le piédestal pour affronter des vagues.', life: 4 }; }
   }
+  if (room.puzzle === 'glyph' && !room.storyHinted) { room.storyHinted = true; hint = { t: STORY.envers.glyph, life: 6 }; }
+  if (!G.sealedHinted && room.doorTiles.some(d => room.tiles[d.y][d.x] === T_SEALED)) { G.sealedHinted = true; hint = { t: STORY.envers.sealed, life: 6 }; }
   updateCamera(true);
 }
 function clearRoom() {
@@ -2664,6 +2867,7 @@ function clearRoom() {
     room.stairs = true; G.bossesKilled++; save.bossKills++;
     if (G.world === 'envers') { G.voile = 100; crossWorld(false); }
     SFX('stairs'); banner = { t: 'Boss vaincu', s: 'L\'escalier est ouvert', color: '#7fd7ff', life: 3, max: 3 };
+    hint = { t: STORY.bosses[G.floorData.biome.boss].death, life: 7 };
     Audio.play(G.floorData.biome.track, { root: G.floorData.biome.root });
   }
   if (G.floor === 1 && !save.tutorial) { save.tutorial = 1; writeSave(); hint = { t: 'Les portes sont ouvertes. Cherche le coffre (jaune) et le boss (rouge) sur la carte.', life: 5 }; }
@@ -2683,7 +2887,7 @@ function die() {
   SFX('die'); burst(P.x, P.y, 50, '#ffd97a', 220); shakeIt(14); flash = 0.5;
   $('dFloor').textContent = G.floor; $('dKills').textContent = G.kills; $('dTime').textContent = fmtTime(G.time); $('dEss').textContent = '+' + r.gained + ' ◆';
   $('deadTitle').textContent = r.newBest ? 'Nouveau record.' : 'La crypte te garde.';
-  $('deadSub').textContent = `Tombé à l'étage ${G.floor} (${G.floorData.biome.name}) avec ${curWeapon().name}. Combo max : ${G.maxCombo}.`;
+  $('deadSub').textContent = STORY.deaths[Math.floor(Math.random() * STORY.deaths.length)] + ` Tombé à l'étage ${G.floor} (${G.floorData.biome.name}) avec ${curWeapon().name}. Combo max : ${G.maxCombo}.`;
   $('deadRelics').textContent = G.relics.length ? 'Reliques : ' + G.relics.map(r => r.ic + ' ' + r.n).join(', ') : 'Aucune relique.';
   const u = $('deadUnlock'); u.hidden = true;
   if (save.essence >= 45 && save.weapons.length < Object.keys(WEAPONS).length) { u.hidden = false; u.textContent = 'Tu as assez d\'essence pour débloquer une nouvelle arme au Sanctuaire.'; }
@@ -2706,7 +2910,7 @@ function offerRelics(title, sub, n, cb) {
 }
 function offerOath(cb) {
   const opts = shuffle(OATHS.slice()).slice(0, 2);
-  const cards = opts.map(o => ({ ic: o.ic, n: o.n, d: o.d, tag: '→ ' + o.reward, cls: 'oath', onPick: () => { G.oath = o; if (o.apply) o.apply(P); SFX('relic'); } }));
+  const cards = opts.map(o => ({ ic: o.ic, n: o.n, d: o.d, tag: '→ ' + o.reward, cls: 'oath', onPick: () => { G.oath = o; if (o.apply) o.apply(P); SFX('relic'); if (STORY.oaths[o.id]) hint = { t: STORY.oaths[o.id], life: 7 }; } }));
   cards.push({ ic: '🕊️', n: 'Sans serment', d: 'Descendre librement, sans contrainte ni récompense.', cls: 'oath neutral', onPick: () => { G.oath = null; SFX('click'); } });
   openChoice({ title: 'Étage ' + G.floor + ' — Prête serment', sub: 'Un serment dure tout l\'étage. La récompense tombe au boss ou pendant la descente.', cards, onClose: cb });
 }
@@ -2729,7 +2933,7 @@ function openShop(room) {
     const w = WEAPONS[it.weapon];
     return Object.assign(base, { ic: w.ic, n: w.name, d: w.desc, onPick: buy(() => { dropWeapon(P.weapon, P.x, P.y + 40); P.weapon = it.weapon; SFX('swap'); }) });
   });
-  openChoice({ title: 'Le marchand', sub: `Tu as ${Math.floor(G.essence)} ◆. L'essence dépensée ici ne sera pas conservée pour le Sanctuaire.`, cards, footer: [{ label: 'Partir', primary: true }] });
+  openChoice({ title: 'Le marchand', sub: `« ${pick(STORY.merchant)} »  Tu as ${Math.floor(G.essence)} ◆. L'essence dépensée ici n'ira pas au Sanctuaire.`, cards, footer: [{ label: 'Partir', primary: true }] });
 }
 function openShrine(prop) {
   const cards = [
@@ -2743,7 +2947,7 @@ function openShrine(prop) {
     } },
     { ic: '🚶', n: 'Partir', d: 'Ne rien demander.', cls: 'neutral', onPick: () => {} },
   ];
-  openChoice({ title: 'Autel des profondeurs', sub: 'Il demande, et il donne. Une seule fois.', cards });
+  openChoice({ title: 'Autel des profondeurs', sub: '« ' + pick(STORY.altar) + ' »  Une seule fois.', cards });
 }
 function openArmory(prop) {
   const others = shuffle(Object.keys(WEAPONS).filter(w => w !== P.weapon)).slice(0, 2);
@@ -2773,6 +2977,7 @@ function interactProps() {
     if (pr.kind === 'fissure') continue;
     if (dist(P.x, P.y, pr.x, pr.y) > P.r + 20) continue;
     if (interactEnvers(pr)) return true;
+    if (pr.kind === 'tablet') { readTablet(pr); return true; }
     if (pr.kind === 'chest') { pr.used = true; burst(pr.x, pr.y, 30, '#ffd97a', 200, { glow: 1 }); SFX('relic'); offerRelics('Un coffre ancien', 'Choisis une relique', 3, null); return true; }
     if (pr.kind === 'armory') { burst(pr.x, pr.y, 30, '#9fd8ff', 200, { glow: 1 }); openArmory(pr); return true; }
     if (pr.kind === 'altar') { openShrine(pr); return true; }

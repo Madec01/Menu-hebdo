@@ -26,7 +26,7 @@ let nextId = 1;
 /* ---------- sauvegarde ---------- */
 const SAVE_KEY = 'crypte-infinie-v2';
 const DEFAULT_SAVE = { v: 2, essence: 0, bestFloor: 0, runs: 0, kills: 0, bossKills: 0, meta: {}, weapons: ['wand'], startWeapon: 'wand',
-  bestiary: {}, musicVol: 0.6, sfxVol: 0.8, shakeAmt: 1, lastSeed: null, tutorial: 0, tutorialEnvers: 0, echo: null };
+  bestiary: {}, musicVol: 0.6, sfxVol: 0.8, shakeAmt: 1, lastSeed: null, tutorial: 0, tutorialEnvers: 0, echo: null, introSeen: false, tabletsRead: [], biomesSeen: [] };
 let save = JSON.parse(JSON.stringify(DEFAULT_SAVE));
 function loadSave() {
   try {
@@ -34,6 +34,7 @@ function loadSave() {
     if (s && typeof s === 'object') {
       save = Object.assign(save, s);
       save.meta = save.meta || {}; save.bestiary = save.bestiary || {};
+      if (!Array.isArray(save.tabletsRead)) save.tabletsRead = []; if (!Array.isArray(save.biomesSeen)) save.biomesSeen = [];
       if (!Array.isArray(save.weapons) || !save.weapons.includes('wand')) save.weapons = ['wand'].concat(Array.isArray(save.weapons) ? save.weapons : []);
       if (!save.weapons.includes(save.startWeapon)) save.startWeapon = 'wand';
     }

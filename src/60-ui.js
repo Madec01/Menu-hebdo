@@ -171,7 +171,7 @@ function pauseGame() {
   refreshMenu(); show('pause');
 }
 function resumeGame() { if (state !== 'pause') return; state = 'play'; hideAll(); lastFrame = performance.now(); Audio.resume(); }
-$('playBtn').addEventListener('click', () => { uiAudio(); newRun(); });
+$('playBtn').addEventListener('click', () => { uiAudio(); if (!save.introSeen) showStory(STORY.intro, () => { save.introSeen = true; writeSave(); newRun(); }); else newRun(); });
 $('metaBtn').addEventListener('click', () => { uiAudio(); refreshMeta(); show('meta'); });
 $('metaBack').addEventListener('click', () => { SFX('click'); goMenu(); });
 $('optBtn').addEventListener('click', () => { uiAudio(); refreshMenu(); show('options'); });

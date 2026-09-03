@@ -20,7 +20,7 @@ function newRun() {
 function startFloor() {
   if (G.world === 'envers') { G.world = 'normal'; Audio.setEnvers(false); }
   G.floorData = genFloor(G.floor);
-  G.menaceT = 0; G.floorT = 0; G.hunterAlive = false; G.enversT = 0;
+  G.menaceT = 0; G.floorT = 0; G.hunterAlive = false; G.enversT = 0; G.tabletsThisFloor = 0;
   G.menaceMax = (150 + 10 * G.floor) * (1 + 0.25 * metaLv('calm'));
   if (metaLv('spark')) G.surge = Math.max(G.surge, 40);
   const biome = G.floorData.biome;
@@ -30,6 +30,9 @@ function startFloor() {
     banner = { t: 'Étage ' + G.floor + ' — ' + biome.name, s: biome.sub, color: '#ffd97a', life: 3, max: 3 };
     if (G.oath && G.oath.mirror) { G.voile = 100; crossWorld(false); }
     if (G.floor === 1 && !save.tutorial) hint = { t: 'Nettoie chaque salle pour ouvrir les portes. Le boss garde l\'escalier.', life: 6 };
+    else storyArrival(biome);
+    if (G.floor === 10) showStory([{ title: 'Ce qui affleure', text: STORY.floor10 }]);
+    else if (G.floor === 11) showStory([{ title: 'La boucle', text: STORY.cycle }]);
   };
   if (G.floor >= 2) { enterRoom(G.floorData.start, null); offerOath(begin); } else begin();
 }
@@ -63,6 +66,9 @@ function setupProps(room) {
     room.props.push({ kind: 'lever', x: (room.pocket.x0 + 1.5) * TILE, y: 4.7 * TILE, used: false, world: 'envers' });
   }
   if (room.type === 'start' && save.echo && save.echo.floor === G.floor) room.props.push({ kind: 'echo', x: cx, y: cy - 70, used: false, world: 'envers' });
+  if (room.type === 'normal' && G.tabletsThisFloor < 2 && chance(0.4)) {
+    for (let i = 0; i < 12; i++) { const tx = RI(2, RW - 3), ty = RI(2, RH - 3); if (room.tiles[ty][tx] !== T_FLOOR || (Math.abs(tx - (RW - 1) / 2) < 3 && Math.abs(ty - (RH - 1) / 2) < 3)) continue; G.tabletsThisFloor++; room.props.push({ kind: 'tablet', x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE, used: false, world: 'normal' }); break; }
+  }
 }
 function enterRoom(room, fromDir) {
   // le Traqueur suit le joueur
@@ -84,13 +90,15 @@ function enterRoom(room, fromDir) {
   if (G.world === 'envers') { setupEnversRoom(room); updateCamera(true); return; }
   if (!room.cleared && (room.type === 'normal' || room.type === 'boss')) {
     setDoors(room, false); spawnEnemies(room); SFX('doorClose');
-    if (room.type === 'boss') { SFX('boss'); banner = { t: G.bossName, s: 'Boss — ' + G.floorData.biome.name, color: '#ff5e7a', life: 3.2, max: 3.2 }; shakeIt(12); Audio.play('boss', { root: G.floorData.biome.root }); }
+    if (room.type === 'boss') { SFX('boss'); banner = { t: G.bossName, s: 'Boss — ' + G.floorData.biome.name, color: '#ff5e7a', life: 3.2, max: 3.2 }; shakeIt(12); Audio.play('boss', { root: G.floorData.biome.root }); hint = { t: STORY.bosses[G.floorData.biome.boss].intro, life: 5 }; }
   } else {
     setDoors(room, true);
     if (room.type === 'shop' && !room.shopSeen) { room.shopSeen = true; hint = { t: 'Un marchand. Approche-toi de lui pour dépenser ton essence.', life: 4 }; }
     if (room.type === 'shrine' && !room.seen) { room.seen = true; hint = { t: 'Un autel ancien. Il demande, et il donne.', life: 4 }; }
     if (room.type === 'challenge' && !room.seen && !room.cleared) { room.seen = true; hint = { t: 'Une épreuve : touche le piédestal pour affronter des vagues.', life: 4 }; }
   }
+  if (room.puzzle === 'glyph' && !room.storyHinted) { room.storyHinted = true; hint = { t: STORY.envers.glyph, life: 6 }; }
+  if (!G.sealedHinted && room.doorTiles.some(d => room.tiles[d.y][d.x] === T_SEALED)) { G.sealedHinted = true; hint = { t: STORY.envers.sealed, life: 6 }; }
   updateCamera(true);
 }
 function clearRoom() {
@@ -103,6 +111,7 @@ function clearRoom() {
     room.stairs = true; G.bossesKilled++; save.bossKills++;
     if (G.world === 'envers') { G.voile = 100; crossWorld(false); }
     SFX('stairs'); banner = { t: 'Boss vaincu', s: 'L\'escalier est ouvert', color: '#7fd7ff', life: 3, max: 3 };
+    hint = { t: STORY.bosses[G.floorData.biome.boss].death, life: 7 };
     Audio.play(G.floorData.biome.track, { root: G.floorData.biome.root });
   }
   if (G.floor === 1 && !save.tutorial) { save.tutorial = 1; writeSave(); hint = { t: 'Les portes sont ouvertes. Cherche le coffre (jaune) et le boss (rouge) sur la carte.', life: 5 }; }
@@ -122,7 +131,7 @@ function die() {
   SFX('die'); burst(P.x, P.y, 50, '#ffd97a', 220); shakeIt(14); flash = 0.5;
   $('dFloor').textContent = G.floor; $('dKills').textContent = G.kills; $('dTime').textContent = fmtTime(G.time); $('dEss').textContent = '+' + r.gained + ' ◆';
   $('deadTitle').textContent = r.newBest ? 'Nouveau record.' : 'La crypte te garde.';
-  $('deadSub').textContent = `Tombé à l'étage ${G.floor} (${G.floorData.biome.name}) avec ${curWeapon().name}. Combo max : ${G.maxCombo}.`;
+  $('deadSub').textContent = STORY.deaths[Math.floor(Math.random() * STORY.deaths.length)] + ` Tombé à l'étage ${G.floor} (${G.floorData.biome.name}) avec ${curWeapon().name}. Combo max : ${G.maxCombo}.`;
   $('deadRelics').textContent = G.relics.length ? 'Reliques : ' + G.relics.map(r => r.ic + ' ' + r.n).join(', ') : 'Aucune relique.';
   const u = $('deadUnlock'); u.hidden = true;
   if (save.essence >= 45 && save.weapons.length < Object.keys(WEAPONS).length) { u.hidden = false; u.textContent = 'Tu as assez d\'essence pour débloquer une nouvelle arme au Sanctuaire.'; }
@@ -145,7 +154,7 @@ function offerRelics(title, sub, n, cb) {
 }
 function offerOath(cb) {
   const opts = shuffle(OATHS.slice()).slice(0, 2);
-  const cards = opts.map(o => ({ ic: o.ic, n: o.n, d: o.d, tag: '→ ' + o.reward, cls: 'oath', onPick: () => { G.oath = o; if (o.apply) o.apply(P); SFX('relic'); } }));
+  const cards = opts.map(o => ({ ic: o.ic, n: o.n, d: o.d, tag: '→ ' + o.reward, cls: 'oath', onPick: () => { G.oath = o; if (o.apply) o.apply(P); SFX('relic'); if (STORY.oaths[o.id]) hint = { t: STORY.oaths[o.id], life: 7 }; } }));
   cards.push({ ic: '🕊️', n: 'Sans serment', d: 'Descendre librement, sans contrainte ni récompense.', cls: 'oath neutral', onPick: () => { G.oath = null; SFX('click'); } });
   openChoice({ title: 'Étage ' + G.floor + ' — Prête serment', sub: 'Un serment dure tout l\'étage. La récompense tombe au boss ou pendant la descente.', cards, onClose: cb });
 }
@@ -168,7 +177,7 @@ function openShop(room) {
     const w = WEAPONS[it.weapon];
     return Object.assign(base, { ic: w.ic, n: w.name, d: w.desc, onPick: buy(() => { dropWeapon(P.weapon, P.x, P.y + 40); P.weapon = it.weapon; SFX('swap'); }) });
   });
-  openChoice({ title: 'Le marchand', sub: `Tu as ${Math.floor(G.essence)} ◆. L'essence dépensée ici ne sera pas conservée pour le Sanctuaire.`, cards, footer: [{ label: 'Partir', primary: true }] });
+  openChoice({ title: 'Le marchand', sub: `« ${pick(STORY.merchant)} »  Tu as ${Math.floor(G.essence)} ◆. L'essence dépensée ici n'ira pas au Sanctuaire.`, cards, footer: [{ label: 'Partir', primary: true }] });
 }
 function openShrine(prop) {
   const cards = [
@@ -182,7 +191,7 @@ function openShrine(prop) {
     } },
     { ic: '🚶', n: 'Partir', d: 'Ne rien demander.', cls: 'neutral', onPick: () => {} },
   ];
-  openChoice({ title: 'Autel des profondeurs', sub: 'Il demande, et il donne. Une seule fois.', cards });
+  openChoice({ title: 'Autel des profondeurs', sub: '« ' + pick(STORY.altar) + ' »  Une seule fois.', cards });
 }
 function openArmory(prop) {
   const others = shuffle(Object.keys(WEAPONS).filter(w => w !== P.weapon)).slice(0, 2);
@@ -212,6 +221,7 @@ function interactProps() {
     if (pr.kind === 'fissure') continue;
     if (dist(P.x, P.y, pr.x, pr.y) > P.r + 20) continue;
     if (interactEnvers(pr)) return true;
+    if (pr.kind === 'tablet') { readTablet(pr); return true; }
     if (pr.kind === 'chest') { pr.used = true; burst(pr.x, pr.y, 30, '#ffd97a', 200, { glow: 1 }); SFX('relic'); offerRelics('Un coffre ancien', 'Choisis une relique', 3, null); return true; }
     if (pr.kind === 'armory') { burst(pr.x, pr.y, 30, '#9fd8ff', 200, { glow: 1 }); openArmory(pr); return true; }
     if (pr.kind === 'altar') { openShrine(pr); return true; }
