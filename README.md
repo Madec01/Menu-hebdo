@@ -8,9 +8,9 @@ Ouvre `index.html` dans un navigateur, ou héberge le dépôt sur GitHub Pages.
 
 ## Contrôles
 
-**PC** : `ZQSD` / `WASD` / flèches pour bouger, souris pour viser (visée automatique sinon), clic gauche pour tirer, `Espace` ou `Maj` pour le dash, `E` ou clic droit pour la Surcharge, `P` pour la pause.
+**PC** : `ZQSD` / `WASD` / flèches pour bouger, souris pour viser (visée automatique sinon), clic gauche pour tirer, `Espace` ou `Maj` pour le dash, `E` ou clic droit pour la Surcharge, `V` ou `Ctrl` pour traverser le Voile, `P` pour la pause.
 
-**Téléphone** : glisser sur la moitié gauche pour bouger, sur la moitié droite pour viser et tirer (tir automatique sinon), boutons DASH et ⚡.
+**Téléphone** : glisser sur la moitié gauche pour bouger, sur la moitié droite pour viser et tirer (tir automatique sinon), boutons DASH, ⚡ et ◐ (traversée).
 
 ## Ce qu'il y a dedans
 
@@ -22,7 +22,9 @@ Ouvre `index.html` dans un navigateur, ou héberge le dépôt sur GitHub Pages.
 - **Menace** : un chrono par étage. Traîne trop, et le Traqueur vient te chercher.
 - **Combo et Surcharge** : enchaîne les kills pour remplir la jauge, puis déclenche une explosion de projectiles.
 - **Salles spéciales** : coffres, marchand, autel (sacrifice, offrande, prière), épreuves en vagues, armurerie.
-- **Trente reliques** cumulables.
+- **L'Envers** : le reflet de la crypte. Tuer remplit le Voile ; quand il suffit, une fissure permet de passer de l'autre côté, où les murs deviennent des ombres traversables, les gouffres des ponts, et où des Reflets rôdent. Le Voile s'y vide lentement : on tient en tuant, ou on revient par une fissure, sinon on est rejeté avec un demi-cœur en moins. L'essence y vaut double et des reliques uniques s'y trouvent.
+- **Énigmes entre les deux mondes** : salles scellées accessibles seulement par l'Envers, glyphes qui révèlent le chemin sûr à travers un champ de gouffres, leviers de l'Envers qui effacent des murs du monde normal, boss qui se voilent à mi-vie et ne peuvent plus être frappés que par leur reflet, Échos qui rendent une relique perdue lors d'une mort précédente.
+- **Trente-quatre reliques** cumulables, dont quatre propres à l'Envers.
 - **Méta-progression** : l'essence ◆ ramassée est conservée et sert aux bénédictions permanentes, aux armes et au bestiaire (bonus de dégâts contre les ennemis souvent vaincus).
 - **Bande-son adaptative** : un morceau par biome et un thème de boss, percussions et basse qui n'entrent qu'au combat, ambiances sonores par biome, réverbération à convolution.
 - **Sprites pixel-art** dessinés pour le jeu (planche générée par `tools/sprites.py`), avec variantes recolorées par biome, animations et éclairage dynamique.

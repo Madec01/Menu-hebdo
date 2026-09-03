@@ -19,7 +19,9 @@ const Audio = (() => {
     revIn = ac.createGain(); revIn.connect(conv);
     const revOut = ac.createGain(); revOut.gain.value = 0.6; conv.connect(revOut); revOut.connect(master);
     noiseBuf = makeNoise(2);
-    M.fadeGain = ac.createGain(); M.fadeGain.connect(musicBus);
+    M.fadeGain = ac.createGain();
+    M.filter = ac.createBiquadFilter(); M.filter.type = 'lowpass'; M.filter.frequency.value = 18000; M.filter.Q.value = 0.5;
+    M.fadeGain.connect(M.filter); M.filter.connect(musicBus);
     for (const l of ['pad', 'bass', 'arp', 'lead', 'drums', 'amb']) {
       layers[l] = ac.createGain(); layers[l].gain.value = (l === 'bass' || l === 'drums') ? 0 : 1;
       layers[l].connect(l === 'amb' ? musicBus : M.fadeGain);
@@ -206,7 +208,8 @@ const Audio = (() => {
     if (tpl.full) M.targetInt = 1;
   }
   function stop() { M.id = null; M.tpl = null; }
-  function setIntensity(v) { if (!(M.tpl && M.tpl.full)) M.targetInt = v; }
+  function setIntensity(v) { if (!(M.tpl && M.tpl.full)) M.targetInt = M.envers ? 0 : v; }
+  function setEnvers(on) { if (!ac) return; M.envers = on; M.filter.frequency.setTargetAtTime(on ? 520 : 18000, ac.currentTime, 0.4); if (on) M.targetInt = 0; }
 
   // voicing d'accord avec conduite des voix (chaque voix bouge le moins possible)
   function voicing(rootMidi, tones) {
@@ -360,6 +363,9 @@ const Audio = (() => {
     die: t => { sample('gameover', { vol: 0.6, rate: 1, rev: 0.7 }); },
     wave: t => { sample('upgrade', { vol: 0.4, rate: 0.8, rev: 0.5 }); },
     thud: t => { sample('rockhit', { vol: 0.5, rate: 0.7, var: 0.2 }); },
+    cross: t => { sample('phase', { vol: 0.5, rate: 0.55, rev: 0.9 }); noise({ t, dur: 0.9, vel: 0.25, cutoff: 300, cutEnd: 5000, q: 2, a: 0.3, rev: 0.8 }); for (const f of [220, 277, 330]) voice({ type: 'sine', freq: f, t: t + 0.1, dur: 0.6, vel: 0.08, a: 0.2, d: 0.3, s: 0.5, r: 0.8, rev: 0.9 }); },
+    crossBack: t => { sample('phase', { vol: 0.45, rate: 1.3, rev: 0.6 }); noise({ t, dur: 0.6, vel: 0.2, cutoff: 4000, cutEnd: 200, q: 2, rev: 0.6 }); },
+    gate: t => { sample('rockhit', { vol: 0.6, rate: 0.45, rev: 0.8 }); noise({ t, dur: 0.8, vel: 0.2, cutoff: 150, cutEnd: 600, ftype: 'lowpass', q: 2, a: 0.1, rev: 0.6 }); },
   };
   const lastPlayed = {};
   function sfx(name, arg) {
@@ -370,6 +376,6 @@ const Audio = (() => {
     const f = SFX_DEFS[name]; if (f) f(now, arg);
   }
 
-  return { init, resume, setVolumes, play, stop, setIntensity, update, setAmbience, sfx, get ready() { return !!ac; }, stats() { return { samples: Object.keys(samples).length, track: M.id, step: M.step, bar: M.bar, intensity: M.intensity, state: ac && ac.state }; } };
+  return { init, resume, setVolumes, play, stop, setIntensity, setEnvers, update, setAmbience, sfx, get ready() { return !!ac; }, stats() { return { samples: Object.keys(samples).length, track: M.id, step: M.step, bar: M.bar, intensity: M.intensity, state: ac && ac.state }; } };
 })();
 const SFX = (n, a) => Audio.sfx(n, a);

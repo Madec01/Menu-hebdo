@@ -36,6 +36,14 @@ function genFloor(n) {
   if (n >= 3 && chance(0.6)) specials.push('challenge');
   if (n >= 2 && (n % 3 === 2 || chance(0.3))) specials.push('armory');
   for (const t of specials) { const r = free.shift(); if (!r) break; r.type = t; if (t !== 'challenge') r.cleared = true; }
+  // Envers : salle scellée (accessible seulement par l'autre côté), énigmes, fissures
+  if (n >= 2 && chance(0.75)) { const c = list.filter(r => (r.type === 'treasure' || r.type === 'armory' || r.type === 'shop') && neighbors(r) === 1); if (c.length) pick(c).sealed = true; }
+  const normals = shuffle(list.filter(r => r.type === 'normal'));
+  if (n >= 3 && normals.length) normals.pop().puzzle = 'glyph';
+  if (n >= 2 && normals.length && chance(0.8)) normals.pop().puzzle = 'alcove';
+  boss.fissure = true;
+  const fisCand = shuffle(list.filter(r => r !== start && r !== boss && !r.sealed));
+  for (let i = 0; i < Math.min(2, fisCand.length); i++) fisCand[i].fissure = true;
   for (const r of list) for (const [dx, dy] of DIRS) r.doors[dx + ',' + dy] = rooms.has(key(r.gx + dx, r.gy + dy));
   return { rooms, list, start, boss, key, biome: biomeFor(n) };
 }
@@ -113,25 +121,51 @@ function genTiles(room) {
   room.torches = [];
   for (const x of [3, 7, RW - 8, RW - 4]) if (t[0][x] === T_WALL) room.torches.push({ x: x * TILE + TILE / 2, y: TILE * 0.55, side: 'top' });
   for (const y of [3, RH - 4]) { room.torches.push({ x: TILE * 0.6, y: y * TILE + TILE / 2, side: 'left' }); room.torches.push({ x: (RW - 1) * TILE + TILE * 0.4, y: y * TILE + TILE / 2, side: 'right' }); }
+  // énigmes de l'Envers
+  if (room.puzzle === 'glyph') {
+    const x0 = mx - 2, x1 = mx + 2;
+    for (let y = 1; y < RH - 1; y++) for (let x = x0; x <= x1; x++) if (t[y][x] !== T_WALL) t[y][x] = T_PIT;
+    let py = RI(2, RH - 3);
+    for (let x = x0; x <= x1; x++) {
+      t[py][x] = T_GLYPH;
+      if (x < x1) { const ny = clamp(py + RI(-1, 1), 1, RH - 2); if (ny !== py) t[ny][x] = T_GLYPH; py = ny; }
+    }
+  } else if (room.puzzle === 'alcove') {
+    const ax = RW - 6;
+    for (let y = 1; y <= 2; y++) for (let x = ax; x <= ax + 2; x++) t[y][x] = T_FLOOR;
+    for (let y = 1; y <= 3; y++) { t[y][ax - 1] = T_WALL; t[y][ax + 3] = T_WALL; }
+    room.gate = [[ax, 3], [ax + 1, 3], [ax + 2, 3]]; room.gateOpen = false;
+    for (const [x, y] of room.gate) t[y][x] = T_WALL;
+    room.pocket = { x0: ax, x1: ax + 2, y0: 1, y1: 2 };
+  }
   room.tiles = t; room.gen = true; room.cache = null;
+  buildEnvers(room);
 }
 
 function setDoors(room, open) {
-  for (const d of room.doorTiles) room.tiles[d.y][d.x] = open ? T_DOOR : T_DOORC;
+  const fd = G.floorData;
+  for (const d of room.doorTiles) {
+    const [dx, dy] = d.dir.split(',').map(Number);
+    const nb = fd.rooms.get(fd.key(room.gx + dx, room.gy + dy));
+    const sealed = (room.sealed && !room.visited) || (nb && nb.sealed && !nb.visited);
+    if (G.world === 'envers') room.tilesE[d.y][d.x] = open ? T_DOOR : T_DOORC;
+    else room.tiles[d.y][d.x] = sealed ? T_SEALED : open ? T_DOOR : T_DOORC;
+  }
 }
 
 /* ---------- collisions ---------- */
 function tileAt(x, y) {
   const cx = Math.floor(x / TILE), cy = Math.floor(y / TILE);
   if (cx < 0 || cy < 0 || cx >= RW || cy >= RH) return T_WALL;
-  return G.room.tiles[cy][cx];
+  return curTiles()[cy][cx];
 }
 // who : 'player' | 'ground' | 'fly' | 'bullet'
 function solidFor(tx, ty, who) {
   if (tx < 0 || ty < 0 || tx >= RW || ty >= RH) return true;
-  const v = G.room.tiles[ty][tx];
-  if (v === T_WALL || v === T_DOORC) return true;
-  if (who === 'ground' && (v === T_PIT || v === T_LAVA)) return true;
+  if (who === 'ghost') return tx === 0 || ty === 0 || tx === RW - 1 || ty === RH - 1;
+  const v = curTiles()[ty][tx];
+  if (v === T_WALL || v === T_DOORC || v === T_SEALED) return true;
+  if (who === 'ground' && (v === T_PIT || v === T_LAVA || v === T_GLYPH)) return true;
   return false;
 }
 function circleRect(cx, cy, r, rx, ry, rw, rh) {
@@ -147,7 +181,7 @@ function hitsWall(x, y, r, who) {
   return false;
 }
 function moveCircle(e, dx, dy, who) {
-  who = who || (e.fly ? 'fly' : 'ground');
+  who = who || (e.reflet ? 'ghost' : e.fly ? 'fly' : 'ground');
   const res = { hx: false, hy: false };
   const steps = Math.max(1, Math.ceil(Math.max(Math.abs(dx), Math.abs(dy)) / (TILE * 0.45)));
   const sx = dx / steps, sy = dy / steps;
@@ -166,9 +200,9 @@ function segCircle(x1, y1, x2, y2, cx, cy, r) {
 function randomFloorTile(minDistFromPlayer, who) {
   for (let tries = 0; tries < 80; tries++) {
     const x = RI(1, RW - 2), y = RI(1, RH - 2);
-    const v = G.room.tiles[y][x];
-    if (v === T_WALL || v === T_DOOR || v === T_DOORC) continue;
-    if (who !== 'fly' && (v === T_PIT || v === T_LAVA)) continue;
+    const v = curTiles()[y][x];
+    if (v === T_WALL || v === T_DOOR || v === T_DOORC || v === T_SEALED || v === T_SHADOW) continue;
+    if (who !== 'fly' && (v === T_PIT || v === T_LAVA || v === T_GLYPH)) continue;
     const wx = (x + 0.5) * TILE, wy = (y + 0.5) * TILE;
     if (P && dist(wx, wy, P.x, P.y) < minDistFromPlayer) continue;
     return { x: wx, y: wy };

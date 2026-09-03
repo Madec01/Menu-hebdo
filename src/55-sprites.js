@@ -37,6 +37,10 @@ const SPRITE_SCALE = { hunter: 1.25, boss_colossus: 1.15, boss_eye: 1.1, boss_qu
 /* ---------- créatures ---------- */
 function drawEnemy(e) {
   ctx.save();
+  if (!inWorld(e)) {   // silhouette de l'autre côté du Voile
+    if (e.spawnT <= 0) drawSprite(e.boss ? 'boss_' + e.bossId : e.type, 0, e.x, e.y + e.r * 0.95, { white: true, alpha: 0.14, flip: P.x < e.x, scale: SPRITE_SCALE[e.boss ? 'boss_' + e.bossId : e.type] || 1 });
+    ctx.restore(); return;
+  }
   if (e.spawnT > 0) {
     const p = 1 - clamp(e.spawnT / 0.9, 0, 1);
     ctx.strokeStyle = e.color; ctx.globalAlpha = 0.7; ctx.lineWidth = 2; ctx.setLineDash([4, 4]); ctx.lineDashOffset = -P.tick * 40;
@@ -64,8 +68,10 @@ function drawEnemy(e) {
   if (e.shape === 'toad') { sy = winding ? 0.75 : 1 + air * 0.15; sx = winding ? 1.15 : 1; }
   else if (!flying && !e.boss) { const b = Math.sin(e.ph * 9) * (dashing ? 0.1 : 0.04); sy = 1 + b; sx = 1 - b * 0.6; }
   else if (e.boss && !flying) { const b = Math.sin(e.ph * 4) * 0.03; sy = 1 + b; sx = 1 - b; }
-  if (e.flash > 0) ctx.filter = 'none';
+  const veiled = e.boss && e.veiled && G.world === 'normal';
+  if (veiled) ctx.globalAlpha = e.alpha * 0.55;
   const drawn = drawSprite(name, frame, 0, e.r * 0.95, { flip, sx, sy, white: e.flash > 0, scale: SPRITE_SCALE[name] || 1 });
+  if (veiled) { ctx.globalAlpha = e.alpha; ctx.strokeStyle = 'rgba(199,125,255,' + (0.5 + 0.4 * Math.sin(P.tick * 5)) + ')'; ctx.lineWidth = 3; ctx.setLineDash([6, 6]); ctx.lineDashOffset = -P.tick * 40; ctx.beginPath(); ctx.arc(0, 0, e.r + 12, 0, TAU); ctx.stroke(); ctx.setLineDash([]); }
   if (!drawn) { ctx.fillStyle = e.flash > 0 ? '#fff' : e.color; ctx.beginPath(); ctx.arc(0, 0, e.r, 0, TAU); ctx.fill(); }
   if (winding) { ctx.strokeStyle = '#ff3b5c'; ctx.lineWidth = 3; ctx.globalAlpha = 0.8; ctx.beginPath(); ctx.arc(0, 0, e.r + 7, 0, TAU); ctx.stroke(); }
   if (e.slowT > 0) { ctx.strokeStyle = 'rgba(160,230,255,0.8)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, e.r + 3, 0, TAU); ctx.stroke(); }
@@ -130,6 +136,22 @@ function drawProp(pr, tk) {
   } else if (pr.kind === 'pedestal') {
     drawSprite('pedestal', 0, x, y + 14, { alpha: pr.used ? 0.7 : 1 });
     if (!pr.used) { ctx.strokeStyle = 'rgba(255,94,122,' + (0.4 + 0.3 * Math.sin(tk * 4)) + ')'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y - 18, 12 + Math.sin(tk * 4) * 2, 0, TAU); ctx.stroke(); }
+  } else if (pr.kind === 'fissure') {
+    const env = G.world === 'envers', a = 0.6 + 0.4 * Math.sin(tk * 4 + x);
+    ctx.strokeStyle = env ? 'rgba(255,255,255,' + a + ')' : 'rgba(199,125,255,' + a + ')'; ctx.lineWidth = env ? 3.5 : 2.5; ctx.lineJoin = 'round'; ctx.shadowColor = '#c77dff'; ctx.shadowBlur = 14;
+    ctx.beginPath(); ctx.moveTo(x - 14, y - 20); ctx.lineTo(x - 5, y - 7); ctx.lineTo(x - 11, y + 1); ctx.lineTo(x + 2, y + 9); ctx.lineTo(x - 2, y + 20); ctx.lineTo(x + 10, y + 5); ctx.lineTo(x + 4, y - 4); ctx.lineTo(x + 15, y - 17); ctx.stroke(); ctx.shadowBlur = 0;
+    if (dist(P.x, P.y, x, y) < 60) { ctx.font = 'bold 9px "Nunito", system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#e0d0ff'; ctx.fillText(env ? 'V : revenir' : 'V : traverser (' + crossCost() + ')', x, y + 30); }
+  } else if (pr.kind === 'chestE') {
+    drawSprite(pr.used ? 'chest_open' : 'chest', 0, x, y + 14);
+    if (!pr.used) { ctx.strokeStyle = 'rgba(199,125,255,' + (0.5 + 0.3 * Math.sin(tk * 4)) + ')'; ctx.lineWidth = 2; ctx.strokeRect(x - 20, y - 16, 40, 32); }
+  } else if (pr.kind === 'lever') {
+    ctx.fillStyle = '#3a3550'; ctx.fillRect(x - 10, y - 2, 20, 10); ctx.fillStyle = '#4d4768'; ctx.fillRect(x - 12, y - 6, 24, 5);
+    ctx.save(); ctx.translate(x, y - 4); ctx.rotate(pr.used ? 0.7 : -0.7); ctx.strokeStyle = '#8a8fa8'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -18); ctx.stroke(); ctx.fillStyle = pr.used ? '#8fe388' : '#ff5e7a'; ctx.beginPath(); ctx.arc(0, -19, 4, 0, TAU); ctx.fill(); ctx.restore();
+    if (!pr.used) { ctx.font = 'bold 9px "Nunito", system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#e0d0ff'; ctx.fillText('levier', x, y + 18); }
+  } else if (pr.kind === 'echo') {
+    ctx.shadowColor = '#dff4ff'; ctx.shadowBlur = 16;
+    drawSprite('player', 0, x, y + 14 + Math.sin(tk * 2) * 2, { alpha: 0.55 + 0.15 * Math.sin(tk * 3), flip: P.x < x }); ctx.shadowBlur = 0;
+    ctx.font = 'bold 9px "Nunito", system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#dff4ff'; ctx.fillText('ton écho', x, y + 26);
   } else if (pr.kind === 'weapon') {
     const w = WEAPONS[pr.id];
     ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.beginPath(); ctx.arc(x, y, 16, 0, TAU); ctx.fill();

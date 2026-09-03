@@ -28,10 +28,10 @@ function hash2(x, y) { let h = (x * 374761393 + y * 668265263 + G.room.gx * 1274
 
 /* ---------- cache de la salle ---------- */
 function buildRoomCache(room) {
-  const pal = G.floorData.biome.pal, S = 2;
+  const pal = G.floorData.biome.pal, S = 2, envers = G.world === 'envers';
   const c = document.createElement('canvas'); c.width = RW * TILE * S; c.height = RH * TILE * S;
   const g = c.getContext('2d'); g.scale(S, S);
-  const t = room.tiles;
+  const t = curTiles(room);
   const isWall = (x, y) => x < 0 || y < 0 || x >= RW || y >= RH || t[y][x] === T_WALL;
   for (let y = 0; y < RH; y++) for (let x = 0; x < RW; x++) {
     const v = t[y][x], px = x * TILE, py = y * TILE, h = hash2(x, y);
@@ -55,10 +55,19 @@ function buildRoomCache(room) {
       g.fillStyle = 'rgba(180,225,255,0.55)'; g.fillRect(px, py, TILE, TILE);
       g.strokeStyle = 'rgba(255,255,255,0.45)'; g.lineWidth = 1; g.beginPath(); g.moveTo(px + (h % 10), py + 4); g.lineTo(px + 14 + (h % 8), py + 16); g.lineTo(px + 8 + (h % 12), py + 28); g.stroke();
       g.fillStyle = 'rgba(255,255,255,0.35)'; g.fillRect(px + 3, py + 3, 8, 2);
-    } else if (v === T_PIT) {
+    } else if (v === T_SHADOW) {
+      g.fillStyle = 'rgba(40,20,70,0.85)'; g.fillRect(px, py, TILE, TILE);
+      g.fillStyle = 'rgba(180,140,255,0.12)'; g.fillRect(px + 3, py + 3, TILE - 6, TILE - 6);
+      g.strokeStyle = 'rgba(200,170,255,0.25)'; g.lineWidth = 1; g.beginPath(); g.moveTo(px + 6, py + 20 + (h % 6)); g.quadraticCurveTo(px + 16, py + 6 + (h % 9), px + 26, py + 18); g.stroke();
+    } else if (v === T_BRIDGE || v === T_GLYPHE) {
+      g.fillStyle = '#5a4030'; g.fillRect(px, py, TILE, TILE);
+      g.fillStyle = 'rgba(0,0,0,0.35)'; for (let i = 0; i < 4; i++) g.fillRect(px, py + 6 + i * 8, TILE, 2);
+      g.fillStyle = 'rgba(255,255,255,0.08)'; g.fillRect(px, py + 2, TILE, 2);
+      if (v === T_GLYPHE) { g.fillStyle = '#c77dff'; g.fillRect(px + 9, py + 9, 14, 14); g.fillStyle = '#fff'; g.fillRect(px + 13, py + 13, 6, 6); }
+    } else if (v === T_PIT || v === T_GLYPH) {
       g.fillStyle = '#05040a'; g.fillRect(px, py, TILE, TILE);
       const gr = g.createLinearGradient(px, py, px, py + 10); gr.addColorStop(0, 'rgba(255,255,255,0.12)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
-      if (!isWall(x, y - 1) && t[y - 1][x] !== T_PIT) { g.fillStyle = gr; g.fillRect(px, py, TILE, 10); }
+      if (!isWall(x, y - 1) && t[y - 1][x] !== T_PIT && t[y - 1][x] !== T_GLYPH) { g.fillStyle = gr; g.fillRect(px, py, TILE, 10); }
     }
   }
   for (let y = 0; y < RH; y++) for (let x = 0; x < RW; x++) {
@@ -80,14 +89,14 @@ function buildRoomCache(room) {
   // ombre portée des murs sur le sol
   g.fillStyle = 'rgba(0,0,0,0.28)';
   for (let y = 0; y < RH - 1; y++) for (let x = 0; x < RW; x++) if (t[y][x] === T_WALL && t[y + 1][x] !== T_WALL) g.fillRect(x * TILE, (y + 1) * TILE, TILE, 6);
-  room.cache = c;
+  if (envers) room.cacheE = c; else room.cache = c;
 }
 
 /* ---------- salle ---------- */
 function drawRoom() {
-  const room = G.room, t = room.tiles, pal = G.floorData.biome.pal, tk = P.tick;
-  if (!room.cache) buildRoomCache(room);
-  ctx.drawImage(room.cache, 0, 0, RW * TILE, RH * TILE);
+  const room = G.room, t = curTiles(room), pal = G.floorData.biome.pal, tk = P.tick, envers = G.world === 'envers';
+  if (envers ? !room.cacheE : !room.cache) buildRoomCache(room);
+  ctx.drawImage(envers ? room.cacheE : room.cache, 0, 0, RW * TILE, RH * TILE);
   const vw = W / ZOOM, vh = H / ZOOM;
   const x0 = Math.max(0, Math.floor(camX / TILE)), x1 = Math.min(RW - 1, Math.floor((camX + vw) / TILE));
   const y0 = Math.max(0, Math.floor(camY / TILE)), y1 = Math.min(RH - 1, Math.floor((camY + vh) / TILE));
@@ -109,6 +118,13 @@ function drawRoom() {
       g.addColorStop(0, pal.accent.replace(')', ',0.35)').replace('#', 'rgba(').replace(/rgba\((\w\w)(\w\w)(\w\w)/, (m, r, gg, b) => `rgba(${parseInt(r, 16)},${parseInt(gg, 16)},${parseInt(b, 16)}`)); g.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = g; ctx.fillRect(px - TILE / 2, py - TILE / 2, TILE * 2, TILE * 2);
       ctx.fillStyle = pal.wallEdge; if (y === 0 || y === RH - 1) { ctx.fillRect(px - 2, py, 3, TILE); ctx.fillRect(px + TILE - 1, py, 3, TILE); } else { ctx.fillRect(px, py - 2, TILE, 3); ctx.fillRect(px, py + TILE - 1, TILE, 3); }
+    } else if (v === T_SEALED) {
+      ctx.fillStyle = '#0d0c14'; ctx.fillRect(px, py, TILE, TILE);
+      ctx.fillStyle = '#4a3a6a'; const vert2 = y === 0 || y === RH - 1;
+      for (let i = 0; i < 3; i++) { if (vert2) ctx.fillRect(px + 5 + i * 9, py + 3, 4, TILE - 6); else ctx.fillRect(px + 3, py + 5 + i * 9, TILE - 6, 4); }
+      ctx.strokeStyle = 'rgba(199,125,255,' + (0.6 + 0.3 * Math.sin(tk * 3)) + ')'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(px + 5, py + 5); ctx.lineTo(px + TILE - 5, py + TILE - 5); ctx.moveTo(px + TILE - 5, py + 5); ctx.lineTo(px + 5, py + TILE - 5); ctx.stroke();
+    } else if (v === T_GLYPHE) {
+      ctx.fillStyle = 'rgba(199,125,255,' + (0.15 + 0.15 * Math.sin(tk * 4 + x)) + ')'; ctx.fillRect(px + 4, py + 4, TILE - 8, TILE - 8);
     } else if (v === T_DOORC) {
       ctx.fillStyle = '#0d0c14'; ctx.fillRect(px, py, TILE, TILE);
       ctx.fillStyle = '#6b6f86'; const vert = y === 0 || y === RH - 1;
@@ -119,7 +135,7 @@ function drawRoom() {
   drawTorches(room, tk);
   // accessoires de la salle
   const cx = RW * TILE / 2, cy = RH * TILE / 2;
-  for (const pr of room.props) drawProp(pr, tk);
+  for (const pr of room.props) if (pr.world === 'both' || (pr.world || 'normal') === G.world) drawProp(pr, tk);
   if (room.stairs) {
     drawSprite('stairs', 0, cx, cy, { anchor: 'center', scale: 1.25 });
     ctx.strokeStyle = 'rgba(127,215,255,' + (0.5 + 0.4 * Math.sin(tk * 5)) + ')'; ctx.lineWidth = 2; ctx.strokeRect(cx - 22, cy - 22, 44, 44);
@@ -149,7 +165,7 @@ function drawRoom() {
 /* ---------- lumière ---------- */
 function drawLighting() {
   const biome = G.floorData.biome;
-  let dark = biome.dark + ((G.oath && G.oath.dark) || 0);
+  let dark = G.world === 'envers' ? 0.42 : biome.dark + ((G.oath && G.oath.dark) || 0);
   if (G.room.type === 'boss' && !G.room.cleared) dark = Math.min(0.92, dark + 0.05);
   lctx.setTransform(1, 0, 0, 1, 0, 0);
   lctx.globalCompositeOperation = 'source-over';
@@ -164,12 +180,12 @@ function drawLighting() {
   const brume = G.oath && G.oath.dark;
   light(P.x, P.y, brume ? 150 : 250, 1);
   for (const tc of G.room.torches) light(tc.x, tc.y - 4, 120 + Math.sin(P.tick * 11 + tc.x) * 8, 0.85);
-  const t = G.room.tiles;
-  for (let y = 0; y < RH; y++) for (let x = 0; x < RW; x++) { const v = t[y][x]; if (v === T_LAVA) light((x + 0.5) * TILE, (y + 0.5) * TILE, 52, 0.55); else if (v === T_DOOR) light((x + 0.5) * TILE, (y + 0.5) * TILE, 70, 0.7); }
+  const t = curTiles();
+  for (let y = 0; y < RH; y++) for (let x = 0; x < RW; x++) { const v = t[y][x]; if (v === T_GLYPHE) light((x + 0.5) * TILE, (y + 0.5) * TILE, 40, 0.5); else if (v === T_LAVA) light((x + 0.5) * TILE, (y + 0.5) * TILE, 52, 0.55); else if (v === T_DOOR) light((x + 0.5) * TILE, (y + 0.5) * TILE, 70, 0.7); }
   for (const b of bullets) light(b.x, b.y, b.friendly ? 26 : 22, 0.6);
-  for (const e of enemies) if (e.spawnT <= 0) light(e.x, e.y, e.boss ? 120 : e.elite || e.hunter ? 70 : e.r + 34, e.boss ? 0.75 : e.elite || e.hunter ? 0.7 : 0.4);
+  for (const e of enemies) if (e.spawnT <= 0 && inWorld(e)) light(e.x, e.y, e.boss ? 120 : e.elite || e.hunter ? 70 : e.r + 34, e.boss ? 0.75 : e.elite || e.hunter ? 0.7 : 0.4);
   for (const p of pools) if (p.type === 'fire') light(p.x, p.y, p.r * 1.6, 0.6);
-  for (const pr of G.room.props) if (!pr.used) light(pr.x, pr.y, 80, 0.8);
+  for (const pr of G.room.props) if (!pr.used && (pr.world === 'both' || (pr.world || 'normal') === G.world)) light(pr.x, pr.y, pr.kind === 'fissure' ? 60 : 80, 0.8);
   if (G.room.stairs) light(RW * TILE / 2, RH * TILE / 2, 90, 0.9);
   for (const pt of parts) if (pt.glow) light(pt.x, pt.y, pt.size * 6, 0.5 * clamp(pt.life / pt.max, 0, 1));
   for (const pet of G.pets) light(pet.x, pet.y, 45, 0.7);
@@ -222,6 +238,12 @@ function drawHUD() {
   ctx.fillStyle = sr ? '#ffd97a' : 'rgba(255,217,122,0.55)'; ctx.fillRect(left, y, bw * clamp(G.surge / 100, 0, 1), 5);
   if (sr) { ctx.strokeStyle = 'rgba(255,217,122,' + (0.5 + 0.5 * Math.sin(P.tick * 8)) + ')'; ctx.lineWidth = 1; ctx.strokeRect(left - 1, y - 1, bw + 2, 7); }
   ctx.fillStyle = 'rgba(236,230,216,0.7)'; ctx.fillText(sr ? 'SURCHARGE PRÊTE' : 'SURCHARGE', left, y + 7);
+  y += 20;
+  ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fillRect(left, y, bw, 5);
+  const vc = G.world === 'normal' ? crossCost() : 0, vr = G.voile >= Math.max(1, vc);
+  ctx.fillStyle = G.world === 'envers' ? '#e0d0ff' : vr ? '#c77dff' : 'rgba(199,125,255,0.5)'; ctx.fillRect(left, y, bw * clamp(G.voile / 100, 0, 1), 5);
+  if (G.world === 'normal' && vc <= 100) { ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.fillRect(left + bw * vc / 100 - 1, y - 2, 2, 9); }
+  ctx.fillStyle = 'rgba(236,230,216,0.7)'; ctx.fillText(G.world === 'envers' ? 'VOILE (drain)' : nearFissure() ? 'VOILE — fissure : ' + vc : 'VOILE', left, y + 7);
   if (P.shield) { ctx.font = '10px ' + F; ctx.fillText(P.shieldT <= 0 ? '🛡️ prêt' : '🛡️ ' + Math.ceil(P.shieldT) + 's', left + bw + 10, y - 13); }
   y += 22;
   if (G.relics.length) { ctx.font = '14px system-ui, sans-serif'; let s = ''; for (const r of G.relics) s += r.ic; ctx.fillText(s, left, y); y += 20; }
@@ -244,10 +266,13 @@ function drawHUD() {
   for (const r of known) { minx = Math.min(minx, r.gx); maxx = Math.max(maxx, r.gx); miny = Math.min(miny, r.gy); }
   const mw = (maxx - minx + 1) * (cs + gap), ox = right - mw, oy = my + 16;
   const typeCol = { boss: '#ff5e7a', treasure: '#ffd97a', shop: '#8fe388', shrine: '#c77dff', challenge: '#ff9f43', armory: '#7fd7ff' };
+  if (G.world === 'envers') { ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillStyle = 'rgba(199,125,255,' + (0.7 + 0.3 * Math.sin(P.tick * 3)) + ')'; ctx.font = 'bold 14px ' + FD; ctx.fillText("L'ENVERS", W / 2, top + (enemies.some(e => e.boss && !e.dead) ? 36 : 6)); ctx.font = '11px ' + F; ctx.fillStyle = 'rgba(236,230,216,0.8)'; ctx.fillText(Math.ceil(G.voile / 4) + ' s de Voile', W / 2, top + (enemies.some(e => e.boss && !e.dead) ? 54 : 24)); ctx.textAlign = 'right'; }
   for (const r of known) {
     const x = ox + (r.gx - minx) * (cs + gap), yy = oy + (r.gy - miny) * (cs + gap);
     const base = typeCol[r.type];
     ctx.fillStyle = base ? base : 'rgba(236,230,216,0.6)'; ctx.globalAlpha = r.visited ? 1 : 0.4; ctx.fillRect(x, yy, cs, cs); ctx.globalAlpha = 1;
+    if (r.fissure && r.visited) { ctx.fillStyle = '#c77dff'; ctx.fillRect(x + cs - 4, yy, 4, 4); }
+    if (r.sealed && !r.visited && r.type !== 'boss') { ctx.strokeStyle = 'rgba(199,125,255,0.9)'; ctx.lineWidth = 1; ctx.strokeRect(x + 0.5, yy + 0.5, cs - 1, cs - 1); }
     if (r === G.room) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.strokeRect(x - 1, yy - 1, cs + 2, cs + 2); }
   }
   // combo
@@ -365,8 +390,21 @@ function render() {
     ctx.fillStyle = t.color; ctx.fillText(t.txt, t.x, t.y);
   }
   ctx.globalAlpha = 1;
+  if (G.world === 'envers') {
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.globalCompositeOperation = 'color'; ctx.fillStyle = '#7b5cc9'; ctx.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = 'source-over';
+  }
   drawLighting();
+  if (G.crossT > 0) {
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    const k = clamp(G.crossT / 0.7, 0, 1);
+    ctx.fillStyle = `rgba(150,110,255,${k * 0.45})`; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = `rgba(255,255,255,${k * 0.5})`;
+    for (let i = 0; i < 26; i++) { const xx = (i * 97.3) % W, hh = H * (0.3 + ((i * 37) % 70) / 100) * k; ctx.fillRect(xx, H / 2 - hh / 2, 2, hh); }
+  }
   drawHUD();
   $('dashBtn').classList.toggle('ready', P.dashCdT <= 0 && !P.noDash);
+  $('crossBtn').classList.toggle('ready', G.voile >= (G.world === 'normal' ? crossCost() : 1));
   $('surgeBtn').classList.toggle('ready', G.surge >= 100);
 }

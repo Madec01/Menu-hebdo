@@ -5,6 +5,7 @@ window.addEventListener('keydown', e => {
   keys.add(e.code);
   if (e.code === 'Space' || e.code === 'ShiftLeft' || e.code === 'ShiftRight') wantDash = true;
   if (e.code === 'KeyE' || e.code === 'KeyF') wantSurge = true;
+  if (e.code === 'KeyV' || e.code === 'ControlLeft' || e.code === 'ControlRight') wantCross = true;
   if (e.code === 'KeyP' || e.code === 'Escape') { if (state === 'play') pauseGame(); else if (state === 'pause') resumeGame(); }
   if (state === 'menu' && $('menu').classList.contains('show') && e.code === 'Enter') { uiAudio(); newRun(); }
 });
@@ -51,6 +52,9 @@ $('dashBtn').addEventListener('mousedown', dashPress);
 const surgePress = e => { e.preventDefault(); wantSurge = true; };
 $('surgeBtn').addEventListener('touchstart', surgePress, { passive: false });
 $('surgeBtn').addEventListener('mousedown', surgePress);
+const crossPress = e => { e.preventDefault(); wantCross = true; };
+$('crossBtn').addEventListener('touchstart', crossPress, { passive: false });
+$('crossBtn').addEventListener('mousedown', crossPress);
 $('pauseBtn').addEventListener('click', () => { if (state === 'play') pauseGame(); });
 
 /* ---------- overlays ---------- */

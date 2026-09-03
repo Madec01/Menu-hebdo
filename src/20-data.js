@@ -101,6 +101,11 @@ const RELICS = [
   { id: 'greed',    ic: '◆',  n: 'Bourse sans fond',   d: '+30 % d\'essence ramassée',                          f: p => { p.greed += 0.3; } },
   { id: 'combo',    ic: '🔗', n: 'Chaîne de fer',      d: 'Les combos durent 2 s de plus',                      f: p => { p.comboWindow += 2; } },
   { id: 'heal',     ic: '🧪', n: 'Potion',             d: 'Soigne complètement',                                f: p => { p.hp = p.maxHp; }, consumable: true },
+  // reliques de l'Envers (uniquement dans les coffres de l'autre côté)
+  { id: 'voile1',   ic: '🪡', n: 'Aiguille de Voile',  d: 'Traverser coûte 40 % de Voile en moins',              f: p => { p.voileCostMul *= 0.6; }, envers: true },
+  { id: 'voile2',   ic: '⌛', n: 'Sablier inversé',    d: 'Le Voile se vide deux fois moins vite dans l\'Envers', f: p => { p.voileDrainMul *= 0.5; }, envers: true },
+  { id: 'voile3',   ic: '👁️', n: 'Œil de l\'autre côté', d: 'Les Reflets lâchent de l\'essence et le double de Voile', f: p => { p.refletBonus = true; }, envers: true },
+  { id: 'voile4',   ic: '🩶', n: 'Pas de brume',       d: 'Dans l\'Envers : +25 % de vitesse, et chaque traversée rend invulnérable 1,5 s', f: p => { p.enversSpeed = true; }, envers: true },
 ];
 const relicById = id => RELICS.find(r => r.id === id);
 
@@ -112,6 +117,7 @@ const OATHS = [
   { id: 'hate',  ic: '⏳', n: 'Serment de hâte',     d: 'La Menace monte deux fois plus vite.', reward: 'Une relique bonus après le boss', menace: 2, bonusRelic: true },
   { id: 'brume', ic: '🌫️', n: 'Serment de brume',    d: 'Les ténèbres se resserrent autour de toi.', reward: '+50 % d\'essence ramassée', dark: 0.3, essMul: 1.5 },
   { id: 'faim',  ic: '🍖', n: 'Serment de faim',     d: 'Aucun cœur ne tombe des ennemis.', reward: 'Les ennemis lâchent deux fois plus d\'essence', noHearts: true, coinMul: 2 },
+  { id: 'miroir', ic: '🪞', n: 'Serment du miroir', d: 'Tu commences l\'étage dans l\'Envers, Voile plein. Le drain y est réduit de moitié.', reward: 'Une relique bonus après le boss', bonusRelic: true, mirror: true },
 ];
 
 /* ---------- méta ---------- */
@@ -123,6 +129,7 @@ const META = [
   { id: 'spark', ic: '⚡', n: 'Étincelle',  d: 'Commence chaque étage avec 40 % de Surcharge',  max: 1, cost: () => 50 },
   { id: 'relic', ic: '🎁', n: 'Héritage',   d: 'Commence chaque partie avec une relique',       max: 1, cost: () => 70 },
   { id: 'calm',  ic: '🕯️', n: 'Patience',   d: 'La Menace monte 25 % moins vite par niveau',    max: 2, cost: l => 30 + 30 * l },
+  { id: 'veil',  ic: '🌫️', n: 'Voile ample', d: 'Le Voile se vide 15 % moins vite dans l\'Envers, par niveau', max: 2, cost: l => 35 + 30 * l },
 ];
 
 /* ---------- gabarits de salles ---------- */

@@ -21,6 +21,8 @@ body.touch.playing .tbtn{display:flex}
 #dashBtn{width:74px;height:74px;right:calc(22px + var(--sar));bottom:calc(26px + var(--sab))}
 #dashBtn.ready{border-color:var(--accent);box-shadow:0 0 18px rgba(127,215,255,.45);background:rgba(127,215,255,.18)}
 #surgeBtn{width:56px;height:56px;right:calc(31px + var(--sar));bottom:calc(112px + var(--sab));font-size:22px;opacity:.5}
+#crossBtn{width:56px;height:56px;right:calc(31px + var(--sar));bottom:calc(176px + var(--sab));font-size:24px;opacity:.5;color:#e0d0ff}
+#crossBtn.ready{opacity:1;border-color:#c77dff;box-shadow:0 0 22px rgba(199,125,255,.6);background:rgba(199,125,255,.2)}
 #surgeBtn.ready{opacity:1;border-color:var(--gold2);box-shadow:0 0 22px rgba(255,217,122,.6);background:rgba(255,217,122,.22);animation:pulse 1s infinite}
 @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
 #pauseBtn{position:fixed;top:calc(8px + var(--sat));right:calc(8px + var(--sar));width:38px;height:38px;border-radius:10px;

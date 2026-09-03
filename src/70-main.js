@@ -4,7 +4,8 @@ function newRun() {
   rng = mulberry32(seed); nextId = 1;
   save.lastSeed = seed;
   G = { seed, floor: 1, kills: 0, essence: 0, time: 0, relics: [], floorData: null, room: null, bossName: '', oath: null,
-    menaceT: 0, menaceMax: 150, hunterAlive: false, hunterDelay: 0, combo: 0, comboT: 0, maxCombo: 0, surge: 0, pets: [], floorT: 0, bossesKilled: 0 };
+    menaceT: 0, menaceMax: 150, hunterAlive: false, hunterDelay: 0, combo: 0, comboT: 0, maxCombo: 0, surge: 0, pets: [], floorT: 0, bossesKilled: 0,
+    world: 'normal', voile: 0, enversT: 0, crossT: 0, crossings: 0, voileHinted: false };
   P = makePlayer();
   P.maxHp += 2 * metaLv('vit'); P.hp = P.maxHp;
   P.dmgMul += 0.1 * metaLv('force');
@@ -17,8 +18,9 @@ function newRun() {
   startFloor();
 }
 function startFloor() {
+  if (G.world === 'envers') { G.world = 'normal'; Audio.setEnvers(false); }
   G.floorData = genFloor(G.floor);
-  G.menaceT = 0; G.floorT = 0; G.hunterAlive = false;
+  G.menaceT = 0; G.floorT = 0; G.hunterAlive = false; G.enversT = 0;
   G.menaceMax = (150 + 10 * G.floor) * (1 + 0.25 * metaLv('calm'));
   if (metaLv('spark')) G.surge = Math.max(G.surge, 40);
   const biome = G.floorData.biome;
@@ -26,6 +28,7 @@ function startFloor() {
     enterRoom(G.floorData.start, null);
     Audio.play(biome.track, { root: biome.root }); Audio.setAmbience(biome.amb);
     banner = { t: 'Étage ' + G.floor + ' — ' + biome.name, s: biome.sub, color: '#ffd97a', life: 3, max: 3 };
+    if (G.oath && G.oath.mirror) { G.voile = 100; crossWorld(false); }
     if (G.floor === 1 && !save.tutorial) hint = { t: 'Nettoie chaque salle pour ouvrir les portes. Le boss garde l\'escalier.', life: 6 };
   };
   if (G.floor >= 2) { enterRoom(G.floorData.start, null); offerOath(begin); } else begin();
@@ -47,6 +50,19 @@ function setupProps(room) {
   if (room.type === 'shrine') room.props.push({ kind: 'altar', x: cx, y: cy, used: false });
   if (room.type === 'shop') { room.props.push({ kind: 'merchant', x: cx, y: cy - 10, used: false }); room.shopItems = makeShopItems(); }
   if (room.type === 'challenge') room.props.push({ kind: 'pedestal', x: cx, y: cy, used: false });
+  // Envers
+  if (room.fissure) {
+    const spots = room.type === 'boss' ? [[4.5, (RH - 1) / 2 | 0]] : [[3.5, 2.5], [RW - 3.5, 2.5], [3.5, RH - 2.5], [RW - 3.5, RH - 2.5]];
+    const ok = spots.filter(([sx, sy]) => room.tiles[Math.floor(sy)][Math.floor(sx)] === T_FLOOR);
+    const [sx, sy] = ok.length ? pick(ok) : [RW / 2 - 4, RH / 2];
+    room.props.push({ kind: 'fissure', x: (Math.floor(sx) + 0.5) * TILE, y: (Math.floor(sy) + 0.5) * TILE, world: 'both' });
+  }
+  if (room.type === 'treasure') room.props.push({ kind: 'chestE', x: cx + 70, y: cy, used: false, world: 'envers' });
+  if (room.puzzle === 'alcove') {
+    room.props.push({ kind: 'chest', x: (room.pocket.x0 + 1.5) * TILE, y: 2 * TILE - 2, used: false, world: 'normal' });
+    room.props.push({ kind: 'lever', x: (room.pocket.x0 + 1.5) * TILE, y: 4.7 * TILE, used: false, world: 'envers' });
+  }
+  if (room.type === 'start' && save.echo && save.echo.floor === G.floor) room.props.push({ kind: 'echo', x: cx, y: cy - 70, used: false, world: 'envers' });
 }
 function enterRoom(room, fromDir) {
   // le Traqueur suit le joueur
@@ -65,6 +81,7 @@ function enterRoom(room, fromDir) {
   P.dashT = 0; P.vx = P.vy = 0; P.safeX = P.x; P.safeY = P.y; P.fallT = 0;
   for (const pet of G.pets) { pet.x = P.x; pet.y = P.y; }
   transT = 0.3;
+  if (G.world === 'envers') { setupEnversRoom(room); updateCamera(true); return; }
   if (!room.cleared && (room.type === 'normal' || room.type === 'boss')) {
     setDoors(room, false); spawnEnemies(room); SFX('doorClose');
     if (room.type === 'boss') { SFX('boss'); banner = { t: G.bossName, s: 'Boss — ' + G.floorData.biome.name, color: '#ff5e7a', life: 3.2, max: 3.2 }; shakeIt(12); Audio.play('boss', { root: G.floorData.biome.root }); }
@@ -84,6 +101,7 @@ function clearRoom() {
   for (let i = 0; i < 2; i++) dropPickup(cx, cy, 'coin');
   if (room.type === 'boss') {
     room.stairs = true; G.bossesKilled++; save.bossKills++;
+    if (G.world === 'envers') { G.voile = 100; crossWorld(false); }
     SFX('stairs'); banner = { t: 'Boss vaincu', s: 'L\'escalier est ouvert', color: '#7fd7ff', life: 3, max: 3 };
     Audio.play(G.floorData.biome.track, { root: G.floorData.biome.root });
   }
@@ -99,6 +117,7 @@ function endRun() {
   return { gained, newBest };
 }
 function die() {
+  if (G.relics.length) { const keep = G.relics.filter(r => !r.once && !r.envers); if (keep.length) save.echo = { floor: G.floor, relic: keep[Math.floor(Math.random() * keep.length)].id }; }
   const r = endRun();
   SFX('die'); burst(P.x, P.y, 50, '#ffd97a', 220); shakeIt(14); flash = 0.5;
   $('dFloor').textContent = G.floor; $('dKills').textContent = G.kills; $('dTime').textContent = fmtTime(G.time); $('dEss').textContent = '+' + r.gained + ' ◆';
@@ -113,7 +132,7 @@ function die() {
 /* ---------- offres : reliques, serments, autel, marchand, armurerie ---------- */
 function relicChoices(n) {
   const owned = new Set(G.relics.map(r => r.id));
-  let pool = RELICS.filter(r => !(r.once && owned.has(r.id)));
+  let pool = RELICS.filter(r => !r.envers && !(r.once && owned.has(r.id)));
   if (P.hp >= P.maxHp) pool = pool.filter(r => r.id !== 'heal');
   if (P.noDash) pool = pool.filter(r => r.id !== 'dash' && r.id !== 'firedash');
   const out = [];
@@ -189,7 +208,10 @@ function interactProps() {
   for (const pr of room.props) {
     if (pr.used) continue;
     if (pr.cd > 0) continue;
+    if (!(pr.world === 'both' || (pr.world || 'normal') === G.world)) continue;
+    if (pr.kind === 'fissure') continue;
     if (dist(P.x, P.y, pr.x, pr.y) > P.r + 20) continue;
+    if (interactEnvers(pr)) return true;
     if (pr.kind === 'chest') { pr.used = true; burst(pr.x, pr.y, 30, '#ffd97a', 200, { glow: 1 }); SFX('relic'); offerRelics('Un coffre ancien', 'Choisis une relique', 3, null); return true; }
     if (pr.kind === 'armory') { burst(pr.x, pr.y, 30, '#9fd8ff', 200, { glow: 1 }); openArmory(pr); return true; }
     if (pr.kind === 'altar') { openShrine(pr); return true; }
@@ -219,7 +241,8 @@ function update(dt) {
   P.dashCdT -= dt; P.inv -= dt; P.shieldT -= dt; P.fireT -= dt; P.webT -= dt; P.slowT -= dt; P.surgeT -= dt;
   const tile = tileAt(P.x, P.y);
   P.inWater = tile === T_WATER; P.onIce = tile === T_ICE;
-  let spd = P.spd * (P.inWater ? 0.55 : 1) * (P.webT > 0 ? 0.5 : 1) * (P.slowT > 0 ? 0.65 : 1);
+  let spd = P.spd * (P.inWater ? 0.55 : 1) * (P.webT > 0 ? 0.5 : 1) * (P.slowT > 0 ? 0.65 : 1) * (G.world === 'envers' && P.enversSpeed ? 1.25 : 1);
+  P.stunT -= dt; if (P.stunT > 0) { mx = my = 0; ml = 0; P.moving = false; }
   if (P.fallT > 0) {
     P.fallT -= dt;
     if (!P.fell && P.fallT <= 0.25) { P.fell = true; hurtPlayer(1, null, true); P.x = P.safeX; P.y = P.safeY; P.vx = P.vy = 0; }
@@ -248,6 +271,9 @@ function update(dt) {
   }
   wantDash = false;
   if (wantSurge && G.surge >= 100) activateSurge();
+  if (wantCross && P.stunT <= 0 && P.fallT <= 0) tryCross();
+  wantCross = false;
+  if (state !== 'play') return;
   wantSurge = false;
 
   /* --- visée & tir --- */
@@ -266,14 +292,14 @@ function update(dt) {
   if (wantFire && P.fireT <= 0 && P.dashT <= 0 && P.fallT <= 0) { P.fireT = 1 / (curWeapon().rate * P.rateMul * (P.surgeT > 0 ? 2 : 1)); fire(P.aim); }
 
   /* --- ennemis --- */
-  for (const e of enemies) updateEnemy(e, dt);
+  for (const e of enemies) if (inWorld(e)) updateEnemy(e, dt);
   for (let i = 0; i < enemies.length; i++) for (let j = i + 1; j < enemies.length; j++) {
-    const a = enemies[i], b = enemies[j]; if (a.dead || b.dead || a.spawnT > 0 || b.spawnT > 0 || a.fly !== b.fly) continue;
+    const a = enemies[i], b = enemies[j]; if (a.dead || b.dead || a.spawnT > 0 || b.spawnT > 0 || a.fly !== b.fly || !inWorld(a) || !inWorld(b)) continue;
     const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 0.01, min = a.r + b.r;
     if (d < min) { const push = (min - d) / 2, ux = dx / d, uy = dy / d; if (!a.boss) moveCircle(a, -ux * push, -uy * push); if (!b.boss) moveCircle(b, ux * push, uy * push); }
   }
   for (const e of enemies) {
-    if (e.dead || e.spawnT > 0 || (e.alpha < 0.5 && !e.boss) || e.state === 'air' || e.phase === 'hop') continue;
+    if (e.dead || e.spawnT > 0 || (e.alpha < 0.5 && !e.boss) || e.state === 'air' || e.phase === 'hop' || !inWorld(e)) continue;
     if (dist(e.x, e.y, P.x, P.y) < e.r + P.r - 2 && hurtPlayer(e.contact, e) && P.thorns) damageEnemy(e, P.thorns, false);
   }
   if (state !== 'play') return;
@@ -282,8 +308,12 @@ function update(dt) {
   updateBullets(dt); updateSlashes(dt); updateZones(dt); updatePickups(dt); updateCompanions(dt);
   if (state !== 'play') return;
   enemies = enemies.filter(e => !e.dead);
-  const fighting = enemies.filter(e => !e.noCount);
-  if (!room.cleared && room.spawned && !room.challengeOn && fighting.length === 0) clearRoom();
+  const fighting = enemies.filter(e => !e.noCount && inWorld(e));
+  if (!room.cleared && room.spawned && !room.challengeOn && fighting.length === 0 && (G.world === 'normal' || room.type === 'boss')) clearRoom();
+  if (G.world === 'envers' && !room.clearedE && room.refletsSpawned && room.type !== 'boss' && fighting.length === 0) clearRoomE(room);
+  updateEnvers(dt);
+  if (state !== 'play') return;
+  if (room.pocket && !room.gateOpen && G.world === 'normal') { const tx = Math.floor(P.x / TILE), ty = Math.floor(P.y / TILE); if (tx >= room.pocket.x0 && tx <= room.pocket.x1 && ty >= room.pocket.y0 && ty <= room.pocket.y1) openGate(room); }
   if (room.challengeOn && fighting.length === 0) {
     room.waveDelay -= dt;
     if (room.waveDelay <= 0) { if (room.wave < room.waves) { nextWave(room); room.waveDelay = 1.2; } else finishChallenge(room); }
@@ -291,11 +321,11 @@ function update(dt) {
 
   /* --- menace & traqueur --- */
   const menaceRate = ((G.oath && G.oath.menace) || 1) * (1 - 0.25 * metaLv('calm'));
-  G.menaceT += dt * menaceRate;
+  if (G.world === 'normal') G.menaceT += dt * menaceRate;
   if (G.menaceT >= G.menaceMax && !G.hunterAlive) spawnHunter();
   if (G.hunterAlive && !enemies.some(e => e.hunter)) { G.hunterDelay -= dt; if (G.hunterDelay <= 0) { const p = randomFloorTile(200, 'fly'); const h = makeEnemy('hunter', p.x, p.y); h.hp = Math.max(1, Math.round(h.maxHp * (G.hunterHpFrac || 1))); enemies.push(h); } }
   if (G.comboT > 0) { G.comboT -= dt; if (G.comboT <= 0) G.combo = 0; }
-  Audio.setIntensity(fighting.length > 0 || enemies.some(e => e.hunter) ? 1 : 0);
+  Audio.setIntensity(fighting.length > 0 || enemies.some(e => e.hunter && inWorld(e)) ? 1 : 0);
 
   /* --- particules & textes --- */
   for (const p of parts) { p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.9; p.vy *= 0.9; if (p.grav) p.vy += p.grav * dt; }
@@ -308,7 +338,7 @@ function update(dt) {
 
   /* --- portes, accessoires, escalier --- */
   if (transT <= 0 && !room.challengeOn) for (const d of room.doorTiles) {
-    if (room.tiles[d.y][d.x] === T_DOOR && circleRect(P.x, P.y, P.r, d.x * TILE, d.y * TILE, TILE, TILE)) {
+    if (curTiles(room)[d.y][d.x] === T_DOOR && circleRect(P.x, P.y, P.r, d.x * TILE, d.y * TILE, TILE, TILE)) {
       const [dx, dy] = d.dir.split(',').map(Number);
       const nr = G.floorData.rooms.get(G.floorData.key(room.gx + dx, room.gy + dy));
       if (nr) { enterRoom(nr, d.dir); return; }
@@ -346,4 +376,4 @@ requestAnimationFrame(loop);
 
 // hook de test (non utilisé par le jeu)
 window.__crypteDebug = { get G() { return G; }, get P() { return P; }, get enemies() { return enemies; }, get state() { return state; }, get room() { return G && G.room; },
-  killAll() { for (const e of enemies.slice()) killEnemy(e); }, enterRoom, spawnHunter, activateSurge, startFloor, Audio, get SPR() { return SPR; }, get bullets() { return bullets; }, get pickups() { return pickups; }, WEAPONS, RELICS, applyRelic, relicById };
+  killAll() { for (const e of enemies.slice()) if (inWorld(e)) killEnemy(e); }, enterRoom, spawnHunter, activateSurge, startFloor, Audio, get SPR() { return SPR; }, tryCross, crossWorld, curTiles, openGate, get bullets() { return bullets; }, get pickups() { return pickups; }, WEAPONS, RELICS, applyRelic, relicById };

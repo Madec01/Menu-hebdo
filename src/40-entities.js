@@ -10,7 +10,7 @@ function burst(x, y, n, color, spd, opts) {
 }
 function addZone(z) { z.t = 0; zones.push(z); SFX('telegraph'); }
 function addPool(x, y, type, r, life) { pools.push({ x, y, type, r, life, max: life, ph: Math.random() * TAU }); }
-const activeEnemies = () => enemies.filter(e => !e.dead && e.spawnT <= 0);
+const activeEnemies = () => enemies.filter(e => !e.dead && e.spawnT <= 0 && inWorld(e));
 const bestiaryMul = type => 1 + Math.min(0.25, Math.floor((save.bestiary[type] || 0) / 25) * 0.05);
 const curWeapon = () => WEAPONS[P.weapon];
 function playerDamage() { const w = curWeapon(); return (w.dmg + P.dmgFlat) * P.dmgMul * (P.surgeT > 0 ? 1.5 : 1); }
@@ -26,6 +26,7 @@ function makePlayer() {
     weapon: save.weapons.includes(save.startWeapon) ? save.startWeapon : 'wand',
     dashCd: 1.5, dashCdT: 0, dashT: 0, ddx: 1, ddy: 0, inv: 0, fireT: 0, fx: 1, fy: 0, aim: 0, tick: 0, moving: false, walk: 0,
     safeX: 0, safeY: 0, safeT: 0, fallT: 0, hazT: 0, surgeT: 0, webT: 0, slowT: 0, onIce: false, inWater: false,
+    stunT: 0, voileCostMul: 1, voileDrainMul: 1, refletBonus: false, enversSpeed: false,
   };
 }
 
@@ -41,9 +42,11 @@ function makeEnemy(type, x, y, opts) {
     ringOnWall: !!b.ringOnWall, hunter: !!b.hunter, spawnT: opts.instant ? 0 : 0.6 + Math.random() * 0.5, fireT: R(0.9, 2.2), cd: R(0, 1),
     state: 'idle', stT: 0, dirx: 0, diry: 0, tx: 0, ty: 0, flash: 0, slowT: 0, ph: R(0, TAU), alpha: 1, poisonT: 0, poisonTick: 0,
     minion: !!opts.minion, elite: null, dead: false, hitCd: 0, fuse: 0, boss: false, noCount: !!b.hunter,
+    world: b.hunter ? 'both' : opts.reflet ? 'envers' : 'normal', reflet: !!opts.reflet,
   };
+  if (e.reflet) { e.hp = Math.max(1, Math.ceil(e.hp * 0.6)); e.spd *= 1.3; e.fly = true; e.color = '#d8c8ff'; e.dark = '#5b2a8a'; e.alpha = 0.9; e.name = 'Reflet de ' + e.name; }
   e.maxHp = e.hp;
-  if (opts.elite || (!opts.minion && !b.hunter && f >= 2 && chance(0.1 + 0.012 * f))) {
+  if (!e.reflet && (opts.elite || (!opts.minion && !b.hunter && f >= 2 && chance(0.1 + 0.012 * f)))) {
     const el = pick(ELITES); e.elite = el; el.f(e); e.maxHp = Math.max(e.maxHp, e.hp); e.r += 2;
   }
   return e;
@@ -79,7 +82,7 @@ function makeBoss() {
   const name = bd.name + (cyc ? ' ' + ROMAN[Math.min(cyc, 7)] : '');
   G.bossName = name;
   return {
-    id: nextId++, type: 'boss', name, shape: bd.shape, boss: true, bossId: biome.boss, x: RW * TILE / 2, y: RH * TILE / 2 - TILE * 2.5, r: bd.r, hp, maxHp: hp,
+    id: nextId++, type: 'boss', name, shape: bd.shape, boss: true, bossId: biome.boss, world: 'both', veiled: false, veilDone: false, x: RW * TILE / 2, y: RH * TILE / 2 - TILE * 2.5, r: bd.r, hp, maxHp: hp,
     spd: bd.spd + 4 * f, color: bd.color, dark: bd.dark, contact: 2, ai: 'boss', fly: bd.shape === 'eye', attacks: bd.attacks, ak: 0,
     phase: 'idle', phT: 1.6, sub: 0, count: 0, rot: 0, tx: 0, ty: 0, dirx: 0, diry: 0, flash: 0, slowT: 0, ph: 0, alpha: 1, spawnT: 1.4,
     state: 'idle', stT: 0, fireT: 0, cd: 0, poisonT: 0, poisonTick: 0, hitCd: 0, fuse: 0, dead: false, elite: null, minion: false, noCount: false, airT: 0,
@@ -220,6 +223,11 @@ function updateBoss(e, dt, ux, uy, d) {
   const idle = t => { e.phase = 'idle'; e.phT = t * (enraged ? 0.7 : 1); };
   switch (e.phase) {
     case 'idle': {
+      if (!e.veilDone && G.floor >= 2 && e.hp < e.maxHp * 0.5) {
+        e.veilDone = true; e.veiled = true; burst(e.x, e.y, 40, '#c77dff', 260, { glow: 1, life: 0.8 }); SFX('cross');
+        banner = { t: 'Le boss se voile', s: 'Frappe son reflet dans l\'Envers (V, Ctrl ou ◐)', color: '#c77dff', life: 3.5, max: 3.5 };
+        if (G.voile < 34) G.voile = 34;
+      }
       if (e.spd > 0) moveCircle(e, ux * e.spd * (enraged ? 1.3 : 1) * sm * dt, uy * e.spd * (enraged ? 1.3 : 1) * sm * dt);
       if (e.phT <= 0) {
         const atk = e.attacks[e.ak % e.attacks.length]; e.ak++;
@@ -336,11 +344,13 @@ function explodeAt(x, y, r, dmg, color, o) {
   burst(x, y, 10, '#fff4d6', 120, { shape: 'dot', life: 0.3 });
   parts.push({ x, y, vx: 0, vy: 0, life: 0.28, max: 0.28, color, size: r, ring: true });
   SFX('explode'); shakeIt(6);
-  if (o.enemies) for (const e of enemies.slice()) if (!e.dead && e.spawnT <= 0 && dist(e.x, e.y, x, y) < r + e.r) damageEnemy(e, o.edmg || dmg, false);
+  if (o.enemies) for (const e of enemies.slice()) if (!e.dead && e.spawnT <= 0 && inWorld(e) && dist(e.x, e.y, x, y) < r + e.r) damageEnemy(e, o.edmg || dmg, false);
   if (o.player && dist(P.x, P.y, x, y) < r + P.r) hurtPlayer(dmg, { x, y });
 }
 function damageEnemy(e, d, crit, silent) {
   if (e.dead || (e.alpha < 0.5 && !e.boss)) return;
+  if (e.boss && e.veiled && G.world === 'normal') { if (!silent) { burst(e.x, e.y, 4, '#c77dff', 90, { shape: 'dot' }); if (Math.random() < 0.12) ft(e.x, e.y - e.r - 12, 'Voilé', '#c77dff', 12); } return; }
+  if (e.boss) G.voile = Math.min(100, G.voile + 1.2);
   d *= bestiaryMul(e.type);
   e.hp -= d; e.flash = 0.12;
   if (P.slow) e.slowT = 1.2;
@@ -361,6 +371,11 @@ function killEnemy(e) {
   shakeIt(e.boss ? 20 : 3);
   // combo & surcharge
   G.combo = G.comboT > 0 ? G.combo + 1 : 1; G.comboT = 3 + P.comboWindow; G.maxCombo = Math.max(G.maxCombo, G.combo);
+  // Voile
+  const vg = (e.boss ? 100 : e.elite ? 16 : e.reflet ? (P.refletBonus ? 24 : 12) : 6) * (1 + Math.min(G.combo, 20) * 0.02);
+  G.voile = Math.min(100, G.voile + vg);
+  if (!G.voileHinted && G.voile >= 34 && G.world === 'normal') { G.voileHinted = true; hint = { t: 'Le Voile est assez plein : trouve une fissure (point violet sur la carte) et appuie sur V, Ctrl ou ◐.', life: 7 }; }
+  if (e.reflet && P.refletBonus) for (let i = 0; i < 2; i++) dropPickup(e.x, e.y, 'coin');
   if (G.combo >= 3) { ft(P.x, P.y - 28, G.combo + '× combo', '#ffd97a', 11 + Math.min(8, G.combo * 0.5), 0.7); SFX('combo', G.combo); }
   const wasReady = G.surge >= 100;
   G.surge = Math.min(100, G.surge + (e.boss ? 40 : e.elite ? 16 : 8) * P.surgeGain);
@@ -413,7 +428,7 @@ function dropPickup(x, y, type) {
   pickups.push({ x, y, type, vx: Math.cos(a) * s, vy: Math.sin(a) * s, r: type === 'heart' ? 8 : type === 'gem' ? 8 : 6, t: Math.random() * 6, life: 0 });
 }
 function addEssence(n) {
-  const mul = (1 + 0.25 * metaLv('or')) * (1 + P.greed) * ((G.oath && G.oath.essMul) || 1) * (1 + Math.min(G.combo, 20) * 0.04);
+  const mul = (1 + 0.25 * metaLv('or')) * (1 + P.greed) * ((G.oath && G.oath.essMul) || 1) * (1 + Math.min(G.combo, 20) * 0.04) * (G.world === 'envers' ? 2 : 1);
   G.essence += n * mul;
 }
 
@@ -446,7 +461,7 @@ function updateBullets(dt) {
       b.x += b.vx * sdt; b.y += b.vy * sdt;
       if (b.friendly) {
         for (const e of enemies) {
-          if (e.dead || e.spawnT > 0 || b.hit.includes(e.id) || (e.alpha < 0.5 && !e.boss)) continue;
+          if (e.dead || e.spawnT > 0 || b.hit.includes(e.id) || (e.alpha < 0.5 && !e.boss) || !inWorld(e)) continue;
           if (dist(e.x, e.y, b.x, b.y) < e.r + b.r) {
             b.hit.push(e.id);
             if (b.aoe) { b.dead = true; explodeAt(b.x, b.y, b.aoe, b.dmg, '#ff9f43', { enemies: true, edmg: b.dmg }); break; }
@@ -476,7 +491,7 @@ function updateSlashes(dt) {
   for (const s of slashes) {
     s.t += dt;
     for (const e of enemies) {
-      if (e.dead || e.spawnT > 0 || s.hit.includes(e.id) || (e.alpha < 0.5 && !e.boss)) continue;
+      if (e.dead || e.spawnT > 0 || s.hit.includes(e.id) || (e.alpha < 0.5 && !e.boss) || !inWorld(e)) continue;
       const d = dist(e.x, e.y, s.x, s.y); if (d > s.range + e.r) continue;
       let da = Math.atan2(e.y - s.y, e.x - s.x) - s.a; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU;
       if (Math.abs(da) < s.arc / 2 + 0.2) {
@@ -548,7 +563,7 @@ function updateCompanions(dt) {
   if (P.orbit) {
     for (let i = 0; i < P.orbit; i++) {
       const a = P.tick * 2.6 + i * TAU / P.orbit, ox = P.x + Math.cos(a) * 44, oy = P.y + Math.sin(a) * 44;
-      for (const e of enemies) if (!e.dead && e.spawnT <= 0 && e.hitCd <= 0 && (e.alpha >= 0.5 || e.boss) && dist(e.x, e.y, ox, oy) < e.r + 8) { e.hitCd = 0.5; damageEnemy(e, 1.2 * P.dmgMul, false); }
+      for (const e of enemies) if (!e.dead && e.spawnT <= 0 && inWorld(e) && e.hitCd <= 0 && (e.alpha >= 0.5 || e.boss) && dist(e.x, e.y, ox, oy) < e.r + 8) { e.hitCd = 0.5; damageEnemy(e, 1.2 * P.dmgMul, false); }
       for (const b of bullets) if (!b.friendly && !b.dead && dist(b.x, b.y, ox, oy) < b.r + 9) { b.dead = true; burst(b.x, b.y, 4, '#fff', 100, { shape: 'dot' }); }
     }
     bullets = bullets.filter(b => !b.dead);

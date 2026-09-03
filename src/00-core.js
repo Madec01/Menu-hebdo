@@ -26,7 +26,7 @@ let nextId = 1;
 /* ---------- sauvegarde ---------- */
 const SAVE_KEY = 'crypte-infinie-v2';
 const DEFAULT_SAVE = { v: 2, essence: 0, bestFloor: 0, runs: 0, kills: 0, bossKills: 0, meta: {}, weapons: ['wand'], startWeapon: 'wand',
-  bestiary: {}, musicVol: 0.6, sfxVol: 0.8, shakeAmt: 1, lastSeed: null, tutorial: 0 };
+  bestiary: {}, musicVol: 0.6, sfxVol: 0.8, shakeAmt: 1, lastSeed: null, tutorial: 0, tutorialEnvers: 0, echo: null };
 let save = JSON.parse(JSON.stringify(DEFAULT_SAVE));
 function loadSave() {
   try {
@@ -49,6 +49,8 @@ const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 const OPP = { '1,0': '-1,0', '-1,0': '1,0', '0,1': '0,-1', '0,-1': '0,1' };
 // tuiles : 0 sol, 1 mur, 3 porte ouverte, 4 porte fermée, 5 eau, 6 poison, 7 lave, 8 glace, 9 gouffre
 const T_FLOOR = 0, T_WALL = 1, T_DOOR = 3, T_DOORC = 4, T_WATER = 5, T_POISON = 6, T_LAVA = 7, T_ICE = 8, T_PIT = 9;
+// Envers : 10 ombre traversable, 11 glyphe (faux gouffre), 12 porte scellée, 13 pont, 14 glyphe révélé
+const T_SHADOW = 10, T_GLYPH = 11, T_SEALED = 12, T_BRIDGE = 13, T_GLYPHE = 14;
 
 let state = 'menu';   // menu | play | pause | choice | dead
 let G = null, P = null;
@@ -56,7 +58,7 @@ let enemies = [], bullets = [], parts = [], pickups = [], texts = [], zones = []
 let shake = 0, flash = 0, flashColor = '255,40,70', transT = 0, camX = 0, camY = 0, banner = null, hint = null;
 let W = 0, H = 0, DPR = 1, ZOOM = 1;
 const SA = { t: 0, b: 0, l: 0, r: 0 };
-let wantDash = false, wantSurge = false;
+let wantDash = false, wantSurge = false, wantCross = false;
 const keys = new Set();
 const mouse = { x: 0, y: 0, down: false, t: -1e9, active: false };
 const touches = new Map();
