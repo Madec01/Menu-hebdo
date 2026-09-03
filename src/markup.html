@@ -1,0 +1,108 @@
+<canvas id="c"></canvas>
+
+<div id="dashBtn" class="tbtn">DASH</div>
+<div id="surgeBtn" class="tbtn">⚡</div>
+<button id="pauseBtn" aria-label="Pause">❚❚</button>
+
+<!-- MENU PRINCIPAL -->
+<div id="menu" class="ov show">
+  <div class="box">
+    <h1>Crypte Infinie</h1>
+    <p class="sub">Descends. Prête serment. Choisis ton arme. Meurs, et reviens plus fort : la crypte se souvient de tout.</p>
+    <div class="stats">
+      <div class="stat"><b id="mBest">0</b><span>Meilleur étage</span></div>
+      <div class="stat"><b id="mRuns">0</b><span>Descentes</span></div>
+      <div class="stat"><b id="mKills">0</b><span>Vaincus</span></div>
+      <div class="stat"><b class="ess" id="mEss">0 ◆</b><span>Essence</span></div>
+    </div>
+    <div class="lbl">Arme de départ</div>
+    <div class="chips" id="weaponChips"></div>
+    <div class="row">
+      <button class="btn primary" id="playBtn">▶ Descendre</button>
+      <button class="btn" id="metaBtn">◆ Sanctuaire</button>
+      <button class="btn small" id="optBtn">⚙</button>
+    </div>
+    <div class="help">
+      <b>PC :</b> <kbd>ZQSD</kbd> / <kbd>WASD</kbd> / flèches pour bouger, souris pour viser (sinon visée auto), <kbd>Espace</kbd> ou <kbd>Maj</kbd> dash, <kbd>E</kbd> ou clic droit Surcharge, <kbd>P</kbd> pause.<br>
+      <b>Téléphone :</b> glisse à gauche pour bouger, à droite pour viser et tirer, boutons DASH et ⚡.<br>
+      Nettoie les salles pour ouvrir les portes. Le boss garde l'escalier. Les serments donnent des récompenses contre un handicap. Ne traîne pas : la Menace monte, et le Traqueur arrive.
+    </div>
+  </div>
+</div>
+
+<!-- SANCTUAIRE (méta) -->
+<div id="meta" class="ov">
+  <div class="box wide">
+    <h2>Sanctuaire</h2>
+    <p class="sub">Essence disponible : <span class="ess" id="sEss">0 ◆</span>. Tout ce que tu achètes ici est permanent.</p>
+    <div class="tabs">
+      <div class="tab on" data-tab="upgrades">Bénédictions</div>
+      <div class="tab" data-tab="armory">Armurerie</div>
+      <div class="tab" data-tab="bestiary">Bestiaire</div>
+    </div>
+    <div id="tab-upgrades" class="meta"></div>
+    <div id="tab-armory" class="meta" hidden></div>
+    <div id="tab-bestiary" class="bestiary" hidden></div>
+    <div class="row"><button class="btn" id="metaBack">← Retour</button></div>
+  </div>
+</div>
+
+<!-- OPTIONS -->
+<div id="options" class="ov">
+  <div class="box">
+    <h2>Options</h2>
+    <div class="opt"><label for="musicVol">Musique</label><input type="range" id="musicVol" min="0" max="100" value="60"></div>
+    <div class="opt"><label for="sfxVol">Effets</label><input type="range" id="sfxVol" min="0" max="100" value="80"></div>
+    <div class="opt"><label for="shakeOpt">Secousses</label><input type="range" id="shakeOpt" min="0" max="100" value="100"></div>
+    <div class="tiny">Graine de la dernière partie : <span class="seed" id="lastSeed">—</span></div>
+    <div class="row">
+      <button class="btn" id="optBack">← Retour</button>
+      <button class="btn ghost small" id="resetBtn">Effacer la sauvegarde</button>
+    </div>
+  </div>
+</div>
+
+<!-- CHOIX GÉNÉRIQUE (reliques, serments, autel, marchand, armurerie) -->
+<div id="choice" class="ov">
+  <div class="box wide">
+    <h2 id="chTitle">Choisis</h2>
+    <p class="sub" id="chSub"></p>
+    <div class="cards" id="chCards"></div>
+    <div class="row" id="chFooter"></div>
+  </div>
+</div>
+
+<!-- PAUSE -->
+<div id="pause" class="ov">
+  <div class="box">
+    <h2>Pause</h2>
+    <p class="sub" id="pauseInfo"></p>
+    <div id="pauseRelics" class="tiny"></div>
+    <div class="opt"><label for="musicVol2">Musique</label><input type="range" id="musicVol2" min="0" max="100" value="60"></div>
+    <div class="opt"><label for="sfxVol2">Effets</label><input type="range" id="sfxVol2" min="0" max="100" value="80"></div>
+    <div class="row">
+      <button class="btn primary" id="resumeBtn">Reprendre</button>
+      <button class="btn" id="quitBtn">Abandonner</button>
+    </div>
+  </div>
+</div>
+
+<!-- MORT -->
+<div id="dead" class="ov">
+  <div class="box">
+    <h2 id="deadTitle">La crypte te garde.</h2>
+    <p class="sub" id="deadSub"></p>
+    <div class="stats">
+      <div class="stat"><b id="dFloor">1</b><span>Étage</span></div>
+      <div class="stat"><b id="dKills">0</b><span>Vaincus</span></div>
+      <div class="stat"><b id="dTime">0:00</b><span>Durée</span></div>
+      <div class="stat"><b class="ess" id="dEss">+0 ◆</b><span>Essence</span></div>
+    </div>
+    <div id="deadRelics" class="tiny"></div>
+    <div id="deadUnlock" class="notice" hidden></div>
+    <div class="row">
+      <button class="btn primary" id="retryBtn">↻ Redescendre</button>
+      <button class="btn" id="menuBtn">Menu</button>
+    </div>
+  </div>
+</div>
