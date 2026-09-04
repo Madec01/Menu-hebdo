@@ -1,6 +1,8 @@
 // render/fx.js — « juice » (ARCHITECTURE.md § 7 et PROMPT § 2) : hit-stop,
 // ralenti, flash (respecte reduceFlash), nombres de dégâts en police locale et
-// traînée de dash (fantômes du sprite teintés bronze). Les minuteries de
+// traînée de dash (fantômes du sprite teintés bronze). Les nombres sont dessinés
+// sur le calque overlay du renderer (lisibles malgré la nuit) ; les traînées
+// restent sur le calque principal (éclairées comme le joueur). Les minuteries de
 // hit-stop/ralenti sont en temps réel (performance.now) puisque dt logique vaut 0
 // pendant un gel ; les nombres et traînées avancent avec dt logique.
 //
@@ -104,14 +106,15 @@ export function updateFx(dt) {
   }
 }
 
-/** Dessine traînées puis nombres (ctx caméra). */
+/** Dessine traînées (ctx caméra) puis nombres (calque overlay du renderer). */
 export function renderFx(ctx, alpha) {
   for (let i = 0; i < trailCount; i++) {
     if (!camera.isVisible(tx[i], ty[i], 48)) continue;
-    trailOpts.alpha = (tlife[i] / 0.3) * 0.6; trailOpts.flipX = tflip[i] === 1;
+    trailOpts.alpha = (tlife[i] / 0.3) * 0.45; trailOpts.flipX = tflip[i] === 1;
     atlas.draw(ctx, tsprite[i], tanim[i], tframe[i], tx[i], ty[i], trailOpts);
   }
   if (numCount === 0) return;
+  ctx = renderer.getOverlayCtx() || ctx;
   ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
   let curKind = -1;
   for (let i = 0; i < numCount; i++) {

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:,">
+<title>CARILLON — contrôle visuel (agent C)</title>
+<style> html, body { margin: 0; background: #0a0908; } canvas { display: block; margin: 8px auto; } </style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<script type="module">
+import { createLoop } from '../../core/loop.js';
+import { makeRng } from '../../core/rng.js';
+import * as input from '../../core/input.js';
+import * as renderer from '../renderer.js';
+import * as atlas from '../atlas.js';
+import * as camera from '../camera.js';
+import * as lighting from '../lighting.js';
+import * as particles from '../particles.js';
+import * as fx from '../fx.js';
+import * as ground from '../ground.js';
+import { loadFonts, font } from '../fonts.js';
+
+const BASE = '../../../assets/';
+const canvas = document.getElementById('game');
+const params = new URLSearchParams(location.search);
+const rng = makeRng(7);
+const manifest = await (await fetch(BASE + 'manifest.json')).json();
+await Promise.all([atlas.loadAtlas(manifest, { baseUrl: BASE, tints: { feutre: ['#ffffff', '#8f8d93'] } }), loadFonts(manifest, BASE)]);
+renderer.initRenderer({ canvas, width: 480, height: 270 });
+renderer.resize(+(params.get('scale') || 0));
+lighting.initLighting({ w: 480, h: 270, ambient: params.get('ambient') || '#16130f' });
+particles.initParticles(4000);
+ground.initGround({ tilesetId: params.get('tileset') || 'cendrelune', seed: 11, groups: (params.get('groups') || 'ash,dirt,grass_dead,patch').split(','), propDensity: 0.05, spriteDensity: 3 });
+renderer.setVignette(+(params.get('vignette') ?? 0.4)); renderer.setGrain(+(params.get('grain') ?? 0.25)); renderer.setFog(+(params.get('fog') ?? 1));
+input.initInput({ canvas, getAudioTime: () => performance.now() / 1000, screenToWorld: camera.screenToWorld, logicalSize: renderer.logicalSize });
+
+const player = { x: 0, y: 0, t: 0, anim: 'walk_down' };
+const kinds = ['feutre', 'baillon', 'ouateux', 'fossoyeur', 'rampe_suie', 'choeur_muet', 'veuve_grise', 'cierge', 'bourdon_fele', 'veuve_suie', 'maitre'];
+const enemies = kinds.map((k, i) => ({ kind: k, x: -200 + (i % 6) * 70 + rng.range(-8, 8), y: -115 + Math.floor(i / 6) * 245 + rng.range(-10, 10), t: rng.next() * 2, flip: i % 2 === 0 }));
+const torches = [{ x: -120, y: -110 }, { x: 150, y: 60 }, { x: 40, y: -120 }];
+const list = [], props = [];
+let time = 0, phase = 0;
+camera.snap(0, 0);
+
+function update(dt) {
+  input.tickInput(); fx.updateFx(dt); time += dt; player.t += dt;
+  phase += dt / (60 / 96); if (phase >= 1) { phase -= 1; particles.emit('bell', player.x, player.y, { count: 0.5 }); fx.damageNumber(-60, -70, 128, { crit: true }); fx.damageNumber(60, -70, 12, { onBeat: true }); fx.damageNumber(0, -90, 7, {}); }
+  lighting.setBeatPulse(params.get('halo') ? +params.get('halo') : 1 - phase); lighting.setHaloPos(player.x, player.y + 1);
+  for (const e of enemies) e.t += dt;
+  if (particles.activeCount() < 300) { particles.emit('ember', rng.range(-230, 230), rng.range(-130, 130)); particles.emit('dust', rng.range(-230, 230), rng.range(-130, 130)); }
+  particles.updateParticles(dt);
+  if (input.justPressed('dash')) { fx.hitStop(40); camera.shake(6, 0.25); fx.flash('#d8cdb4', 1); for (let i = 0; i < 5; i++) fx.dashTrail('wren', 'walk_right', i, player.x - 10 * (5 - i), player.y, false); }
+  loop.stats.entities = enemies.length;
+}
+function render(alpha) {
+  renderer.beginFrame(alpha);
+  const ctx = renderer.getCtx();
+  ground.renderGround(ctx, camera);
+  lighting.drawBeatHalo(ctx);
+  list.length = 0; ground.visibleProps(camera, props);
+  for (const p of props) list.push(p);
+  for (const e of enemies) list.push(e);
+  for (const t of torches) list.push(t);
+  list.push(player);
+  list.sort((a, b) => a.y - b.y);
+  for (const e of list) { const id = e.kind || (e === player ? 'wren' : null); if (id) atlas.drawShadow(ctx, id, e.x, e.y); }
+  for (const e of list) {
+    if (e === player) atlas.draw(ctx, 'wren', player.anim, atlas.frameAt('wren', player.anim, player.t), e.x, e.y);
+    else if (e.kind) { const anim = atlas.dirAnim(e.kind, 'walk', e.flip ? -1 : 1, 0); atlas.draw(ctx, e.kind, anim, atlas.frameAt(e.kind, anim, e.t), e.x, e.y, { flipX: !atlas.isDirectional(e.kind) && e.flip, tint: e.kind === 'feutre' && phase < 0.15 ? '#ffffff' : null }); }
+    else if (e.sprite) { ground.drawProp(ctx, e, time); if (e.light) lighting.addLight(e.x, e.y - 6, 60, '#e0a050', 0.8, 0.3); }
+    else { atlas.draw(ctx, 'torch', 'idle', atlas.frameAt('torch', 'idle', time), e.x, e.y); lighting.addLight(e.x, e.y - 12, 80, '#e0a050', 0.9, 0.25); lighting.addGlow(e.x, e.y - 14, 10, '#e0603a', 0.5); }
+  }
+  // Projectiles et pickups (cellules `col`).
+  atlas.draw(ctx, 'proj_cloche', 'idle', atlas.frameAt('proj_cloche', 'idle', time), 40, 40);
+  atlas.draw(ctx, 'echo', 'small', 0, -30, 50); atlas.draw(ctx, 'echo', 'medium', 0, -15, 50); atlas.draw(ctx, 'echo', 'large', 0, 3, 50);
+  atlas.draw(ctx, 'pickups', 'heal', 0, 80, 50); atlas.draw(ctx, 'pickups', 'bronze', 0, 100, 50);
+  particles.renderParticles(ctx, alpha);
+  fx.renderFx(ctx, alpha);
+  lighting.addLight(player.x, player.y - 12, 110, '#c9973f', 0.95, 0.05);
+  lighting.addLight(player.x, player.y - 12, 200, '#8f7a58', 0.4, 0);
+  const ui = renderer.getUiCtx();
+  atlas.drawNineSlice(ui, 'frame_parchment', 4, 4, 130, 40);
+  atlas.drawIcon(ui, 'icons', 'ui_coeur', 10, 10);
+  ui.font = font('CarillonUi', 12); ui.fillStyle = '#16130f'; ui.textBaseline = 'top';
+  ui.fillText(loop.stats.fps + ' fps', 46, 10); ui.fillText('halo ' + (1 - phase).toFixed(2), 46, 24);
+  atlas.drawNineSlice(ui, 'gauge_bg', 4, 48, 130, 12); atlas.drawNineSlice(ui, 'gauge_fill', 6, 50, 80, 8);
+  atlas.drawNineSlice(ui, 'button', 340, 240, 130, 24);
+  ui.font = font('CarillonDisplay', 18); ui.fillStyle = '#c9973f'; ui.fillText('Les Marches Sourdes', 300, 8);
+  renderer.endFrame();
+}
+const loop = createLoop({ update, render });
+fx.initFx({ loop, getOptions: () => ({ reduceFlash: params.get('reduceFlash') === '1' }) });
+loop.start();
+window.__bench = { loop, particles, renderer, camera, fx, atlas, ground, input, lighting };
+</script>
+</body>
+</html>

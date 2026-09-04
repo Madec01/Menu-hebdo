@@ -224,6 +224,18 @@ export function damageNumber(x, y, value, { crit, onBeat })
 export function updateFx(dt) / renderFx(ctx, alpha)
 ```
 
+### 7 bis. Ajouts livrés (C et B) — font partie du contrat
+
+- `core/input.js` : **`tickInput()` à appeler au début de chaque `update(dt)`** ; `initInput({canvas, getAudioTime, screenToWorld, logicalSize})` ; `applyBindings(map)`, `cancelCapture()`, `isCapturing()`.
+- `render/fx.js` : **`initFx({ loop, getOptions })`** obligatoire ; `dashTrail(spriteId, anim, frame, x, y, flipX)`.
+- `render/lighting.js` : `setHaloPos(x, y)` (position du joueur), `drawBeatHalo(ctx)` à appeler juste après le sol, `prepareLight(color)` au chargement.
+- `render/renderer.js` : `getOverlayCtx()` (calque monde composé après la lumière), `setFog`, `setAshes`, `setFlash`, `addFrameHook`, `time()`, `frameDelta()`.
+- `render/atlas.js` : `loadAtlas(manifestOuUrl, {baseUrl, tints})` ; `frameAt(id, anim, tSec)`, `animDone`, `dirAnim(id, base, dx, dy)`, `isDirectional(id)`, `prepareTint`, `drawShadow`, `drawIcon(ctx, iconId, x, y)`, `spriteDef/tileDef/uiDef/getManifest`. `tint` = colorisation 60 % ; `'#ffffff'` = flash blanc.
+- `render/camera.js` : `worldToScreen/screenToWorld(x, y, out?)` renvoient un objet réutilisé ; `snap`, `viewRect`, `setShakeScale(option)`.
+- `render/ground.js` : `initGround({tilesetId, seed, groups})`, `renderGround(ctx, camera)`, `visibleProps(camera, out)`, `drawProp(ctx, prop)` ; `render/fonts.js` : `loadFonts(manifest)` ; `render/post.js` interne.
+- `audio/conductor.js` : **`conductorTick()` à appeler à chaque tick 60 Hz** (émet `beat`/`bar`). `audio/audio.js` : `initAudio({options})`, `setAssetsBase(url)`. `audio/music.js` : `layerTargets()`. `audio/sfx.js` : `setListener(x, y)`, `playAmbience(id)/stopAmbience()`.
+- Ordre par frame recommandé (`main.js`) : `update` → `tickInput(); conductorTick(); updateFx(dt); jeu; camera.follow(); updateParticles(dt)` ; `render(alpha)` → `beginFrame(alpha)` → `renderGround` → `drawBeatHalo` → ombres → entités + props triés par y → projectiles → `renderParticles` → `renderFx` → lumières → HUD sur `getUiCtx()` → `endFrame()`.
+
 ## 8. Contrats `audio/` — le cœur du projet
 
 Graphe : `sources → (bus music | bus sfx | bus ui) → lowpass global → master → destination`.

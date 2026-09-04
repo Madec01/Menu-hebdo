@@ -139,7 +139,7 @@ export function renderParticles(ctx, alpha) {
       if (!(flags[i] & FLAG_GLOW)) continue;
       const x = px[i], y = py[i];
       if (x < x0 || x > x1 || y < y0 || y > y1) continue;
-      addGlow(x, y, 5 + size[i] * 2, PALETTE[color[i]], 0.35 * (life[i] / maxLife[i]));
+      addGlow(x, y, 2 + size[i], PALETTE[color[i]], 0.3 * (life[i] / maxLife[i]));
     }
   }
 }

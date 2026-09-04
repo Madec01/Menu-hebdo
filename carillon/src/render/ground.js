@@ -78,7 +78,7 @@ function buildChunk(cx, cy) {
       let gi = 0;
       for (let k = groups.length - 1; k >= 1; k--) {
         const v = noise(seed + k * 7919, wx, wy, 5 + k);
-        if (v > 0.6) { gi = k; break; }
+        if (v > 0.62 + 0.03 * k) { gi = k; break; }
       }
       const tiles = groups[gi];
       // Variante : les premières tuiles d'un groupe sont les plus unies → pondération.

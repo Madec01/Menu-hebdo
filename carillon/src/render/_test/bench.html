@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:,">
+<title>CARILLON — bench moteur & rendu (agent C)</title>
+<style>
+  html, body { margin: 0; background: #0a0908; color: #d8cdb4; font: 13px/1.4 monospace; }
+  #wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 8px; }
+  canvas { display: block; background: #000; }
+  #info { max-width: 1440px; white-space: pre-wrap; }
+  kbd { background: #2a241c; border: 1px solid #4a5540; padding: 0 4px; border-radius: 3px; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game"></canvas>
+  <div id="info">Chargement…</div>
+</div>
+<script type="module">
+import { createLoop } from '../../core/loop.js';
+import { bus } from '../../core/events.js';
+import { makeRng } from '../../core/rng.js';
+import { createPool } from '../../core/pool.js';
+import { createGrid } from '../../core/grid.js';
+import * as input from '../../core/input.js';
+import * as renderer from '../renderer.js';
+import * as atlas from '../atlas.js';
+import * as camera from '../camera.js';
+import * as lighting from '../lighting.js';
+import * as particles from '../particles.js';
+import * as fx from '../fx.js';
+import * as ground from '../ground.js';
+import { loadFonts, font } from '../fonts.js';
+
+const BASE = '../../../assets/';
+const N_ENEMIES = 400, N_PROJ = 300, TARGET_PARTICLES = 2000, BPM = 96;
+const ENEMY_KINDS = ['feutre', 'baillon', 'ouateux', 'fossoyeur', 'rampe_suie', 'choeur_muet', 'veuve_grise', 'cierge'];
+const PROJ_KINDS = ['proj_cloche', 'proj_clochette', 'proj_grelot', 'proj_cor', 'proj_crecelle', 'proj_chaine', 'proj_diapason'];
+const SONNEURS = ['wren', 'osric', 'maren', 'le_muet'];
+const info = document.getElementById('info');
+const canvas = document.getElementById('game');
+const rng = makeRng(2026);
+
+// --- Chargement -----------------------------------------------------------
+const manifest = await (await fetch(BASE + 'manifest.json')).json();
+await Promise.all([atlas.loadAtlas(manifest, { baseUrl: BASE, tints: { feutre: ['#ffffff'], baillon: ['#ffffff'] } }), loadFonts(manifest, BASE)]);
+renderer.initRenderer({ canvas, width: 480, height: 270 });
+lighting.initLighting({ w: 480, h: 270, ambient: '#16130f' });
+particles.initParticles(4000);
+ground.initGround({ tilesetId: 'cendrelune', seed: 2026, groups: ['ash', 'dirt', 'grass_dead', 'patch'], propDensity: 0.06, spriteDensity: 4 });
+renderer.setVignette(0.45); renderer.setGrain(0.3);
+
+// --- Monde de test ---------------------------------------------------------
+const player = { x: 0, y: 0, r: 8, sprite: 'wren', anim: 'idle_down', t: 0, dirX: 0, dirY: 1, hp: 100 };
+const sonneurs = SONNEURS.slice(1).map((s, i) => ({ x: 60 * (i + 1) - 120, y: -70, r: 8, sonneur: s, t: rng.next() }));
+const enemyPool = createPool(() => ({ x: 0, y: 0, r: 10, kind: '', t: 0, vx: 0, vy: 0, flip: false, anim: 'walk' }), (e) => { e.t = 0; }, N_ENEMIES);
+const grid = createGrid(64);
+for (let i = 0; i < N_ENEMIES; i++) {
+  const e = enemyPool.acquire();
+  const a = rng.range(0, Math.PI * 2), d = rng.range(80, 520);
+  e.x = Math.cos(a) * d; e.y = Math.sin(a) * d; e.kind = rng.pick(ENEMY_KINDS); e.t = rng.range(0, 3);
+  e.speed = rng.range(14, 30); e.keep = rng.range(30, 320);
+}
+const projectiles = [];
+for (let i = 0; i < N_PROJ; i++) projectiles.push({ kind: rng.pick(PROJ_KINDS), a: rng.range(0, 6.28), d: rng.range(20, 260), w: rng.range(0.6, 2.2), t: rng.next() * 3, x: 0, y: 0 });
+const torches = [];
+for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; torches.push({ x: Math.cos(a) * 170, y: Math.sin(a) * 120, t: rng.next() }); }
+const propList = [];
+const drawList = []; // entités triées par y (réutilisé)
+let time = 0, beatPhase = 0, beats = 0, neighbours = 0, autoWalk = true;
+input.initInput({ canvas, getAudioTime: () => performance.now() / 1000, screenToWorld: camera.screenToWorld, logicalSize: renderer.logicalSize });
+camera.setShakeScale(1);
+camera.snap(0, 0);
+
+function update(dt) {
+  input.tickInput();
+  fx.updateFx(dt);
+  time += dt;
+  // Mesure simulée à 96 BPM.
+  const beatDur = 60 / BPM;
+  beatPhase += dt / beatDur;
+  if (beatPhase >= 1) { beatPhase -= 1; beats++; particles.emit('bell', player.x, player.y, { count: 0.5 }); }
+  lighting.setBeatPulse(1 - beatPhase);
+  // Joueur : clavier, sinon petite ronde automatique.
+  const ax = input.axis();
+  let mx = ax.x, my = ax.y;
+  if (mx === 0 && my === 0 && autoWalk) { mx = Math.cos(time * 0.5); my = Math.sin(time * 0.35) * 0.6; }
+  if (mx !== 0 || my !== 0) { player.dirX = mx; player.dirY = my; player.anim = atlas.dirAnim('wren', 'walk', mx, my) === 'walk' ? 'walk_down' : atlas.dirAnim('wren', 'walk', mx, my); }
+  else player.anim = 'idle_down';
+  player.x += mx * 70 * dt; player.y += my * 70 * dt; player.t += dt;
+  if (input.justPressed('dash')) { fx.hitStop(40); camera.shake(6, 0.25); fx.flash('#d8cdb4', 1); fx.dashTrail('wren', player.anim, atlas.frameAt('wren', player.anim, player.t), player.x, player.y); particles.emit('dash_trail', player.x, player.y); }
+  if (input.justPressed('parry')) { particles.emit('parry', player.x, player.y); fx.damageNumber(player.x, player.y - 20, 42, { onBeat: true }); }
+  if (input.justPressed('pause')) autoWalk = !autoWalk;
+  camera.follow(player.x, player.y, dt);
+  lighting.setHaloPos(player.x, player.y + 1);
+  // Ennemis : suivent le joueur mollement, se répartissent via la grille.
+  grid.clear();
+  enemyPool.forEach((e) => {
+    const dx = player.x - e.x, dy = player.y - e.y, d = Math.hypot(dx, dy) || 1;
+    if (d > e.keep) { e.x += dx / d * e.speed * dt; e.y += dy / d * e.speed * dt; e.anim = 'walk'; } else { e.x -= dy / d * e.speed * 0.5 * dt; e.y += dx / d * e.speed * 0.5 * dt; e.anim = 'walk'; }
+    e.flip = dx < 0; e.t += dt;
+    grid.insert(e);
+  });
+  neighbours = 0; grid.query(player.x, player.y, 80, () => { neighbours++; });
+  // Projectiles en orbite.
+  for (let i = 0; i < projectiles.length; i++) { const p = projectiles[i]; p.a += p.w * dt; p.t += dt; p.x = player.x + Math.cos(p.a) * p.d; p.y = player.y + Math.sin(p.a) * p.d * 0.6; }
+  // Particules : maintenir ~2000 actives (braises, cendres, poussière, impacts).
+  let guard = 0;
+  while (particles.activeCount() < TARGET_PARTICLES && guard++ < 60) {
+    const k = rng.next();
+    const x = player.x + rng.range(-260, 260), y = player.y + rng.range(-150, 150);
+    if (k < 0.4) particles.emit('ember', x, y); else if (k < 0.7) particles.emit('ash', x, y); else if (k < 0.85) particles.emit('dust', x, y); else particles.emit('hit', x, y);
+  }
+  particles.updateParticles(dt);
+  if (beats % 2 === 0 && beatPhase < dt / beatDur) { const e = enemyPool.items[rng.int(0, N_ENEMIES - 1)]; particles.emit('hit_big', e.x, e.y - 10); fx.damageNumber(e.x, e.y - 24, rng.int(4, 120), { crit: rng.chance(0.3) }); }
+  loop.stats.entities = enemyPool.active + projectiles.length + particles.activeCount();
+}
+
+function render(alpha) {
+  renderer.beginFrame(alpha);
+  const ctx = renderer.getCtx();
+  ground.renderGround(ctx, camera);
+  lighting.drawBeatHalo(ctx);
+  // Liste triée par y : props, sonneurs, ennemis, joueur, torches.
+  drawList.length = 0;
+  ground.visibleProps(camera, propList);
+  for (let i = 0; i < propList.length; i++) drawList.push(propList[i]);
+  for (let i = 0; i < sonneurs.length; i++) drawList.push(sonneurs[i]);
+  const items = enemyPool.items;
+  for (let i = 0; i < items.length; i++) if (camera.isVisible(items[i].x, items[i].y, 48)) drawList.push(items[i]);
+  for (let i = 0; i < torches.length; i++) drawList.push(torches[i]);
+  drawList.push(player);
+  drawList.sort((a, b) => a.y - b.y);
+  // Ombres d'abord.
+  for (let i = 0; i < drawList.length; i++) { const e = drawList[i]; const id = e.kind || e.sonneur || (e === player ? 'wren' : null); if (id) atlas.drawShadow(ctx, id, e.x, e.y, 0.8); }
+  for (let i = 0; i < drawList.length; i++) {
+    const e = drawList[i];
+    if (e === player) { atlas.draw(ctx, 'wren', player.anim, atlas.frameAt('wren', player.anim, player.t), player.x, player.y); }
+    else if (e.kind) { const anim = atlas.dirAnim(e.kind, e.anim, e.flip ? -1 : 1, 0); atlas.draw(ctx, e.kind, anim, atlas.frameAt(e.kind, anim, e.t), e.x, e.y, e.flipOpts || (e.flipOpts = { flipX: false })); e.flipOpts.flipX = !atlas.isDirectional(e.kind) && e.flip; }
+    else if (e.sonneur) atlas.draw(ctx, e.sonneur, 'idle_down', atlas.frameAt(e.sonneur, 'idle_down', time + e.t), e.x, e.y);
+    else if (e.sprite) ground.drawProp(ctx, e, time);
+    else if (e.t !== undefined && e.x !== undefined && !e.anim) { atlas.draw(ctx, 'torch', 'idle', atlas.frameAt('torch', 'idle', time + e.t), e.x, e.y); lighting.addLight(e.x, e.y - 12, 70, '#e0a050', 0.9, 0.25); lighting.addGlow(e.x, e.y - 14, 10, '#e0603a', 0.5); }
+    if (e.light) lighting.addLight(e.x, e.y - 6, 60, '#e0a050', 0.8, 0.3);
+  }
+  for (let i = 0; i < projectiles.length; i++) { const p = projectiles[i]; if (!camera.isVisible(p.x, p.y, 40)) continue; atlas.draw(ctx, p.kind, 'idle', atlas.frameAt(p.kind, 'idle', p.t), p.x, p.y); }
+  particles.renderParticles(ctx, alpha);
+  fx.renderFx(ctx, alpha);
+  lighting.addLight(player.x, player.y - 12, 120, '#c9973f', 0.95, 0.05);
+  lighting.addLight(player.x, player.y - 12, 220, '#8f7a58', 0.45, 0);
+  // HUD de test.
+  const ui = renderer.getUiCtx();
+  atlas.drawNineSlice(ui, 'frame_dark', 4, 4, 150, 46);
+  atlas.drawIcon(ui, 'icons', 'battant', 10, 10, 1);
+  ui.font = font('CarillonUi', 12); ui.fillStyle = '#d8cdb4'; ui.textBaseline = 'top';
+  ui.fillText(`${loop.stats.fps} fps  ${loop.stats.frameMs.toFixed(1)} ms`, 48, 10);
+  ui.fillText(`ent ${loop.stats.entities}  part ${particles.activeCount()}  voisins ${neighbours}`, 48, 24);
+  ui.font = font('CarillonDisplay', 16); ui.fillStyle = '#c9973f';
+  ui.fillText('Cendrelune', 300, 8);
+  renderer.endFrame();
+}
+
+const loop = createLoop({ update, render });
+fx.initFx({ loop, getOptions: () => ({ reduceFlash: false }) });
+loop.start();
+window.__bench = { loop, particles, enemyPool, renderer, camera, fx, atlas, ground, input, bus };
+info.textContent = `${N_ENEMIES} ennemis · 4 sonneurs · ${N_PROJ} projectiles · ~${TARGET_PARTICLES} particules · 6 torches + halo · brume, cendres, vignette, grain.\nTouches : ZQSD/flèches déplacer · Espace = hit-stop 40 ms + shake + flash + traînée · Shift/clic droit = parade + nombre · Échap = ronde auto on/off.`;
+</script>
+</body>
+</html>

@@ -20,6 +20,7 @@ let haloColor = '#c9973f';
 export function initLighting({ w, h, ambient = '#16130f', halo = '#c9973f' } = {}) {
   ambientColor = ambient; haloColor = halo;
   renderer.setAmbient(ambient);
+  renderer.addFrameHook(updateLighting);
   sprites.clear();
   prepareLight(halo);
   prepareLight('#ffffff');
@@ -106,8 +107,8 @@ export function drawBeatHalo(ctx) {
 }
 
 /**
- * À appeler une fois par frame (renderFrame) : avance le vacillement et ajoute la
- * lueur bronze du halo sur le calque screen.
+ * Appelé automatiquement par renderer.endFrame (hook) : avance le vacillement et
+ * ajoute la lueur bronze du halo sur le calque screen. Ne pas l'appeler soi-même.
  */
 export function updateLighting(dt) {
   flickerT += dt;

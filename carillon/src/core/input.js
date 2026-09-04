@@ -149,7 +149,8 @@ function finishCapture(key, button) {
 
 // Lecture de la manette (au tick logique). Les boutons passent par press().
 function pollGamepad() {
-  const pads = navigator.getGamepads ? navigator.getGamepads() : null;
+  let pads = null;
+  try { pads = navigator.getGamepads ? navigator.getGamepads() : null; } catch (e) { pads = null; }
   let pad = null;
   if (pads) {
     if (gamepadIndex >= 0 && pads[gamepadIndex]) pad = pads[gamepadIndex];
