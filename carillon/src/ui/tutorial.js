@@ -26,8 +26,10 @@ const STEPS = ['move', 'wave', 'beat1', 'beat2', 'beat3', 'levelup', 'goal', 'do
 const BEAT_GOAL = { beat1: 1, beat2: 2, beat3: 3 };
 const MIN_SEC = { move: 3, wave: 4, beat1: 2, beat2: 2, beat3: 2, levelup: 3, goal: 7, done: 5 };
 const MAX_SEC = { move: 9, wave: 10, beat1: 25, beat2: 25, beat3: 25, levelup: 25, goal: 7, done: 5 };
-const BOX = { x: 60, y: 172, w: 360, h: 62 };   // sous le joueur, au-dessus de la jauge de Résonance
-const TEXT_W = BOX.w - 24;
+const BOX_DESK = { x: 60, y: 172, w: 360, h: 62 };   // sous le joueur, au-dessus de la jauge de Résonance
+const BOX_TOUCH = { x: 24, y: 168, w: 300, h: 66 };  // tactile : laisse les boutons Volée/Parade libres à droite
+let BOX = BOX_DESK;
+let TEXT_W = BOX.w - 24;
 const CHARS_PER_SEC = 45;
 
 export function createTutorial(deps) {
@@ -104,6 +106,7 @@ export function createTutorial(deps) {
     render(ui) {
       const s = id();
       if (!s || states.isFrozen()) return; // cartes ou pause au-dessus : la boîte se retire
+      BOX = touchActive() ? BOX_TOUCH : BOX_DESK; TEXT_W = BOX.w - 24;
       const goal = BEAT_GOAL[s];
       const textW = (s === 'move' || goal) ? TEXT_W - 70 : TEXT_W;
       panel(ui, BOX.x, BOX.y, BOX.w, BOX.h, 'parchment');
@@ -115,7 +118,7 @@ export function createTutorial(deps) {
       const shown = typed >= full.length ? full : full.slice(0, Math.floor(typed));
       paragraph(ui, shown, BOX.x + 12, BOX.y + 20, textW, { size: 9, color: C.encre, lineHeight: 10, maxLines: 3 });
       const canSkipStep = stepT >= MIN_SEC[s] && !goal && s !== 'levelup';
-      text(ui, t(canSkipStep ? 'ui.tutorial.next' : 'ui.tutorial.skip'), BOX.x + 12, BOX.y + BOX.h - 15, { size: 7, color: C.encreClaire });
+      text(ui, t(touchActive() ? (canSkipStep ? 'ui.tutorial.next_touch' : 'ui.tutorial.skip_touch') : (canSkipStep ? 'ui.tutorial.next' : 'ui.tutorial.skip')), BOX.x + 12, BOX.y + BOX.h - 15, { size: 7, color: C.encreClaire });
       if (s === 'move') renderMoveHelper(ui);
       if (goal) renderBeatHelper(ui, goal);
     },

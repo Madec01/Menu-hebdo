@@ -353,7 +353,9 @@
       "stick": "Left stick",
       "pad_dash": "A",
       "touch_stick": "left thumb: slide",
-      "touch_dash": "Peal"
+      "touch_dash": "Peal",
+      "next_touch": "Tap the box: continue",
+      "skip_touch": "▮▮ button: skip the tutorial"
     },
     "toast": {
       "achievement": "Achievement",

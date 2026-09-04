@@ -353,7 +353,9 @@
       "stick": "Stick gauche",
       "pad_dash": "A",
       "touch_stick": "pouce gauche : glisser",
-      "touch_dash": "Volée"
+      "touch_dash": "Volée",
+      "next_touch": "Toucher la boîte : continuer",
+      "skip_touch": "Bouton ▮▮ : passer le tutoriel"
     },
     "toast": {
       "achievement": "Haut-fait",
