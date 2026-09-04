@@ -1,11 +1,13 @@
 // ui/gamedata.js — lecture des JSON de src/data/ pour l'interface (hub, codex,
 // bilan). Indépendant de src/game/data.js : le hub et le codex fonctionnent
 // même si le gameplay n'est pas chargé. Aucune valeur n'est interprétée ici,
-// seulement lue et indexée par id.
+// seulement lue et indexée par id. `start-weapons` est un objet (règles des
+// Timbres de départ), les autres fichiers sont des listes.
 
-const FILES = ['characters', 'parishes', 'upgrades', 'lore', 'achievements', 'weapons', 'passives', 'fusions', 'enemies'];
+const FILES = ['characters', 'parishes', 'upgrades', 'lore', 'achievements', 'weapons', 'passives', 'fusions', 'enemies', 'start-weapons'];
+const OBJECT_FILES = { 'start-weapons': true };
 const data = { loaded: false };
-for (const f of FILES) data[f] = [];
+for (const f of FILES) data[f] = OBJECT_FILES[f] ? {} : [];
 const byId = {};
 let base = 'src/data/';
 
@@ -19,10 +21,10 @@ export async function loadUiData() {
       const res = await fetch(base + name + '.json');
       if (!res.ok) throw new Error(res.status);
       const arr = await res.json();
-      data[name] = Array.isArray(arr) ? arr : [];
-    } catch (e) { console.warn('[ui/gamedata]', name, e); data[name] = []; }
+      data[name] = OBJECT_FILES[name] ? (arr && typeof arr === 'object' ? arr : {}) : (Array.isArray(arr) ? arr : []);
+    } catch (e) { console.warn('[ui/gamedata]', name, e); data[name] = OBJECT_FILES[name] ? {} : []; }
     const map = new Map();
-    for (const d of data[name]) if (d && d.id) map.set(d.id, d);
+    if (Array.isArray(data[name])) for (const d of data[name]) if (d && d.id) map.set(d.id, d);
     byId[name] = map;
   }));
   data.loaded = true;
@@ -40,3 +42,4 @@ export const weapons = () => data.weapons;
 export const passives = () => data.passives;
 export const fusions = () => data.fusions;
 export const enemies = () => data.enemies;
+export const startWeaponRules = () => data['start-weapons'];

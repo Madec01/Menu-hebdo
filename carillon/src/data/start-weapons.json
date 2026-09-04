@@ -1,0 +1,15 @@
+{
+  "_comment": "Timbres de départ (méta, agent E). unlockLevel : niveau à atteindre en run pour débloquer un Timbre définitivement ; costs : prix alternatif en Bronze depuis le hub. Les Timbres des sonneurs débloqués sont toujours disponibles.",
+  "unlockLevel": 7,
+  "costs": {
+    "battant": 150,
+    "clarine": 200,
+    "bourdon": 250,
+    "grelots": 200,
+    "tocsin": 300,
+    "cor_de_brume": 300,
+    "crecelle": 250,
+    "chaine_d_angelus": 350,
+    "diapason": 400
+  }
+}

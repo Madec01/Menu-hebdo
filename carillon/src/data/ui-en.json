@@ -74,7 +74,14 @@
       "tutorial_first": "First night: the Clapper will guide you.",
       "error_game": "The gameplay is not loaded yet: the night cannot be rung.",
       "prev": "◄",
-      "next": "►"
+      "next": "►",
+      "start_weapon_label": "Starting Timbre",
+      "second_weapon_label": "Second Timbre ({weapon} first)",
+      "weapon_none": "{weapon} only",
+      "weapon_condition": "Level {level} in a run, or {cost} bronze",
+      "unlock_weapon": "Unlock ({cost} bronze)",
+      "unlocked_weapon": "Starting Timbre unlocked: {name}",
+      "weapon_locked_start": "Pick an unlocked Timbre to ring the night"
     },
     "tree": {
       "title": "Belfry upgrades",
@@ -170,7 +177,8 @@
       "hub": "Back to the Belfry",
       "perfects": "Perfect hits: {perfects} · misses: {misses}",
       "killer": "You fell to: {name}",
-      "build": "Your bronze tonight"
+      "build": "Your bronze tonight",
+      "start_weapon": "Starting Timbre unlocked: {name}"
     },
     "codex": {
       "title": "Codex",
@@ -203,7 +211,9 @@
       "stat_regen": "Regeneration",
       "stat_window": "Window",
       "stat_crit": "Critical",
-      "stat_bounce": "Bounces"
+      "stat_bounce": "Bounces",
+      "start_unlocked": "Starting Timbre: unlocked",
+      "start_locked": "Starting Timbre: level {level} in a run or {cost} bronze"
     },
     "options": {
       "title": "Options",
@@ -326,7 +336,8 @@
       "leaf": "Leaf found",
       "fusion": "Fusion",
       "parish_unlocked": "Parish opened",
-      "saved": "Saved"
+      "saved": "Saved",
+      "start_weapon": "Starting Timbre unlocked"
     },
     "confirm": {
       "title": "Sure?"

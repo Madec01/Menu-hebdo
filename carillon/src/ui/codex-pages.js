@@ -1,12 +1,14 @@
 // ui/codex-pages.js — contenu des onglets du codex : listes d'entrées et
 // panneau de détail (bestiaire rempli par save.codex, Timbres, Accords,
 // fusions découvertes, hauts-faits). Les Feuillets sont rendus par ui/lore.js.
+// L'onglet Timbres indique si le Timbre est débloqué en départ (start-weapons.js).
 
 import { getSave } from '../core/save.js';
 import * as atlas from '../render/atlas.js';
 import { t, has } from './i18n.js';
 import { enemies, weapons, passives, fusions } from './gamedata.js';
 import { achievementList } from './achievements.js';
+import { isStartWeaponUnlocked, unlockLevel, weaponCost, weaponParams } from './start-weapons.js';
 import { text, paragraph, icon, pips, heading, C } from './widgets.js';
 
 export const TABS = ['bestiary', 'weapons', 'passives', 'fusions', 'leaves', 'achievements'];
@@ -43,11 +45,6 @@ export function pageProgress(tab) {
   return { done: items.filter((i) => i.known).length, total: items.length };
 }
 
-function weaponParams(def) {
-  const b = def.base || {};
-  return { damage: b.damage || 0, count: b.count || 1, area: Math.round((b.area || 1) * 100), bonus: Math.round((b.markBonus || 0) * 100) };
-}
-
 /** Détail d'une entrée dans le rectangle donné (parchemin déjà dessiné). */
 export function renderDetail(ui, tab, item, r, time) {
   if (!item) return;
@@ -76,6 +73,8 @@ export function renderDetail(ui, tab, item, r, time) {
     const rk = 'ui.codex.rhythm_' + d.rhythm;
     text(ui, t('ui.codex.rhythm', { rhythm: has(rk) ? t(rk) : String(d.rhythm) }), cx, r.y + 90, { size: 9, align: 'center', color: C.encreClaire });
     if (tab === 'fusions') text(ui, t('ui.codex.recipe', { weapon: t('weapon.' + d.weapon + '.name'), passive: t('passive.' + d.passive + '.name') }), cx, r.y + 100, { size: 9, align: 'center', color: C.bronze });
+    else if (isStartWeaponUnlocked(d.id)) text(ui, t('ui.codex.start_unlocked'), cx, r.y + 100, { size: 9, align: 'center', color: C.bronze });
+    else text(ui, t('ui.codex.start_locked', { level: unlockLevel(), cost: weaponCost(d.id) }), cx, r.y + 100, { size: 8, align: 'center', color: C.encreClaire });
     let y = r.y + 114;
     y += paragraph(ui, t(d.desc, weaponParams(d)), r.x + 12, y, r.w - 24, { size: 9, color: C.encre, lineHeight: 10, maxLines: 5 });
     const vk = (tab === 'fusions' ? 'fusion.' : 'weapon.') + d.id + '.voice';

@@ -1,9 +1,10 @@
 // ui/hub.js — Le Beffroi Mère : carte des 5 paroisses en parchemin (nœuds
 // reliés, verrouillage selon save.unlocked.parishes), sélection du sonneur
-// (sprite animé, stats, coût de déblocage en Bronze), accès à l'arbre du
-// Beffroi (hub-tree.js) et à l'autel des Feuillets (hub-altar.js), seed
-// manuelle (champ DOM discret) et bouton « Sonner la nuit ».
-// Navigation : ↑↓ change de rangée (paroisses / sonneur / boutons), ◄► choisit.
+// (sprite animé, stats, coût de déblocage en Bronze), sélecteur du Timbre de
+// départ (hub-weapon.js), accès à l'arbre du Beffroi (hub-tree.js) et à l'autel
+// des Feuillets (hub-altar.js), seed manuelle (champ DOM discret) et bouton
+// « Sonner la nuit » (transmet weaponId à l'écran run).
+// Navigation : ↑↓ change de rangée (paroisses / sonneur / Timbre / boutons), ◄► choisit.
 
 import { getSave, commit } from '../core/save.js';
 import { mix32, hashSeed } from '../core/rng.js';
@@ -19,7 +20,9 @@ import * as states from './states.js';
 import { showInput } from './dom.js';
 import { toast } from './toasts.js';
 import { leafIds, isUnlocked as leafUnlocked, unreadCount } from './lore.js';
-import { panel, text, paragraph, button, icon, gauge, hit, heading, C } from './widgets.js';
+import { createWeaponPicker } from './hub-weapon.js';
+import { syncStartWeapons } from './start-weapons.js';
+import { panel, text, paragraph, button, icon, hit, heading, C } from './widgets.js';
 
 const W = 480, H = 270;
 // Positions des nœuds sur la carte (pixels logiques, dans le panneau de gauche).
@@ -31,12 +34,16 @@ const BTN = [ // rangée du bas
   { id: 'upgrades', x: 6, w: 92 }, { id: 'altar', x: 102, w: 100 }, { id: 'seed', x: 206, w: 80 }, { id: 'start', x: 292, w: 182 },
 ];
 const BTN_Y = 220, BTN_H = 22;
-const STATS = [['stat_hp', 'maxHp', 160], ['stat_speed', 'speed', 140], ['stat_armor', 'armor', 5], ['stat_window', 'windowMult', 1.5], ['stat_damage', 'damageMult', 1.3]];
+// Stats en mini-jauges sur deux colonnes : [clé, stat, max, colonne, rangée].
+const STATS = [['stat_hp', 'maxHp', 160, 0, 0], ['stat_speed', 'speed', 140, 0, 1], ['stat_armor', 'armor', 5, 0, 2], ['stat_window', 'windowMult', 1.5, 1, 0], ['stat_damage', 'damageMult', 1.3, 1, 1]];
+const STAT_COL = [{ label: 12, gauge: 56, w: 40 }, { label: 104, gauge: 146, w: 54 }];
+const ROWS = 4; // 0 paroisses · 1 sonneur · 2 Timbre de départ · 3 boutons
 
 export function createHub(deps) {
   let row = 0, parish = 0, charIdx = 0, btn = 3, time = 0, seedEditing = false;
   const arrows = { prev: { x: SIDE.x + 8, y: SIDE.y + 40, w: 16, h: 20 }, next: { x: SIDE.x + SIDE.w - 24, y: SIDE.y + 40, w: 16, h: 20 } };
-  const unlockRect = { x: SIDE.x + 40, y: SIDE.y + SIDE.h - 26, w: SIDE.w - 80, h: 18 };
+  const unlockRect = { x: SIDE.x + 40, y: SIDE.y + 150, w: SIDE.w - 80, h: 18 };
+  const picker = createWeaponPicker(SIDE);
   const save = () => getSave();
   const parishList = () => (parishes().length ? parishes() : ORDER.map((id) => ({ id })));
   const charList = () => (characters().length ? characters() : [{ id: 'wren', sprite: 'wren', stats: {}, unlockCost: 0 }]);
@@ -44,19 +51,26 @@ export function createHub(deps) {
   const curChar = () => charList()[charIdx];
   const parishOpen = (id) => save().unlocked.parishes.indexOf(id) >= 0;
   const charOpen = (id) => save().unlocked.characters.indexOf(id) >= 0;
-  const canStart = () => !!deps.game && parishOpen(curParish().id) && charOpen(curChar().id);
+  const canStart = () => !!deps.game && parishOpen(curParish().id) && charOpen(curChar().id) && picker.ok();
 
   function selectParish(i) {
     if (i === parish) return;
     parish = (i + parishList().length) % parishList().length; playUi('ui_move');
   }
-  function cycleChar(d) { charIdx = (charIdx + d + charList().length) % charList().length; playUi('ui_move'); }
+  function cycleChar(d) { charIdx = (charIdx + d + charList().length) % charList().length; picker.setChar(curChar()); playUi('ui_move'); }
+  /** Change de rangée en sautant celle du Timbre quand le sonneur est verrouillé. */
+  function moveRow(d) {
+    let r = row;
+    do { r = (r + d + ROWS) % ROWS; } while (r === 2 && !charOpen(curChar().id));
+    row = r; playUi('ui_move');
+  }
 
   function tryUnlockChar() {
     const c = curChar(), s = save();
     if (charOpen(c.id)) return;
     if (s.bronze < c.unlockCost) { playUi('ui_cancel'); toast({ title: t('ui.hub.bell_ringer'), body: t('ui.hub.not_enough_bronze'), icon: 'ui_bronze' }); return; }
-    s.bronze -= c.unlockCost; s.unlocked.characters.push(c.id); commit();
+    s.bronze -= c.unlockCost; s.unlocked.characters.push(c.id); syncStartWeapons(); commit();
+    picker.setChar(c);
     playSfx('achievement'); toast({ title: t('ui.hub.bell_ringer'), body: t('ui.hub.unlocked_char', { name: t(c.name) }), icon: 'ui_coeur' });
   }
 
@@ -78,7 +92,7 @@ export function createHub(deps) {
     const seedText = s.seedManual;
     const seed = seedText ? hashSeed(seedText) : freshSeed();
     s.lastParish = curParish().id; s.lastCharacter = curChar().id; commit();
-    states.replace('run', { parishId: curParish().id, characterId: curChar().id, seed, seedText, tutorial: !s.tutorialDone }, { sound: 'bell_tier' });
+    states.replace('run', { parishId: curParish().id, characterId: curChar().id, seed, seedText, tutorial: !s.tutorialDone, weaponId: picker.selected() }, { sound: 'bell_tier' });
   }
 
   function activate(id) {
@@ -89,8 +103,9 @@ export function createHub(deps) {
   }
 
   function confirm() {
-    if (row === 0) { if (parishOpen(curParish().id)) { row = 2; btn = 3; playUi('ui_confirm'); } else playUi('ui_cancel'); }
-    else if (row === 1) { if (charOpen(curChar().id)) { row = 2; btn = 3; playUi('ui_confirm'); } else tryUnlockChar(); }
+    if (row === 0) { if (parishOpen(curParish().id)) { row = 3; btn = 3; playUi('ui_confirm'); } else playUi('ui_cancel'); }
+    else if (row === 1) { if (charOpen(curChar().id)) { row = 2; playUi('ui_confirm'); } else tryUnlockChar(); }
+    else if (row === 2) { if (picker.confirm()) { row = 3; btn = 3; } }
     else activate(BTN[btn].id);
   }
 
@@ -132,22 +147,25 @@ export function createHub(deps) {
     const cx = SIDE.x + SIDE.w / 2;
     // Sprite animé (idle_down) dessiné sur le calque HUD ; sépia si verrouillé.
     const anim = 'idle_down';
-    atlas.draw(ui, c.sprite || c.id, anim, atlas.frameAt(c.sprite || c.id, anim, time), cx, SIDE.y + 68, { alpha: open ? 1 : 0.4, scale: 1 });
-    heading(ui, t('char.' + c.id + '.name'), cx, SIDE.y + 72, 15);
+    atlas.draw(ui, c.sprite || c.id, anim, atlas.frameAt(c.sprite || c.id, anim, time), cx, SIDE.y + 62, { alpha: open ? 1 : 0.4, scale: 1 });
+    heading(ui, t('char.' + c.id + '.name'), cx, SIDE.y + 66, 15);
     button(ui, { ...arrows.prev, label: t('ui.hub.prev'), focused: row === 1, size: 10 });
     button(ui, { ...arrows.next, label: t('ui.hub.next'), focused: row === 1, size: 10 });
-    const sw = c.startWeapon ? t('weapon.' + c.startWeapon + '.name') : '';
-    text(ui, t('ui.hub.start_weapon', { weapon: sw }), cx, SIDE.y + 92, { size: 9, align: 'center', color: C.encreClaire });
-    paragraph(ui, t('char.' + c.id + '.trait'), SIDE.x + 12, SIDE.y + 104, SIDE.w - 24, { size: 8, color: C.encre, lineHeight: 8, maxLines: 3 });
-    // Stats en mini-jauges.
+    paragraph(ui, t('char.' + c.id + '.trait'), SIDE.x + 12, SIDE.y + 84, SIDE.w - 24, { size: 8, color: C.encre, lineHeight: 8, maxLines: 3 });
+    // Stats en mini-jauges (deux colonnes).
     for (let i = 0; i < STATS.length; i++) {
-      const [key, stat, max] = STATS[i];
+      const [key, stat, max, col, r] = STATS[i];
       const v = c.stats && c.stats[stat] !== undefined ? c.stats[stat] : (stat === 'windowMult' || stat === 'damageMult' ? 1 : 0);
-      const y = SIDE.y + 134 + i * 8;
-      text(ui, t('ui.hub.' + key), SIDE.x + 12, y, { size: 8, color: C.encre });
-      gauge(ui, SIDE.x + 64, y, SIDE.w - 80, 7, v / max);
+      const y = SIDE.y + 112 + r * 8, L = STAT_COL[col];
+      text(ui, t('ui.hub.' + key), SIDE.x + L.label, y, { size: 8, color: C.encre, maxWidth: L.gauge - L.label - 2 });
+      miniGauge(ui, SIDE.x + L.gauge, y + 1, L.w, 5, v / max);
     }
-    if (!open) button(ui, { ...unlockRect, label: t('ui.hub.unlock_char', { cost: c.unlockCost }), focused: row === 1, size: 9, disabled: save().bronze < c.unlockCost });
+    // Sonneur débloqué : sélecteur de Timbre de départ ; sinon : bouton d'achat et Timbre imposé.
+    if (open) picker.render(ui, row === 2);
+    else {
+      text(ui, t('ui.hub.start_weapon', { weapon: c.startWeapon ? t('weapon.' + c.startWeapon + '.name') : '' }), cx, SIDE.y + 140, { size: 8, align: 'center', color: C.encreClaire });
+      button(ui, { ...unlockRect, label: t('ui.hub.unlock_char', { cost: c.unlockCost }), focused: row === 1, size: 9, disabled: save().bronze < c.unlockCost });
+    }
   }
 
   function renderButtons(ui) {
@@ -162,9 +180,9 @@ export function createHub(deps) {
       let label = t('ui.hub.' + b.id);
       if (b.id === 'seed') label = s.seedManual ? t('ui.hub.seed_manual', { seed: s.seedManual }) : t('ui.hub.seed_random');
       if (b.id === 'altar' && unreadCount() > 0) label += ' •';
-      button(ui, { x: b.x, y: BTN_Y, w: b.w, h: BTN_H, label, focused: row === 2 && btn === i, size: b.id === 'start' ? 13 : 10, disabled: b.id === 'start' && !canStart(), icon: b.id === 'start' ? 'battant' : null });
+      button(ui, { x: b.x, y: BTN_Y, w: b.w, h: BTN_H, label, focused: row === 3 && btn === i, size: b.id === 'start' ? 13 : 10, disabled: b.id === 'start' && !canStart(), icon: b.id === 'start' ? picker.icon() : null });
     }
-    const hint = !s.tutorialDone ? t('ui.hub.tutorial_first') : t('ui.hub.seed_hint');
+    const hint = charOpen(curChar().id) && !picker.ok() ? t('ui.hub.weapon_locked_start') : !s.tutorialDone ? t('ui.hub.tutorial_first') : t('ui.hub.seed_hint');
     text(ui, hint, W / 2, H - 20, { size: 9, align: 'center', color: C.gris });
   }
 
@@ -173,7 +191,9 @@ export function createHub(deps) {
       const s = save();
       parish = Math.max(0, ORDER.indexOf(s.lastParish || 'cendrelune'));
       charIdx = Math.max(0, charList().findIndex((c) => c.id === (s.lastCharacter || 'wren')));
-      row = 2; btn = 3; time = 0;
+      if (syncStartWeapons()) commit();
+      picker.setChar(curChar());
+      row = 3; btn = 3; time = 0;
       if (music.current() !== 'hub') music.play('hub', { layers: 2, fadeSec: 1.2 }).catch(() => {});
     },
     exit() {},
@@ -182,23 +202,25 @@ export function createHub(deps) {
       const m = states.mouse;
       if (seedEditing) return;
       if (m.moved) {
-        for (let i = 0; i < BTN.length; i++) if (hit({ x: BTN[i].x, y: BTN_Y, w: BTN[i].w, h: BTN_H }, m.x, m.y) && (row !== 2 || btn !== i)) { row = 2; btn = i; playUi('ui_move'); }
+        for (let i = 0; i < BTN.length; i++) if (hit({ x: BTN[i].x, y: BTN_Y, w: BTN[i].w, h: BTN_H }, m.x, m.y) && (row !== 3 || btn !== i)) { row = 3; btn = i; playUi('ui_move'); }
       }
       if (!m.clicked) return;
-      for (let i = 0; i < BTN.length; i++) if (hit({ x: BTN[i].x, y: BTN_Y, w: BTN[i].w, h: BTN_H }, m.x, m.y)) { row = 2; btn = i; activate(BTN[i].id); return; }
+      for (let i = 0; i < BTN.length; i++) if (hit({ x: BTN[i].x, y: BTN_Y, w: BTN[i].w, h: BTN_H }, m.x, m.y)) { row = 3; btn = i; activate(BTN[i].id); return; }
       const list = parishList();
       for (let i = 0; i < list.length; i++) { const pos = NODES[list[i].id]; if (pos && hit({ x: pos[0] - 12, y: pos[1] - 12, w: 24, h: 24 }, m.x, m.y)) { row = 0; selectParish(i); return; } }
       if (hit(arrows.prev, m.x, m.y)) { row = 1; cycleChar(-1); return; }
       if (hit(arrows.next, m.x, m.y)) { row = 1; cycleChar(1); return; }
-      if (!charOpen(curChar().id) && hit(unlockRect, m.x, m.y)) { row = 1; tryUnlockChar(); }
+      if (charOpen(curChar().id)) { if (picker.click(m.x, m.y)) row = 2; }
+      else if (hit(unlockRect, m.x, m.y)) { row = 1; tryUnlockChar(); }
     },
     handleAction(a) {
       if (seedEditing) return false;
-      if (a === 'menuUp') { row = (row + 2) % 3; playUi('ui_move'); return true; }
-      if (a === 'menuDown') { row = (row + 1) % 3; playUi('ui_move'); return true; }
+      if (a === 'menuUp') { moveRow(-1); return true; }
+      if (a === 'menuDown') { moveRow(1); return true; }
       if (a === 'menuLeft' || a === 'menuRight') {
         const d = a === 'menuLeft' ? -1 : 1;
-        if (row === 0) selectParish(parish + d); else if (row === 1) cycleChar(d); else { btn = (btn + d + BTN.length) % BTN.length; playUi('ui_move'); }
+        if (row === 0) selectParish(parish + d); else if (row === 1) cycleChar(d); else if (row === 2) picker.cycle(d);
+        else { btn = (btn + d + BTN.length) % BTN.length; playUi('ui_move'); }
         return true;
       }
       if (a === 'confirm') { confirm(); return true; }
@@ -208,6 +230,13 @@ export function createHub(deps) {
     renderWorld,
     render(ui) { renderMap(ui); renderChar(ui); renderButtons(ui); },
   };
+}
+
+/** Mini-jauge de stat (trop petite pour le 9-slice) : fond tourbe, remplissage bronze. */
+function miniGauge(ui, x, y, w, h, v) {
+  ui.fillStyle = C.tourbe; ui.fillRect(x, y, w, h);
+  const k = v < 0 ? 0 : v > 1 ? 1 : v;
+  if (k > 0) { ui.fillStyle = C.bronze; ui.fillRect(x + 1, y + 1, Math.max(1, Math.round((w - 2) * k)), h - 2); }
 }
 
 /** Seed « au hasard » : dérivée de l'horloge (aucun tirage non seedé, conformément aux règles du projet). */

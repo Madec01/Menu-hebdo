@@ -371,6 +371,10 @@
     "muet_victoire": {
       "name": "Un nom de plus",
       "desc": "Tenir jusqu'à l'aube avec le Muet."
+    },
+    "tous_timbres": {
+      "name": "Tous les Timbres",
+      "desc": "Débloquer les neuf Timbres de départ, en jeu ou au Beffroi."
     }
   },
   "lore": {

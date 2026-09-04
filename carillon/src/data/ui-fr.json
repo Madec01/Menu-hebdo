@@ -74,7 +74,14 @@
       "tutorial_first": "Première nuit : le Battant te guidera.",
       "error_game": "Le gameplay n'est pas encore chargé : impossible de sonner la nuit.",
       "prev": "◄",
-      "next": "►"
+      "next": "►",
+      "start_weapon_label": "Timbre de départ",
+      "second_weapon_label": "Second Timbre ({weapon} d'abord)",
+      "weapon_none": "{weapon} seul",
+      "weapon_condition": "Niveau {level} en jeu, ou {cost} bronze",
+      "unlock_weapon": "Débloquer ({cost} bronze)",
+      "unlocked_weapon": "Timbre de départ débloqué : {name}",
+      "weapon_locked_start": "Choisis un Timbre débloqué pour sonner la nuit"
     },
     "tree": {
       "title": "Améliorations du Beffroi",
@@ -170,7 +177,8 @@
       "hub": "Retour au Beffroi",
       "perfects": "Coups parfaits : {perfects} · ratés : {misses}",
       "killer": "Tu es tombé face à : {name}",
-      "build": "Ton bronze cette nuit"
+      "build": "Ton bronze cette nuit",
+      "start_weapon": "Timbre de départ débloqué : {name}"
     },
     "codex": {
       "title": "Codex",
@@ -203,7 +211,9 @@
       "stat_regen": "Régénération",
       "stat_window": "Fenêtre",
       "stat_crit": "Critique",
-      "stat_bounce": "Rebonds"
+      "stat_bounce": "Rebonds",
+      "start_unlocked": "Timbre de départ : débloqué",
+      "start_locked": "Timbre de départ : niveau {level} en jeu ou {cost} bronze"
     },
     "options": {
       "title": "Options",
@@ -326,7 +336,8 @@
       "leaf": "Feuillet retrouvé",
       "fusion": "Fusion",
       "parish_unlocked": "Paroisse ouverte",
-      "saved": "Sauvegardé"
+      "saved": "Sauvegardé",
+      "start_weapon": "Timbre de départ débloqué"
     },
     "confirm": {
       "title": "Sûr ?"

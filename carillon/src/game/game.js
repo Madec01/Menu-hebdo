@@ -41,8 +41,12 @@ function upgradeLevels(save) {
   return out;
 }
 
-/** Démarre une run. Renvoie { run, player, world }. */
-export function startGame({ parishId, characterId, seed, assist = null, upgrades = null }) {
+/**
+ * Démarre une run. Renvoie { run, player, world }.
+ * `weaponId` : Timbre de départ choisi au hub (repli sur cDef.startWeapon s'il est absent ou inconnu).
+ * Un sonneur à `startWeaponFixed` (le Muet) reçoit toujours son Timbre, puis `weaponId` en second.
+ */
+export function startGame({ parishId, characterId, seed, assist = null, upgrades = null, weaponId = null }) {
   endGame();
   const save = getSave();
   const pDef = parishDef(parishId), cDef = characterDef(characterId), wDef = waveDef(parishId);
@@ -52,7 +56,9 @@ export function startGame({ parishId, characterId, seed, assist = null, upgrades
   const player = createPlayer(cDef, upgrades || upgradeLevels(save));
   initResonance({ assist: mode, gain: player.stats.resonanceGain });
   const world = createWorld({ parishDef: pDef, rng: makeRng(run.rng.seed ^ 0x5bd1e995), waveDef: wDef });
-  addWeapon(player, cDef.startWeapon);
+  const chosen = weaponId && weaponDef(weaponId) ? weaponId : null;
+  if (cDef.startWeaponFixed) { addWeapon(player, cDef.startWeapon); if (chosen && chosen !== cDef.startWeapon) addWeapon(player, chosen); }
+  else addWeapon(player, chosen || cDef.startWeapon);
   snap(player.x, player.y);
   setHaloPos(player.x, player.y);
   // Nuit de la paroisse, relevée par la « lune grise » (lisibilité hors du halo).

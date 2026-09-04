@@ -159,5 +159,14 @@
    "type": "run_win_character",
    "character": "le_muet"
   }
+ },
+ {
+  "id": "tous_timbres",
+  "name": "achievement.tous_timbres.name",
+  "desc": "achievement.tous_timbres.desc",
+  "condition": {
+   "type": "weapons_unlocked",
+   "count": 9
+  }
  }
 ]

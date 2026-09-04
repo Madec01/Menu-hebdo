@@ -4,6 +4,9 @@
 // attente sont émises une à une après chaque `level:choice` (applyCard). finishRun construit
 // RunStats, calcule le Bronze, met à jour la sauvegarde (stats, codex, fusions, Feuillets, hauts-faits)
 // et commit(). Les compteurs rythmiques (parfait/raté) viennent de `rhythm:input`.
+// Timbres de départ : un Timbre porté à son niveau max pendant la run (ou composant d'une fusion
+// découverte) est débloqué immédiatement dans save.unlocked.weapons (commit → l'UI affiche le toast
+// par différence sur `save:changed`) et listé dans RunStats.startWeapons pour le bilan.
 
 import { bus } from '../core/events.js';
 import { makeRng } from '../core/rng.js';
@@ -18,7 +21,7 @@ import { healPlayer } from './player.js';
 import { dpsReport, resetReport } from './weapons.js';
 import { mult as resonanceMult, maxTierTime, resetResonance } from './resonance.js';
 import { drawCards } from './cards.js';
-import { evaluateUnlocks } from './unlocks.js';
+import { evaluateUnlocks, unlockStartWeapon, syncStartWeapons } from './unlocks.js';
 
 const levelPayload = { level: 1, choices: [] };
 const endPayload = { victory: false, stats: null };
@@ -40,7 +43,27 @@ function listen() {
     if (e.grade === 'parfait') current.perfects++; else if (e.grade === 'rate') current.misses++;
   });
   bus.on('player:hit', () => { if (current && !current.finished) current.hitsTaken++; });
-  bus.on('weapon:fusion', (e) => { if (current && !current.finished && current.fusions.indexOf(e.fusionId) < 0) current.fusions.push(e.fusionId); });
+  bus.on('weapon:fusion', (e) => {
+    if (!current || current.finished) return;
+    if (current.fusions.indexOf(e.fusionId) < 0) current.fusions.push(e.fusionId);
+    noteStartWeapon(current, e.from[0]);
+  });
+}
+
+/** Débloque `weaponId` comme Timbre de départ (si nouveau) : sauvegarde immédiate + liste du bilan. */
+function noteStartWeapon(run, weaponId) {
+  if (!unlockStartWeapon(getSave(), weaponId)) return;
+  run.startWeapons.push(weaponId);
+  commit();
+}
+
+/** Timbres (hors fusions) au niveau max → Timbre de départ débloqué. */
+function checkMaxedWeapons(run, player) {
+  const ws = player.weapons;
+  for (let i = 0; i < ws.length; i++) {
+    const w = ws[i];
+    if (!w.fusion && w.level >= (w.def.maxLevel || 1) && run.startWeapons.indexOf(w.id) < 0 && getSave().unlocked.weapons.indexOf(w.id) < 0) noteStartWeapon(run, w.id);
+  }
 }
 
 /** Démarre une run (état de progression). */
@@ -55,6 +78,7 @@ export function initRun({ parishId, characterId, seed, assist = 'none' }) {
     pendingLevels: 0, awaiting: false, choices: [], rerolls: 0,
     echoes: 0, perfects: 0, misses: 0, inputs: 0, hitsTaken: 0, fusions: [],
     resonanceSum: 0, resonanceSamples: 0, bossKilled: null, world: null, player: null, finished: false, stats: null,
+    startWeapons: [],
   };
   current = run;
   return run;
@@ -69,7 +93,7 @@ export function updateRun(run, dt, player, world) {
   run.timeSec += dt;
   run.resonanceSum += resonanceMult() * dt; run.resonanceSamples += dt;
   if (world) { run.kills = world.kills; run.echoes = world.echoes; if (world.bossKilled) run.bossKilled = world.bossKilled; }
-  if (player) run.rerolls = player.stats.rerolls;
+  if (player) { run.rerolls = player.stats.rerolls; checkMaxedWeapons(run, player); }
 }
 
 /** Ajoute de l'XP ; déclenche level:up (une montée à la fois). */
@@ -153,6 +177,8 @@ export function finishRun(run, victory) {
   if (world) for (const k in world.killsByKind) save.codex.enemies[k] = (save.codex.enemies[k] || 0) + world.killsByKind[k];
   if (run.bossKilled) save.codex.bosses[run.bossKilled] = (save.codex.bosses[run.bossKilled] || 0) + 1;
   for (let i = 0; i < run.fusions.length; i++) if (save.unlocked.fusions.indexOf(run.fusions[i]) < 0) save.unlocked.fusions.push(run.fusions[i]);
+  if (p) checkMaxedWeapons(run, p);
+  syncStartWeapons(save);
   if (victory && parish) {
     for (const other of (world ? world.allParishes : [])) {
       if (other.unlock && other.unlock.type === 'win' && other.unlock.parish === run.parishId && save.unlocked.parishes.indexOf(other.id) < 0) save.unlocked.parishes.push(other.id);
@@ -175,7 +201,7 @@ export function finishRun(run, victory) {
       weapons: p ? p.weapons.map((w) => ({ id: w.id, level: w.level })) : [],
       passives: p ? p.passives.map((pa) => ({ id: pa.id, level: pa.level })) : [],
     },
-    leaves: unlockOut.leaves.slice(), achievements: unlockOut.achievements.slice(),
+    leaves: unlockOut.leaves.slice(), achievements: unlockOut.achievements.slice(), startWeapons: run.startWeapons.slice(),
     echoes: run.echoes, perfects: run.perfects, misses: run.misses, inputs: run.inputs, hitsTaken: run.hitsTaken,
   };
   run.stats = stats;

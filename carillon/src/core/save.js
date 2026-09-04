@@ -2,13 +2,15 @@
 // (ARCHITECTURE.md § 6). Schéma versionné ; loadSave() migre les anciennes
 // versions en complétant les champs manquants depuis les valeurs par défaut.
 // Les modules mutent getSave() puis appellent commit(), qui émet save:changed.
+// v2 : `unlocked.weapons` = Timbres de départ débloqués (niveau max en run ou achat
+// en Bronze) et `lastWeaponByCharacter` = { sonneur: Timbre choisi } (hub).
 
 import { bus } from './events.js';
 
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 const STORAGE_KEY = 'carillon.save';
 
-/** Valeurs par défaut du schéma v1 (source unique de vérité). */
+/** Valeurs par défaut du schéma courant (source unique de vérité). */
 function defaults() {
   return {
     version: SAVE_VERSION,
@@ -26,6 +28,9 @@ function defaults() {
       showFps: false, bindings: {},
     },
     tutorialDone: false,
+    lastParish: null,
+    lastCharacter: null,
+    lastWeaponByCharacter: {},
   };
 }
 
@@ -50,8 +55,15 @@ function migrate(raw) {
   const save = defaults();
   if (!isObject(raw)) return save;
   // v0 (sans version) et v1 partagent la même forme : compléter suffit.
-  // Les migrations futures s'enchaînent ici : if (raw.version < 2) { … }
   mergeInto(save, raw);
+  // v1 → v2 : Timbres de départ. `unlocked.weapons` existait déjà (jamais lu avant la v2) mais
+  // pouvait être vide ou absent ; `lastWeaponByCharacter` est nouveau (valeur par défaut : {}).
+  if (!(raw.version >= 2)) {
+    if (!Array.isArray(save.unlocked.weapons)) save.unlocked.weapons = [];
+    if (save.unlocked.weapons.indexOf('battant') < 0) save.unlocked.weapons.unshift('battant');
+    if (!isObject(save.lastWeaponByCharacter)) save.lastWeaponByCharacter = {};
+  }
+  // Les migrations futures s'enchaînent ici : if (raw.version < 3) { … }
   save.version = SAVE_VERSION;
   return save;
 }

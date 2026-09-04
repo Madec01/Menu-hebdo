@@ -4,10 +4,12 @@
 // Extension du schéma Save (documentée) : save.stats.winsByParish et save.stats.winsByCharacter
 // ({ id: nombre }) servent aux conditions « toutes les paroisses » / « tous les sonneurs ».
 // Émet lore:unlock {leafId} et achievement:unlock {id} ; joue lore_unlock / achievement.
+// Timbres de départ (save.unlocked.weapons) : unlockStartWeapon / syncStartWeapons, appelés par
+// progression.js (niveau max en run, fusion découverte, Timbres des sonneurs débloqués).
 
 import { bus } from '../core/events.js';
 import { play as playSfx } from '../audio/sfx.js';
-import { loreDefs, achievementDefs } from './data.js';
+import { loreDefs, achievementDefs, weaponDef, fusionDef, allCharacters } from './data.js';
 
 const lorePayload = { leafId: '' };
 const achPayload = { id: '' };
@@ -49,6 +51,7 @@ export function achievementCondition(c, f, save) {
     case 'leaves': return save.unlocked.leaves.length >= c.count;
     case 'run_win_assist': return f.victory && f.assist === c.assist;
     case 'run_win_character': return f.victory && f.characterId === c.character;
+    case 'weapons_unlocked': return save.unlocked.weapons.length >= c.count;
     default: return false;
   }
 }
@@ -76,4 +79,25 @@ export function evaluateUnlocks(f, save, out) {
   if (out.leaves.length) playSfx('lore_unlock');
   if (out.achievements.length) playSfx('achievement');
   return out;
+}
+
+/** Ajoute un Timbre aux Timbres de départ débloqués ; renvoie true s'il est nouveau. */
+export function unlockStartWeapon(save, weaponId) {
+  if (!weaponDef(weaponId)) return false;
+  const list = save.unlocked.weapons;
+  if (list.indexOf(weaponId) >= 0) return false;
+  list.push(weaponId);
+  return true;
+}
+
+/**
+ * Cohérence des Timbres de départ avec le reste de la sauvegarde : le Timbre de chaque sonneur
+ * débloqué et le Timbre composant de chaque fusion découverte sont toujours disponibles.
+ * Renvoie le nombre de Timbres ajoutés (0 = rien à faire).
+ */
+export function syncStartWeapons(save) {
+  let n = 0;
+  for (const c of allCharacters().values()) if (save.unlocked.characters.indexOf(c.id) >= 0 && unlockStartWeapon(save, c.startWeapon)) n++;
+  for (let i = 0; i < save.unlocked.fusions.length; i++) { const f = fusionDef(save.unlocked.fusions[i]); if (f && unlockStartWeapon(save, f.weapon)) n++; }
+  return n;
 }

@@ -153,7 +153,7 @@ export function createGrid(cellSize) → { clear(), insert(e), query(x, y, r, fn
   // e possède x, y, r ; fn(e) est appelé pour chaque candidat (test précis à la charge de l'appelant)
 
 // core/save.js — localStorage 'carillon.save', schéma versionné
-export const SAVE_VERSION = 1
+export const SAVE_VERSION = 2   // v2 : unlocked.weapons garanti, lastWeaponByCharacter, lastParish/lastCharacter
 export function loadSave() → Save     // migre si version < SAVE_VERSION
 export function getSave() → Save     // instance courante (mutable, puis commit())
 export function commit()             // sérialise + bus.emit('save:changed')
@@ -169,7 +169,7 @@ Schéma `Save` (v1) :
   "codex": { "enemies": {"feutre": 12}, "bosses": {} },
   "stats": { "runs": 0, "wins": 0, "kills": 0, "bestTime": 0, "bestResonance": 0 },
   "options": { "lang": "fr", "volMaster": 0.8, "volMusic": 0.8, "volSfx": 0.9, "shake": 1, "particles": 1, "reduceFlash": false, "fullscreen": false, "scale": 0, "beatIndicator": "both", "assist": "none", "showFps": false, "bindings": {} },
-  "tutorialDone": false }
+  "tutorialDone": false, "lastWeaponByCharacter": {}, "lastParish": null, "lastCharacter": null }
 ```
 `scale: 0` = automatique. `assist ∈ 'none' | 'assisted' | 'norhythm'`.
 
@@ -386,7 +386,7 @@ Une piste est soit un fichier bouclé (`file`, `loop` = points de boucle vérifi
 { "id": "cendrelune", "name": "parish.cendrelune.name", "tileset": "cendrelune", "track": "cendrelune", "boss": "bourdon_fele",
   "ambient": "#16130f", "fog": ["#2a241c", "#8f8d93"], "unlock": null, "bronzeReward": 120, "leaves": ["f01","f02","f03","f04","f05"] }
 
-// characters.json
+// characters.json — `startWeaponFixed: true` (Le Muet garde le Diapason en premier) ; Timbres de départ débloqués : src/data/start-weapons.json { unlockLevel, costs }
 { "id": "wren", "name": "char.wren.name", "desc": "char.wren.desc", "sprite": "wren", "startWeapon": "battant",
   "stats": { "maxHp": 100, "speed": 110, "armor": 0, "windowMult": 1.3, "resonanceGain": 1, "damageMult": 1 }, "unlockCost": 0, "unique": null }
 
@@ -414,7 +414,7 @@ Tout identifiant de données est en `snake_case` et doit figurer ici avant d'êt
 - **Boss** : `bourdon_fele` (Cendrelune, Les Tourbes), `veuve_suie` (Val-des-Cordes, La Nef Noyée), `maitre` (Le Beffroi Mère).
 - **Paroisses** : `cendrelune`, `tourbes`, `val_des_cordes`, `nef_noyee`, `beffroi_mere`.
 - **Améliorations du Beffroi** (`upgrades.json`, ≥ 12) : `coeur_de_bronze` (maxHp), `semelles_de_cuir` (speed), `ferrure_du_beffroi` (armor), `oreille_fine` (window), `battant_lourd` (damageMult), `aimant_d_echos` (magnet), `reliquaire` (xpGain), `cire_de_veillee` (regen), `main_sure` (crit), `bourse_de_cuivre` (bronzeGain), `second_souffle` (revive), `contrepoids_de_fonte` (area), `corde_neuve` (cadence), `troisieme_carte` (rerolls).
-- **Hauts-faits** (`achievements.json`, ≥ 15) : `premiere_aube`, `sonneur_confirme`, `cent_echos`, `mille_silences`, `plein_timbre`, `plein_accord`, `premiere_fusion`, `quatre_fusions`, `resonance_parfaite`, `sans_faute`, `fele_vaincu`, `veuve_vaincue`, `maitre_vaincu`, `toutes_paroisses`, `tous_sonneurs`, `feuillets_complets`, `sans_rythme_victoire`, `muet_victoire`.
+- **Hauts-faits** (`achievements.json`, ≥ 15) : `premiere_aube`, `sonneur_confirme`, `cent_echos`, `mille_silences`, `plein_timbre`, `plein_accord`, `premiere_fusion`, `quatre_fusions`, `resonance_parfaite`, `sans_faute`, `fele_vaincu`, `veuve_vaincue`, `maitre_vaincu`, `toutes_paroisses`, `tous_sonneurs`, `tous_timbres`, `feuillets_complets`, `sans_rythme_victoire`, `muet_victoire`, `repondre_a_la_cloche`.
 - **Feuillets** : `f01` … `f24`.
 - **Bruitages et pistes** : § 8.
 

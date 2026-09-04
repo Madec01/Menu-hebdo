@@ -4,7 +4,8 @@
 // aux écrans de cartes (level:up → 'levelup'), à la pause et au bilan
 // (run:end → 'results'). À la mort : ralenti (fx.slowMo, joueur), voile qui
 // s'assombrit et « Le Battant se tait » avant le bilan ; à l'aube : « L'aube est
-// sonnée » sur victory_bell. enter({ parishId, characterId, seed, seedText, tutorial }).
+// sonnée » sur victory_bell. enter({ parishId, characterId, seed, seedText, tutorial, weaponId }) ;
+// weaponId = Timbre de départ choisi au hub, transmis tel quel à startGame.
 
 import { bus } from '../core/events.js';
 import { getSave } from '../core/save.js';
@@ -69,7 +70,7 @@ export function createRun(deps) {
       renderer.setFog(1); renderer.setAshes(0.6); renderer.setVignette(0.35); renderer.setGrain(0.25);
       camera.setZoom(1, 0);
       try {
-        deps.game.startGame({ parishId: p.parishId, characterId: p.characterId, seed: p.seed });
+        deps.game.startGame({ parishId: p.parishId, characterId: p.characterId, seed: p.seed, weaponId: p.weaponId || null });
       } catch (e) {
         console.error('[run]', e);
         toast({ title: t('ui.hub.start'), body: t('ui.hub.error_game'), icon: 'ui_mort' });

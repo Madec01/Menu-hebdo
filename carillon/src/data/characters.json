@@ -70,6 +70,7 @@
    "damageMult": 1
   },
   "unlockCost": 400,
-  "unique": "sans_voix"
+  "unique": "sans_voix",
+  "startWeaponFixed": true
  }
 ]

@@ -371,6 +371,10 @@
     "muet_victoire": {
       "name": "One More Name",
       "desc": "Hold until dawn with Le Muet."
+    },
+    "tous_timbres": {
+      "name": "Every Timbre",
+      "desc": "Unlock all nine starting Timbres, in play or at the Belfry."
     }
   },
   "lore": {

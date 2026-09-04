@@ -8,9 +8,11 @@ import { getSave } from '../core/save.js';
 import { t } from './i18n.js';
 import { achievements } from './gamedata.js';
 import { toast } from './toasts.js';
+import { initStartWeaponToasts } from './start-weapons.js';
 
 /** Abonne les notifications. */
 export function initAchievements() {
+  initStartWeaponToasts();
   bus.on('achievement:unlock', ({ id }) => {
     toast({ title: t('ui.toast.achievement'), body: t('achievement.' + id + '.name'), icon: 'ui_sceau' });
   });
