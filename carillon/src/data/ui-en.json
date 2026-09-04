@@ -399,6 +399,20 @@
       "fullscreen_on": "Full screen",
       "fullscreen_off": "Leave full screen",
       "card_hint": "Tap a card to take it"
+    },
+    "moment": {
+      "cercle": "They come from everywhere: hold the centre",
+      "nuee": "Mute Choir swarming: strike on the beat",
+      "meute": "The Gags leap together: Counter-beat",
+      "ligne": "Silence volley incoming: slide sideways",
+      "pluie_de_suie": "Soot Crawlers fall around you: leave the circle",
+      "procession": "Double Echoes if they fall before the end",
+      "accalmie": "No wave · Echoes ×2 · catch your breath",
+      "cierge_errant": "An elite flees: bonus Bronze if it falls",
+      "veuves_en_cercle": "Three Widows surround you: beware the charges",
+      "end": "The moment passes",
+      "remaining": "{sec} s",
+      "night": "Dawn"
     }
   }
 }

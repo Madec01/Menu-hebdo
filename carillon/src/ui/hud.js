@@ -11,6 +11,9 @@
 // Mode tactile (ui/touch.js) : rien sous les pouces — jauge de Résonance décalée à gauche des
 // boutons, Timbres/Accords en rangée sous la vie, tués décalés à gauche du bouton pause, rappel
 // des commandes tactiles à la place des touches.
+// Rythme de la nuit : barre de progression de la nuit sous le chrono (durée lue dans waves.json,
+// repères des Fêlures), bannière de Moment scripté (run:moment : titre en display + sous-titre, entrée/
+// sortie animées, compte à rebours lu dans world.moments) et voile pâle pendant une accalmie.
 
 import { bus } from '../core/events.js';
 import { getSave } from '../core/save.js';
@@ -31,11 +34,13 @@ const HINT_SEC = 30;        // durée du rappel des commandes
 const HINT_RUNS = 3;        // … affiché tant que le joueur a fini moins de 3 nuits
 const RELIC_RECT = { x: 4, y: 46, w: 18, h: 18 }, RELIC_RECT_TOUCH = { x: 4, y: 54, w: 18, h: 18 };
 const BELL_HINT_SEC = 7;
+const MOMENT_IN = 0.35, MOMENT_HOLD = 2.8, MOMENT_OUT = 0.4, MOMENT_END_SEC = 1.4, MOMENT_Y = 64;
 
 export function createHud() {
   const res = { tier: 0, mult: 1, value: 0 };
   const st = { minuteT: 0, minute: 0, bannerT: 0, bannerKind: '', bannerName: '', judgeT: 0, judge: '', beatFlash: 0, blockedT: 0, lastBeat: -1, hintT: 0,
-    answerT: 0, answerBonus: '', bellHintT: 0, bellHintShown: false };
+    answerT: 0, answerBonus: '', bellHintT: 0, bellHintShown: false,
+    momentId: '', momentT: 0, momentOut: -1, momentPersist: false, momentEndT: 0 };
   const unsubs = [];
 
   function listen() {
@@ -51,6 +56,46 @@ export function createHud() {
     unsubs.push(bus.on('beat', () => { st.beatFlash = 1; if (res.tier >= 3) rumble(0.12, 40); }));
     unsubs.push(bus.on('bell:ring', () => { if (!st.bellHintShown && getSave().stats.runs === 0) { st.bellHintShown = true; st.bellHintT = BELL_HINT_SEC; } }));
     unsubs.push(bus.on('bell:answered', (e) => { st.answerT = 1.6; st.answerBonus = e.bonus || ''; rumble(0.3, 120); }));
+    unsubs.push(bus.on('run:moment', (e) => {
+      if (e.phase === 'start') { st.momentId = e.id; st.momentT = 0; st.momentOut = -1; st.momentPersist = e.id === 'accalmie'; st.momentEndT = 0; }
+      else { if (e.id === st.momentId && st.momentOut < 0) st.momentOut = 0; if (e.id !== 'accalmie') st.momentEndT = MOMENT_END_SEC; }
+    }));
+  }
+
+  /** Bannière de Moment : titre (display) + sous-titre, glisse depuis le haut, compte à rebours, voile d'accalmie. */
+  function renderMoment(ui, g) {
+    const mo = g.world.moments, active = mo && mo.active && mo.active.id === st.momentId ? mo.active : null;
+    if (st.momentEndT > 0 && !st.momentId) {
+      text(ui, t('ui.moment.end'), W / 2, MOMENT_Y + 6, { size: 8, align: 'center', color: C.gris, shadow: true, alpha: Math.min(1, st.momentEndT / 0.5) });
+    }
+    if (!st.momentId) return;
+    if (!st.momentPersist && st.momentOut < 0 && st.momentT >= MOMENT_IN + MOMENT_HOLD) st.momentOut = 0;
+    const k = st.momentOut >= 0 ? 1 - st.momentOut / MOMENT_OUT : Math.min(1, st.momentT / MOMENT_IN);
+    const a = k * k, dy = st.momentOut >= 0 ? -(1 - k) * 6 : -(1 - k) * 8;
+    if (st.momentPersist) { ui.globalAlpha = 0.1 * a; ui.fillStyle = C.os; ui.fillRect(0, 0, W, H); ui.globalAlpha = 1; }
+    if (st.bannerT > 0) return;   // la Fêlure / le Bourdon a la priorité, la bannière reprend ensuite
+    const y = MOMENT_Y + dy;
+    text(ui, t('moment.' + st.momentId + '.name'), W / 2, y, { kind: 'display', size: 18, align: 'center', color: st.momentPersist ? C.os : C.bronze, shadow: true, alpha: a });
+    text(ui, t('ui.moment.' + st.momentId), W / 2, y + 20, { size: 8, align: 'center', color: C.os, shadow: true, alpha: a });
+    if (active) {
+      const left = Math.max(0, active.sec - mo.t), w = 120, x = W / 2 - w / 2, by = y + 31;
+      ui.globalAlpha = 0.8 * a;
+      ui.fillStyle = C.tourbe; ui.fillRect(x, by, w, 2);
+      ui.fillStyle = st.momentPersist ? C.os : C.bronze; ui.fillRect(x, by, Math.round(w * left / active.sec), 2);
+      ui.globalAlpha = 1;
+      if (st.momentPersist) text(ui, t('ui.moment.remaining', { sec: Math.ceil(left) }), W / 2 + w / 2 + 4, by - 3, { size: 7, color: C.gris, shadow: true, alpha: a });
+    }
+  }
+
+  /** Progression de la nuit (durée de waves.json) avec les repères des Fêlures et l'aube. */
+  function renderNight(ui, g) {
+    const def = g.world.waveDef, dur = def && def.duration > 0 ? def.duration : 1;
+    const w = 72, x = W / 2 - w / 2, y = 24;
+    ui.fillStyle = C.tourbe; ui.fillRect(x, y, w, 3);
+    ui.fillStyle = C.bronze; ui.fillRect(x, y, Math.round(w * Math.min(1, g.run.timeSec / dur)), 3);
+    ui.fillStyle = C.braise;
+    for (let i = 0; i < def.events.length; i++) if (def.events[i].type === 'fissure') ui.fillRect(x + Math.round(w * def.events[i].at / dur), y - 1, 1, 5);
+    ui.fillStyle = C.clair; ui.fillRect(x + w - 1, y - 1, 1, 5);
   }
 
   /** Icône de la Relique portée, info-bulle (nom + description) au survol. */
@@ -146,7 +191,9 @@ export function createHud() {
     // Timer et palier.
     const tt = fmtTime(run.timeSec);
     text(ui, tt, W / 2, 4, { kind: 'display', size: 18, align: 'center', color: st.minuteT > 0 ? C.clair : C.os, shadow: true });
-    if (world.tier > 1) text(ui, t('ui.hud.tier', { tier: world.tier }), W / 2, 26, { size: 9, align: 'center', color: C.gris, shadow: true });
+    renderNight(ui, g);
+    const busy = (world.boss && world.boss.state === 'alive') || (world.fissure && world.fissure.state === 'alive');   // le cadre de Fêlure/Bourdon prend la place
+    if (world.tier > 1 && !busy) text(ui, t('ui.hud.tier', { tier: world.tier }), W / 2, 29, { size: 9, align: 'center', color: C.gris, shadow: true });
     // Tués et assistance (décalés à gauche du bouton pause tactile).
     const kx = touchActive() ? W - 38 : W;
     icon(ui, 'ui_mort', kx - 20, 4, 0.5);
@@ -264,6 +311,7 @@ export function createHud() {
     reset() {
       res.tier = 0; res.mult = 1; res.value = 0; st.minuteT = 0; st.bannerT = 0; st.judgeT = 0; st.blockedT = 0;
       st.answerT = 0; st.bellHintT = 0; st.bellHintShown = false;
+      st.momentId = ''; st.momentT = 0; st.momentOut = -1; st.momentPersist = false; st.momentEndT = 0;
       st.hintT = getSave().stats.runs < HINT_RUNS ? HINT_SEC : 0;
       if (!unsubs.length) listen();
     },
@@ -277,6 +325,11 @@ export function createHud() {
       if (st.hintT > 0) st.hintT -= realDt;
       if (st.answerT > 0) st.answerT -= realDt;
       if (st.bellHintT > 0) st.bellHintT -= realDt;
+      if (st.momentEndT > 0) st.momentEndT -= realDt;
+      if (st.momentId) {
+        st.momentT += realDt;
+        if (st.momentOut >= 0) { st.momentOut += realDt; if (st.momentOut >= MOMENT_OUT) { st.momentId = ''; st.momentOut = -1; } }
+      }
     },
     render(ui, g) {
       if (!g || !g.player || !g.run || !g.world) return;
@@ -284,6 +337,7 @@ export function createHud() {
       renderControls(ui);
       renderMinute(ui, g);
       renderBanner(ui, g);
+      renderMoment(ui, g);
       renderBell(ui, g);
       renderResonance(ui);
       renderBuild(ui, g);

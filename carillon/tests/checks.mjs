@@ -94,6 +94,47 @@ for (const pid of REG.parishes) {
   for (const e of w.events || []) if (!enemyIds.has(e.boss)) badWave.push(pid + ' event ' + e.boss);
 }
 check('vagues : ennemis/boss référencés existent', badWave.length === 0, badWave.join(', '));
+// Rythme de la nuit : durées par paroisse, Fêlures à 40 % / 70 %, boss à 100 %, Moments scriptés (5 à 8 par
+// paroisse, motifs du registre, toutes les 40–60 s ±8 s, 10–25 s chacun) et leurs clés i18n.
+const NIGHT = { cendrelune: 360, tourbes: 420, val_des_cordes: 480, nef_noyee: 540, beffroi_mere: 600 };
+const MOMENTS = ['cercle', 'nuee', 'meute', 'ligne', 'pluie_de_suie', 'procession', 'accalmie', 'cierge_errant', 'veuves_en_cercle'];
+const badNight = [];
+for (const pid of REG.parishes) {
+  const w = waves[pid];
+  if (!w) continue;
+  const D = w.duration;
+  if (D !== NIGHT[pid]) badNight.push(pid + ' durée ' + D + ' ≠ ' + NIGHT[pid]);
+  if (!(w.tierEvery >= 60 && w.tierEvery <= 75)) badNight.push(pid + ' tierEvery ' + w.tierEvery);
+  if (!w.difficulty || !(w.difficulty.hp >= 1) || !(w.difficulty.damage >= 1)) badNight.push(pid + ' difficulty absente');
+  const fis = (w.events || []).filter((e) => e.type === 'fissure').map((e) => e.at), boss = (w.events || []).filter((e) => e.type === 'boss').map((e) => e.at);
+  if (fis.length !== 2 || Math.abs(fis[0] - D * 0.4) > 1 || Math.abs(fis[1] - D * 0.7) > 1) badNight.push(pid + ' Fêlures ' + fis.join('/'));
+  if (boss.length !== 1 || boss[0] !== D) badNight.push(pid + ' boss ' + boss.join('/'));
+  for (const s of w.spawns || []) if (s.to > D) badNight.push(pid + ' spawn ' + s.kind + ' au-delà de la nuit');
+  const kinds20 = new Set((w.spawns || []).filter((s) => s.from <= 20).map((s) => s.kind)), kinds45 = new Set((w.spawns || []).filter((s) => s.from <= 45).map((s) => s.kind)), kinds90 = new Set((w.spawns || []).filter((s) => s.from <= 90).map((s) => s.kind));
+  if (kinds20.size < 2 || kinds45.size < 3 || kinds90.size < 4) badNight.push(pid + ' variété ' + kinds20.size + '/' + kinds45.size + '/' + kinds90.size + ' types à 20/45/90 s');
+  const ms = w.moments || [];
+  if (ms.length < 5 || ms.length > 8) badNight.push(pid + ' ' + ms.length + ' moments');
+  let prev = 0;
+  for (const m of ms) {
+    if (!MOMENTS.includes(m.id)) badNight.push(pid + ' motif ' + m.id);
+    if (!(m.sec >= 10 && m.sec <= 25)) badNight.push(pid + ' ' + m.id + ' durée ' + m.sec);
+    if (m.kind && !enemyIds.has(m.kind)) badNight.push(pid + ' ' + m.id + ' ennemi ' + m.kind);
+    if (prev && (m.at - prev < 40 - 8 || m.at - prev > 60 + 8)) badNight.push(pid + ' ' + m.id + '@' + m.at + ' écart ' + (m.at - prev));
+    if (m.at + m.sec > D) badNight.push(pid + ' ' + m.id + ' déborde sur le boss');
+    prev = m.at;
+  }
+}
+check('rythme de la nuit : durées 360→600, Fêlures 40/70 %, boss 100 %, variété initiale, 5–8 Moments toutes les 40–60 s', badNight.length === 0, badNight.join(', '));
+check('waves.json : bloc balance.moments et balance.bronze', !!(waves.balance && waves.balance.moments && waves.balance.moments.jitterSec >= 0 && waves.balance.bronze), '');
+try {
+  const src = readFileSync(path.join(ROOT, 'src', 'game', 'moments.js'), 'utf8');
+  const missing = MOMENTS.filter((id) => !new RegExp('^\\s*' + id + ':\\s*\\{', 'm').test(src));
+  check('game/moments.js : les 9 motifs du registre sont implémentés', missing.length === 0, missing.join(', '));
+} catch (e) { check('game/moments.js présent', false, e.message); }
+for (const c of D('lore') || []) if (c.unlock && c.unlock.type === 'run_minute') {
+  const w = waves[c.unlock.parish];
+  check(`Feuillet ${c.id} : minute ${c.unlock.minute} atteignable avant le boss de ${c.unlock.parish}`, !!w && c.unlock.minute * 60 < w.duration, w ? 'nuit de ' + w.duration + ' s' : 'paroisse inconnue');
+}
 check('waves.json : bloc balance', !!waves.balance && !!waves.balance.xp && !!waves.balance.spawn && !!waves.balance.resonance, '');
 for (const p of D('parishes') || []) check(`paroisse ${p.id} : boss ${p.boss} existe`, enemyIds.has(p.boss));
 for (const c of D('characters') || []) check(`sonneur ${c.id} : Timbre de départ ${c.startWeapon} existe`, ids(D('weapons')).has(c.startWeapon));
@@ -123,6 +164,7 @@ function collectKeys(o) {
 for (const name of ['weapons', 'passives', 'fusions', 'enemies', 'parishes', 'characters', 'upgrades', 'achievements', 'lore', 'relics']) collectKeys(D(name));
 // Clés dérivées par le code : parish.<id>.desc, char.<id>.trait, boss.<id>.name/lore.
 for (const p of D('parishes') || []) refKeys.add('parish.' + p.id + '.desc');
+for (const id of MOMENTS) { refKeys.add('moment.' + id + '.name'); refKeys.add('ui.moment.' + id); }
 const missFr = [...refKeys].filter((k) => !(k in fr)), missEn = [...refKeys].filter((k) => !(k in en));
 check(`clés i18n des JSON présentes dans fr (${refKeys.size})`, missFr.length === 0, missFr.slice(0, 10).join(', '));
 check(`clés i18n des JSON présentes dans en (${refKeys.size})`, missEn.length === 0, missEn.slice(0, 10).join(', '));

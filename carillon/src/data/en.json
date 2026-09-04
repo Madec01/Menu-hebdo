@@ -524,5 +524,34 @@
       "name": "Veil of Fog",
       "desc": "Clapper halo ×1.6. Cost: outside the halo, the fog hides everything."
     }
+  },
+  "moment": {
+    "cercle": {
+      "name": "The Closing Circle"
+    },
+    "nuee": {
+      "name": "The Swarm"
+    },
+    "meute": {
+      "name": "The Pack"
+    },
+    "ligne": {
+      "name": "The Gravediggers' Line"
+    },
+    "pluie_de_suie": {
+      "name": "Soot Rain"
+    },
+    "procession": {
+      "name": "The Procession"
+    },
+    "accalmie": {
+      "name": "Lull"
+    },
+    "cierge_errant": {
+      "name": "The Wandering Candle"
+    },
+    "veuves_en_cercle": {
+      "name": "The Three Widows"
+    }
   }
 }

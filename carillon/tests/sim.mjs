@@ -15,7 +15,9 @@
 //   node tests/sim.mjs --json                           # sortie JSON brute (une ligne)
 //   node tests/sim.mjs --relic none|first|<id>          # Relique de paroisse (défaut : la première proposée)
 // Options : --seeds N, --cards honnete|premiere|fusion, --upgrades coeur_de_bronze:3,battant_lourd:2,
-//           --secondWeapon <id> (variante : arme supplémentaire au départ), --minutes 13, --jobs 4.
+//           --secondWeapon <id> (variante : arme supplémentaire au départ), --minutes 13 (défaut : durée de la
+//           paroisse waves.json + 2 min 30 pour le boss), --jobs 4. Les Moments scriptés (run:moment) sont traversés
+//           et listés (id@seconde) ; le bilan agrégé lit la durée de la nuit (niv@fin = niveau à `duration`).
 
 import { register } from 'node:module';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -45,7 +47,7 @@ const PASSIVE_PREF = ['ferrure', 'contrepoids', 'cire_d_abeille', 'corde_de_chan
 
 function parseArgs(argv) {
   const o = { seed: 1, seeds: 5, char: 'wren', profile: 'parfait', parish: 'cendrelune', cards: null, data: null, upgrades: '', secondWeapon: null, trace: null,
-    minutes: 14.5, json: false, matrix: false, chars: 'wren,le_muet', profiles: 'parfait,moyen,norhythm', jobs: 4, quiet: false, weapons: 4, relic: 'first' };
+    minutes: 0, json: false, matrix: false, chars: 'wren,le_muet', profiles: 'parfait,moyen,norhythm', jobs: 4, quiet: false, weapons: 4, relic: 'first' };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (!a.startsWith('--')) continue;
@@ -53,7 +55,7 @@ function parseArgs(argv) {
     if (k === 'json' || k === 'matrix' || k === 'quiet') { o[k] = true; continue; }
     o[k] = argv[++i];
   }
-  for (const k of ['seed', 'seeds', 'minutes', 'jobs', 'weapons']) o[k] = +o[k];
+  for (const k of ['seed', 'seeds', 'minutes', 'jobs', 'weapons']) o[k] = +o[k] || 0;
   return o;
 }
 
@@ -305,7 +307,7 @@ export async function runOne(o) {
     samples: [], xpTotal: 0, outcome: 'timeout', endSec: 0, kills: 0, level: 1, levelUps: 0, hitsTaken: 0, dmgTaken: {}, dmgTakenTotal: 0,
     boss: { startSec: null, endSec: null, hpAtStart: null, fightSec: null }, fissures: [], dps: {}, resonanceAvg: 0, bronze: 0,
     grades: null, dashes: 0, parries: 0, maxEnemies: 0, build: null, achievements: [], leaves: [], firstDeathRisk: null, minHp: 1e9, minHpSec: 0,
-    relic: null, relicOffer: null, bellRings: 0, bellAnswers: 0,
+    relic: null, relicOffer: null, bellRings: 0, bellAnswers: 0, duration: 0, moments: [], momentsTotal: 0,
   };
   const offs = [];
   offs.push(bus.on('level:up', (e) => {
@@ -322,6 +324,7 @@ export async function runOne(o) {
     if (e.phase === 'end') { out.boss.endSec = g.run.timeSec; out.boss.fightSec = +(out.boss.endSec - out.boss.startSec).toFixed(1); }
   }));
   offs.push(bus.on('run:fissure', (e) => out.fissures.push(e.bossId + ':' + e.phase + '@' + Math.round(g.run.timeSec))));
+  offs.push(bus.on('run:moment', (e) => { if (e.phase === 'start') out.moments.push(e.id + '@' + Math.round(g.run.timeSec)); }));
   if (o.trace === 'boss') {
     offs.push(bus.on('enemy:hit', (e) => { const b = g.world.boss; if (b && e.id === b.id) console.error(`[boss] t=${g.run.timeSec.toFixed(2)} -${e.damage} crit=${e.crit} hp=${b.hp} src=${b.killedBy}`); }));
     offs.push(bus.on('enemy:death', (e) => { if (e.boss) console.error(`[boss] mort t=${g.run.timeSec.toFixed(2)}`); }));
@@ -343,7 +346,9 @@ export async function runOne(o) {
   out.relic = g.run.relicId;
   if (o.secondWeapon) weapons.addWeapon(g.player, o.secondWeapon);
   const p = g.player, world = g.world;
-  const maxTicks = Math.round(o.minutes * 60 * 60);
+  out.duration = world.waveDef.duration; out.momentsTotal = world.moments.list.length;
+  const minutes = o.minutes > 0 ? o.minutes : out.duration / 60 + 2.5;
+  const maxTicks = Math.round(minutes * 60 * 60);
   let nextSample = 0;
   const t0 = performance.now();
   for (let i = 0; i < maxTicks && game.isGameActive(); i++) {
@@ -388,6 +393,7 @@ function fmtRun(r) {
   lines.push('  DPS par arme : ' + Object.entries(r.dps).map(([k, v]) => k + ' ' + v).join(', '));
   lines.push('  frappes : ' + JSON.stringify(r.grades) + ` (${r.dashes} volées, ${r.parries} parades) ; coups reçus ${r.hitsTaken} (${r.dmgTakenTotal} PV) : ` + Object.entries(r.dmgTaken).map(([k, v]) => k + ' ' + v).join(', '));
   lines.push(`  PV mini ${r.minHp} à ${r.minHpSec} s ; ennemis max ${r.maxEnemies} ; Fêlures ${r.fissures.join(' ')}`);
+  lines.push(`  nuit de ${r.duration} s ; Moments ${r.moments.length}/${r.momentsTotal} : ${r.moments.join(' ')}`);
   lines.push(`  Relique : ${r.relic || 'aucune'} (proposées : ${(r.relicOffer || []).join(', ')}) ; cloche : ${r.bellAnswers}/${r.bellRings} réponses`);
   if (r.boss.startSec !== null) lines.push(`  boss : début ${Math.round(r.boss.startSec)} s avec ${r.boss.hpAtStart} PV, durée ${r.boss.fightSec === null ? 'non vaincu (' + r.boss.hpLeft + ' PV restants)' : r.boss.fightSec + ' s'}`);
   if (r.build) lines.push('  build : ' + r.build.weapons.map((w) => w.id + ':' + w.level).join(' ') + ' | ' + r.build.passives.map((w) => w.id + ':' + w.level).join(' '));
@@ -406,7 +412,8 @@ export function summarize(results) {
     rows.push({
       key: k, n: rs.length, victoires: rs.filter((r) => r.outcome === 'victory').length, morts: rs.filter((r) => r.outcome === 'death').length,
       minuteMort: mean(rs.filter((r) => r.outcome === 'death').map((r) => r.endSec / 60)),
-      niv90: mean(rs.map((r) => levelAt(r, 90))), niv240: mean(rs.map((r) => levelAt(r, 240))), niv720: mean(rs.map((r) => levelAt(r, 720) ?? (r.endSec >= 700 ? r.level : null))),
+      niv90: mean(rs.map((r) => levelAt(r, 90))), niv180: mean(rs.map((r) => levelAt(r, 180))), nivEnd: mean(rs.map((r) => levelAt(r, r.duration) ?? (r.endSec >= r.duration - 20 ? r.level : null))),
+      moments: mean(rs.map((r) => r.moments.length)), duration: rs[0].duration,
       pvBoss: mean(rs.map((r) => r.boss.hpAtStart !== null ? r.boss.hpAtStart / (r.samples[0] ? r.samples[r.samples.length - 1].maxHp : 100) * 100 : null)),
       bossSec: mean(rs.map((r) => r.boss.fightSec)), kills: mean(rs.map((r) => r.kills)), reso: mean(rs.map((r) => r.resonanceAvg)),
       bronze: mean(rs.map((r) => r.bronze)), minHp: mean(rs.map((r) => r.minHp)),
@@ -415,14 +422,14 @@ export function summarize(results) {
   return rows;
 }
 export function tableText(rows) {
-  const h = 'sonneur/profil        n  vict  morts  min.mort  niv@90s  niv@4min  niv@12min  PV%boss  boss(s)  tués   réso  bronze';
+  const h = 'sonneur/profil        n  vict  morts  min.mort  niv@90s  niv@3min  niv@fin  PV%boss  boss(s)  tués   réso  bronze  moments';
   const lines = [h];
-  for (const r of rows) lines.push(`${r.key.padEnd(20)} ${String(r.n).padStart(2)}  ${String(r.victoires).padStart(4)}  ${String(r.morts).padStart(5)}  ${f1(r.minuteMort).padStart(8)}  ${f1(r.niv90).padStart(7)}  ${f1(r.niv240).padStart(8)}  ${f1(r.niv720).padStart(9)}  ${f1(r.pvBoss).padStart(7)}  ${f1(r.bossSec).padStart(7)}  ${f1(r.kills).padStart(5)}  ${f1(r.reso).padStart(4)}  ${f1(r.bronze).padStart(6)}`);
+  for (const r of rows) lines.push(`${r.key.padEnd(20)} ${String(r.n).padStart(2)}  ${String(r.victoires).padStart(4)}  ${String(r.morts).padStart(5)}  ${f1(r.minuteMort).padStart(8)}  ${f1(r.niv90).padStart(7)}  ${f1(r.niv180).padStart(8)}  ${f1(r.nivEnd).padStart(7)}  ${f1(r.pvBoss).padStart(7)}  ${f1(r.bossSec).padStart(7)}  ${f1(r.kills).padStart(5)}  ${f1(r.reso).padStart(4)}  ${f1(r.bronze).padStart(6)}  ${f1(r.moments).padStart(7)}`);
   return lines.join('\n');
 }
 export function markdownTable(rows) {
-  const lines = ['| sonneur/profil | n | vict. | morts | min. mort | niv 90 s | niv 4 min | niv 12 min | PV % au boss | boss (s) | tués | réso | bronze |', '|---|---|---|---|---|---|---|---|---|---|---|---|---|'];
-  for (const r of rows) lines.push(`| ${r.key} | ${r.n} | ${r.victoires} | ${r.morts} | ${f1(r.minuteMort)} | ${f1(r.niv90)} | ${f1(r.niv240)} | ${f1(r.niv720)} | ${f1(r.pvBoss)} | ${f1(r.bossSec)} | ${f1(r.kills)} | ${f1(r.reso)} | ${f1(r.bronze)} |`);
+  const lines = ['| sonneur/profil | n | vict. | morts | min. mort | niv 90 s | niv 3 min | niv fin | PV % au boss | boss (s) | tués | réso | bronze | moments |', '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|'];
+  for (const r of rows) lines.push(`| ${r.key} | ${r.n} | ${r.victoires} | ${r.morts} | ${f1(r.minuteMort)} | ${f1(r.niv90)} | ${f1(r.niv180)} | ${f1(r.nivEnd)} | ${f1(r.pvBoss)} | ${f1(r.bossSec)} | ${f1(r.kills)} | ${f1(r.reso)} | ${f1(r.bronze)} | ${f1(r.moments)} |`);
   return lines.join('\n');
 }
 
@@ -442,7 +449,8 @@ function runChild(args) {
 export async function runMatrix(o) {
   const jobs = [];
   for (const c of o.chars.split(',')) for (const pr of o.profiles.split(',')) for (let s = 1; s <= o.seeds; s++) {
-    const args = ['--char', c, '--profile', pr, '--seed', String(s), '--parish', o.parish, '--minutes', String(o.minutes), '--weapons', String(o.weapons), '--relic', o.relic];
+    const args = ['--char', c, '--profile', pr, '--seed', String(s), '--parish', o.parish, '--weapons', String(o.weapons), '--relic', o.relic];
+    if (o.minutes > 0) args.push('--minutes', String(o.minutes));
     if (o.data) args.push('--data', o.data);
     if (o.cards) args.push('--cards', o.cards);
     if (o.upgrades) args.push('--upgrades', o.upgrades);

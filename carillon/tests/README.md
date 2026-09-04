@@ -7,9 +7,10 @@ seul `perf.mjs` a besoin de Playwright et de Chromium.
 | Script | Rôle | Commande |
 |---|---|---|
 | `checks.mjs` | Contrôles statiques (JSON, identifiants § 10 bis, i18n fr/en, assets référencés, règles de code) | `node tests/checks.mjs` |
-| `sim.mjs` | Simulation déterministe d'une run complète (12 min + boss) avec un joueur robot | `node tests/sim.mjs --matrix` |
+| `sim.mjs` | Simulation déterministe d'une run complète (durée de la paroisse dans `waves.json` + boss, Moments scriptés traversés) avec un joueur robot | `node tests/sim.mjs --matrix` |
 | `dps.mjs` | DPS théorique de chaque Timbre (niv 1 et 7) et de chaque fusion, cible seule et groupe | `node tests/dps.mjs` |
 | `perf.mjs` | Run réelle en navigateur, saut à la minute 10, fps/frameMs sur 10 s, 404 et erreurs console | `node tests/perf.mjs` |
+| `night.mjs` | Rythme de la nuit en navigateur (Playwright) : run réelle accélérée (`loop.setTimeScale`), cartes automatiques, journal des `run:moment` / `run:fissure` / `run:tier` / `run:minute`, captures des bannières de Moments et de la Fêlure dans `tests/results/night/`, 404 et erreurs console | `node tests/night.mjs [--seconds 200 --scale 3 --parish cendrelune]` |
 | `game-test.html` | Page de test manuelle de l'agent D (`src/game/_test/`), inchangée | `http://localhost:8080/carillon/src/game/_test/game-test.html` |
 | `mobile.mjs` | Jouabilité mobile (agent T) : émulation tactile Playwright 812×375 @3 (iPhone), 915×412 @2.625 (Android), FR et EN — tap « Cliquez pour sonner », titre → hub → nuit → Relique, joystick virtuel et taps Volée calés sur le temps (≥ 60 % de Parfait), cartes au tap, pause au bouton, options qui défilent au doigt, voile portrait ; captures dans `--out` | `node tests/mobile.mjs [--devices iphone,android,lowdpi] [--langs fr,en] [--out dir]` |
 | `timbres-audio.mjs` | Enregistre à l'oreille (MediaRecorder) 8 mesures de Timbres qui chantent : Battant seul, 4 armes, 6 armes → `tests/results/timbres/` | `node tests/timbres-audio.mjs` |
@@ -47,7 +48,9 @@ node tests/sim.mjs --seed 2 --trace boss             # trace des coups sur le bo
 Options : `--seed N`, `--seeds N` (matrice), `--chars a,b`, `--profiles a,b`, `--parish id`,
 `--cards honnete|premiere|fusion`, `--upgrades coeur_de_bronze:2,battant_lourd:1`,
 `--secondWeapon clarine` (arme supplémentaire au départ : variante « Le Muet corrigé »),
-`--weapons N` (Timbres visés par le build, 4 par défaut), `--minutes 14.5`, `--jobs 4`, `--json`, `--quiet`.
+`--weapons N` (Timbres visés par le build, 4 par défaut), `--minutes N` (défaut : durée de la paroisse + 2 min 30), `--jobs 4`, `--json`, `--quiet`.
+Le tableau agrégé donne le niveau à 90 s, 3 min et à la fin de la nuit (`duration` de `waves.json`), et le nombre de
+Moments traversés ; chaque run liste ses Moments (`id@seconde`).
 
 Profils du robot (`PROFILES` en tête du fichier) :
 

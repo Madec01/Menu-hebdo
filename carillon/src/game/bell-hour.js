@@ -3,7 +3,7 @@
 // sur la grille, volume croissant, dernier plus fort). Un Contre-battement jugé dans la fenêtre du
 // 4ᵉ coup « répond à la cloche » : `bell:answered {minute, grade, bonus}` puis bonus selon la minute :
 //   minutes impaires → soin 15 % ; 2, 6, 10 → +1 cran de Résonance ; 4, 8 → carte offerte ;
-//   12 → Bronze de la paroisse ×1. Manqué : rien. `bell:ring {minute, at}` ouvre la sonnerie (HUD).
+//   dernière minute de la nuit → Bronze de la paroisse ×1. Manqué : rien. `bell:ring {minute, at}` ouvre la sonnerie (HUD).
 // L'état (bellState) est lu par le HUD via gameState().bell : coups allumés, réponse, chrono.
 
 import { bus } from '../core/events.js';
@@ -50,7 +50,9 @@ export function bellState() { return st; }
 
 /** Bonus de la minute (déterministe, lisible dans le HUD). */
 export function bonusFor(minute) {
-  if (minute % 12 === 0) return 'bronze';
+  // Dernière minute de la nuit (durée lue dans le monde ; 12 min par défaut) : Bronze de la paroisse.
+  const last = Math.max(1, Math.round(((st.world && (st.world.duration || (st.world.wave && st.world.wave.duration))) || 720) / 60));
+  if (minute === last) return 'bronze';
   if (minute % 4 === 0) return 'card';
   if (minute % 2 === 0) return 'resonance';
   return 'heal';

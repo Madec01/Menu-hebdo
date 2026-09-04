@@ -47,7 +47,8 @@ export async function measureAll(dataDir) {
     const p = g.player, world = g.world;
     weapons.removeWeapon(p, 'battant');
     if (extra) { weapons.addWeapon(p, extra); for (let l = 1; l < 7; l++) weapons.upgradeWeapon(p, extra); }
-    world.spawner.def = { duration: 720, tierEvery: 120, spawns: [], events: [] };
+    world.spawner.def = { duration: world.waveDef.duration, tierEvery: world.waveDef.tierEvery, spawns: [], events: [] };   // plus de vagues
+    world.moments.list.length = 0;                                                                                         // ni de Moments scriptés
     if (fusion) {
       const f = data.allFusions().get(weaponId);
       weapons.addWeapon(p, f.weapon); for (let l = 1; l < 7; l++) weapons.upgradeWeapon(p, f.weapon);

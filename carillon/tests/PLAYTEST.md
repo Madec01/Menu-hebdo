@@ -1,6 +1,6 @@
 # CARILLON — rapport de playtest et d'équilibrage (agent G)
 
-Date : 2026-09-04. Périmètre : valeurs de `src/data/*.json` et `tests/**`. Aucun `.js` hors `tests/` n'a été
+Date : 2026-09-04 (§ 1–9 : agent G ; § 10 : agent P, rythme de la nuit). Périmètre G : valeurs de `src/data/*.json` et `tests/**`. Aucun `.js` hors `tests/` n'a été
 modifié ; les bugs JS sont **rapportés** (§ 6), pas corrigés. JSON bruts des mesures : `tests/results/`
 (`before.json` = valeurs d'origine rejouées avec le robot final, `after.json` = valeurs livrées).
 
@@ -261,3 +261,169 @@ Tout passe (JSON, registre § 10 bis, i18n fr/en et ui-fr/ui-en, 181 clés `t('�
 icônes, bruitages, pistes, presets de particules, fichiers des manifestes, fichiers ≤ 400 lignes, aucun
 OscillatorNode, aucun alert/prompt/confirm, aucune chaîne française en dur), sauf `Math.random` hors
 `src/audio` (§ 6.7).
+
+## 10. Rythme de la nuit (agent P) — nuits courtes, variété immédiate, Moments scriptés
+
+Retour du commanditaire : « 12 minutes c'est beaucoup trop long car hyper répétitif ». Constat : Cendrelune
+durait 720 s, Feutres seuls pendant 60 s puis un type par minute, deux Fêlures (240 / 480 s), boss à 720 s,
+palier toutes les 120 s et rien entre deux paliers. Périmètre : `src/game/spawner.js`, nouveau
+`src/game/moments.js`, hooks dans `world.js`, `waves.json`, `enemies.json` (PV des boss), `lore.json`
+(minutes), i18n (`moment.<id>.name`, `ui.moment.*`), HUD (bannière + barre de nuit), `run-screen.js`
+(accent musical), `tests/sim.mjs`, `tests/checks.mjs`, nouveau `tests/night.mjs`. JSON bruts :
+`tests/results/before-rythme.json` (nuit de 12 min rejouée avec le robot actuel, Reliques comprises) et
+`tests/results/after-rythme.json` (valeurs livrées).
+
+### 10.1 Ce qui change
+
+- **Durées** (`waves.json → duration`) : Cendrelune 360 s, Les Tourbes 420, Val-des-Cordes 480, La Nef Noyée
+  540, Le Beffroi Mère 600. Paliers de Sourdine toutes les 60 / 64 / 68 / 72 / 75 s (6 paliers atteints à
+  300–375 s, puis le palier 6 tient jusqu'au boss). Fêlures à 40 % et 70 % de la nuit, boss à 100 %. Cloche
+  horaire inchangée (chaque minute). Le HUD (barre de nuit sous le chrono, repères des Fêlures et de l'aube),
+  la Sourdine, le bilan et la sim lisent `duration` ; `grep -rn 720 src tests` ne renvoie plus que
+  `src/game/_test/game-test.js` (page de test manuelle de D, hors périmètre : son contrôle « 6 paliers, 12
+  minutes » est à ramener à `duration`) et la Cloche horaire (`bell-hour.js`, minute 12 → Bronze : n'arrive
+  plus qu'au Beffroi Mère si le boss dure ; à faire suivre à D : bonus de la dernière minute = `duration / 60`).
+- **Variété dès le début** : 2 types d'ennemis avant 20 s, 3 avant 45 s, 4 avant 90 s dans chaque paroisse,
+  ordre propre à chacune et ennemi signature (Tourbes : Rampes de suie dès 12 s et Ouateux à 40 s ; Val :
+  Bâillons dès 0 s, en meute ; Nef : Chœur Muet dès 0 s et Fossoyeurs à 35 s ; Beffroi : tout, Cierges à 90 s).
+- **Moments scriptés** (`src/game/moments.js`, `waves.<paroisse>.moments`) : toutes les 40–65 s, un événement
+  de 12 à 20 s avec bannière HUD (titre en display + sous-titre, entrée/sortie animées, barre de temps
+  restant), sfx `bell_tier` (procession, accalmie, cierge errant) ou `silence_cry` (assauts) et accent musical
+  (`music.setIntensity` 1 pendant un assaut, 0,1 pendant l'accalmie, retour à 0,5 ensuite ; les crans de
+  Résonance ne sont pas touchés). Neuf motifs paramétrés par type, nombre et rayon : `cercle`, `nuee`,
+  `meute` (même mesure d'origine → bond synchronisé), `ligne` (salve synchronisée), `pluie_de_suie`,
+  `procession` (Échos ×2 tant que dure le moment), `accalmie` (15 s sans flux régulier, Échos ×2 sur tout ce
+  qui est vivant, cendres calmées, voile pâle), `cierge_errant` (élite qui fuit via le recul, +25 de Bronze si
+  tuée, disparaît sinon), `veuves_en_cercle` (télégraphie puis charge). Chaque paroisse en enchaîne 7 ou 8 dans
+  un ordre propre ; instant tiré au rng du run (±8 s), espacement minimal 5 s après le moment précédent ;
+  aucun moment ne démarre pendant le Bourdon. Événement `run:moment {id, phase}` ; `balance.moments` porte
+  les constantes (jitter, multiplicateurs d'Échos, prime de Bronze, vitesse de fuite, distances de bord).
+- **Progression** : `balance.xp` base 22 → 34, growth 1,06 → 1,045 (niveau ≈ toutes les 18–20 s : 5–6 à 90 s,
+  10–11 à 3 min, 18–19 à l'aube de Cendrelune). Densité par palier 0,30 → 0,28 et PV par palier 1,35 → 1,32
+  (le sonneur arrive au boss au niveau 18–19 au lieu de 25 : la foule du palier 6 a été ramenée pour rester
+  franchissable ; les dégâts par palier sont inchangés, 1,16). Soins au sol 3 % → 2 % des morts. Boss :
+  `bourdon_fele` 16 000 → 8 000 PV, `veuve_suie` et `maitre` 24 000 → 13 000 (build de niveau 18 au lieu de
+  25 ; durée du combat robot 48 s → 45–60 s). Bronze : perMinute 5 → 10, perKill 0,03 → 0,05 (nuit deux fois
+  plus courte, mêmes ordres de grandeur : voir tableau).
+- **Feuillets** `run_minute` : f01 4 → 2, f02 8 → 4 (Cendrelune), f06 4 → 3 (Tourbes), f11 4 → 3 (Val), f16 et
+  f21 restent à 4 (Nef, Beffroi ; nuits de 9 et 10 min). Hauts-faits : aucun n'est lié au temps de nuit
+  (`repondre_a_la_cloche` = 10 réponses cumulées, `cent_echos` = 100 Échos par run : atteignables en 6 min),
+  valeurs inchangées.
+- **Tests** : `sim.mjs` lit `duration` (durée par défaut = nuit + 2 min 30), traverse et liste les Moments,
+  colonnes niv 90 s / 3 min / fin ; `checks.mjs` vérifie durées, Fêlures 40/70 %, boss 100 %, variété initiale,
+  5–8 Moments toutes les 40–60 s ±8 s de 10–25 s, motifs du registre implémentés dans `moments.js`, clés
+  i18n des Moments, Feuillets `run_minute` atteignables ; `night.mjs` (Playwright) joue une vraie run accélérée
+  ×3 (`loop.setTimeScale`), prend la première carte, journalise `run:moment` / `run:fissure` / `run:tier` /
+  `run:minute`, capture les bannières et échoue sur toute erreur console ou 404.
+
+### 10.2 Cendrelune minute par minute (360 s)
+
+| minute | Sourdine | nouveaux ennemis | Moment (±8 s) | Fêlure / boss | cloche |
+|---|---|---|---|---|---|
+| 0–1 | 1 | Feutres 0 s, Chœur Muet 10 s, Bâillons 40 s | 40 s **La Procession** — 12 Feutres en file, Échos ×2 (18 s) | – | – |
+| 1–2 | 2 à 60 s | Fossoyeurs 80 s | 85 s **Le Cercle se referme** — 10 Feutres en anneau à 260 px (15 s) | – | 60 s |
+| 2–3 | 3 à 120 s | Ouateux 130 s | 125 s **La Nuée** — 24 Chœur Muet depuis un côté (12 s) | 144 s Fêlure : Veuve aînée | 120 s |
+| 3–4 | 4 à 180 s | Rampes de suie 180 s | 175 s **Accalmie** — 15 s sans vague, Échos ×2 ; 215 s **La Meute** — 6 Bâillons qui bondissent ensemble (12 s) | – | 180 s |
+| 4–5 | 5 à 240 s | Veuves grises 230 s | 270 s **Le Rang des Fossoyeurs** — 5 Fossoyeurs alignés, salve synchronisée (15 s) | 252 s Fêlure : Cierge pascal | 240 s |
+| 5–6 | 6 à 300 s | Cierges 290 s | 315 s **Les Trois Veuves** — 4 Veuves grises téléportées autour du sonneur (12 s) | 360 s **Le Bourdon Fêlé** | 300 s |
+
+Avec la Relique `clef_du_beffroi`, les Fêlures arrivent 60 s plus tôt (84 s et 192 s) : elles tombent alors
+sur le Cercle et la Meute, ce qui est voulu.
+
+### 10.3 Structure des autres paroisses
+
+| paroisse | durée / palier | ordre d'apparition (s) | Fêlures | Moments (s) |
+|---|---|---|---|---|
+| Les Tourbes | 420 / 64 | Feutre 0, **Rampe 12**, **Ouateux 40**, Chœur 75, Bâillon 130, Fossoyeur 190, Veuve 260, Cierge 330 | Rampe mère 168, Bâillon double 294 | pluie_de_suie 40 (5), cercle 90 (8 Ouateux), procession 140 (14), accalmie 190, nuee 245 (28), meute 305 (7), pluie_de_suie 350 (8), cierge_errant 392 |
+| Val-des-Cordes | 480 / 68 | **Bâillon 0**, Feutre 6, Chœur 40, Fossoyeur 80, Veuve 140, Ouateux 200, Rampe 260, Cierge 330 | Fossoyeur ancien 192, Veuve aînée 336 | meute 35 (6), procession 85 (14), cercle 135 (18), meute 180 (8), accalmie 235, ligne 290 (6), veuves_en_cercle 350 (3), meute 410 (10) |
+| La Nef Noyée | 540 / 72 | **Chœur 0**, Feutre 10, **Fossoyeur 35**, Veuve 85, Ouateux 140, Bâillon 200, Rampe 280, Cierge 340 | Cierge pascal 216, Fossoyeur ancien 378 | nuee 40 (24), ligne 100 (5), cercle 160 (18), nuee 220 (32), accalmie 280, veuves_en_cercle 340 (3), ligne 400 (7), pluie_de_suie 460 (7) |
+| Le Beffroi Mère | 600 / 75 | Feutre 0, Chœur 8, Bâillon 30, Fossoyeur 60, **Cierge 90**, Rampe 130, Veuve 170, Ouateux 210 | Bâillon double 240, Rampe mère 420 | cercle 40 (18), meute 108 (8), cierge_errant 176, nuee 244 (30), accalmie 312, ligne 380 (7), pluie_de_suie 448 (8), veuves_en_cercle 516 (3) |
+
+Difficulté par paroisse (`waves.<paroisse>.difficulty`, PV / dégâts des ennemis hors boss, appliquée par
+`spawner.scaleNewEnemies` à toute apparition, y compris Moments, Fêlures et invocations) : Cendrelune 1 / 1,
+Tourbes 1,25 / 1,12, Val 1,55 / 1,25, Nef 1,7 / 1,3, Beffroi 2 / 1,4. Sans elle, les nuits plus longues laissaient
+le sonneur dépasser le palier 6 (atteint à 300–375 s) : 3/3 partout et niveau 31 au Beffroi (proposition § 7.4).
+
+### 10.4 Avant / après (Cendrelune, 5 seeds par ligne, Relique = première proposée)
+
+Avant = nuit de 12 min (`before-rythme.json`, valeurs d'origine rejouées aujourd'hui, Reliques et cloche
+comprises — d'où un Bronze plus haut que dans § 3.2). Après = valeurs livrées (`after-rythme.json`).
+« timeouts » = boss vivant 2 min 30 après son arrivée avec un joueur vivant (le robot fuit la foule de 400 au lieu
+de la traverser, § 7.3 : ces runs comptent comme non gagnées). Colonne PV % au boss : moyenne (médiane).
+
+Avant (12 min) :
+
+| sonneur/profil | n | vict. | morts | timeouts | min. mort | niv 90 s | niv 3 min | niv fin (720 s) | PV % au boss (méd.) | boss (s) | tués | ennemis max | bronze vict. | bronze déf. |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| le_muet/moyen | 5 | 3 | 1 | 1 | 10.2 | 4.4 | 8.6 | 25.5 | 67.5 (80) | 12.9 | 2455 | 125 | 463.3 | 107 |
+| le_muet/norhythm | 5 | 2 | 0 | 3 | – | 4.2 | 8.4 | 23.8 | 69.8 (80) | 18.6 | 2834.2 | 182.8 | 400.5 | – |
+| le_muet/parfait | 5 | 4 | 0 | 1 | – | 4.4 | 8.4 | 25.8 | 76.8 (80) | 29.8 | 2566.4 | 72 | 516.8 | – |
+| wren/moyen | 5 | 5 | 0 | 0 | – | 5 | 9 | 26 | 87.6 (83) | 48.8 | 2835.2 | 228 | 472.4 | – |
+| wren/norhythm | 5 | 4 | 1 | 0 | 13 | 4.8 | 9 | 25.8 | 95.2 (100) | 61.5 | 2874 | 219.8 | 380.8 | 175 |
+| wren/parfait | 5 | 5 | 0 | 0 | – | 4.8 | 8.8 | 26.4 | 96 (100) | 28.5 | 2665.2 | 120.4 | 498.2 | – |
+
+Après (6 min) :
+
+| sonneur/profil | n | vict. | morts | timeouts | min. mort | niv 90 s | niv 3 min | niv fin (360 s) | PV % au boss (méd.) | boss (s) | tués | ennemis max | bronze vict. | bronze déf. |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| le_muet/moyen | 5 | 5 | 0 | 0 | – | 5 | 10.4 | 18.2 | 70 (80) | 67.2 | 1331.6 | 163.4 | 326.6 | – |
+| le_muet/norhythm | 5 | 2 | 1 | 2 | 5.2 | 5.2 | 10.6 | 18.3 | 45.3 (63) | 17 | 1198.2 | 213 | 310 | 87 |
+| le_muet/parfait | 5 | 5 | 0 | 0 | – | 5 | 10.6 | 19 | 75.4 (80) | 77.1 | 1267.6 | 110.2 | 345.4 | – |
+| le_muet/passif | 5 | 0 | 4 | 1 | 3.1 | 5.2 | 10.5 | 17 | 21 (21) | – | 620.6 | 88.4 | – | 58.5 |
+| wren/moyen | 5 | 3 | 0 | 2 | – | 5.8 | 10.8 | 19.2 | 53.8 (41) | 61.7 | 1227.6 | 262.4 | 321 | – |
+| wren/norhythm | 5 | 1 | 4 | 0 | 6.2 | 5.8 | 10.8 | 18.7 | 42.7 (42) | 130.1 | 1123 | 210.6 | 364 | 104.5 |
+| wren/parfait | 5 | 3 | 2 | 0 | 6.1 | 5.6 | 10.6 | 20.5 | 99 (100) | 27.8 | 1154 | 132 | 334.7 | 125 |
+| wren/passif | 5 | 0 | 5 | 0 | 2.7 | 5.5 | 10 | – | – (–) | – | 281.6 | 64.8 | – | 40.8 |
+
+Cibles et lecture :
+- Wren moyen : **3 victoires sur 5** (cible 3–4), aucune mort, 2 timeouts de foule ; niveau 5,8 à 90 s, 10,8 à
+  3 min, **19,2 à l'aube** (cible 18–20, soit un niveau toutes les ≈ 19 s) ; PV à l'arrivée au boss 19–100 %
+  (médiane 41 %, cible 20–35 % : le robot ramasse tous les soins ; sur les 5 runs, 3 arrivent entre 19 et
+  41 %) ; boss battu en 62 s (48 s avant, avec un build de niveau 26 contre 19 aujourd'hui).
+- Mort possible tôt en jouant mal : Wren passif meurt entre 1 min 28 et 4 min 11 (moyenne 2,7 min ; avant :
+  minute 8 sur 12), Le Muet passif entre 2,6 et 4,6 min.
+- Bronze : victoire 306–364 (cible 250–400), défaite 35–139 (cible 40–120 ; 139 = mort pendant le boss).
+- Sans rythme (Wren) : 1/5 contre 4/5 avant — c'est la régression à surveiller. Le robot Sans rythme ne pare
+  ni ne dashe : au niveau 19 (au lieu de 26) il met 130 s à user le Bourdon et y meurt (4 morts sur 5 à la
+  minute 6–7). Le Muet Sans rythme reste à 2/5 (comme avant). Pistes JSON si les humains le confirment :
+  `resonance.norhythmTier` 2 → 3 (×2,5 fixe) ou `bourdon_fele.hp` 8 000 → 6 500 ; ne pas retoucher la densité,
+  qui cale déjà le profil moyen.
+- Le Muet : 5/5 (moyen) et 5/5 (parfait) — le Diapason + Clarine de départ est devenu le sonneur le plus sûr
+  sur 6 min ; à rééquilibrer par D si c'est trop (§ 6.1 tenait pour 12 min).
+
+Courbe type (Wren moyen, seed 3) : niveau 2 à 30 s, 4 à 60 s, 6 à 90 s, 9 à 150 s, 11 à 180 s, 13 à 240 s,
+16 à 300 s, 19 à 360 s ; PV 100 → 70 (150 s, Nuée + Fêlure) → 100 → 73 (300 s) → 24 (minimum à 363 s) → 41 à
+l'arrivée du boss ; 7 Moments traversés (procession 46, cercle 81, nuée 122, accalmie 175, meute 214, ligne 262,
+Veuves 323) ; 1 347 tués (2 835 en moyenne avant).
+
+### 10.5 Paroisses suivantes (Wren moyen, 3 seeds, Beffroi « 2 runs » : cœur de bronze 2, battant lourd 1, ferrure 1)
+
+| paroisse | nuit (s) | vict. | morts (min) | niv 90 s / 3 min / fin | PV mini | PV % boss | boss (s) | tués | ennemis max | Moments | bronze |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| Cendrelune (sans Beffroi, 5 seeds) | 360 | 3/5 | 0 | 5,8 / 10,8 / 19,2 | 34 | 54 | 62 | 1 228 | 262 | 7/7 | 321 |
+| Les Tourbes | 420 | 3/3 | 0 | 6 / 12,3 / 22,3 | 32 | 114 | 44,5 | 1 770 | 236 | 8/8 | 430 |
+| Val-des-Cordes | 480 | 3/3 | 0 | 5,7 / 10 / 22,3 | 12 | 94 | 42,5 | 1 657 | 380 | 8/8 | 464 |
+| La Nef Noyée | 540 | 2/3 | 1 (6,2) | 4,7 / 10,3 / 21,5 | 17 | 72 | 37 | 1 539 | 384 | 7,3/8 | 375 |
+| Le Beffroi Mère | 600 | 1/3 | 2 (4,2 ; 4,2) | 5,7 / 11,3 / 33 | 25 | 120 | 8 | 1 585 | 400 | 5,3/8 | 334 |
+
+Le « +25 % par paroisse » se lit dans les PV minimum (32 → 12 → 17 → 25 avec 20 PV de plus au Beffroi) et
+dans les morts (aucune → Nef 1/3 → Beffroi 2/3, toutes autour de 4 min : Fêlure Bâillon double à 240 s + Nuée
+de 30 Chœur Muet à 244 s, la fin de nuit reste à durcir si le Maître tombe en 8 s avec un build de niveau 33).
+Bruts : `tests/results/after-rythme-parishes.jsonl` (une matrice JSON par ligne).
+
+### 10.6 Run réelle (`tests/night.mjs`, Chromium headless, ×3, Cendrelune, Wren, seed 1717)
+
+200 s de jeu : Moments procession 47 s, cercle 89 s, nuée 130 s, accalmie 177 s ; Fêlure Veuve aînée à 144 s ;
+paliers 2/3/4 à 60/120/180 s ; cloche aux minutes 1, 2, 3 ; 10 niveaux. **0 erreur console, 0 erreur de page,
+0 réponse ≥ 400, 0 requête échouée.** Captures dans `tests/results/night/` : `moment-procession.png`,
+`moment-cercle.png`, `moment-nuee.png`, `moment-accalmie.png` (voile pâle, compte à rebours, cendres calmées),
+`fissure-veuve_grise_elite.png`, `final.png`.
+
+### 10.7 À transmettre (hors périmètre P)
+
+- D : `bell-hour.bonusFor` — le Bronze de la « 12ᵉ minute » n'existe plus (nuits de 6 à 10 min) : bonus de la
+  dernière minute = `Math.round(duration / 60)` ; `src/game/_test/game-test.js` (contrôle « 6 paliers, 12
+  minutes » et `duration: 720` du banc DPS) à aligner sur `waveDef.duration`.
+- Lead : `waves.<paroisse>.difficulty` et `moments`, `balance.moments`, l'événement `run:moment {id, phase}` et
+  les clés `moment.<id>.name` / `ui.moment.*` sont à inscrire dans ARCHITECTURE.md § 5 et § 10.
+- E/tutoriel : une ligne sur les Moments (« la bannière annonce l'assaut ; l'accalmie double les Échos »).

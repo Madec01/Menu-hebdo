@@ -1,5 +1,5 @@
 // game/world.js — le monde d'une nuit (ARCHITECTURE.md § 11) : pools (ennemis, projectiles,
-// ramassables, zones), grille, temps, palier, suivi de la Mesure (beat/bar/contretemps), et rendu
+// ramassables, zones), grille, temps, palier, Moments scriptés (moments.js), suivi de la Mesure (beat/bar/contretemps), et rendu
 // dans l'ordre du § 3 : sol → halo de la Mesure → zones → ramassables → ombres+entités triées
 // par y → projectiles. Le tri par y est un tri par comptage dans des tableaux préalloués (aucune allocation).
 
@@ -13,7 +13,8 @@ import { createProjectilePool, updateProjectiles } from './projectiles.js';
 import { createPickupPool, updatePickups, renderPickups } from './pickups.js';
 import { createHazardPool, updateHazards, renderHazards } from './hazards.js';
 import { buildGrid, collideProjectiles, collideEnemiesPlayer } from './collision.js';
-import { createSpawner, updateSpawner } from './spawner.js';
+import { createSpawner, updateSpawner, scaleNewEnemies } from './spawner.js';
+import { createMoments, updateMoments } from './moments.js';
 import { updateBoss } from './boss.js';
 import { createGround, renderGround, drawProp } from './ground.js';
 import { renderPlayer } from './player.js';
@@ -31,7 +32,7 @@ export function createWorld({ parishDef, rng, waveDef }) {
   const world = {
     parishDef, waveDef, rng, time: 0, tier: 0, minute: 0,
     enemies: createEnemyPool(), projectiles: createProjectilePool(), pickups: createPickupPool(), hazards: createHazardPool(),
-    grid: createGrid(64), spawner: createSpawner(waveDef), ground: createGround(parishDef, rng.seed),
+    grid: createGrid(64), spawner: createSpawner(waveDef), moments: createMoments(waveDef, rng), ground: createGround(parishDef, rng.seed),
     beat: -1, bar: -1, beatInBar: 0, beatChanged: false, barChanged: false, offbeatChanged: false, lastPhase: 0,
     kills: 0, killsByKind: {}, spawned: 0, echoes: 0, bronzePicked: 0, auraDepth: 0, auraWasIn: false,
     fissure: null, fissureId: 0, boss: null, bossId: 0, bossKind: '', bossKilled: null, victory: false, ended: false,
@@ -60,8 +61,10 @@ export function updateWorld(world, dt, player) {
   world.time += dt;
   trackBeat(world);
   updateSpawner(world, dt, player);
+  updateMoments(world, dt, player);
   buildGrid(world);
   updateEnemies(world, dt, player);
+  scaleNewEnemies(world);
   buildGrid(world);
   updateProjectiles(world, dt, player);
   collideProjectiles(world, player);

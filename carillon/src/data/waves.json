@@ -1,18 +1,18 @@
 {
  "balance": {
   "xp": {
-   "base": 22,
+   "base": 34,
    "perLevel": 4,
-   "growth": 1.06,
+   "growth": 1.045,
    "startLevel": 1
   },
   "enemyHp": {
-   "perTier": 1.35,
+   "perTier": 1.32,
    "damagePerTier": 1.16,
    "speedPerTier": 1.03
   },
   "spawn": {
-   "densityPerTier": 0.3,
+   "densityPerTier": 0.28,
    "globalCap": 400,
    "minDist": 290,
    "maxDist": 360,
@@ -69,7 +69,7 @@
    "mediumAt": 5,
    "largeAt": 15,
    "healPct": 0.3,
-   "healChance": 0.03,
+   "healChance": 0.02,
    "chimeChance": 0.003,
    "bronzeChance": 0.01,
    "bronzeValue": 5,
@@ -79,8 +79,8 @@
   },
   "bronze": {
    "win": 1.0,
-   "perMinute": 5,
-   "perKill": 0.03,
+   "perMinute": 10,
+   "perKill": 0.05,
    "perResonance": 30,
    "lossMult": 0.5
   },
@@ -106,64 +106,97 @@
    "introSec": 2.5,
    "slowMoDeath": 0.4,
    "slowMoSec": 1.5
+  },
+  "moments": {
+   "jitterSec": 8,
+   "minGapSec": 5,
+   "leadSec": 0.0,
+   "processionXpMult": 2,
+   "accalmieXpMult": 2,
+   "ciergeBronze": 25,
+   "ciergeFleeSpeed": 60,
+   "ringYScale": 0.75,
+   "edgeDist": {
+    "x": 270,
+    "y": 165
+   },
+   "bannerSec": 3.5
   }
  },
  "cendrelune": {
-  "duration": 720,
-  "tierEvery": 120,
+  "duration": 360,
+  "tierEvery": 60,
+  "difficulty": {
+   "hp": 1,
+   "damage": 1
+  },
   "spawns": [
    {
     "from": 0,
-    "to": 720,
+    "to": 360,
     "kind": "feutre",
     "perSec": 0.8,
     "cap": 60
    },
    {
-    "from": 60,
-    "to": 720,
+    "from": 10,
+    "to": 60,
     "kind": "choeur_muet",
-    "perSec": 0.6,
+    "perSec": 0.3,
+    "cap": 20
+   },
+   {
+    "from": 60,
+    "to": 360,
+    "kind": "choeur_muet",
+    "perSec": 0.5,
     "cap": 40
    },
    {
-    "from": 120,
-    "to": 720,
+    "from": 40,
+    "to": 90,
     "kind": "baillon",
-    "perSec": 0.25,
+    "perSec": 0.15,
+    "cap": 6
+   },
+   {
+    "from": 90,
+    "to": 360,
+    "kind": "baillon",
+    "perSec": 0.22,
     "cap": 12
    },
    {
-    "from": 180,
-    "to": 720,
+    "from": 80,
+    "to": 360,
     "kind": "fossoyeur",
-    "perSec": 0.15,
+    "perSec": 0.14,
     "cap": 8
    },
    {
-    "from": 240,
-    "to": 720,
+    "from": 130,
+    "to": 360,
     "kind": "ouateux",
     "perSec": 0.08,
     "cap": 5
    },
    {
-    "from": 300,
-    "to": 720,
+    "from": 180,
+    "to": 360,
     "kind": "rampe_suie",
     "perSec": 0.1,
     "cap": 8
    },
    {
-    "from": 420,
-    "to": 720,
+    "from": 230,
+    "to": 360,
     "kind": "veuve_grise",
     "perSec": 0.08,
     "cap": 6
    },
    {
-    "from": 540,
-    "to": 720,
+    "from": 290,
+    "to": 360,
     "kind": "cierge",
     "perSec": 0.03,
     "cap": 2
@@ -171,78 +204,133 @@
   ],
   "events": [
    {
-    "at": 240,
+    "at": 144,
     "type": "fissure",
     "boss": "veuve_grise_elite"
    },
    {
-    "at": 480,
+    "at": 252,
     "type": "fissure",
     "boss": "cierge_elite"
    },
    {
-    "at": 720,
+    "at": 360,
     "type": "boss",
     "boss": "bourdon_fele"
+   }
+  ],
+  "moments": [
+   {
+    "at": 40,
+    "id": "procession",
+    "sec": 18,
+    "kind": "feutre",
+    "count": 12
+   },
+   {
+    "at": 85,
+    "id": "cercle",
+    "sec": 15,
+    "kind": "feutre",
+    "count": 10,
+    "radius": 260
+   },
+   {
+    "at": 125,
+    "id": "nuee",
+    "sec": 12,
+    "kind": "choeur_muet",
+    "count": 24
+   },
+   {
+    "at": 175,
+    "id": "accalmie",
+    "sec": 15
+   },
+   {
+    "at": 215,
+    "id": "meute",
+    "sec": 12,
+    "kind": "baillon",
+    "count": 6
+   },
+   {
+    "at": 270,
+    "id": "ligne",
+    "sec": 15,
+    "kind": "fossoyeur",
+    "count": 5
+   },
+   {
+    "at": 315,
+    "id": "veuves_en_cercle",
+    "sec": 12,
+    "kind": "veuve_grise",
+    "count": 4,
+    "radius": 110
    }
   ]
  },
  "tourbes": {
-  "duration": 720,
-  "tierEvery": 120,
+  "duration": 420,
+  "tierEvery": 64,
+  "difficulty": {
+   "hp": 1.25,
+   "damage": 1.12
+  },
   "spawns": [
    {
     "from": 0,
-    "to": 720,
+    "to": 420,
     "kind": "feutre",
     "perSec": 0.9,
     "cap": 60
    },
    {
-    "from": 30,
-    "to": 720,
+    "from": 12,
+    "to": 420,
     "kind": "rampe_suie",
-    "perSec": 0.15,
+    "perSec": 0.14,
     "cap": 10
    },
    {
-    "from": 90,
-    "to": 720,
-    "kind": "choeur_muet",
-    "perSec": 0.7,
-    "cap": 50
-   },
-   {
-    "from": 150,
-    "to": 720,
+    "from": 40,
+    "to": 420,
     "kind": "ouateux",
     "perSec": 0.1,
     "cap": 6
    },
    {
-    "from": 200,
-    "to": 720,
+    "from": 75,
+    "to": 420,
+    "kind": "choeur_muet",
+    "perSec": 0.6,
+    "cap": 50
+   },
+   {
+    "from": 130,
+    "to": 420,
     "kind": "baillon",
-    "perSec": 0.3,
+    "perSec": 0.28,
     "cap": 14
    },
    {
-    "from": 300,
-    "to": 720,
+    "from": 190,
+    "to": 420,
     "kind": "fossoyeur",
-    "perSec": 0.18,
+    "perSec": 0.16,
     "cap": 10
    },
    {
-    "from": 400,
-    "to": 720,
+    "from": 260,
+    "to": 420,
     "kind": "veuve_grise",
     "perSec": 0.1,
     "cap": 6
    },
    {
-    "from": 500,
-    "to": 720,
+    "from": 330,
+    "to": 420,
     "kind": "cierge",
     "perSec": 0.04,
     "cap": 3
@@ -250,78 +338,141 @@
   ],
   "events": [
    {
-    "at": 240,
+    "at": 168,
     "type": "fissure",
     "boss": "rampe_suie_elite"
    },
    {
-    "at": 480,
+    "at": 294,
     "type": "fissure",
     "boss": "baillon_elite"
    },
    {
-    "at": 720,
+    "at": 420,
     "type": "boss",
     "boss": "bourdon_fele"
+   }
+  ],
+  "moments": [
+   {
+    "at": 40,
+    "id": "pluie_de_suie",
+    "sec": 15,
+    "kind": "rampe_suie",
+    "count": 5,
+    "radius": 110
+   },
+   {
+    "at": 90,
+    "id": "cercle",
+    "sec": 15,
+    "kind": "ouateux",
+    "count": 8,
+    "radius": 240
+   },
+   {
+    "at": 140,
+    "id": "procession",
+    "sec": 18,
+    "kind": "feutre",
+    "count": 14
+   },
+   {
+    "at": 190,
+    "id": "accalmie",
+    "sec": 15
+   },
+   {
+    "at": 245,
+    "id": "nuee",
+    "sec": 12,
+    "kind": "choeur_muet",
+    "count": 28
+   },
+   {
+    "at": 305,
+    "id": "meute",
+    "sec": 12,
+    "kind": "baillon",
+    "count": 7
+   },
+   {
+    "at": 350,
+    "id": "pluie_de_suie",
+    "sec": 15,
+    "kind": "rampe_suie",
+    "count": 8,
+    "radius": 100
+   },
+   {
+    "at": 392,
+    "id": "cierge_errant",
+    "sec": 20,
+    "kind": "cierge_elite",
+    "count": 1
    }
   ]
  },
  "val_des_cordes": {
-  "duration": 720,
-  "tierEvery": 120,
+  "duration": 480,
+  "tierEvery": 68,
+  "difficulty": {
+   "hp": 1.55,
+   "damage": 1.25
+  },
   "spawns": [
    {
     "from": 0,
-    "to": 720,
+    "to": 480,
+    "kind": "baillon",
+    "perSec": 0.2,
+    "cap": 12
+   },
+   {
+    "from": 6,
+    "to": 480,
     "kind": "feutre",
     "perSec": 1.0,
     "cap": 70
    },
    {
     "from": 40,
-    "to": 720,
-    "kind": "baillon",
-    "perSec": 0.3,
-    "cap": 16
-   },
-   {
-    "from": 100,
-    "to": 720,
+    "to": 480,
     "kind": "choeur_muet",
-    "perSec": 0.8,
+    "perSec": 0.7,
     "cap": 50
    },
    {
-    "from": 160,
-    "to": 720,
+    "from": 80,
+    "to": 480,
     "kind": "fossoyeur",
-    "perSec": 0.2,
+    "perSec": 0.18,
     "cap": 12
    },
    {
-    "from": 240,
-    "to": 720,
+    "from": 140,
+    "to": 480,
     "kind": "veuve_grise",
     "perSec": 0.12,
     "cap": 8
    },
    {
-    "from": 300,
-    "to": 720,
+    "from": 200,
+    "to": 480,
     "kind": "ouateux",
     "perSec": 0.12,
     "cap": 6
    },
    {
-    "from": 360,
-    "to": 720,
+    "from": 260,
+    "to": 480,
     "kind": "rampe_suie",
     "perSec": 0.12,
     "cap": 8
    },
    {
-    "from": 480,
-    "to": 720,
+    "from": 330,
+    "to": 480,
     "kind": "cierge",
     "perSec": 0.05,
     "cap": 3
@@ -329,78 +480,140 @@
   ],
   "events": [
    {
-    "at": 240,
+    "at": 192,
     "type": "fissure",
     "boss": "fossoyeur_elite"
    },
    {
-    "at": 480,
+    "at": 336,
     "type": "fissure",
     "boss": "veuve_grise_elite"
    },
    {
-    "at": 720,
+    "at": 480,
     "type": "boss",
     "boss": "veuve_suie"
+   }
+  ],
+  "moments": [
+   {
+    "at": 35,
+    "id": "meute",
+    "sec": 12,
+    "kind": "baillon",
+    "count": 6
+   },
+   {
+    "at": 85,
+    "id": "procession",
+    "sec": 18,
+    "kind": "feutre",
+    "count": 14
+   },
+   {
+    "at": 135,
+    "id": "cercle",
+    "sec": 15,
+    "kind": "feutre",
+    "count": 18,
+    "radius": 250
+   },
+   {
+    "at": 180,
+    "id": "meute",
+    "sec": 12,
+    "kind": "baillon",
+    "count": 8
+   },
+   {
+    "at": 235,
+    "id": "accalmie",
+    "sec": 15
+   },
+   {
+    "at": 290,
+    "id": "ligne",
+    "sec": 15,
+    "kind": "fossoyeur",
+    "count": 6
+   },
+   {
+    "at": 350,
+    "id": "veuves_en_cercle",
+    "sec": 12,
+    "kind": "veuve_grise",
+    "count": 3,
+    "radius": 110
+   },
+   {
+    "at": 410,
+    "id": "meute",
+    "sec": 14,
+    "kind": "baillon",
+    "count": 10
    }
   ]
  },
  "nef_noyee": {
-  "duration": 720,
-  "tierEvery": 120,
+  "duration": 540,
+  "tierEvery": 72,
+  "difficulty": {
+   "hp": 1.7,
+   "damage": 1.3
+  },
   "spawns": [
    {
     "from": 0,
-    "to": 720,
-    "kind": "feutre",
-    "perSec": 1.1,
-    "cap": 80
-   },
-   {
-    "from": 30,
-    "to": 720,
+    "to": 540,
     "kind": "choeur_muet",
-    "perSec": 1.0,
+    "perSec": 0.8,
     "cap": 60
    },
    {
-    "from": 90,
-    "to": 720,
+    "from": 10,
+    "to": 540,
+    "kind": "feutre",
+    "perSec": 1.0,
+    "cap": 80
+   },
+   {
+    "from": 35,
+    "to": 540,
     "kind": "fossoyeur",
-    "perSec": 0.22,
+    "perSec": 0.2,
     "cap": 12
    },
    {
-    "from": 150,
-    "to": 720,
+    "from": 85,
+    "to": 540,
+    "kind": "veuve_grise",
+    "perSec": 0.12,
+    "cap": 8
+   },
+   {
+    "from": 140,
+    "to": 540,
     "kind": "ouateux",
-    "perSec": 0.14,
+    "perSec": 0.12,
     "cap": 8
    },
    {
     "from": 200,
-    "to": 720,
-    "kind": "veuve_grise",
-    "perSec": 0.14,
-    "cap": 8
-   },
-   {
-    "from": 300,
-    "to": 720,
+    "to": 540,
     "kind": "baillon",
-    "perSec": 0.35,
+    "perSec": 0.3,
     "cap": 16
    },
    {
-    "from": 360,
-    "to": 720,
+    "from": 280,
+    "to": 540,
     "kind": "rampe_suie",
-    "perSec": 0.14,
+    "perSec": 0.12,
     "cap": 10
    },
    {
-    "from": 420,
-    "to": 720,
+    "from": 340,
+    "to": 540,
     "kind": "cierge",
     "perSec": 0.06,
     "cap": 4
@@ -408,81 +621,144 @@
   ],
   "events": [
    {
-    "at": 240,
+    "at": 216,
     "type": "fissure",
     "boss": "cierge_elite"
    },
    {
-    "at": 480,
+    "at": 378,
     "type": "fissure",
     "boss": "fossoyeur_elite"
    },
    {
-    "at": 720,
+    "at": 540,
     "type": "boss",
     "boss": "veuve_suie"
+   }
+  ],
+  "moments": [
+   {
+    "at": 40,
+    "id": "nuee",
+    "sec": 12,
+    "kind": "choeur_muet",
+    "count": 24
+   },
+   {
+    "at": 100,
+    "id": "ligne",
+    "sec": 15,
+    "kind": "fossoyeur",
+    "count": 5
+   },
+   {
+    "at": 160,
+    "id": "cercle",
+    "sec": 15,
+    "kind": "feutre",
+    "count": 18,
+    "radius": 250
+   },
+   {
+    "at": 220,
+    "id": "nuee",
+    "sec": 12,
+    "kind": "choeur_muet",
+    "count": 32
+   },
+   {
+    "at": 280,
+    "id": "accalmie",
+    "sec": 15
+   },
+   {
+    "at": 340,
+    "id": "veuves_en_cercle",
+    "sec": 12,
+    "kind": "veuve_grise",
+    "count": 3,
+    "radius": 110
+   },
+   {
+    "at": 400,
+    "id": "ligne",
+    "sec": 15,
+    "kind": "fossoyeur",
+    "count": 7
+   },
+   {
+    "at": 460,
+    "id": "pluie_de_suie",
+    "sec": 15,
+    "kind": "rampe_suie",
+    "count": 7,
+    "radius": 100
    }
   ]
  },
  "beffroi_mere": {
-  "duration": 720,
-  "tierEvery": 120,
+  "duration": 600,
+  "tierEvery": 75,
+  "difficulty": {
+   "hp": 2.0,
+   "damage": 1.4
+  },
   "spawns": [
    {
     "from": 0,
-    "to": 720,
+    "to": 600,
     "kind": "feutre",
-    "perSec": 1.2,
+    "perSec": 1.1,
     "cap": 90
    },
    {
-    "from": 20,
-    "to": 720,
+    "from": 8,
+    "to": 600,
     "kind": "choeur_muet",
-    "perSec": 1.0,
+    "perSec": 0.9,
     "cap": 60
    },
    {
-    "from": 60,
-    "to": 720,
+    "from": 30,
+    "to": 600,
     "kind": "baillon",
-    "perSec": 0.4,
+    "perSec": 0.35,
     "cap": 18
    },
    {
-    "from": 100,
-    "to": 720,
+    "from": 60,
+    "to": 600,
     "kind": "fossoyeur",
-    "perSec": 0.25,
+    "perSec": 0.22,
     "cap": 14
    },
    {
-    "from": 150,
-    "to": 720,
-    "kind": "ouateux",
-    "perSec": 0.16,
-    "cap": 8
-   },
-   {
-    "from": 200,
-    "to": 720,
-    "kind": "rampe_suie",
-    "perSec": 0.16,
-    "cap": 10
-   },
-   {
-    "from": 250,
-    "to": 720,
-    "kind": "veuve_grise",
-    "perSec": 0.16,
-    "cap": 10
-   },
-   {
-    "from": 300,
-    "to": 720,
+    "from": 90,
+    "to": 600,
     "kind": "cierge",
-    "perSec": 0.08,
+    "perSec": 0.06,
     "cap": 5
+   },
+   {
+    "from": 130,
+    "to": 600,
+    "kind": "rampe_suie",
+    "perSec": 0.14,
+    "cap": 10
+   },
+   {
+    "from": 170,
+    "to": 600,
+    "kind": "veuve_grise",
+    "perSec": 0.14,
+    "cap": 10
+   },
+   {
+    "from": 210,
+    "to": 600,
+    "kind": "ouateux",
+    "perSec": 0.14,
+    "cap": 8
    }
   ],
   "events": [
@@ -492,14 +768,73 @@
     "boss": "baillon_elite"
    },
    {
-    "at": 480,
+    "at": 420,
     "type": "fissure",
     "boss": "rampe_suie_elite"
    },
    {
-    "at": 720,
+    "at": 600,
     "type": "boss",
     "boss": "maitre"
+   }
+  ],
+  "moments": [
+   {
+    "at": 40,
+    "id": "cercle",
+    "sec": 15,
+    "kind": "feutre",
+    "count": 18,
+    "radius": 250
+   },
+   {
+    "at": 108,
+    "id": "meute",
+    "sec": 12,
+    "kind": "baillon",
+    "count": 8
+   },
+   {
+    "at": 176,
+    "id": "cierge_errant",
+    "sec": 20,
+    "kind": "cierge_elite",
+    "count": 1
+   },
+   {
+    "at": 244,
+    "id": "nuee",
+    "sec": 12,
+    "kind": "choeur_muet",
+    "count": 30
+   },
+   {
+    "at": 312,
+    "id": "accalmie",
+    "sec": 15
+   },
+   {
+    "at": 380,
+    "id": "ligne",
+    "sec": 15,
+    "kind": "fossoyeur",
+    "count": 7
+   },
+   {
+    "at": 448,
+    "id": "pluie_de_suie",
+    "sec": 15,
+    "kind": "rampe_suie",
+    "count": 8,
+    "radius": 100
+   },
+   {
+    "at": 516,
+    "id": "veuves_en_cercle",
+    "sec": 12,
+    "kind": "veuve_grise",
+    "count": 3,
+    "radius": 110
    }
   ]
  }

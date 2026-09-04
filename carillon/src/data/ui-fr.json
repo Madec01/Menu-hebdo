@@ -399,6 +399,20 @@
       "fullscreen_on": "Plein écran",
       "fullscreen_off": "Quitter le plein écran",
       "card_hint": "Touche une carte pour la prendre"
+    },
+    "moment": {
+      "cercle": "Ils viennent de partout : tenez le centre",
+      "nuee": "Chœur Muet en essaim : frappez sur le temps",
+      "meute": "Les Bâillons bondissent ensemble : Contre-battement",
+      "ligne": "Salve de Silence en approche : glissez de côté",
+      "pluie_de_suie": "Les Rampes tombent autour de vous : sortez du cercle",
+      "procession": "Échos doublés s'ils tombent avant la fin",
+      "accalmie": "Aucune vague · Échos ×2 · reprenez votre souffle",
+      "cierge_errant": "Une élite s'enfuit : Bronze en prime si elle tombe",
+      "veuves_en_cercle": "Trois Veuves vous encerclent : gare aux charges",
+      "end": "Le moment passe",
+      "remaining": "{sec} s",
+      "night": "Aube"
     }
   }
 }

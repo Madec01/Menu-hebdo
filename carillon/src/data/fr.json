@@ -524,5 +524,34 @@
       "name": "Voile de brume",
       "desc": "Halo du Battant ×1,6. Revers : hors du halo, la brume cache tout."
     }
+  },
+  "moment": {
+    "cercle": {
+      "name": "Le Cercle se referme"
+    },
+    "nuee": {
+      "name": "La Nuée"
+    },
+    "meute": {
+      "name": "La Meute"
+    },
+    "ligne": {
+      "name": "Le Rang des Fossoyeurs"
+    },
+    "pluie_de_suie": {
+      "name": "Pluie de suie"
+    },
+    "procession": {
+      "name": "La Procession"
+    },
+    "accalmie": {
+      "name": "Accalmie"
+    },
+    "cierge_errant": {
+      "name": "Le Cierge errant"
+    },
+    "veuves_en_cercle": {
+      "name": "Les Trois Veuves"
+    }
   }
 }

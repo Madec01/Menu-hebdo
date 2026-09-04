@@ -7,6 +7,9 @@
 // sonnée » sur victory_bell. enter({ parishId, characterId, seed, seedText, tutorial, weaponId }) ;
 // weaponId = Timbre de départ choisi au hub, transmis tel quel à startGame. Reliques (§ 11 bis) :
 // l'écran 'relicpick' est posé après le tutoriel (ou dès le départ), sauf noRelic (tests).
+// Moments scriptés (game/moments.js, run:moment) : accent musical par music.setIntensity (haut pendant
+// un assaut, bas pendant une accalmie, retour à la valeur d'entrée à la fin ; les crans de Résonance ne
+// sont pas touchés) et brume/cendres de l'accalmie via le renderer.
 
 import { bus } from '../core/events.js';
 import { getSave } from '../core/save.js';
@@ -24,11 +27,14 @@ import { text, C } from './widgets.js';
 
 const W = 480, H = 270;
 const END_TO_RESULTS_SEC = 0.8;
+const MOMENT_INTENSITY_HIGH = 1, MOMENT_INTENSITY_LOW = 0.1;   // accent musical d'un Moment (0..1)
+const ASHES_NORMAL = 0.6, ASHES_LULL = 0.2;
 
 export function createRun(deps) {
   const hud = createHud();
   let params = null, unsubs = [], endStats = null, endT = -1, tier3 = false, active = false;
   let overlay = null, overlayT = 0, killer = '';   // 'death' | 'victory' : texte de fin avant le bilan
+  let baseIntensity = 0.5;                          // intensité musicale hors Moment (lue à l'entrée)
 
   function playTrack(id, layers) {
     music.loadTrack(id).then(() => music.play(id, { layers: layers || music.layers(), fadeSec: 1 })).catch((e) => console.warn('[music]', e));
@@ -54,6 +60,12 @@ export function createRun(deps) {
     unsubs.push(bus.on('beat', () => { if (tier3 && active) camera.shake(1.5, 0.08); }));
     unsubs.push(bus.on('options:change', (e) => { if (e.key === 'beatIndicator') applyMetronome(); }));
     unsubs.push(bus.on('ui:close', (e) => { if (e.screen === 'tutorial' && active) offerRelics(); }));
+    unsubs.push(bus.on('run:moment', (e) => {
+      if (!active) return;
+      const lull = e.id === 'accalmie';
+      if (e.phase === 'start') { music.setIntensity(lull ? MOMENT_INTENSITY_LOW : MOMENT_INTENSITY_HIGH); if (lull) { renderer.setFog(1); renderer.setAshes(ASHES_LULL); } }
+      else { music.setIntensity(baseIntensity); if (lull) renderer.setAshes(ASHES_NORMAL); }
+    }));
   }
 
   /** Écran de Reliques : les deux propositions de la run (game/relics.js), sauf choix déjà fait. */
@@ -78,8 +90,9 @@ export function createRun(deps) {
       }
       const parish = dataDef('parishes', p.parishId) || {};
       lighting.setAmbient(parish.ambient || '#16130f');
-      renderer.setFog(1); renderer.setAshes(0.6); renderer.setVignette(0.35); renderer.setGrain(0.25);
+      renderer.setFog(1); renderer.setAshes(ASHES_NORMAL); renderer.setVignette(0.35); renderer.setGrain(0.25);
       camera.setZoom(1, 0);
+      baseIntensity = music.getIntensity ? music.getIntensity() : 0.5;
       try {
         deps.game.startGame({ parishId: p.parishId, characterId: p.characterId, seed: p.seed, weaponId: p.weaponId || null });
       } catch (e) {
@@ -104,7 +117,8 @@ export function createRun(deps) {
       hud.dispose();
       if (deps.game) deps.game.endGame();
       camera.setZoom(1, 0);
-      renderer.setVignette(0.35); renderer.setGrain(0.25);
+      renderer.setVignette(0.35); renderer.setGrain(0.25); renderer.setAshes(ASHES_NORMAL);
+      music.setIntensity(baseIntensity);
     },
     update(dt, realDt) {
       if (!active) return;

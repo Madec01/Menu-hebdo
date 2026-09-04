@@ -2,7 +2,11 @@
 // cap par type), paliers de Sourdine toutes les tierEvery s (`run:tier`), sonnerie horaire
 // (`run:minute`), Fêlures (élites) et boss aux `events`. Les ennemis apparaissent hors écran,
 // sur un anneau autour du joueur (angle tiré au rng du run). Après le boss, le flux régulier
-// est réduit (balance.spawn.afterBossRate).
+// est réduit (balance.spawn.afterBossRate). Les Moments scriptés (moments.js) vivent à côté : une
+// accalmie suspend le flux régulier (world.moments.noSpawn) ; la durée de la nuit est `duration`.
+// Difficulté par paroisse (`waves.<paroisse>.difficulty: { hp, damage }`) : appliquée par scaleNewEnemies
+// (hook de world.js après updateEnemies) à tout ennemi nouvellement apparu, boss exclus — quelle que soit sa
+// source (flux, Moment, Fêlure, invocation) — pour tenir le « +25 % par paroisse » indépendamment de l'XP.
 
 import { bus } from '../core/events.js';
 import { play as playSfx } from '../audio/sfx.js';
@@ -16,8 +20,24 @@ const tierPayload = { tier: 1 };
 /** État du spawner, attaché au monde (world.spawner). */
 export function createSpawner(waveDef) {
   return {
-    def: waveDef, acc: new Float64Array(waveDef.spawns.length), nextMinute: 1, eventIdx: 0, bossStarted: false,
+    def: waveDef, acc: new Float64Array(waveDef.spawns.length), nextMinute: 1, eventIdx: 0, bossStarted: false, scaledId: 0,
   };
+}
+
+/** Difficulté de la paroisse sur les ennemis apparus depuis le dernier appel (ids croissants). */
+export function scaleNewEnemies(world) {
+  const sp = world.spawner, d = sp.def.difficulty;
+  const items = world.enemies.items;
+  let maxId = sp.scaledId;
+  for (let i = 0; i < items.length; i++) {
+    const e = items[i];
+    if (e.id <= sp.scaledId) continue;
+    if (e.id > maxId) maxId = e.id;
+    if (e.boss || !d) continue;
+    e.maxHp = Math.max(1, Math.round(e.maxHp * (d.hp || 1))); e.hp = e.maxHp;
+    e.damage = Math.round(e.damage * (d.damage || 1));
+  }
+  sp.scaledId = maxId;
 }
 
 /** Position hors écran autour du joueur (écrit dans out). */
@@ -58,8 +78,8 @@ export function updateSpawner(world, dt, p) {
     if (ev.type === 'fissure') startFissure(world, ev.boss, p);
     else if (ev.type === 'boss') { startBoss(world, ev.boss, p); sp.bossStarted = true; }
   }
-  // Flux régulier.
-  if (p.dead || world.ended) return;
+  // Flux régulier (suspendu pendant une accalmie).
+  if (p.dead || world.ended || (world.moments && world.moments.noSpawn)) return;
   const density = (1 + S.densityPerTier * (tier - 1)) * (sp.bossStarted ? S.afterBossRate : 1);
   for (let i = 0; i < def.spawns.length; i++) {
     const s = def.spawns[i];
