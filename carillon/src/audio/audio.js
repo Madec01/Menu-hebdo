@@ -26,17 +26,17 @@ export async function initAudio({ options = null } = {}) {
   lowpass.type = 'lowpass';
   lowpass.frequency.value = LOWPASS_OPEN;
   lowpass.Q.value = 0.5;
-  const duck = ac.createGain();
+  const duckGain = ac.createGain();       // nœud de ducking (ne pas nommer « duck » : masquerait la fonction exportée)
   const music = ac.createGain();
   const sfx = ac.createGain();
   const ui = ac.createGain();
-  music.connect(duck);
-  duck.connect(lowpass);
+  music.connect(duckGain);
+  duckGain.connect(lowpass);
   sfx.connect(lowpass);
   ui.connect(lowpass);
   lowpass.connect(master);
   master.connect(ac.destination);
-  nodes = { master, lowpass, duck, music, sfx, ui };
+  nodes = { master, lowpass, duck: duckGain, music, sfx, ui };
   if (options) {
     for (const [key, name] of Object.entries(OPTION_KEYS)) {
       if (typeof options[key] === 'number') volumes[name] = options[key];
