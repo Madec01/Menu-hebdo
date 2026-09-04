@@ -42,7 +42,7 @@ export function achievementCondition(c, f, save) {
     case 'fusions_run': return f.fusions.length >= c.count;
     case 'fusions_unlocked': return save.unlocked.fusions.length >= c.count;
     case 'perfects_run': return f.perfects >= c.count;
-    case 'run_win_no_miss': return f.victory && f.misses === 0;
+    case 'run_win_no_miss': return f.victory && f.misses === 0 && f.inputs > 0 && f.assist !== 'norhythm';
     case 'boss_kill': return f.bossKilled === c.boss;
     case 'parishes_won': return keys(save.stats.winsByParish) >= c.count;
     case 'characters_won': return keys(save.stats.winsByCharacter) >= c.count;

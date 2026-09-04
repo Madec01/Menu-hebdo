@@ -106,7 +106,7 @@ function orbit(w, p, world) {
   }
   while (w.orbits.length < want) {
     resetSpec();
-    SPEC.kind = 'orbit'; SPEC.sprite = w.def.projectileSprite; SPEC.x = p.x; SPEC.y = p.y; SPEC.r = 10; SPEC.life = 0;
+    SPEC.kind = 'orbit'; SPEC.sprite = w.def.projectileSprite; SPEC.x = p.x; SPEC.y = p.y; SPEC.r = 12; SPEC.life = 0;
     SPEC.weaponId = w.id; SPEC.orbitR = radius; SPEC.knockback = w.stats.knockback;
     const o = spawnProjectile(world);
     if (!o) break;
@@ -123,16 +123,14 @@ function orbit(w, p, world) {
   return false;
 }
 
-/** Bourdon : anneau d'onde de choc au sol ; count > 1 = anneaux concentriques plus larges. */
+/** Bourdon : anneau d'onde de choc au sol ; count > 1 = anneaux successifs (chacun frappe tout le disque, plus large). */
 function shockwave(w, p, world) {
   const dmg = baseDamage(w, p);
   const chain = w.def.behavior === 'shockwave_chain';
-  let inner = 0;
   for (let k = 0; k < w.stats.count; k++) {
-    const range = w.stats.range * w.stats.area * (1 + 0.5 * k);
-    instantArea(w, p, world, p.x, p.y, range, 0, 0, -2, inner, dmg, w.stats.knockback, chain);
-    fxSprite(world, w.def.projectileSprite, p.x, p.y, w.stats.duration, 0.3, (range * 2) / 72, true, 0, 0);
-    inner = range;
+    const range = w.stats.range * w.stats.area * (1 + 0.35 * k);
+    instantArea(w, p, world, p.x, p.y, range, 0, 0, -2, 0, dmg, w.stats.knockback, chain);
+    fxSprite(world, w.def.projectileSprite, p.x, p.y, w.stats.duration * (1 + 0.4 * k), 0.3, (range * 2) / 72, true, 0, 0);
   }
   shake(chain ? 5 : 3, 0.2);
   return true;
@@ -169,14 +167,14 @@ function aura(w, p, world) {
   return screen || n >= 6;
 }
 
-/** Cor de Brume : cône perforant devant ; count > 1 ajoute des cônes latéraux. */
+/** Cor de Brume : cône perforant devant ; count > 1 ajoute des cônes décalés de ±20° (l'avant reste couvert). */
 function cone(w, p, world) {
   const f = facing(p);
   const range = w.stats.range * w.stats.area;
   const dmg = baseDamage(w, p);
   const base = Math.atan2(f.y, f.x);
   for (let k = 0; k < w.stats.count; k++) {
-    const a = base + (k === 0 ? 0 : (k % 2 ? 1 : -1) * 0.8 * Math.ceil(k / 2));
+    const a = base + (k === 0 ? 0 : (k % 2 ? 1 : -1) * 0.35 * Math.ceil(k / 2));
     instantArea(w, p, world, p.x, p.y, range, Math.cos(a), Math.sin(a), Math.cos(0.52), 0, dmg, w.stats.knockback, false);
     fxSprite(world, w.def.projectileSprite, p.x, p.y, w.stats.duration, 0.8, range / 14, false, Math.cos(a) * range / w.stats.duration, Math.sin(a) * range / w.stats.duration);
   }

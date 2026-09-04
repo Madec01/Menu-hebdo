@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>CARILLON — test gameplay (agent D)</title>
+<style>
+  body { background: #16130f; color: #d8cdb4; font: 14px/1.4 monospace; margin: 16px; }
+  canvas { image-rendering: pixelated; border: 1px solid #c9973f; display: block; margin: 8px 0; }
+  pre { white-space: pre-wrap; }
+  .ok { color: #9c6; } .ko { color: #e0603a; }
+</style>
+</head>
+<body>
+<h1>CARILLON — test gameplay</h1>
+<p>Stubs : input, audio, conductor, sfx, lighting, particles, fx. Réels : events, pool, grid, rng, save, atlas, camera + tout src/game/.</p>
+<canvas id="game" width="480" height="270" style="width:960px;height:540px"></canvas>
+<pre id="log">chargement…</pre>
+<script>
+  // Import map : redirige les modules core/audio/render que les tests remplacent par des stubs.
+  // Les modules de game/ importent '../core/input.js' → résolu en /carillon/src/core/input.js → stub.
+  (function () {
+    var params = new URLSearchParams(location.search);
+    var base = location.pathname.replace(/\/game\/_test\/.*$/, '');
+    var map = { imports: {} };
+    var stubs = { 'core/input.js': 'input.js', 'audio/audio.js': 'audio.js', 'audio/conductor.js': 'conductor.js',
+                  'audio/sfx.js': 'sfx.js', 'render/lighting.js': 'lighting.js', 'render/particles.js': 'particles.js', 'render/fx.js': 'fx.js' };
+    for (var k in stubs) map.imports[base + '/' + k] = './stubs/' + stubs[k];
+    var s = document.createElement('script'); s.type = 'importmap'; s.textContent = JSON.stringify(map);
+    document.currentScript.after(s);
+    var m = document.createElement('script'); m.type = 'module'; m.src = './game-test.js';
+    s.after(m);
+  })();
+</script>
+</body>
+</html>

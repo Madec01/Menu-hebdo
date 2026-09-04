@@ -162,7 +162,7 @@ export function finishRun(run, victory) {
   const facts = {
     parishId: run.parishId, characterId: run.characterId, timeSec: run.timeSec, victory, bossKilled: run.bossKilled,
     fusions: run.fusions, maxTierTime: maxTierTime(), echoes: run.echoes, perfects: run.perfects, misses: run.misses,
-    assist: run.assist, weaponCount: p ? p.weapons.length : 0, passiveCount: p ? p.passives.length : 0,
+    assist: run.assist, inputs: run.inputs, weaponCount: p ? p.weapons.length : 0, passiveCount: p ? p.passives.length : 0,
   };
   evaluateUnlocks(facts, save, unlockOut);
   commit();

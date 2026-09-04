@@ -1,8 +1,8 @@
 {
  "balance": {
   "xp": {
-   "base": 25,
-   "perLevel": 12,
+   "base": 20,
+   "perLevel": 6,
    "growth": 1.02,
    "startLevel": 1
   },
@@ -24,7 +24,7 @@
    "iframesSec": 0.25,
    "parrySec": 0.2,
    "parryRadius": 40,
-   "hitInvulnSec": 0.5,
+   "hitInvulnSec": 0.6,
    "contactCooldownSec": 0.6,
    "auraSlow": 0.3,
    "reviveHp": 0.5,
@@ -57,13 +57,13 @@
    "separationForce": 60
   },
   "pickups": {
-   "magnetRadius": 60,
+   "magnetRadius": 90,
    "magnetSpeed": 260,
    "collectRadius": 12,
    "mediumAt": 5,
    "largeAt": 15,
    "healPct": 0.3,
-   "healChance": 0.015,
+   "healChance": 0.03,
    "chimeChance": 0.003,
    "bronzeChance": 0.01,
    "bronzeValue": 5,
