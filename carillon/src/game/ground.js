@@ -47,18 +47,56 @@ function noise(s, x, y, cell) {
   return (a * (1 - tx) + b * tx) * (1 - ty) + (c * (1 - tx) + d * tx) * ty;
 }
 
-/** Tuile d'une case : la nappe la plus « haute » qui dépasse son seuil, sinon la base. */
-function pickGround(ground, tx, ty) {
+function smooth(v, a, b) { const t = Math.max(0, Math.min(1, (v - a) / (b - a))); return t * t * (3 - 2 * t); }
+
+/**
+ * Peint une case : la tuile de base partout (uniforme, jamais de tirage par case), puis les
+ * variantes du groupe de base et les nappes des autres groupes FONDUES par bruit basse fréquence
+ * (alpha progressif) : aucun bord franc de carreau, aucun damier haute fréquence.
+ */
+function paintCell(g, ground, tx, ty, px, py) {
   const groups = ground.groups, seed = ground.seed;
-  let gi = 0;
-  for (let k = groups.length - 1; k >= 1; k--) {
-    if (noise(seed + k * 7919, tx, ty, 5 + k) > 0.62 + 0.03 * k) { gi = k; break; }
+  const base = groups[0];
+  drawTile(g, ground.tileset, base[0], px, py);
+  // Variantes du groupe de base : nappes larges (cellule 6), fondu doux, jamais plus de 70 %.
+  if (base.length > 1) {
+    const n = noise(seed + 101, tx, ty, 6);
+    const a = smooth(n, 0.52, 0.8) * 0.7;
+    if (a > 0.02) {
+      const vi = 1 + Math.floor(noise(seed + 103, tx, ty, 9) * (base.length - 1)) % base.length;
+      g.globalAlpha = a; drawTile(g, ground.tileset, base[Math.min(vi, base.length - 1)], px, py); g.globalAlpha = 1;
+    }
   }
-  const tiles = groups[gi];
-  // Les premières tuiles d'un groupe sont les plus unies : pondération vers elles.
-  const r = hash3f(seed + 1, tx, ty);
-  const idx = r < 0.6 ? Math.floor(hash3f(seed + 2, tx, ty) * Math.min(2, tiles.length)) : Math.floor(hash3f(seed + 3, tx, ty) * tiles.length);
-  return tiles[idx];
+  // Nappes des autres groupes (cellule 9 + k) : grandes taches rares, bords fondus.
+  for (let k = 1; k < groups.length; k++) {
+    const n = noise(seed + k * 7919, tx, ty, 9 + k);
+    const a = smooth(n, 0.58 + 0.03 * k, 0.8 + 0.03 * k);
+    if (a <= 0.02) continue;
+    const tiles = groups[k];
+    const ti = Math.floor(noise(seed + 200 + k, tx, ty, 7) * tiles.length) % tiles.length;
+    g.globalAlpha = a; drawTile(g, ground.tileset, tiles[ti], px, py); g.globalAlpha = 1;
+  }
+}
+
+/** Ombrage doux du sol (multiply) : taches sombres larges qui cassent la grille des carreaux.
+ *  Les taches des 8 chunks voisins sont aussi peintes (décalées) pour qu'aucune couture n'apparaisse. */
+function shadeChunk(g, ground, cx, cy) {
+  g.save();
+  g.globalCompositeOperation = 'multiply';
+  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+    const ox = dx * CHUNK, oy = dy * CHUNK, ncx = cx + dx, ncy = cy + dy;
+    const n = 7 + Math.floor(hash3f(ground.seed + 300, ncx, ncy) * 4);
+    for (let i = 0; i < n; i++) {
+      const x = ox + hash3f(ground.seed + 310 + i, ncx, ncy) * CHUNK, y = oy + hash3f(ground.seed + 320 + i, ncx, ncy) * CHUNK;
+      const r = 70 + hash3f(ground.seed + 330 + i, ncx, ncy) * 130;
+      if (x + r < 0 || x - r > CHUNK || y + r < 0 || y - r > CHUNK) continue;
+      const grad = g.createRadialGradient(x, y, 0, x, y, r);
+      const k = 0.22 + hash3f(ground.seed + 340 + i, ncx, ncy) * 0.16;
+      grad.addColorStop(0, `rgba(22, 19, 15, ${k})`); grad.addColorStop(1, 'rgba(22, 19, 15, 0)');
+      g.fillStyle = grad; g.fillRect(x - r, y - r, r * 2, r * 2);
+    }
+  }
+  g.restore();
 }
 
 function buildChunk(ground, cx, cy) {
@@ -72,12 +110,13 @@ function buildChunk(ground, cx, cy) {
     const propTiles = ground.propTiles;
     for (let ty = 0; ty < n; ty++) for (let tx = 0; tx < n; tx++) {
       const wx = cx * n + tx, wy = cy * n + ty;
-      drawTile(g, ground.tileset, pickGround(ground, wx, wy), tx * TILE, ty * TILE);
+      paintCell(g, ground, wx, wy, tx * TILE, ty * TILE);
       // Petits props au sol (rochers, os, touffes) : rares.
       if (propTiles.length && hash3f(ground.seed + 7, wx, wy) < 0.04) {
         drawTile(g, ground.tileset, propTiles[Math.floor(hash3f(ground.seed + 8, wx, wy) * propTiles.length)], tx * TILE, ty * TILE);
       }
     }
+    shadeChunk(g, ground, cx, cy);
   }
   // Props hauts (2 à 4 par chunk) et lumières (0 à 2), positions déterministes.
   const entry = { canvas, props: [], x: cx * CHUNK, y: cy * CHUNK };
