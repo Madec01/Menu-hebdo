@@ -75,9 +75,11 @@ function applyLayers(sec = XFADE_SEC) {
   const track = tracks.get(active.id);
   track.score.layers.forEach((layer, li) => {
     const g = active.gains[li].gain;
+    const target = layerTarget(layer, layersWanted);
+    active.targets[li] = target;
     g.cancelScheduledValues(t);
     g.setValueAtTime(g.value, t);
-    g.linearRampToValueAtTime(layerTarget(layer, layersWanted), t + sec);
+    g.linearRampToValueAtTime(target, t + sec);
   });
 }
 
@@ -104,7 +106,7 @@ export async function play(trackId, { layers = 1, fadeSec = 1 } = {}) {
     g.connect(busNode('music'));
     return g;
   });
-  const me = { id: trackId, gains, startBeat, unschedule: null, fadeIn: fadeSec };
+  const me = { id: trackId, gains, startBeat, unschedule: null, targets: track.score.layers.map((l) => layerTarget(l, layersWanted)) };
   me.unschedule = conductor.schedule(STEP, (at, beatPos) => {
     // beatPos est en temps (fractionnaire) ; la grille de tempo peut avoir changé : on se cale sur les temps
     const rel = beatPos - me.startBeat;
@@ -153,8 +155,11 @@ export function setLayers(n) {
 
 export function current() { return active ? active.id : null; }
 export function layers() { return layersWanted; }
-/** Gains courants des couches de la piste active (tests / HUD de debug). */
+/** Gains des couches de la piste active (tests / HUD de debug). `layerGains()` lit AudioParam.value,
+ *  que Chromium ne met à jour que pour les nœuds qui reçoivent du signal (couches clairsemées : valeur
+ *  périmée) ; `layerTargets()` donne les cibles des fondus en cours. */
 export function layerGains() { return active ? active.gains.map((g) => g.gain.value) : []; }
+export function layerTargets() { return active ? active.targets.slice() : []; }
 
 /** Variation continue 0..1 : gains `intensityGain` des couches et couches `minIntensity` (ornements). */
 export function setIntensity(v) {

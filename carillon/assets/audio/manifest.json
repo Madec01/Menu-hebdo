@@ -1669,8 +1669,8 @@
   "hub": {
    "score": "src/data/music/hub.json",
    "bpm": 88,
-   "bars": 8,
-   "status": "esquisse",
+   "bars": 16,
+   "status": "complete",
    "title": "Le Beffroi Mère — carte des paroisses",
    "credit": "original"
   },
@@ -1685,56 +1685,56 @@
   "tourbes": {
    "score": "src/data/music/tourbes.json",
    "bpm": 88,
-   "bars": 8,
-   "status": "esquisse",
+   "bars": 16,
+   "status": "complete",
    "title": "Les Tourbes — la marche des noyés",
    "credit": "original"
   },
   "val_des_cordes": {
    "score": "src/data/music/val_des_cordes.json",
    "bpm": 104,
-   "bars": 8,
-   "status": "esquisse",
+   "bars": 16,
+   "status": "complete",
    "title": "Val-des-Cordes — la ronde des pendus",
    "credit": "original"
   },
   "nef_noyee": {
    "score": "src/data/music/nef_noyee.json",
    "bpm": 84,
-   "bars": 8,
-   "status": "esquisse",
+   "bars": 16,
+   "status": "complete",
    "title": "La Nef Noyée — psaume sous l'eau",
    "credit": "original"
   },
   "beffroi_mere": {
    "score": "src/data/music/beffroi_mere.json",
    "bpm": 100,
-   "bars": 8,
-   "status": "esquisse",
+   "bars": 16,
+   "status": "complete",
    "title": "Le Beffroi Mère — la cloche-mère",
    "credit": "original"
   },
   "boss": {
    "score": "src/data/music/boss.json",
    "bpm": 110,
-   "bars": 8,
-   "status": "esquisse",
+   "bars": 16,
+   "status": "complete",
    "title": "Le Bourdon Fêlé",
    "credit": "original"
   },
   "victory": {
    "score": "src/data/music/victory.json",
    "bpm": 96,
-   "bars": 8,
-   "status": "esquisse",
+   "bars": 16,
+   "status": "complete",
    "title": "L'aube sonnée",
    "credit": "original"
   },
   "death": {
    "score": "src/data/music/death.json",
    "bpm": 72,
-   "bars": 8,
-   "status": "esquisse",
+   "bars": 16,
+   "status": "complete",
    "title": "Le Silence a mangé le son",
    "credit": "original"
   }

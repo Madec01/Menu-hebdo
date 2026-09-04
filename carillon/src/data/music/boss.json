@@ -1,10 +1,10 @@
 {
  "id": "boss",
  "title": "Le Bourdon Fêlé",
- "status": "esquisse",
+ "status": "complete",
  "bpm": 110,
  "beatsPerBar": 4,
- "bars": 8,
+ "bars": 16,
  "key": "D",
  "mode": "éolien",
  "layers": [
@@ -31,6 +31,30 @@
      "beat": 0,
      "note": "D2",
      "dur": 8
+    },
+    {
+     "bar": 8,
+     "beat": 0,
+     "note": "D2",
+     "dur": 8
+    },
+    {
+     "bar": 10,
+     "beat": 0,
+     "note": "F2",
+     "dur": 8
+    },
+    {
+     "bar": 12,
+     "beat": 0,
+     "note": "A#1",
+     "dur": 8
+    },
+    {
+     "bar": 14,
+     "beat": 0,
+     "note": "D2",
+     "dur": 8
     }
    ]
   },
@@ -42,6 +66,12 @@
    "events": [
     {
      "bar": 0,
+     "beat": 0,
+     "note": "drone",
+     "dur": 32
+    },
+    {
+     "bar": 8,
      "beat": 0,
      "note": "drone",
      "dur": 32
@@ -83,7 +113,11 @@
      ]
     ]
    },
-   "repeatBars": 1
+   "repeatBars": 1,
+   "intensityGain": [
+    0.8,
+    1.0
+   ]
   },
   {
    "tier": 1,
@@ -138,6 +172,27 @@
     ]
    },
    "repeatBars": 1
+  },
+  {
+   "tier": 1,
+   "name": "crecelle",
+   "instrument": "ratchet",
+   "gain": 0.35,
+   "events": [
+    {
+     "bar": 7,
+     "beat": 3,
+     "note": "crank",
+     "dur": 1
+    },
+    {
+     "bar": 15,
+     "beat": 2,
+     "note": "fast",
+     "dur": 2
+    }
+   ],
+   "minIntensity": 0.6
   },
   {
    "tier": 2,
@@ -324,6 +379,186 @@
      "beat": 0.0,
      "note": "D4",
      "dur": 4.0
+    },
+    {
+     "bar": 8,
+     "beat": 0.0,
+     "note": "D4",
+     "dur": 0.5
+    },
+    {
+     "bar": 8,
+     "beat": 0.5,
+     "note": "D4",
+     "dur": 0.5
+    },
+    {
+     "bar": 8,
+     "beat": 1.0,
+     "note": "A4",
+     "dur": 1.0
+    },
+    {
+     "bar": 8,
+     "beat": 2.0,
+     "note": "A#4",
+     "dur": 1.0
+    },
+    {
+     "bar": 8,
+     "beat": 3.0,
+     "note": "A4",
+     "dur": 1.0
+    },
+    {
+     "bar": 9,
+     "beat": 0.0,
+     "note": "G4",
+     "dur": 0.5
+    },
+    {
+     "bar": 9,
+     "beat": 0.5,
+     "note": "G4",
+     "dur": 0.5
+    },
+    {
+     "bar": 9,
+     "beat": 1.0,
+     "note": "F4",
+     "dur": 1.0
+    },
+    {
+     "bar": 9,
+     "beat": 2.0,
+     "note": "D4",
+     "dur": 2.0
+    },
+    {
+     "bar": 10,
+     "beat": 0.0,
+     "note": "F4",
+     "dur": 0.5
+    },
+    {
+     "bar": 10,
+     "beat": 0.5,
+     "note": "F4",
+     "dur": 0.5
+    },
+    {
+     "bar": 10,
+     "beat": 1.0,
+     "note": "A4",
+     "dur": 1.0
+    },
+    {
+     "bar": 10,
+     "beat": 2.0,
+     "note": "C5",
+     "dur": 1.0
+    },
+    {
+     "bar": 10,
+     "beat": 3.0,
+     "note": "A#4",
+     "dur": 1.0
+    },
+    {
+     "bar": 11,
+     "beat": 0.0,
+     "note": "A4",
+     "dur": 2.0
+    },
+    {
+     "bar": 11,
+     "beat": 2.0,
+     "note": "F4",
+     "dur": 2.0
+    },
+    {
+     "bar": 12,
+     "beat": 0.0,
+     "note": "A#3",
+     "dur": 0.5
+    },
+    {
+     "bar": 12,
+     "beat": 0.5,
+     "note": "A#3",
+     "dur": 0.5
+    },
+    {
+     "bar": 12,
+     "beat": 1.0,
+     "note": "D4",
+     "dur": 1.0
+    },
+    {
+     "bar": 12,
+     "beat": 2.0,
+     "note": "F4",
+     "dur": 1.0
+    },
+    {
+     "bar": 12,
+     "beat": 3.0,
+     "note": "A4",
+     "dur": 1.0
+    },
+    {
+     "bar": 13,
+     "beat": 0.0,
+     "note": "G#4",
+     "dur": 0.5
+    },
+    {
+     "bar": 13,
+     "beat": 0.5,
+     "note": "G#4",
+     "dur": 0.5
+    },
+    {
+     "bar": 13,
+     "beat": 1.0,
+     "note": "A4",
+     "dur": 1.0
+    },
+    {
+     "bar": 13,
+     "beat": 2.0,
+     "note": "F4",
+     "dur": 2.0
+    },
+    {
+     "bar": 14,
+     "beat": 0.0,
+     "note": "E4",
+     "dur": 1.0
+    },
+    {
+     "bar": 14,
+     "beat": 1.0,
+     "note": "F4",
+     "dur": 1.0
+    },
+    {
+     "bar": 14,
+     "beat": 2.0,
+     "note": "E4",
+     "dur": 1.0
+    },
+    {
+     "bar": 14,
+     "beat": 3.0,
+     "note": "C#4",
+     "dur": 1.0
+    },
+    {
+     "bar": 15,
+     "beat": 0.0,
+     "note": "D4",
+     "dur": 4.0
     }
    ]
   },
@@ -371,6 +606,54 @@
     },
     {
      "bar": 7,
+     "beat": 0.0,
+     "note": "D6",
+     "dur": 4.0
+    },
+    {
+     "bar": 12,
+     "beat": 0.0,
+     "note": "F5",
+     "dur": 2.0
+    },
+    {
+     "bar": 12,
+     "beat": 2.0,
+     "note": "A5",
+     "dur": 2.0
+    },
+    {
+     "bar": 13,
+     "beat": 0.0,
+     "note": "A#5",
+     "dur": 2.0
+    },
+    {
+     "bar": 13,
+     "beat": 2.0,
+     "note": "A5",
+     "dur": 2.0
+    },
+    {
+     "bar": 14,
+     "beat": 0.0,
+     "note": "G#5",
+     "dur": 1.0
+    },
+    {
+     "bar": 14,
+     "beat": 1.0,
+     "note": "A5",
+     "dur": 1.0
+    },
+    {
+     "bar": 14,
+     "beat": 2.0,
+     "note": "C#6",
+     "dur": 2.0
+    },
+    {
+     "bar": 15,
      "beat": 0.0,
      "note": "D6",
      "dur": 4.0
@@ -454,6 +737,102 @@
      "beat": 0,
      "note": "D5",
      "dur": 8
+    },
+    {
+     "bar": 8,
+     "beat": 0,
+     "note": "D3",
+     "dur": 8
+    },
+    {
+     "bar": 8,
+     "beat": 0,
+     "note": "A3",
+     "dur": 8
+    },
+    {
+     "bar": 8,
+     "beat": 0,
+     "note": "F4",
+     "dur": 8
+    },
+    {
+     "bar": 8,
+     "beat": 0,
+     "note": "D5",
+     "dur": 8
+    },
+    {
+     "bar": 10,
+     "beat": 0,
+     "note": "F3",
+     "dur": 8
+    },
+    {
+     "bar": 10,
+     "beat": 0,
+     "note": "C4",
+     "dur": 8
+    },
+    {
+     "bar": 10,
+     "beat": 0,
+     "note": "A4",
+     "dur": 8
+    },
+    {
+     "bar": 10,
+     "beat": 0,
+     "note": "F5",
+     "dur": 8
+    },
+    {
+     "bar": 12,
+     "beat": 0,
+     "note": "A#2",
+     "dur": 8
+    },
+    {
+     "bar": 12,
+     "beat": 0,
+     "note": "F3",
+     "dur": 8
+    },
+    {
+     "bar": 12,
+     "beat": 0,
+     "note": "D4",
+     "dur": 8
+    },
+    {
+     "bar": 12,
+     "beat": 0,
+     "note": "A#4",
+     "dur": 8
+    },
+    {
+     "bar": 14,
+     "beat": 0,
+     "note": "D3",
+     "dur": 8
+    },
+    {
+     "bar": 14,
+     "beat": 0,
+     "note": "A3",
+     "dur": 8
+    },
+    {
+     "bar": 14,
+     "beat": 0,
+     "note": "F4",
+     "dur": 8
+    },
+    {
+     "bar": 14,
+     "beat": 0,
+     "note": "D5",
+     "dur": 8
     }
    ]
   },
@@ -474,6 +853,24 @@
      "beat": 0,
      "note": "hit",
      "dur": 4
+    },
+    {
+     "bar": 8,
+     "beat": 0,
+     "note": "hit",
+     "dur": 4
+    },
+    {
+     "bar": 12,
+     "beat": 0,
+     "note": "hit",
+     "dur": 4
+    },
+    {
+     "bar": 15,
+     "beat": 3,
+     "note": "scrape",
+     "dur": 1
     }
    ]
   },
@@ -506,6 +903,36 @@
      "beat": 0,
      "note": "F4",
      "dur": 2
+    },
+    {
+     "bar": 8,
+     "beat": 0,
+     "note": "D5",
+     "dur": 2
+    },
+    {
+     "bar": 9,
+     "beat": 2,
+     "note": "A#4",
+     "dur": 2
+    },
+    {
+     "bar": 12,
+     "beat": 0,
+     "note": "D4",
+     "dur": 2
+    },
+    {
+     "bar": 14,
+     "beat": 0,
+     "note": "C#5",
+     "dur": 2
+    },
+    {
+     "bar": 15,
+     "beat": 0,
+     "note": "D4",
+     "dur": 4
     }
    ]
   }

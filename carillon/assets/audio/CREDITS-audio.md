@@ -220,15 +220,15 @@ Fichiers livrés : 406 références, 34 instruments, 43 bruitages, 5 ambiances, 
 | id | titre | tempo | état |
 |---|---|---|---|
 | `menu` | Le dernier apprenti | 84 BPM, 16 mesures | complete |
-| `hub` | Le Beffroi Mère — carte des paroisses | 88 BPM, 8 mesures | esquisse |
+| `hub` | Le Beffroi Mère — carte des paroisses | 88 BPM, 16 mesures | complete |
 | `cendrelune` | Cendrelune — la veillée des cendres | 96 BPM, 16 mesures | complete |
-| `tourbes` | Les Tourbes — la marche des noyés | 88 BPM, 8 mesures | esquisse |
-| `val_des_cordes` | Val-des-Cordes — la ronde des pendus | 104 BPM, 8 mesures | esquisse |
-| `nef_noyee` | La Nef Noyée — psaume sous l'eau | 84 BPM, 8 mesures | esquisse |
-| `beffroi_mere` | Le Beffroi Mère — la cloche-mère | 100 BPM, 8 mesures | esquisse |
-| `boss` | Le Bourdon Fêlé | 110 BPM, 8 mesures | esquisse |
-| `victory` | L'aube sonnée | 96 BPM, 8 mesures | esquisse |
-| `death` | Le Silence a mangé le son | 72 BPM, 8 mesures | esquisse |
+| `tourbes` | Les Tourbes — la marche des noyés | 88 BPM, 16 mesures | complete |
+| `val_des_cordes` | Val-des-Cordes — la ronde des pendus | 104 BPM, 16 mesures | complete |
+| `nef_noyee` | La Nef Noyée — psaume sous l'eau | 84 BPM, 16 mesures | complete |
+| `beffroi_mere` | Le Beffroi Mère — la cloche-mère | 100 BPM, 16 mesures | complete |
+| `boss` | Le Bourdon Fêlé | 110 BPM, 16 mesures | complete |
+| `victory` | L'aube sonnée | 96 BPM, 16 mesures | complete |
+| `death` | Le Silence a mangé le son | 72 BPM, 16 mesures | complete |
 
 ## Sources examinées et rejetées
 

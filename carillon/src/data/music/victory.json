@@ -1,10 +1,10 @@
 {
  "id": "victory",
  "title": "L'aube sonnée",
- "status": "esquisse",
+ "status": "complete",
  "bpm": 96,
  "beatsPerBar": 4,
- "bars": 8,
+ "bars": 16,
  "key": "D",
  "mode": "mixolydien",
  "layers": [
@@ -28,6 +28,30 @@
     },
     {
      "bar": 6,
+     "beat": 0,
+     "note": "D2",
+     "dur": 8
+    },
+    {
+     "bar": 8,
+     "beat": 0,
+     "note": "D2",
+     "dur": 8
+    },
+    {
+     "bar": 10,
+     "beat": 0,
+     "note": "C2",
+     "dur": 8
+    },
+    {
+     "bar": 12,
+     "beat": 0,
+     "note": "G2",
+     "dur": 8
+    },
+    {
+     "bar": 14,
      "beat": 0,
      "note": "D2",
      "dur": 8
@@ -93,6 +117,78 @@
      "beat": 0,
      "note": "F#4",
      "dur": 8
+    },
+    {
+     "bar": 8,
+     "beat": 0,
+     "note": "D3",
+     "dur": 8
+    },
+    {
+     "bar": 8,
+     "beat": 0,
+     "note": "A3",
+     "dur": 8
+    },
+    {
+     "bar": 8,
+     "beat": 0,
+     "note": "F#4",
+     "dur": 8
+    },
+    {
+     "bar": 10,
+     "beat": 0,
+     "note": "C3",
+     "dur": 8
+    },
+    {
+     "bar": 10,
+     "beat": 0,
+     "note": "G3",
+     "dur": 8
+    },
+    {
+     "bar": 10,
+     "beat": 0,
+     "note": "E4",
+     "dur": 8
+    },
+    {
+     "bar": 12,
+     "beat": 0,
+     "note": "G3",
+     "dur": 8
+    },
+    {
+     "bar": 12,
+     "beat": 0,
+     "note": "D4",
+     "dur": 8
+    },
+    {
+     "bar": 12,
+     "beat": 0,
+     "note": "B4",
+     "dur": 8
+    },
+    {
+     "bar": 14,
+     "beat": 0,
+     "note": "D3",
+     "dur": 8
+    },
+    {
+     "bar": 14,
+     "beat": 0,
+     "note": "A3",
+     "dur": 8
+    },
+    {
+     "bar": 14,
+     "beat": 0,
+     "note": "F#4",
+     "dur": 8
     }
    ]
   },
@@ -126,7 +222,11 @@
      ]
     ]
    },
-   "repeatBars": 1
+   "repeatBars": 1,
+   "intensityGain": [
+    0.7,
+    1.0
+   ]
   },
   {
    "tier": 1,
@@ -154,6 +254,29 @@
     ]
    },
    "repeatBars": 1
+  },
+  {
+   "tier": 1,
+   "name": "grelots",
+   "instrument": "sleigh_bells",
+   "gain": 0.35,
+   "pattern": {
+    "steps": 8,
+    "hits": [
+     [
+      "shake",
+      0,
+      0.5
+     ],
+     [
+      "hit",
+      4,
+      0.4
+     ]
+    ]
+   },
+   "repeatBars": 1,
+   "minIntensity": 0.6
   },
   {
    "tier": 2,
@@ -298,6 +421,212 @@
      "beat": 0.0,
      "note": "D5",
      "dur": 4.0
+    },
+    {
+     "bar": 8,
+     "beat": 0.0,
+     "note": "A5",
+     "dur": 1.0
+    },
+    {
+     "bar": 8,
+     "beat": 1.0,
+     "note": "B5",
+     "dur": 1.0
+    },
+    {
+     "bar": 8,
+     "beat": 2.0,
+     "note": "D6",
+     "dur": 1.5
+    },
+    {
+     "bar": 8,
+     "beat": 3.5,
+     "note": "C6",
+     "dur": 0.5
+    },
+    {
+     "bar": 9,
+     "beat": 0.0,
+     "note": "B5",
+     "dur": 1.0
+    },
+    {
+     "bar": 9,
+     "beat": 1.0,
+     "note": "A5",
+     "dur": 1.0
+    },
+    {
+     "bar": 9,
+     "beat": 2.0,
+     "note": "F#5",
+     "dur": 2.0
+    },
+    {
+     "bar": 10,
+     "beat": 0.0,
+     "note": "G5",
+     "dur": 1.0
+    },
+    {
+     "bar": 10,
+     "beat": 1.0,
+     "note": "B5",
+     "dur": 1.0
+    },
+    {
+     "bar": 10,
+     "beat": 2.0,
+     "note": "D6",
+     "dur": 1.0
+    },
+    {
+     "bar": 10,
+     "beat": 3.0,
+     "note": "B5",
+     "dur": 1.0
+    },
+    {
+     "bar": 11,
+     "beat": 0.0,
+     "note": "A5",
+     "dur": 4.0
+    },
+    {
+     "bar": 12,
+     "beat": 0.0,
+     "note": "F#5",
+     "dur": 1.0
+    },
+    {
+     "bar": 12,
+     "beat": 1.0,
+     "note": "G5",
+     "dur": 1.0
+    },
+    {
+     "bar": 12,
+     "beat": 2.0,
+     "note": "A5",
+     "dur": 1.0
+    },
+    {
+     "bar": 12,
+     "beat": 3.0,
+     "note": "B5",
+     "dur": 1.0
+    },
+    {
+     "bar": 13,
+     "beat": 0.0,
+     "note": "C6",
+     "dur": 1.0
+    },
+    {
+     "bar": 13,
+     "beat": 1.0,
+     "note": "B5",
+     "dur": 1.0
+    },
+    {
+     "bar": 13,
+     "beat": 2.0,
+     "note": "A5",
+     "dur": 1.0
+    },
+    {
+     "bar": 13,
+     "beat": 3.0,
+     "note": "G5",
+     "dur": 1.0
+    },
+    {
+     "bar": 14,
+     "beat": 0.0,
+     "note": "F#5",
+     "dur": 1.5
+    },
+    {
+     "bar": 14,
+     "beat": 1.5,
+     "note": "E5",
+     "dur": 0.5
+    },
+    {
+     "bar": 14,
+     "beat": 2.0,
+     "note": "F#5",
+     "dur": 1.0
+    },
+    {
+     "bar": 14,
+     "beat": 3.0,
+     "note": "A5",
+     "dur": 1.0
+    },
+    {
+     "bar": 15,
+     "beat": 0.0,
+     "note": "D6",
+     "dur": 4.0
+    }
+   ]
+  },
+  {
+   "tier": 2,
+   "name": "violon",
+   "instrument": "violin",
+   "gain": 0.4,
+   "events": [
+    {
+     "bar": 0,
+     "beat": 0,
+     "note": "A4",
+     "dur": 8
+    },
+    {
+     "bar": 2,
+     "beat": 0,
+     "note": "B4",
+     "dur": 8
+    },
+    {
+     "bar": 4,
+     "beat": 0,
+     "note": "A4",
+     "dur": 8
+    },
+    {
+     "bar": 6,
+     "beat": 0,
+     "note": "F#4",
+     "dur": 8
+    },
+    {
+     "bar": 8,
+     "beat": 0,
+     "note": "A4",
+     "dur": 8
+    },
+    {
+     "bar": 10,
+     "beat": 0,
+     "note": "G4",
+     "dur": 8
+    },
+    {
+     "bar": 12,
+     "beat": 0,
+     "note": "B4",
+     "dur": 8
+    },
+    {
+     "bar": 14,
+     "beat": 0,
+     "note": "A4",
+     "dur": 8
     }
    ]
   },
@@ -372,6 +701,96 @@
      "beat": 0,
      "note": "D5",
      "dur": 8
+    },
+    {
+     "bar": 8,
+     "beat": 0,
+     "note": "D3",
+     "dur": 8
+    },
+    {
+     "bar": 8,
+     "beat": 0,
+     "note": "A3",
+     "dur": 8
+    },
+    {
+     "bar": 8,
+     "beat": 0,
+     "note": "F#4",
+     "dur": 8
+    },
+    {
+     "bar": 8,
+     "beat": 0,
+     "note": "D5",
+     "dur": 8
+    },
+    {
+     "bar": 10,
+     "beat": 0,
+     "note": "C3",
+     "dur": 8
+    },
+    {
+     "bar": 10,
+     "beat": 0,
+     "note": "G3",
+     "dur": 8
+    },
+    {
+     "bar": 10,
+     "beat": 0,
+     "note": "E4",
+     "dur": 8
+    },
+    {
+     "bar": 10,
+     "beat": 0,
+     "note": "C5",
+     "dur": 8
+    },
+    {
+     "bar": 12,
+     "beat": 0,
+     "note": "G3",
+     "dur": 8
+    },
+    {
+     "bar": 12,
+     "beat": 0,
+     "note": "D4",
+     "dur": 8
+    },
+    {
+     "bar": 12,
+     "beat": 0,
+     "note": "B4",
+     "dur": 8
+    },
+    {
+     "bar": 14,
+     "beat": 0,
+     "note": "D3",
+     "dur": 8
+    },
+    {
+     "bar": 14,
+     "beat": 0,
+     "note": "A3",
+     "dur": 8
+    },
+    {
+     "bar": 14,
+     "beat": 0,
+     "note": "F#4",
+     "dur": 8
+    },
+    {
+     "bar": 14,
+     "beat": 0,
+     "note": "D5",
+     "dur": 8
     }
    ]
   },
@@ -421,6 +840,54 @@
      "bar": 6,
      "beat": 0,
      "note": "D5",
+     "dur": 4
+    },
+    {
+     "bar": 8,
+     "beat": 0,
+     "note": "D4",
+     "dur": 2
+    },
+    {
+     "bar": 8,
+     "beat": 2,
+     "note": "A4",
+     "dur": 2
+    },
+    {
+     "bar": 10,
+     "beat": 0,
+     "note": "C5",
+     "dur": 2
+    },
+    {
+     "bar": 10,
+     "beat": 2,
+     "note": "E5",
+     "dur": 2
+    },
+    {
+     "bar": 12,
+     "beat": 0,
+     "note": "G4",
+     "dur": 2
+    },
+    {
+     "bar": 13,
+     "beat": 0,
+     "note": "B4",
+     "dur": 2
+    },
+    {
+     "bar": 14,
+     "beat": 0,
+     "note": "D5",
+     "dur": 2
+    },
+    {
+     "bar": 15,
+     "beat": 0,
+     "note": "D4",
      "dur": 4
     }
    ]

@@ -67,10 +67,10 @@ export async function loadAtlas(src, opts = NO_OPTS) {
 function buildShadow() {
   const c = document.createElement('canvas'); c.width = 64; c.height = 32;
   const g = c.getContext('2d');
-  const grad = g.createRadialGradient(32, 16, 2, 32, 16, 16);
+  g.setTransform(1, 0, 0, 0.5, 0, 0); // espace 64×64 écrasé en 64×32
+  const grad = g.createRadialGradient(32, 32, 4, 32, 32, 32);
   grad.addColorStop(0, 'rgba(0,0,0,0.55)'); grad.addColorStop(1, 'rgba(0,0,0,0)');
-  g.setTransform(1, 0, 0, 1, 0, 0); g.scale(1, 1);
-  g.fillStyle = grad; g.setTransform(2, 0, 0, 1, -32, 0); g.fillRect(0, 0, 64, 32);
+  g.fillStyle = grad; g.fillRect(0, 0, 64, 64);
   shadowSprite = c;
 }
 
