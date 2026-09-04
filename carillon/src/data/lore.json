@@ -1,0 +1,30 @@
+[
+  { "id": "f01", "title": "lore.f01.title", "text": "lore.f01.text", "unlock": { "type": "run_minute", "parish": "cendrelune", "minute": 4 } },
+  { "id": "f02", "title": "lore.f02.title", "text": "lore.f02.text", "unlock": { "type": "run_minute", "parish": "cendrelune", "minute": 8 } },
+  { "id": "f03", "title": "lore.f03.title", "text": "lore.f03.text", "unlock": { "type": "kills", "enemy": "feutre", "count": 100 } },
+  { "id": "f04", "title": "lore.f04.title", "text": "lore.f04.text", "unlock": { "type": "boss_kill", "boss": "bourdon_fele" } },
+  { "id": "f05", "title": "lore.f05.title", "text": "lore.f05.text", "unlock": { "type": "run_win", "parish": "cendrelune" } },
+
+  { "id": "f06", "title": "lore.f06.title", "text": "lore.f06.text", "unlock": { "type": "run_minute", "parish": "tourbes", "minute": 4 } },
+  { "id": "f07", "title": "lore.f07.title", "text": "lore.f07.text", "unlock": { "type": "kills", "enemy": "ouateux", "count": 40 } },
+  { "id": "f08", "title": "lore.f08.title", "text": "lore.f08.text", "unlock": { "type": "character", "character": "osric" } },
+  { "id": "f09", "title": "lore.f09.title", "text": "lore.f09.text", "unlock": { "type": "kills", "enemy": "baillon", "count": 60 } },
+  { "id": "f10", "title": "lore.f10.title", "text": "lore.f10.text", "unlock": { "type": "run_win", "parish": "tourbes" } },
+
+  { "id": "f11", "title": "lore.f11.title", "text": "lore.f11.text", "unlock": { "type": "run_minute", "parish": "val_des_cordes", "minute": 4 } },
+  { "id": "f12", "title": "lore.f12.title", "text": "lore.f12.text", "unlock": { "type": "character", "character": "le_muet" } },
+  { "id": "f13", "title": "lore.f13.title", "text": "lore.f13.text", "unlock": { "type": "fusion", "fusion": "glas" } },
+  { "id": "f14", "title": "lore.f14.title", "text": "lore.f14.text", "unlock": { "type": "kills", "enemy": "veuve_grise", "count": 30 } },
+  { "id": "f15", "title": "lore.f15.title", "text": "lore.f15.text", "unlock": { "type": "character", "character": "maren" } },
+
+  { "id": "f16", "title": "lore.f16.title", "text": "lore.f16.text", "unlock": { "type": "run_minute", "parish": "nef_noyee", "minute": 4 } },
+  { "id": "f17", "title": "lore.f17.title", "text": "lore.f17.text", "unlock": { "type": "kills", "enemy": "cierge", "count": 50 } },
+  { "id": "f18", "title": "lore.f18.title", "text": "lore.f18.text", "unlock": { "type": "boss_kill", "boss": "veuve_suie" } },
+  { "id": "f19", "title": "lore.f19.title", "text": "lore.f19.text", "unlock": { "type": "resonance_max_time", "seconds": 60 } },
+  { "id": "f20", "title": "lore.f20.title", "text": "lore.f20.text", "unlock": { "type": "runs", "count": 10 } },
+
+  { "id": "f21", "title": "lore.f21.title", "text": "lore.f21.text", "unlock": { "type": "run_minute", "parish": "beffroi_mere", "minute": 4 } },
+  { "id": "f22", "title": "lore.f22.title", "text": "lore.f22.text", "unlock": { "type": "fusion", "fusion": "requiem" } },
+  { "id": "f23", "title": "lore.f23.title", "text": "lore.f23.text", "unlock": { "type": "boss_kill", "boss": "maitre" } },
+  { "id": "f24", "title": "lore.f24.title", "text": "lore.f24.text", "unlock": { "type": "run_win", "parish": "beffroi_mere", "character": "le_muet" } }
+]

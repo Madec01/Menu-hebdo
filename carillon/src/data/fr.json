@@ -1,0 +1,342 @@
+{
+  "title": {
+    "tagline": "Sonne jusqu'à l'aube."
+  },
+  "hub": {
+    "intro": "Le Beffroi Mère. La carte des paroisses est clouée au mur, une croix de charbon par nuit perdue. Choisis où tu vas sonner."
+  },
+  "codex": {
+    "intro": "Ce que le Battant a vu, il ne l'oublie pas. Voici ce qu'il a retenu des choses qui marchent dans la brume."
+  },
+  "tutorial": {
+    "move": "Marche. ZQSD, ou les flèches. Le sol se souvient de tes pas ; moi aussi, c'est mon travail.",
+    "wave": "Ils sortent de la brume. Ils ne t'entendent pas : ils sentent le bronze. Ne les laisse pas te toucher.",
+    "beat1": "Écoute. Un, deux, trois, quatre. C'est moi qui bats dans ta poitrine. Appuie sur Espace quand le halo touche le sol.",
+    "beat2": "Encore. Sur le temps, pas à côté. Tu entends ? Le tambour vient d'entrer.",
+    "beat3": "Une troisième fois. Là. Quand tu tiens la Mesure, je frappe plus fort, et la nuit chante avec nous.",
+    "levelup": "Les Échos te montent au cœur. Choisis un Timbre ou un Accord ; je m'y ferai.",
+    "goal": "Tiens jusqu'à l'aube. Douze minutes. À la fin il y aura un Bourdon, et il faudra le faire taire.",
+    "done": "C'est tout ce que je sais. Le reste, on l'apprend en sonnant."
+  },
+  "weapon": {
+    "battant": {
+      "name": "Battant",
+      "desc": "Frappe en arc devant toi sur chaque temps : {damage} dégâts.",
+      "voice": "Un coup, un temps. C'est ainsi qu'on m'a cousu."
+    },
+    "clarine": {
+      "name": "Clarine",
+      "desc": "{count} clarines tournent autour de toi et frappent ce qu'elles croisent : {damage} dégâts.",
+      "voice": "Les vaches rentraient à ce son. Les Feutres, eux, reculent."
+    },
+    "bourdon": {
+      "name": "Bourdon",
+      "desc": "Tous les quatre temps, une onde de {area} pas repousse tout ce qui l'entend : {damage} dégâts.",
+      "voice": "La note la plus basse est celle qui va le plus loin."
+    },
+    "grelots": {
+      "name": "Grelots",
+      "desc": "Lance {count} grelots en éventail à chaque croche : {damage} dégâts chacun.",
+      "voice": "Maren en cousait au cou des agneaux pour ne pas les perdre dans le marais."
+    },
+    "tocsin": {
+      "name": "Tocsin",
+      "desc": "Un cercle de {area} pas autour de toi mord tout ce qui y entre, sur le temps : {damage} dégâts.",
+      "voice": "Quand il sonne, on ne demande pas pourquoi. On court."
+    },
+    "cor_de_brume": {
+      "name": "Cor de Brume",
+      "desc": "Souffle un cône de brume tous les deux temps : {damage} dégâts et ralentit ce qu'il touche.",
+      "voice": "Le cor des passeurs de la Nef. Il ne perce pas la brume, il la repousse."
+    },
+    "crecelle": {
+      "name": "Crécelle",
+      "desc": "Crépite {count} éclats vers l'ennemi le plus proche à chaque croche : {damage} dégâts.",
+      "voice": "Le bois qu'on agite quand le bronze doit se taire, le Vendredi saint."
+    },
+    "chaine_d_angelus": {
+      "name": "Chaîne d'Angélus",
+      "desc": "Sur le temps, l'angélus saute d'ennemi en ennemi, {count} fois : {damage} dégâts.",
+      "voice": "Trois fois trois coups, matin, midi et soir. Elle connaît le chemin d'une poitrine à l'autre."
+    },
+    "diapason": {
+      "name": "Diapason",
+      "desc": "Marque {count} ennemis par mesure ; la marque éclate sur le temps suivant : {damage} dégâts.",
+      "voice": "Le seul bronze qu'on peut porter sans qu'on vous l'ait cousu."
+    }
+  },
+  "passive": {
+    "ferrure": { "name": "Ferrure", "desc": "Le fer qui cercle la cloche. Chaque coup reçu fait un peu moins mal." },
+    "souffle": { "name": "Souffle", "desc": "Les poumons d'un sonneur qui monte les marches. Tu marches plus vite." },
+    "contrepoids": { "name": "Contrepoids", "desc": "La masse qui fait aller la cloche plus loin. Tes Timbres portent plus large." },
+    "corde_de_chanvre": { "name": "Corde de chanvre", "desc": "Une corde neuve épissée dans la vieille. Tes Timbres tirent plus souvent." },
+    "cire_d_abeille": { "name": "Cire d'abeille", "desc": "On en met sur les plaies et sur les mèches. Tu regagnes de la vie lentement." },
+    "metronome": { "name": "Métronome", "desc": "Le petit balancier du maître de chant. La fenêtre de la Mesure s'élargit." },
+    "etain": { "name": "Étain", "desc": "Vingt-deux parts sur cent. C'est lui qui donne le tranchant à la note : plus de coups critiques." },
+    "echo": { "name": "Écho", "desc": "Ce que la vallée renvoie. Tes coups rebondissent sur un ennemi de plus." }
+  },
+  "fusion": {
+    "glas": { "name": "Glas", "desc": "Tocsin et Contrepoids. Tous les quatre temps, la paroisse entière l'entend dans la poitrine : dégâts sur tout l'écran." },
+    "carillon": { "name": "Carillon", "desc": "Clarine et Écho. Les clarines se répondent et se multiplient à chaque coup qui tombe sur le temps." },
+    "tonnerre": { "name": "Tonnerre", "desc": "Bourdon et Étain. L'onde ne repousse plus : elle fend, et chaque coup peut être critique." },
+    "requiem": { "name": "Requiem", "desc": "Diapason et Métronome. Toutes les marques éclatent ensemble, sur la ronde, et la fenêtre reste ouverte." }
+  },
+  "enemy": {
+    "feutre": {
+      "name": "Feutre",
+      "lore": "Ce qui reste d'un veilleur qui s'est endormi dans la brume. Autour de lui le son s'étouffe, comme sous une couverture de laine mouillée."
+    },
+    "baillon": {
+      "name": "Bâillon",
+      "lore": "Un tissu gris qui cherche une bouche. Ceux qu'il a pris ne crient plus, mais ils marchent encore vers le beffroi."
+    },
+    "ouateux": {
+      "name": "Ouateux",
+      "lore": "Une boule de bourre grise qui gonfle en approchant du bronze. Elle n'attaque pas : elle bouche, et la Résonance s'y perd."
+    },
+    "fossoyeur": {
+      "name": "Fossoyeur",
+      "lore": "Il creuse encore, par habitude, pour des morts dont il a perdu le nom. Il sort de terre sous tes pieds quand la Mesure faiblit."
+    },
+    "choeur_muet": {
+      "name": "Chœur Muet",
+      "lore": "Ils avancent en rang, bouches ouvertes, sans un son. On dit qu'ils chantaient le Salve dans une paroisse dont personne n'a gardé le nom."
+    },
+    "rampe_suie": {
+      "name": "Rampe de suie",
+      "lore": "Une coulée noire qui longe les murs et monte aux poutres. Elle laisse derrière elle des traces où le pied glisse et où le pas ne sonne plus."
+    },
+    "veuve_grise": {
+      "name": "Veuve grise",
+      "lore": "Elle porte encore le voile de la veillée. Elle cherche quelqu'un dans la foule et te prend pour lui, une seconde, avant de frapper."
+    },
+    "cierge": {
+      "name": "Cierge",
+      "lore": "Un corps droit, la tête en flamme pâle. Il brûle sans chaleur et éclate en cendre quand il t'atteint."
+    },
+    "feutre_elite": {
+      "name": "Grand Feutre",
+      "lore": "Un veilleur qui a dormi plus longtemps que les autres. Son manteau de laine étouffe la moitié du cimetière."
+    },
+    "baillon_elite": {
+      "name": "Bâillon double",
+      "lore": "Deux tissus cousus l'un dans l'autre. Il a assez de bouche pour deux et il ne lâche pas."
+    },
+    "ouateux_elite": {
+      "name": "Ouateux gonflé",
+      "lore": "Il a mangé la Résonance d'un sonneur entier. Il roule plus qu'il ne marche, et il crève tard."
+    },
+    "fossoyeur_elite": {
+      "name": "Fossoyeur ancien",
+      "lore": "Il a creusé pour trois générations. La terre le connaît et s'ouvre devant lui sans qu'il ait à frapper."
+    },
+    "choeur_muet_elite": {
+      "name": "Chantre muet",
+      "lore": "Celui qui donnait la note. Le rang le suit, et là où il se tait, tout se tait."
+    },
+    "rampe_suie_elite": {
+      "name": "Rampe mère",
+      "lore": "La coulée dont toutes les autres descendent. Elle a noirci un beffroi entier de la cave au coq."
+    },
+    "veuve_grise_elite": {
+      "name": "Veuve aînée",
+      "lore": "La première à avoir pris le voile, et la dernière à l'ôter. Les autres lui obéissent comme à une mère."
+    },
+    "cierge_elite": {
+      "name": "Cierge pascal",
+      "lore": "Le grand cierge de l'autel, haut comme un homme. Il brûle pour tout le monde et pour personne, et il tombe lourd."
+    }
+  },
+  "boss": {
+    "bourdon_fele": {
+      "name": "Le Bourdon Fêlé",
+      "lore": "La grande cloche de Cendrelune, tombée du beffroi le jour où le suif a manqué. Elle sonne encore, mais faux, et chaque coup fêlé appelle ce qui dort dans la brume."
+    },
+    "veuve_suie": {
+      "name": "La Veuve de Suie",
+      "lore": "Elle a tenu la veillée de tout Val-des-Cordes, seule, jusqu'à ce qu'il ne reste plus rien à veiller. Sa suie est faite de tous les cierges qu'elle a laissés brûler."
+    },
+    "maitre": {
+      "name": "Ce qui reste du Maître",
+      "lore": "Il sonne à l'envers, du dernier coup vers le premier. Ce n'est pas lui qui est là : c'est ce que Cendrelune a gardé de lui, et cela ne veut pas être fait taire."
+    }
+  },
+  "parish": {
+    "cendrelune": {
+      "name": "Cendrelune",
+      "desc": "Une paroisse de charbonniers sous la lune grise, à trois heures de marche du Beffroi Mère. Le maître y est parti reconsacrer la cloche il y a trois mois."
+    },
+    "tourbes": {
+      "name": "Les Tourbes",
+      "desc": "Des marais où l'on coupe le combustible de tout le pays. La tourbe garde les corps ; le village a perdu les noms."
+    },
+    "val_des_cordes": {
+      "name": "Val-des-Cordes",
+      "desc": "Le village des cordiers, qui tressait les cordes de toutes les cloches des Marches. Aujourd'hui les cordes pendent et personne ne tire."
+    },
+    "nef_noyee": {
+      "name": "La Nef Noyée",
+      "desc": "Une église engloutie quand la digue a cédé, il y a quarante ans. Sa cloche sonne encore sous l'eau, disent les pêcheurs, une fois par marée."
+    },
+    "beffroi_mere": {
+      "name": "Le Beffroi Mère",
+      "desc": "La tour d'où l'Ordre des Battants envoie ses sonneurs. Elle est tombée à son tour cette nuit, et il n'y a plus personne pour t'envoyer."
+    }
+  },
+  "char": {
+    "wren": {
+      "name": "Wren",
+      "desc": "Cousue à sept ans, dernière apprentie du Beffroi Mère. Elle attend son maître depuis trois mois et a décidé de ne plus l'attendre.",
+      "trait": "Fenêtre de Mesure élargie : ses coups tombent plus facilement dans le temps."
+    },
+    "osric": {
+      "name": "Osric",
+      "desc": "Ancien fondeur, cousu tard, à douze ans, ce qui ne se fait pas. Il se souvient d'avant le Battant et n'en parle jamais.",
+      "trait": "Lent et lourd : plus de vie, et chaque coup sur le temps frappe plus fort."
+    },
+    "maren": {
+      "name": "Maren",
+      "desc": "Bergère des Tourbes, elle comptait ses bêtes au son des grelots. On l'a trouvée seule dans le marais avec le troupeau entier.",
+      "trait": "Rapide, attire les Échos de plus loin ; la Résonance décroît moins vite."
+    },
+    "le_muet": {
+      "name": "Le Muet",
+      "desc": "Un ancien sonneur à qui l'on a retiré le Battant. Plus personne ne prononce son nom, et il tient un diapason à la main comme on tient une lampe.",
+      "trait": "Sans Battant : la Résonance ne monte que sur les coups parfaits, mais elle monte de deux crans."
+    }
+  },
+  "upgrade": {
+    "coeur_de_bronze": { "name": "Cœur de bronze", "desc": "Une couture de plus autour du Battant. Vie maximale augmentée." },
+    "semelles_de_cuir": { "name": "Semelles de cuir", "desc": "Du cuir de bœuf, graissé au suif. Tu marches plus vite dans la boue." },
+    "ferrure_du_beffroi": { "name": "Ferrure du beffroi", "desc": "Le fer des poutres, reforgé en plaques. Armure augmentée." },
+    "oreille_fine": { "name": "Oreille fine", "desc": "Des nuits à écouter la cloche par-dessus le vent. La fenêtre de la Mesure s'élargit." },
+    "battant_lourd": { "name": "Battant lourd", "desc": "Une masse de plus au bout du bras. Tous tes dégâts augmentent." },
+    "aimant_d_echos": { "name": "Aimant d'échos", "desc": "Une pierre noire du Val qui appelle le bronze. Les Échos viennent à toi de plus loin." },
+    "reliquaire": { "name": "Reliquaire", "desc": "Une boîte d'étain pour garder ce qu'on ramasse. Chaque Écho vaut davantage." },
+    "cire_de_veillee": { "name": "Cire de veillée", "desc": "La cire qui coule des cierges, gardée dans un pot. Tu regagnes de la vie pendant la nuit." },
+    "main_sure": { "name": "Main sûre", "desc": "Le geste du sonneur qui ne regarde plus la corde. Plus de coups critiques." },
+    "bourse_de_cuivre": { "name": "Bourse de cuivre", "desc": "On y met les morceaux de bronze ramassés au matin. Tu rapportes plus de Bronze de chaque nuit." },
+    "second_souffle": { "name": "Second souffle", "desc": "Le Battant repart une fois, tout seul, quand le cœur s'arrête. Une fois par nuit." },
+    "contrepoids_de_fonte": { "name": "Contrepoids de fonte", "desc": "Le bloc qui balance la cloche du Beffroi Mère. Tous tes Timbres portent plus large." },
+    "corde_neuve": { "name": "Corde neuve", "desc": "Du chanvre du Val, épissé dans l'ancien. Tous tes Timbres tirent plus souvent." },
+    "troisieme_carte": { "name": "Troisième carte", "desc": "Le droit de retourner une carte de plus. Une relance de plus par nuit à chaque niveau." }
+  },
+  "achievement": {
+    "premiere_aube": { "name": "Première aube", "desc": "Tenir jusqu'à l'aube une fois." },
+    "sonneur_confirme": { "name": "Sonneur confirmé", "desc": "Tenir jusqu'à l'aube dix fois." },
+    "cent_echos": { "name": "Cent échos", "desc": "Faire taire cent choses en une seule nuit." },
+    "mille_silences": { "name": "Mille silences", "desc": "Faire taire mille choses en une seule nuit." },
+    "plein_timbre": { "name": "Plein timbre", "desc": "Porter six Timbres à la fois." },
+    "plein_accord": { "name": "Plein accord", "desc": "Porter six Accords à la fois." },
+    "premiere_fusion": { "name": "Première fusion", "desc": "Fondre un Timbre et un Accord ensemble." },
+    "quatre_fusions": { "name": "Quatre fusions", "desc": "Découvrir les quatre fusions." },
+    "resonance_parfaite": { "name": "Résonance parfaite", "desc": "Tenir le quatrième cran de Résonance pendant une minute entière." },
+    "sans_faute": { "name": "Sans faute", "desc": "Finir une nuit sans un seul coup hors du temps." },
+    "fele_vaincu": { "name": "Le Fêlé s'est tu", "desc": "Faire taire le Bourdon Fêlé." },
+    "veuve_vaincue": { "name": "La veillée est finie", "desc": "Faire taire la Veuve de Suie." },
+    "maitre_vaincu": { "name": "Ce qui reste", "desc": "Faire taire ce qui reste du Maître." },
+    "toutes_paroisses": { "name": "Toutes les paroisses", "desc": "Tenir jusqu'à l'aube dans les cinq paroisses." },
+    "tous_sonneurs": { "name": "Tous les sonneurs", "desc": "Tenir jusqu'à l'aube avec les quatre sonneurs." },
+    "feuillets_complets": { "name": "Le carnet entier", "desc": "Retrouver les vingt-quatre Feuillets du Battant." },
+    "sans_rythme_victoire": { "name": "À sa propre mesure", "desc": "Tenir jusqu'à l'aube en mode Sans rythme." },
+    "muet_victoire": { "name": "Un nom de plus", "desc": "Tenir jusqu'à l'aube avec le Muet." }
+  },
+  "lore": {
+    "f01": {
+      "title": "Suif pour les lampes du beffroi",
+      "text": "Carnet de tournée, Cendrelune, la Saint-Michel. Trois parts de suif de mouton pour une de cire, mèche de chanvre à trois brins, tremper deux fois. Une lampe ainsi tient de la nuit tombée au premier coup de l'aube. La cloche d'ici est saine, le sonneur s'appelle Jorin, il a du suif pour l'hiver."
+    },
+    "f02": {
+      "title": "Note de fonderie",
+      "text": "Fonderie de Guerlande, relevé de la coulée. Soixante-dix-huit parts de cuivre, vingt-deux d'étain, pas une de plus, sinon la note se ferme. Le maître fondeur dit que le bronze ne pardonne pas les mélanges mais qu'il n'oublie jamais sa note, même fêlé, même refondu. Je note la phrase, elle me plaît."
+    },
+    "f03": {
+      "title": "Les sonneurs de Cendrelune",
+      "text": "Liste des sonneurs de Cendrelune, à recopier au registre du Beffroi. Jorin, fils de Pel. Avant lui, une femme dont Jorin dit qu'elle était sa tante. Avant elle, un nom que personne ici ne sait plus me donner. Ce n'est pas grave, ils sont vieux, et le registre est loin."
+    },
+    "f04": {
+      "title": "Ce que mange le Silence",
+      "text": "On m'a appris que le Silence mange le son. Pourtant à Saint-Aubin-des-Suies, la cloche a fondu dans l'incendie de la grange, et le village a encore chanté trois semaines avant de tomber. Ce n'est pas la cloche qui les tenait. C'est autre chose, que le bronze porte avec la note."
+    },
+    "f05": {
+      "title": "Lettre non envoyée, I",
+      "text": "Wren. Je t'écris depuis Cendrelune, où tout va bien, ce qui est un mensonge. Je veux dire : la cloche tient. Il y a une chose que je ne t'ai pas apprise parce que je ne la savais pas moi-même. Je te l'apprendrai en rentrant, ou bien tu la sauras sans moi, ce qui revient au même."
+    },
+    "f06": {
+      "title": "Ce que garde la tourbe",
+      "text": "Les Tourbes, la Toussaint. Les coupeurs ont sorti un corps de la tourbe : une femme, la peau brune comme du cuir, les cheveux roux, entière. Personne ne sait qui elle est ; la tourbe garde les corps et le pays perd les noms. On l'a remise dans le trou. Le curé n'a rien dit."
+    },
+    "f07": {
+      "title": "Les Ouateux",
+      "text": "Une boule de bourre est entrée dans le beffroi pendant que je sonnais. Elle n'a rien fait, elle a gonflé contre la cloche jusqu'à ce que je ne m'entende plus battre. Quand elle a crevé, j'avais oublié à quel coup j'en étais. Un seul coup. Ça m'a fait plus peur que tous les Feutres."
+    },
+    "f08": {
+      "title": "Osric",
+      "text": "Osric a été cousu à douze ans. L'Ordre ne le fait jamais si tard : passé sept ans, disent-ils, la couture ne prend pas. Je crois maintenant que ce n'est pas la couture qui ne prend pas. Passé sept ans, on a déjà quelque chose à perdre, et le Battant le garde tout entier, chaque nuit, sans demander la permission."
+    },
+    "f09": {
+      "title": "Les Bâillons",
+      "text": "Un Bâillon a pris le bouvier des Tourbes au bord du marais. On l'a ramené, il vit, il mange. Il ne parle plus, mais ce n'est pas le pire : sa femme met deux jours à retrouver son nom quand on le lui demande. Ce que le Bâillon prend, personne ne le réclame."
+    },
+    "f10": {
+      "title": "Marge du registre",
+      "text": "Liste des sonneurs des Tourbes : Aude, fille de Bran ; Bran ; le père de Bran, dont on a le surnom mais plus le nom. Au bas de la page, de ma main : Anselme, du Beffroi Mère. Je l'écris pour l'exercice. Il vaut mieux savoir combien de lettres on a."
+    },
+    "f11": {
+      "title": "Corde de cloche",
+      "text": "Val-des-Cordes, l'Avent. Chanvre roui trois semaines, peigné, tressé à quatre torons, à gauche puis à droite. Une corde de cloche ne se remplace jamais entière : on épisse la neuve dans la vieille, sur une brasse, pour que la main du sonneur retrouve le grain. Les cordiers disent que sinon la cloche ne reconnaît pas la main."
+    },
+    "f12": {
+      "title": "Rougemare",
+      "text": "Il est venu me trouver à Val-des-Cordes avec une lame et une bouteille. Il ne voulait plus se souvenir de Rougemare, de ce qu'il avait vu depuis le beffroi la nuit où il n'a pas pu tenir ; le Battant ne lui laissait pas une nuit sans. J'ai retiré le Battant. Depuis, plus personne au village ne dit son nom, et moi je l'écris ici chaque soir, en bas de la page, pour qu'il en reste un : Tomas Ferrand. Tomas Ferrand. Tomas."
+    },
+    "f13": {
+      "title": "Le Glas",
+      "text": "Quand le tocsin pèse assez, il devient glas. Ce n'est pas une autre cloche, c'est la même, plus lente, et la paroisse entière l'entend dans la poitrine. À Val-des-Cordes on sonnait le glas pour que tout le monde sache qui était mort. Je me demande à quoi il sert quand plus personne ne sait qui."
+    },
+    "f14": {
+      "title": "Les Veuves grises",
+      "text": "Elles gardent le voile de la veillée. Elles cherchent quelqu'un, et chacune me prend pour lui, une seconde, avant de me frapper. J'ai compris ce soir qu'elles ne cherchent pas un mort. Elles cherchent un nom, et c'est le nom qu'elles ont perdu, pas l'homme."
+    },
+    "f15": {
+      "title": "Maren",
+      "text": "Une petite des Tourbes qui compte ses bêtes au son des grelots. On l'a trouvée seule dans le marais, le troupeau entier autour d'elle, pas une bête en moins, et pas un mot sur les gens de la ferme. Elle sait le nom de chaque brebis. Elle ne sait plus celui de sa mère. L'Ordre la coudra."
+    },
+    "f16": {
+      "title": "Inventaire de la cloche noyée",
+      "text": "La Nef Noyée, marée basse. Cloche remontée par les pêcheurs : mille deux cent quarante livres, soixante-dix-huit de cuivre pour vingt-deux d'étain, note sol, quarante ans sous l'eau. Je l'ai frappée du marteau : elle donne son sol, juste. Le bronze se souvient de sa note. C'est le seul ici qui se souvienne de tout."
+    },
+    "f17": {
+      "title": "Les Cierges",
+      "text": "Ils marchent droits, la tête en flamme pâle, et ils brûlent sans chaleur. Ce sont les cierges de la veillée, allumés pour quelqu'un, et le quelqu'un est parti de la mémoire avant que la cire ne finisse. Un cierge qui ne sait plus pour qui il brûle brûle quand même. C'est cela, je crois, la suie."
+    },
+    "f18": {
+      "title": "Lettre non envoyée, II",
+      "text": "Wren. Si tu lis ceci, tu es venue me chercher, et tu es allée plus loin que je ne voulais. Ne me cherche pas parmi les morts ; on ne perd pas les morts, on les enterre, on écrit leur nom, la tourbe les garde. Cherche-moi là où l'on ne se souvient pas. Je serai reconnaissable au bruit."
+    },
+    "f19": {
+      "title": "Pourquoi les enfants",
+      "text": "Il ne mange pas le son. Il mange ce qui tient les gens ensemble : le nom, la veillée, qui était à qui. Le bronze est la seule matière qu'il ne digère pas, alors l'Ordre coud du bronze dans des poitrines, et il prend des enfants parce qu'un cœur de bronze empêche d'oublier et empêche d'être oublié, et qu'il faut n'avoir encore rien à garder pour supporter cela. Je relirai ceci demain pour voir si je le crois encore."
+    },
+    "f20": {
+      "title": "La fêlure",
+      "text": "Cendrelune, retour. La cloche est tombée du beffroi le jour où le suif a manqué ; elle est fêlée d'une main de long. J'ai frappé : la note sort, puis rentre, comme un homme qui commence une phrase et en oublie la fin. J'ai demandé à Jorin le nom de sa tante. Il m'a dit Jorin. La fêlure n'est pas dans le bronze. Elle est dans ce qui écoutait."
+    },
+    "f21": {
+      "title": "Une paroisse ne se souvient pas d'elle-même",
+      "text": "Un sonneur qui sonne jusqu'à l'aube, ils l'oublient à midi ; c'est le métier. Une paroisse ne peut pas se souvenir d'elle-même : il lui faut quelqu'un vers qui se tourner, et qui ne parte pas. Le bronze ne part pas. Mais le bronze ne les regarde pas."
+    },
+    "f22": {
+      "title": "Ce qui revient à qui",
+      "text": "Le marteau de fonderie à Osric, il saura. Le carnet de suif à qui tient le beffroi. Le diapason, je l'ai déjà donné ; il sait à qui, même si le village ne le sait plus. Wren garde le Battant qu'elle a déjà, et ce feuillet, si elle le trouve. Le reste ne vaut rien et peut aller au feu."
+    },
+    "f23": {
+      "title": "Dernière page de Cendrelune",
+      "text": "Saint-Martin, soixante et unième hiver, Cendrelune. Je pose le Battant sur l'autel, sous la cloche fêlée, et je vais m'asseoir dans la brume, dehors, sans lampe. Il me prendra le nom, la tournée, Guerlande, la couleur des cheveux de la femme de la tourbe. Il ne leur prendra pas moi : ils me garderont, il faut bien que quelqu'un garde quelqu'un. Si ça sonne encore après, ce sera de leur côté."
+    },
+    "f24": {
+      "title": "Ce qui reste",
+      "text": "Registre de Cendrelune, main inconnue : Anselme, sonneur, venu à la Saint-Michel. Resté. Au-dessous, d'une main que je reconnais, les lettres comme écrites en miroir : Il sonne de l'aube vers la nuit, du dernier coup au premier. Ne lui réponds pas sur le temps. Réponds à contretemps ; c'est là que je suis encore."
+    }
+  }
+}

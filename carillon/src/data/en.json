@@ -1,0 +1,342 @@
+{
+  "title": {
+    "tagline": "Ring until dawn."
+  },
+  "hub": {
+    "intro": "The Beffroi Mère. The map of the parishes is nailed to the wall, one charcoal cross for every night lost. Choose where you will ring."
+  },
+  "codex": {
+    "intro": "What the Clapper has seen, it does not forget. Here is what it has kept of the things that walk in the fog."
+  },
+  "tutorial": {
+    "move": "Walk. WASD, or the arrows. The ground remembers your steps; so do I, that is my work.",
+    "wave": "They come out of the fog. They cannot hear you: they smell the bronze. Do not let them touch you.",
+    "beat1": "Listen. One, two, three, four. That is me beating in your chest. Press Space when the halo touches the ground.",
+    "beat2": "Again. On the beat, not beside it. Do you hear? The drum has just come in.",
+    "beat3": "A third time. There. When you hold the Measure, I strike harder, and the night sings with us.",
+    "levelup": "The Echoes rise to your heart. Choose a Timbre or a Chord; I will get used to it.",
+    "goal": "Hold until dawn. Twelve minutes. At the end there will be a Bourdon, and it will have to be silenced.",
+    "done": "That is all I know. The rest is learned by ringing."
+  },
+  "weapon": {
+    "battant": {
+      "name": "Clapper",
+      "desc": "Strikes in an arc in front of you on every beat: {damage} damage.",
+      "voice": "One blow, one beat. That is how I was sewn in."
+    },
+    "clarine": {
+      "name": "Cowbell",
+      "desc": "{count} cowbells circle around you and strike whatever they cross: {damage} damage.",
+      "voice": "The cows came home to this sound. The Felts, for their part, back away."
+    },
+    "bourdon": {
+      "name": "Bourdon",
+      "desc": "Every four beats, a wave {area} paces wide pushes back everything that hears it: {damage} damage.",
+      "voice": "The lowest note is the one that travels farthest."
+    },
+    "grelots": {
+      "name": "Sleigh Bells",
+      "desc": "Throws {count} bells in a fan on every eighth note: {damage} damage each.",
+      "voice": "Maren sewed them onto the lambs' necks so as not to lose them in the marsh."
+    },
+    "tocsin": {
+      "name": "Tocsin",
+      "desc": "A circle {area} paces wide around you bites everything that enters it, on the beat: {damage} damage.",
+      "voice": "When it rings, nobody asks why. They run."
+    },
+    "cor_de_brume": {
+      "name": "Fog Horn",
+      "desc": "Blows a cone of fog every two beats: {damage} damage and slows whatever it touches.",
+      "voice": "The horn of the ferrymen of the Nef. It does not pierce the fog, it pushes it back."
+    },
+    "crecelle": {
+      "name": "Rattle",
+      "desc": "Crackles {count} splinters toward the nearest enemy on every eighth note: {damage} damage.",
+      "voice": "The wood you shake when the bronze must stay silent, on Good Friday."
+    },
+    "chaine_d_angelus": {
+      "name": "Angelus Chain",
+      "desc": "On the beat, the angelus leaps from enemy to enemy, {count} times: {damage} damage.",
+      "voice": "Three times three strokes, morning, noon and evening. It knows the way from one chest to the next."
+    },
+    "diapason": {
+      "name": "Tuning Fork",
+      "desc": "Marks {count} enemies per bar; the mark bursts on the next beat: {damage} damage.",
+      "voice": "The only bronze you can carry without having it sewn into you."
+    }
+  },
+  "passive": {
+    "ferrure": { "name": "Ironwork", "desc": "The iron that hoops the bell. Every blow you take hurts a little less." },
+    "souffle": { "name": "Breath", "desc": "The lungs of a ringer climbing the stairs. You walk faster." },
+    "contrepoids": { "name": "Counterweight", "desc": "The mass that carries the bell farther. Your Timbres reach wider." },
+    "corde_de_chanvre": { "name": "Hemp Rope", "desc": "A new rope spliced into the old. Your Timbres fire more often." },
+    "cire_d_abeille": { "name": "Beeswax", "desc": "Put on wounds and on wicks alike. You slowly regain life." },
+    "metronome": { "name": "Metronome", "desc": "The choirmaster's little pendulum. The window of the Measure widens." },
+    "etain": { "name": "Tin", "desc": "Twenty-two parts in a hundred. It gives the note its edge: more critical hits." },
+    "echo": { "name": "Echo", "desc": "What the valley sends back. Your blows bounce to one more enemy." }
+  },
+  "fusion": {
+    "glas": { "name": "Knell", "desc": "Tocsin and Counterweight. Every four beats, the whole parish feels it in the chest: damage across the entire screen." },
+    "carillon": { "name": "Carillon", "desc": "Cowbell and Echo. The bells answer one another and multiply with every blow that lands on the beat." },
+    "tonnerre": { "name": "Thunder", "desc": "Bourdon and Tin. The wave no longer pushes: it splits, and every blow can be critical." },
+    "requiem": { "name": "Requiem", "desc": "Tuning Fork and Metronome. All the marks burst together, on the whole note, and the window stays open." }
+  },
+  "enemy": {
+    "feutre": {
+      "name": "Felt",
+      "lore": "What remains of a watchman who fell asleep in the fog. Around him sound is smothered, as under a wet wool blanket."
+    },
+    "baillon": {
+      "name": "Gag",
+      "lore": "A grey cloth looking for a mouth. Those it has taken no longer cry out, but they still walk toward the belfry."
+    },
+    "ouateux": {
+      "name": "Wadling",
+      "lore": "A ball of grey stuffing that swells as it nears the bronze. It does not attack: it plugs, and the Resonance is lost inside it."
+    },
+    "fossoyeur": {
+      "name": "Gravedigger",
+      "lore": "He still digs, out of habit, for dead whose names he has lost. He comes up out of the ground beneath your feet when the Measure weakens."
+    },
+    "choeur_muet": {
+      "name": "Mute Choir",
+      "lore": "They advance in a row, mouths open, without a sound. They say they sang the Salve in a parish whose name nobody has kept."
+    },
+    "rampe_suie": {
+      "name": "Soot Creeper",
+      "lore": "A black trickle that runs along the walls and climbs the beams. It leaves behind tracks where the foot slips and the step no longer rings."
+    },
+    "veuve_grise": {
+      "name": "Grey Widow",
+      "lore": "She still wears the veil of the wake. She is looking for someone in the crowd and takes you for him, for a second, before she strikes."
+    },
+    "cierge": {
+      "name": "Taper",
+      "lore": "An upright body, its head a pale flame. It burns without heat and bursts into ash when it reaches you."
+    },
+    "feutre_elite": {
+      "name": "Great Felt",
+      "lore": "A watchman who slept longer than the others. His wool coat smothers half the churchyard."
+    },
+    "baillon_elite": {
+      "name": "Double Gag",
+      "lore": "Two cloths sewn one inside the other. It has mouth enough for two and it does not let go."
+    },
+    "ouateux_elite": {
+      "name": "Swollen Wadling",
+      "lore": "It has eaten the Resonance of an entire ringer. It rolls more than it walks, and it bursts late."
+    },
+    "fossoyeur_elite": {
+      "name": "Old Gravedigger",
+      "lore": "He has dug for three generations. The earth knows him and opens before him without his having to strike."
+    },
+    "choeur_muet_elite": {
+      "name": "Mute Cantor",
+      "lore": "The one who gave the note. The row follows him, and where he falls silent, everything falls silent."
+    },
+    "rampe_suie_elite": {
+      "name": "Mother Creeper",
+      "lore": "The trickle all the others descend from. It blackened an entire belfry from the cellar to the weathercock."
+    },
+    "veuve_grise_elite": {
+      "name": "Eldest Widow",
+      "lore": "The first to take the veil, and the last to remove it. The others obey her as they would a mother."
+    },
+    "cierge_elite": {
+      "name": "Paschal Taper",
+      "lore": "The great candle of the altar, tall as a man. It burns for everyone and for no one, and it falls heavy."
+    }
+  },
+  "boss": {
+    "bourdon_fele": {
+      "name": "The Cracked Bourdon",
+      "lore": "The great bell of Cendrelune, fallen from the belfry the day the tallow ran out. It still rings, but false, and every cracked stroke calls what sleeps in the fog."
+    },
+    "veuve_suie": {
+      "name": "The Soot Widow",
+      "lore": "She kept the wake for all of Val-des-Cordes, alone, until there was nothing left to watch over. Her soot is made of every candle she let burn down."
+    },
+    "maitre": {
+      "name": "What Remains of the Master",
+      "lore": "It rings backwards, from the last stroke toward the first. It is not him standing there: it is what Cendrelune kept of him, and it does not want to be silenced."
+    }
+  },
+  "parish": {
+    "cendrelune": {
+      "name": "Cendrelune",
+      "desc": "A parish of charcoal burners under the grey moon, three hours' walk from the Beffroi Mère. The master left to reconsecrate its bell three months ago."
+    },
+    "tourbes": {
+      "name": "Les Tourbes",
+      "desc": "Marshes where the fuel for the whole country is cut. The peat keeps the bodies; the village has lost the names."
+    },
+    "val_des_cordes": {
+      "name": "Val-des-Cordes",
+      "desc": "The ropemakers' village, which braided the ropes for every bell in the Marches. Today the ropes hang and nobody pulls."
+    },
+    "nef_noyee": {
+      "name": "La Nef Noyée",
+      "desc": "A church swallowed when the dike gave way, forty years ago. Its bell still rings underwater, the fishermen say, once every tide."
+    },
+    "beffroi_mere": {
+      "name": "Le Beffroi Mère",
+      "desc": "The tower from which the Order of Clappers sends out its ringers. It fell in its turn tonight, and there is no one left to send you."
+    }
+  },
+  "char": {
+    "wren": {
+      "name": "Wren",
+      "desc": "Sewn at seven, last apprentice of the Beffroi Mère. She has waited three months for her master and has decided to wait no longer.",
+      "trait": "Wider Measure window: her strokes land on the beat more easily."
+    },
+    "osric": {
+      "name": "Osric",
+      "desc": "A former bell founder, sewn late, at twelve, which is not done. He remembers the time before the Clapper and never speaks of it.",
+      "trait": "Slow and heavy: more life, and every stroke on the beat hits harder."
+    },
+    "maren": {
+      "name": "Maren",
+      "desc": "A shepherdess from Les Tourbes, she counted her flock by the sound of the bells. She was found alone in the marsh with the whole flock around her.",
+      "trait": "Fast, draws Echoes from farther away; the Resonance decays more slowly."
+    },
+    "le_muet": {
+      "name": "Le Muet",
+      "desc": "A former ringer whose Clapper was taken out. Nobody speaks his name anymore, and he holds a tuning fork in his hand the way one holds a lamp.",
+      "trait": "No Clapper: the Resonance only rises on perfect strokes, but it rises two notches at a time."
+    }
+  },
+  "upgrade": {
+    "coeur_de_bronze": { "name": "Bronze Heart", "desc": "One more stitch around the Clapper. Maximum life increased." },
+    "semelles_de_cuir": { "name": "Leather Soles", "desc": "Ox leather, greased with tallow. You walk faster through the mud." },
+    "ferrure_du_beffroi": { "name": "Belfry Ironwork", "desc": "The iron of the beams, reforged into plates. Armor increased." },
+    "oreille_fine": { "name": "Keen Ear", "desc": "Nights spent listening to the bell over the wind. The window of the Measure widens." },
+    "battant_lourd": { "name": "Heavy Clapper", "desc": "One more weight at the end of the arm. All your damage increases." },
+    "aimant_d_echos": { "name": "Echo Lodestone", "desc": "A black stone from the Val that calls to bronze. Echoes come to you from farther away." },
+    "reliquaire": { "name": "Reliquary", "desc": "A tin box to keep what you pick up. Every Echo is worth more." },
+    "cire_de_veillee": { "name": "Wake Wax", "desc": "The wax that runs from the candles, kept in a pot. You regain life during the night." },
+    "main_sure": { "name": "Steady Hand", "desc": "The gesture of a ringer who no longer looks at the rope. More critical hits." },
+    "bourse_de_cuivre": { "name": "Copper Purse", "desc": "For the pieces of bronze gathered in the morning. You bring back more Bronze from every night." },
+    "second_souffle": { "name": "Second Wind", "desc": "The Clapper starts again once, by itself, when the heart stops. Once per night." },
+    "contrepoids_de_fonte": { "name": "Cast-Iron Counterweight", "desc": "The block that balances the bell of the Beffroi Mère. All your Timbres reach wider." },
+    "corde_neuve": { "name": "New Rope", "desc": "Hemp from the Val, spliced into the old. All your Timbres fire more often." },
+    "troisieme_carte": { "name": "Third Card", "desc": "The right to turn over one more card. One more reroll per night at each level." }
+  },
+  "achievement": {
+    "premiere_aube": { "name": "First Dawn", "desc": "Hold until dawn once." },
+    "sonneur_confirme": { "name": "Seasoned Ringer", "desc": "Hold until dawn ten times." },
+    "cent_echos": { "name": "A Hundred Echoes", "desc": "Silence a hundred things in a single night." },
+    "mille_silences": { "name": "A Thousand Silences", "desc": "Silence a thousand things in a single night." },
+    "plein_timbre": { "name": "Full Timbre", "desc": "Carry six Timbres at once." },
+    "plein_accord": { "name": "Full Chord", "desc": "Carry six Chords at once." },
+    "premiere_fusion": { "name": "First Fusion", "desc": "Melt a Timbre and a Chord together." },
+    "quatre_fusions": { "name": "Four Fusions", "desc": "Discover all four fusions." },
+    "resonance_parfaite": { "name": "Perfect Resonance", "desc": "Hold the fourth notch of Resonance for a full minute." },
+    "sans_faute": { "name": "Faultless", "desc": "Finish a night without a single stroke off the beat." },
+    "fele_vaincu": { "name": "The Cracked One Is Quiet", "desc": "Silence the Cracked Bourdon." },
+    "veuve_vaincue": { "name": "The Wake Is Over", "desc": "Silence the Soot Widow." },
+    "maitre_vaincu": { "name": "What Remains", "desc": "Silence what remains of the Master." },
+    "toutes_paroisses": { "name": "Every Parish", "desc": "Hold until dawn in all five parishes." },
+    "tous_sonneurs": { "name": "Every Ringer", "desc": "Hold until dawn with all four ringers." },
+    "feuillets_complets": { "name": "The Whole Notebook", "desc": "Recover all twenty-four Leaves of the Clapper." },
+    "sans_rythme_victoire": { "name": "In Its Own Time", "desc": "Hold until dawn in No Rhythm mode." },
+    "muet_victoire": { "name": "One More Name", "desc": "Hold until dawn with Le Muet." }
+  },
+  "lore": {
+    "f01": {
+      "title": "Tallow for the belfry lamps",
+      "text": "Rounds notebook, Cendrelune, Michaelmas. Three parts mutton tallow to one of wax, a three-strand hemp wick, dipped twice. A lamp made so holds from nightfall to the first stroke of dawn. The bell here is sound, the ringer is called Jorin, he has tallow enough for the winter."
+    },
+    "f02": {
+      "title": "Foundry note",
+      "text": "Guerlande foundry, record of the pour. Seventy-eight parts copper, twenty-two of tin, not one more, or the note closes up. The master founder says bronze does not forgive mixtures but never forgets its note, even cracked, even recast. I write the sentence down, I like it."
+    },
+    "f03": {
+      "title": "The ringers of Cendrelune",
+      "text": "List of the ringers of Cendrelune, to be copied into the register of the Belfry. Jorin, son of Pel. Before him, a woman Jorin says was his aunt. Before her, a name nobody here can give me anymore. No matter, they are old, and the register is far away."
+    },
+    "f04": {
+      "title": "What the Silence eats",
+      "text": "I was taught that the Silence eats sound. Yet at Saint-Aubin-des-Suies the bell melted in the barn fire, and the village still sang for three weeks before it fell. It was not the bell that held them. It was something else, which the bronze carries along with the note."
+    },
+    "f05": {
+      "title": "Unsent letter, I",
+      "text": "Wren. I write to you from Cendrelune, where all is well, which is a lie. I mean: the bell holds. There is one thing I did not teach you because I did not know it myself. I will teach it to you when I return, or else you will learn it without me, which comes to the same."
+    },
+    "f06": {
+      "title": "What the peat keeps",
+      "text": "Les Tourbes, All Saints. The cutters pulled a body out of the peat: a woman, skin brown as leather, red hair, whole. Nobody knows who she is; the peat keeps the bodies and the country loses the names. They put her back in the hole. The priest said nothing."
+    },
+    "f07": {
+      "title": "The Wadlings",
+      "text": "A ball of stuffing got into the belfry while I was ringing. It did nothing, it swelled against the bell until I could no longer hear myself beat. When it burst, I had forgotten which stroke I was on. A single stroke. It frightened me more than all the Felts."
+    },
+    "f08": {
+      "title": "Osric",
+      "text": "Osric was sewn at twelve. The Order never does it so late: past seven, they say, the stitching does not take. I now believe it is not the stitching that fails to take. Past seven, you already have something to lose, and the Clapper keeps all of it, every night, without asking leave."
+    },
+    "f09": {
+      "title": "The Gags",
+      "text": "A Gag took the cowherd of Les Tourbes at the edge of the marsh. They brought him back, he lives, he eats. He no longer speaks, but that is not the worst of it: his wife takes two days to find his name again when asked. What the Gag takes, nobody claims."
+    },
+    "f10": {
+      "title": "Margin of the register",
+      "text": "List of the ringers of Les Tourbes: Aude, daughter of Bran; Bran; the father of Bran, whose nickname we have but no longer his name. At the foot of the page, in my hand: Anselme, of the Beffroi Mère. I write it for the exercise. Better to know how many letters one has."
+    },
+    "f11": {
+      "title": "Bell rope",
+      "text": "Val-des-Cordes, Advent. Hemp retted three weeks, combed, laid in four strands, left then right. A bell rope is never replaced whole: the new is spliced into the old, over one fathom, so the ringer's hand finds the grain again. The ropemakers say that otherwise the bell does not recognise the hand."
+    },
+    "f12": {
+      "title": "Rougemare",
+      "text": "He came to find me at Val-des-Cordes with a blade and a bottle. He no longer wanted to remember Rougemare, what he had seen from the belfry the night he could not hold; the Clapper would not give him a single night without it. I took the Clapper out. Since then nobody in the village says his name, and I write it here every evening, at the foot of the page, so that one remains: Tomas Ferrand. Tomas Ferrand. Tomas."
+    },
+    "f13": {
+      "title": "The Knell",
+      "text": "When the tocsin grows heavy enough, it becomes a knell. It is not another bell, it is the same one, slower, and the whole parish feels it in the chest. In Val-des-Cordes the knell was rung so everyone would know who had died. I wonder what use it is when nobody knows who anymore."
+    },
+    "f14": {
+      "title": "The Grey Widows",
+      "text": "They keep the veil of the wake. They are looking for someone, and each one takes me for him, for a second, before striking me. I understood tonight that they are not looking for a dead man. They are looking for a name, and it is the name they have lost, not the man."
+    },
+    "f15": {
+      "title": "Maren",
+      "text": "A little girl from Les Tourbes who counts her flock by the sound of the bells. She was found alone in the marsh, the whole flock around her, not one animal missing, and not a word about the people of the farm. She knows the name of every ewe. She no longer knows her mother's. The Order will sew her."
+    },
+    "f16": {
+      "title": "Inventory of the drowned bell",
+      "text": "La Nef Noyée, low tide. Bell raised by the fishermen: twelve hundred and forty pounds, seventy-eight of copper to twenty-two of tin, note G, forty years underwater. I struck it with the hammer: it gives its G, true. Bronze remembers its note. It is the only thing here that remembers everything."
+    },
+    "f17": {
+      "title": "The Tapers",
+      "text": "They walk upright, heads a pale flame, and they burn without heat. They are the candles of the wake, lit for someone, and the someone left memory before the wax ran out. A candle that no longer knows whom it burns for burns all the same. That, I think, is what soot is."
+    },
+    "f18": {
+      "title": "Unsent letter, II",
+      "text": "Wren. If you are reading this, you came looking for me, and you went farther than I wanted. Do not look for me among the dead; the dead are not lost, they are buried, their names are written, the peat keeps them. Look for me where nobody remembers. You will know me by the noise."
+    },
+    "f19": {
+      "title": "Why children",
+      "text": "It does not eat sound. It eats what holds people together: the name, the wake, who belonged to whom. Bronze is the only matter it cannot digest, so the Order sews bronze into chests, and it takes children because a heart of bronze keeps you from forgetting and keeps you from being forgotten, and you must have nothing yet to keep in order to bear that. I will read this again tomorrow to see whether I still believe it."
+    },
+    "f20": {
+      "title": "The crack",
+      "text": "Cendrelune, return. The bell fell from the belfry the day the tallow ran out; it is cracked a hand's length. I struck it: the note comes out, then goes back in, like a man who begins a sentence and forgets the end. I asked Jorin his aunt's name. He said Jorin. The crack is not in the bronze. It is in what was listening."
+    },
+    "f21": {
+      "title": "A parish does not remember itself",
+      "text": "A ringer who rings until dawn, they forget him by noon; that is the trade. A parish cannot remember itself: it needs someone to turn toward, and who does not leave. Bronze does not leave. But bronze does not look at them."
+    },
+    "f22": {
+      "title": "What goes to whom",
+      "text": "The foundry hammer to Osric, he will know. The tallow notebook to whoever keeps the belfry. The tuning fork I have already given; he knows to whom, even if the village no longer does. Wren keeps the Clapper she already has, and this leaf, if she finds it. The rest is worth nothing and can go on the fire."
+    },
+    "f23": {
+      "title": "Last page from Cendrelune",
+      "text": "Martinmas, sixty-first winter, Cendrelune. I lay the Clapper on the altar, under the cracked bell, and I go to sit in the fog, outside, without a lamp. It will take my name, the rounds, Guerlande, the colour of the hair of the woman in the peat. It will not take me from them: they will keep me, someone has to keep someone. If it still rings afterwards, it will be on their side."
+    },
+    "f24": {
+      "title": "What remains",
+      "text": "Register of Cendrelune, unknown hand: Anselme, ringer, come at Michaelmas. Stayed. Beneath, in a hand I recognise, the letters as if written in a mirror: He rings from dawn toward night, from the last stroke to the first. Do not answer him on the beat. Answer off the beat; that is where I still am."
+    }
+  }
+}
