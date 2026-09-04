@@ -2,7 +2,8 @@
 // (title_beffroi) se dresse sous la pluie de cendres (renderer.setAshes), la
 // cloche (title_cloche) oscille lentement, le logo CARILLON est gravé en
 // CarillonDisplay avec relief et ombre, la brume roule (renderer.setFog).
-// Boutons : Jouer/Continuer, Tutoriel, Codex, Options, Crédits.
+// Boutons : Jouer/Continuer, Tutoriel, Codex, Options, Crédits ; bouton plein écran en haut à
+// droite (ui/touch.js : conteneur #stage, verrouillage paysage, aide iOS).
 
 import { makeRng, mix32 } from '../core/rng.js';
 import { getSave } from '../core/save.js';
@@ -16,7 +17,8 @@ import { playUi } from '../audio/sfx.js';
 import { hasGamepad } from '../core/input.js';
 import { t } from './i18n.js';
 import * as states from './states.js';
-import { text, createMenu, C } from './widgets.js';
+import * as touch from './touch.js';
+import { text, createMenu, hit, C } from './widgets.js';
 
 const W = 480, H = 270;
 const BELL = { x: -150, y: -50 };        // coordonnées monde de la cloche
@@ -91,6 +93,7 @@ export function createTitle() {
     { label: () => t('ui.title.credits'), rect: rect(4), action: () => states.push('credits'), icon: 'ui_musique' },
   ];
   const menu = createMenu(items, { size: 11 });
+  let fsRect = { x: W - 24, y: 6, w: 18, h: 18 };
 
   /** « Dernière nuit : Cendrelune · Wren » à droite du bouton Continuer. */
   function renderContinueHint(ui) {
@@ -117,7 +120,10 @@ export function createTitle() {
       dt = realDt;
       const m = states.mouse;
       if (m.moved && menu.hover(m.x, m.y)) playUi('ui_move');
-      if (m.clicked) { const it = menu.at(m.x, m.y); if (it) { playUi('ui_confirm'); it.action(); } }
+      if (m.clicked) {
+        if (hit(fsRect, m.x, m.y)) { playUi('ui_confirm'); touch.toggleFullscreen(); return; }
+        const it = menu.at(m.x, m.y); if (it) { playUi('ui_confirm'); it.action(); }
+      }
     },
     handleAction(a) {
       if (a === 'menuUp') { if (menu.move(-1)) playUi('ui_move'); return true; }
@@ -130,10 +136,11 @@ export function createTitle() {
       renderLogo(ui, 14);
       menu.render(ui);
       renderContinueHint(ui);
+      fsRect = touch.fullscreenButton(ui, W - (touch.isActive() ? 32 : 24), 6);
       const s = getSave().stats;
       text(ui, t('ui.title.runs', { runs: s.runs, wins: s.wins }), 6, H - 12, { size: 9, color: C.gris });
       text(ui, t('ui.title.version'), W / 2, H - 12, { size: 9, align: 'center', color: C.gris });
-      text(ui, t(hasGamepad() ? 'ui.common.nav_hint_pad' : 'ui.common.nav_hint'), W - 6, H - 12, { size: 9, align: 'right', color: C.gris });
+      text(ui, t(touch.isActive() ? 'ui.touch.nav_hint' : hasGamepad() ? 'ui.common.nav_hint_pad' : 'ui.common.nav_hint'), W - 6, H - 12, { size: 9, align: 'right', color: C.gris });
     },
   };
 }

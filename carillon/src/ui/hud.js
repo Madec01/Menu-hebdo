@@ -8,6 +8,9 @@
 // § 11 bis : icône de la Relique portée (info-bulle au survol), bannière « La cloche sonne »
 // avec 4 points (gameState().bell), anneau qui pulse autour du sonneur pendant la sonnerie,
 // « Répondu ! » sur bell:answered, ligne de tutoriel (tutorial.bell) à la 1re cloche de la 1re nuit.
+// Mode tactile (ui/touch.js) : rien sous les pouces — jauge de Résonance décalée à gauche des
+// boutons, Timbres/Accords en rangée sous la vie, tués décalés à gauche du bouton pause, rappel
+// des commandes tactiles à la place des touches.
 
 import { bus } from '../core/events.js';
 import { getSave } from '../core/save.js';
@@ -18,14 +21,15 @@ import { t, fmtTime } from './i18n.js';
 import { def as dataDef } from './gamedata.js';
 import { keyName } from './options-items.js';
 import { mouse } from './states.js';
+import { isActive as touchActive } from './touch.js';
 import { panel, text, paragraph, gauge, icon, keycap, hit, C } from './widgets.js';
 import { drawNineSlice } from '../render/atlas.js';
 
 const W = 480, H = 270;
-const RES_X = W / 2 - 74, RES_Y = H - 24, SEG_W = 34, SEG_H = 8, SEG_GAP = 4;
+const HUD_RES_X = W / 2 - 74, RES_X_TOUCH = W / 2 - 110, RES_Y = H - 24, SEG_W = 34, SEG_H = 8, SEG_GAP = 4;
 const HINT_SEC = 30;        // durée du rappel des commandes
 const HINT_RUNS = 3;        // … affiché tant que le joueur a fini moins de 3 nuits
-const RELIC_RECT = { x: 4, y: 46, w: 18, h: 18 };
+const RELIC_RECT = { x: 4, y: 46, w: 18, h: 18 }, RELIC_RECT_TOUCH = { x: 4, y: 54, w: 18, h: 18 };
 const BELL_HINT_SEC = 7;
 
 export function createHud() {
@@ -54,7 +58,7 @@ export function createHud() {
     const id = g.run.relicId;
     if (!id) return;
     const d = dataDef('relics', id);
-    const r = RELIC_RECT;
+    const r = touchActive() ? RELIC_RECT_TOUCH : RELIC_RECT;
     drawNineSlice(ui, 'gauge_bg', r.x, r.y, r.w, r.h);
     icon(ui, d && d.icon ? d.icon : 'ui_sceau', r.x + 1, r.y + 1, 0.5);
     if (!mouse.inside || !hit(r, mouse.x, mouse.y)) return;
@@ -115,6 +119,7 @@ export function createHud() {
     const a = Math.min(1, st.hintT / 0.8);
     ui.globalAlpha = a;
     const y = 31;
+    if (touchActive()) { text(ui, t('ui.touch.hint'), W / 2, 66, { size: 8, align: 'center', color: C.os, shadow: true, maxWidth: W - 40 }); ui.globalAlpha = 1; return; }
     if (hasGamepad()) { text(ui, t('ui.hud.controls_pad'), 6, y + 2, { size: 8, color: C.os, shadow: true }); ui.globalAlpha = 1; return; }
     const b = getBindings();
     const first = (act) => (b[act] && b[act].keys.length ? keyName(b[act].keys[0]) : '?');
@@ -142,11 +147,12 @@ export function createHud() {
     const tt = fmtTime(run.timeSec);
     text(ui, tt, W / 2, 4, { kind: 'display', size: 18, align: 'center', color: st.minuteT > 0 ? C.clair : C.os, shadow: true });
     if (world.tier > 1) text(ui, t('ui.hud.tier', { tier: world.tier }), W / 2, 26, { size: 9, align: 'center', color: C.gris, shadow: true });
-    // Tués et assistance.
-    icon(ui, 'ui_mort', W - 20, 4, 0.5);
-    text(ui, t('ui.hud.kills', { kills: run.kills }), W - 24, 8, { size: 12, align: 'right', color: C.os, shadow: true });
+    // Tués et assistance (décalés à gauche du bouton pause tactile).
+    const kx = touchActive() ? W - 38 : W;
+    icon(ui, 'ui_mort', kx - 20, 4, 0.5);
+    text(ui, t('ui.hud.kills', { kills: run.kills }), kx - 24, 8, { size: 12, align: 'right', color: C.os, shadow: true });
     const assist = getSave().options.assist;
-    if (assist !== 'none') text(ui, t('ui.hud.assist_' + assist), W - 6, 22, { size: 8, align: 'right', color: C.gris, shadow: true });
+    if (assist !== 'none') text(ui, t('ui.hud.assist_' + assist), kx - 6, 22, { size: 8, align: 'right', color: C.gris, shadow: true });
     // Statuts.
     if (p.silencedT > 0) text(ui, t('ui.hud.silenced'), W / 2, 40, { size: 10, align: 'center', color: C.gris, shadow: true });
     else if (st.blockedT > 0) text(ui, t('ui.hud.blocked'), W / 2, 40, { size: 10, align: 'center', color: C.gris, shadow: true });
@@ -181,6 +187,7 @@ export function createHud() {
     const phase = conductor.isRunning() ? conductor.phase() : 0;
     const pulse = Math.pow(1 - phase, 3);
     const hot = res.tier >= 3;
+    const RES_X = touchActive() ? RES_X_TOUCH : HUD_RES_X;
     text(ui, t('ui.hud.resonance'), RES_X - 6, RES_Y - 1, { size: 8, align: 'right', color: C.gris, shadow: true });
     for (let i = 0; i < 4; i++) {
       const x = RES_X + i * (SEG_W + SEG_GAP);
@@ -222,6 +229,7 @@ export function createHud() {
 
   function renderBuild(ui, g) {
     const p = g.player;
+    if (touchActive()) { renderBuildRow(ui, p); return; }
     for (let i = 0; i < p.weapons.length; i++) {
       const w = p.weapons[i], x = 4 + i * 20, y = H - 22;
       drawNineSlice(ui, 'gauge_bg', x, y, 18, 18);
@@ -233,6 +241,22 @@ export function createHud() {
       drawNineSlice(ui, 'gauge_bg', x, y, 18, 18);
       icon(ui, pa.def && pa.def.icon ? pa.def.icon : pa.id, x + 1, y + 1, 0.5);
       text(ui, String(pa.level), x + 17, y + 18, { size: 8, align: 'right', baseline: 'bottom', color: C.bronze, shadow: true });
+    }
+  }
+
+  /** Mode tactile : Timbres puis Accords sur une rangée sous la vie (les coins bas sont sous les pouces). */
+  function renderBuildRow(ui, p) {
+    const y = 31;
+    let x = 4;
+    for (const list of [p.weapons, p.passives]) {
+      for (let i = 0; i < list.length; i++) {
+        const it = list[i];
+        drawNineSlice(ui, 'gauge_bg', x, y, 18, 18);
+        icon(ui, it.def && it.def.icon ? it.def.icon : it.id, x + 1, y + 1, 0.5);
+        text(ui, String(it.level), x + 17, y + 18, { size: 8, align: 'right', baseline: 'bottom', color: C.bronze, shadow: true });
+        x += 20;
+      }
+      x += 6;
     }
   }
 

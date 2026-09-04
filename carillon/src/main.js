@@ -2,7 +2,8 @@
 // manifestes, de l'atlas, des polices, de l'audio, des langues et des données ;
 // écran « Cliquez pour sonner » (déblocage audio dans le geste) ; boucle à pas fixe
 // avec l'ordre par frame du § 7 bis ; pile d'états (ui/states.js) ; application des
-// options au démarrage et sur options:change.
+// options au démarrage et sur options:change. Mobile (ui/touch.js) : commandes tactiles,
+// plein écran dans le geste, pause et suspension audio quand l'onglet/le téléphone se met en veille.
 
 import { bus } from './core/events.js';
 import { createLoop } from './core/loop.js';
@@ -28,6 +29,7 @@ import { loadUiData } from './ui/gamedata.js';
 import { initMetronome } from './ui/metronome.js';
 import { createScreens } from './ui/screens.js';
 import { initKeyNames } from './ui/options-items.js';
+import * as touch from './ui/touch.js';
 
 const W = 480, H = 270;
 const canvas = document.getElementById('game');
@@ -58,19 +60,41 @@ function applyAllOptions() {
   if (o.fullscreen && !document.fullscreenElement) o.fullscreen = false; // pas de plein écran sans geste
 }
 
+/** Plein écran sur le conteneur #stage (ui/touch.js : verrouillage paysage, aide iOS). */
 function setFullscreen(on) {
-  try {
-    if (on && !document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
-    else if (!on && document.fullscreenElement) document.exitFullscreen().catch(() => {});
-  } catch (e) { /* navigateur sans API plein écran */ }
+  if (!touch.setFullscreen(on) && on) { const o = getSave().options; if (o.fullscreen) { o.fullscreen = false; commit(); } }
 }
 
-document.addEventListener('fullscreenchange', () => {
+function onFullscreenChange() {
   const o = getSave().options;
-  const on = !!document.fullscreenElement;
+  const on = !!(document.fullscreenElement || document.webkitFullscreenElement);
   if (o.fullscreen !== on) { o.fullscreen = on; commit(); }
-  if ((o.scale | 0) === 0) renderer.resize(0);
-});
+  renderer.resize(o.scale | 0);
+}
+document.addEventListener('fullscreenchange', onFullscreenChange);
+document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+
+// Onglet caché / téléphone en veille : pause de la run et suspension propre du contexte audio
+// (fondu du master), reprise en fondu au retour.
+let sleeping = false;
+function onVisibility() {
+  const ac = audio.ctx(), master = audio.busNode('master');
+  if (document.hidden) {
+    if (booted && deps.game && deps.game.isGameActive() && states.topName() === 'run' && !states.isFrozen()) states.push('pause');
+    if (!ac || !unlocked || sleeping) return;
+    sleeping = true;
+    const g = master.gain, t0 = ac.currentTime;
+    g.cancelScheduledValues(t0); g.setValueAtTime(g.value, t0); g.linearRampToValueAtTime(0, t0 + 0.08);
+    setTimeout(() => { if (sleeping && ac.state === 'running') ac.suspend().catch(() => {}); }, 100);
+  } else if (sleeping) {
+    sleeping = false;
+    Promise.resolve(ac.state !== 'running' ? ac.resume() : null).then(() => {
+      const g = master.gain, t0 = ac.currentTime;
+      g.cancelScheduledValues(t0); g.setValueAtTime(0, t0); g.linearRampToValueAtTime(getSave().options.volMaster, t0 + 0.6);
+    }).catch(() => {});
+  }
+}
+document.addEventListener('visibilitychange', onVisibility);
 
 bus.on('options:change', ({ key, value }) => applyOption(key, value));
 
@@ -78,6 +102,7 @@ bus.on('options:change', ({ key, value }) => applyOption(key, value));
 
 function update(dt) {
   input.tickInput();
+  touch.update(loop.stepSec);                // disposition des commandes tactiles, voile portrait
   const frozen = states.isFrozen();
   if (frozen !== wasFrozen) { wasFrozen = frozen; loop.setTimeScale(frozen ? 0 : 1); }
   // updateGame() (ui/run-screen.js) appelle conductorTick() lui-même quand la run tourne.
@@ -93,9 +118,10 @@ function render(alpha) {
   renderer.beginFrame(alpha);
   states.render(alpha);
   const ui = renderer.getUiCtx();
+  touch.render(ui);                          // joystick, Volée/Parade, pause (en run)
   renderToasts(ui, W);
   if (getSave().options.showFps) text(ui, t('ui.common.fps', { fps: loop.stats.fps }), W - 4, 32, { size: 8, align: 'right', color: C.gris, shadow: true });
-  if (states.mouse.inside) drawCursor(ui, states.mouse.x, states.mouse.y, states.cursorKind());
+  if (states.mouse.inside && !touch.hideCursor()) drawCursor(ui, states.mouse.x, states.mouse.y, states.cursorKind());
   renderer.endFrame();
 }
 
@@ -139,6 +165,7 @@ async function boot() {
   lighting.initLighting({ w: W, h: H, ambient: '#16130f' });
   particles.initParticles(4000);
   input.initInput({ canvas, getAudioTime: audio.now, screenToWorld: camera.screenToWorld, logicalSize: renderer.logicalSize });
+  touch.initTouch({ isRunActive: () => !!(deps.game && deps.game.isGameActive()) });
   initKeyNames();
   applyAllOptions();
   const bootTimer = setInterval(() => renderBoot(t('ui.boot.loading', { percent: Math.round(100 * bootProgress.done / bootProgress.total) })), 100);
@@ -166,6 +193,7 @@ async function boot() {
   states.initStates(createScreens(deps));
   initAchievements();
   states.replace('unlock', null, { fade: false });
+  bus.on('state:change', (e) => { if (e.to === 'title') touch.homeScreenHintOnce(); });
   loop.start();
   booted = true;
 }
@@ -202,4 +230,4 @@ boot().catch((e) => {
 });
 
 /** Accès de débogage / tests (Playwright). */
-window.carillon = { states, bus, getSave, deps, toast, get loop() { return loop; }, audio, music, conductor };
+window.carillon = { states, bus, getSave, deps, toast, get loop() { return loop; }, audio, music, conductor, touch, input };

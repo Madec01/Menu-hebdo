@@ -67,7 +67,11 @@ export function createLeafReader() {
     freezes: true,
     enter(p) { id = p.leafId; scroll = 0; lines = null; markRead(id); window.addEventListener('wheel', onWheel); },
     exit() { window.removeEventListener('wheel', onWheel); },
-    update() { if (states.mouse.clicked && !hitPanel(states.mouse.x, states.mouse.y)) { playUi('ui_cancel'); states.pop(); } },
+    update() {
+      const m = states.mouse;
+      if (m.dragY) scroll = clamp(scroll - m.dragY);
+      if (m.clicked && !hitPanel(m.x, m.y)) { playUi('ui_cancel'); states.pop(); }
+    },
     handleAction(a) {
       if (a === 'menuUp') { scroll = clamp(scroll - LH); return true; }
       if (a === 'menuDown') { scroll = clamp(scroll + LH); return true; }

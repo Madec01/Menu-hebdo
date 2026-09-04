@@ -9,6 +9,7 @@ import { hasGamepad } from '../core/input.js';
 import { t } from './i18n.js';
 import { def as dataDef } from './gamedata.js';
 import * as states from './states.js';
+import { isActive as touchActive } from './touch.js';
 import { card, text, button, dimmer, hit, heading, C } from './widgets.js';
 
 const W = 480, H = 270;
@@ -85,7 +86,7 @@ export function createRelicPick(deps) {
         card(ui, cardX(i), CARD_Y + lift, { flip: flips[i], focused: i === sel, icon: d.icon, kind: t('ui.relic.kind'), title: t(d.name), level: '', isNew: false, desc: t(d.desc) });
       }
       button(ui, { ...noneRect, label: t('ui.relic.none'), size: 9, focused: sel === choices.length, icon: 'ui_mort' });
-      text(ui, t(hasGamepad() ? 'ui.relic.hint_pad' : 'ui.relic.hint'), W / 2, H - 22, { size: 8, align: 'center', color: C.gris, shadow: true });
+      text(ui, t(touchActive() ? 'ui.touch.card_hint' : hasGamepad() ? 'ui.relic.hint_pad' : 'ui.relic.hint'), W / 2, H - 22, { size: 8, align: 'center', color: C.gris, shadow: true });
     },
   };
 }

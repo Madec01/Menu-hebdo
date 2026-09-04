@@ -21,11 +21,13 @@ let glow = null, gctx = null;          // calque écran (screen)
 let over = null, octx = null;          // calque overlay monde (après lumière)
 let ui = null, uctx = null;            // calque HUD (affichage)
 let W = 480, H = 270, scale = 1, scaleOption = 0;
+let pixelRatio = 1;                    // > 1 en mode tactile : échelle entière en pixels PHYSIQUES (setPixelRatio)
 let ambient = '#16130f';
 let vignette = 0.35, grain = 0.25, fog = 1, ashes = 1;
 let flashColor = '#ffffff', flashFrames = 0, flashAlpha = 0.85;
 let lastNow = 0, frameDt = 0, elapsed = 0;
-const size = { w: 480, h: 270, scale: 1 };
+// scale = pixels physiques du canvas par pixel logique ; cssScale = pixels CSS par pixel logique.
+const size = { w: 480, h: 270, scale: 1, cssScale: 1 };
 const frameHooks = [];                 // fn(dt) appelés au début d'endFrame (lighting)
 
 function makeCanvas(w, h) {
@@ -48,7 +50,11 @@ export function initRenderer({ canvas, width = 480, height = 270, seed = 7 }) {
   initPost(mctx, W, H, seed);
   camera.initCamera({ w: W, h: H });
   resize(scaleOption);
-  window.addEventListener('resize', () => { if (scaleOption === 0) resize(0); });
+  // Redimensionnement, rotation du téléphone, barre d'adresse mobile : l'échelle est recalculée.
+  const onResize = () => resize(scaleOption);
+  window.addEventListener('resize', onResize);
+  window.addEventListener('orientationchange', onResize);
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', onResize);
   lastNow = performance.now();
 }
 
@@ -64,21 +70,43 @@ export function getGlowCtx() { return gctx; }
 export function getOverlayCtx() { return octx; }
 export function displayCanvas() { return display; }
 
-/** 0 = automatique (plus grande échelle entière qui tient dans la fenêtre), sinon 2/3/4. */
+/** Espace disponible (px CSS) dans le conteneur du canvas, marges de sécurité (safe-area) déduites. */
+function available() {
+  const parent = display.parentElement;
+  let w = (parent && parent.clientWidth) || window.innerWidth, h = (parent && parent.clientHeight) || window.innerHeight;
+  if (parent) {
+    const cs = getComputedStyle(parent);
+    w -= (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+    h -= (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
+  }
+  return { w: Math.max(1, w), h: Math.max(1, h) };
+}
+
+/**
+ * 0 = automatique (plus grande échelle entière qui tient dans la fenêtre, ×1 compris sur un petit
+ * écran), sinon 2/3/4 — bornée à ce qui tient. Le canvas est centré par la CSS (#stage, fond suie).
+ * En mode tactile (pixelRatio > 1), l'échelle est entière en pixels physiques : le canvas est plus
+ * grand sur un écran dense tout en gardant des pixels nets.
+ */
 export function resize(opt) {
   scaleOption = opt | 0;
-  if (scaleOption > 0) scale = scaleOption;
-  else {
-    const parent = display.parentElement;
-    const availW = parent ? parent.clientWidth || window.innerWidth : window.innerWidth;
-    const availH = window.innerHeight;
-    scale = Math.max(1, Math.floor(Math.min(availW / W, availH / H)));
-  }
+  const avail = available();
+  const fit = Math.max(1, Math.floor(Math.min(avail.w * pixelRatio / W, avail.h * pixelRatio / H)));
+  scale = scaleOption > 0 ? Math.max(1, Math.min(fit, Math.round(scaleOption * pixelRatio))) : fit;
+  const cssScale = scale / pixelRatio;
   display.width = W * scale; display.height = H * scale;
-  display.style.width = W * scale + 'px'; display.style.height = H * scale + 'px';
+  display.style.width = W * cssScale + 'px'; display.style.height = H * cssScale + 'px';
   ui.width = W * scale; ui.height = H * scale;
   dctx.imageSmoothingEnabled = false; uctx.imageSmoothingEnabled = false;
-  size.w = W; size.h = H; size.scale = scale;
+  size.w = W; size.h = H; size.scale = scale; size.cssScale = cssScale;
+}
+
+/** Densité de pixels prise en compte par resize() (1 = échelle en px CSS, comme sur bureau). */
+export function setPixelRatio(r) {
+  const v = Math.max(1, +r || 1);
+  if (v === pixelRatio) return;
+  pixelRatio = v;
+  if (display) resize(scaleOption);
 }
 
 export function logicalSize() { return size; }

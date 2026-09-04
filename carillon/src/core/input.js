@@ -1,14 +1,17 @@
-// core/input.js — entrées abstraites (ARCHITECTURE.md § 6) : clavier (codes
-// physiques, donc ZQSD = WASD), souris et manette (Gamepad API), remappables.
+// core/input.js — entrées abstraites (ARCHITECTURE.md § 6) : clavier (codes physiques, donc
+// ZQSD = WASD), souris, manette (Gamepad API) et tactile (Pointer Events multi-doigts), remappables.
 //
-// Cycle : main.js appelle tickInput() au début de CHAQUE pas logique. justPressed(a)
-// est vrai pendant le seul pas qui suit l'appui ; pressedAt(a) donne le temps
-// audio exact de l'appui (mesuré dans l'événement DOM, pas au tick) pour le
-// jugement rythmique. Les transitions émettent input:action sur le bus.
+// Cycle : main.js appelle tickInput() au début de CHAQUE pas logique. justPressed(a) est vrai
+// pendant le seul pas qui suit l'appui ; pressedAt(a) donne le temps audio exact de l'appui
+// (mesuré dans l'événement DOM, pas au tick) pour le jugement rythmique — le tactile passe par
+// le même chemin (press()) que le clavier. Les transitions émettent input:action sur le bus.
 //
-// initInput({ canvas, getAudioTime, screenToWorld?, logicalSize? }) :
-//   screenToWorld(x, y) → {x, y}  (camera.screenToWorld) pour pointer().worldX/Y ;
-//   logicalSize() → {w, h}        (renderer.logicalSize) pour convertir la souris.
+// initInput({ canvas, getAudioTime, screenToWorld?, logicalSize? }) : screenToWorld(x, y) → {x, y}
+// (camera.screenToWorld) pour pointer().worldX/Y ; logicalSize() → {w, h} (renderer.logicalSize).
+//
+// Tactile : ui/touch.js décrit la disposition (setTouchLayout) ; ici on suit chaque doigt : posé sur
+// un bouton virtuel = press(action) ; posé dans la zone du stick = joystick flottant (axis()) ; tout
+// autre doigt = « tap » (clic latché au relâchement s'il n'a pas bougé) ou glissement (dragX/dragY).
 
 import { bus } from './events.js';
 
@@ -32,6 +35,7 @@ const DEFAULT_BINDINGS = {
 };
 const DEADZONE = 0.22;
 const STICK_THRESHOLD = 0.5; // le stick déclenche aussi les actions de direction/menu
+const TAP_SLOP = 6;          // px logiques : au-delà, un doigt « tap » devient un glissement
 
 let bindings = cloneBindings(DEFAULT_BINDINGS);
 const keyToActions = new Map();    // code → [actions]
@@ -42,10 +46,11 @@ const down = {}, pending = {}, just = {}, at = {}, keyCount = {};
 for (const a of ACTIONS) { down[a] = false; pending[a] = false; just[a] = false; at[a] = 0; keyCount[a] = 0; }
 
 const axisOut = { x: 0, y: 0 };
-// clicks = nombre de clics gauches (mousedown dans le canvas) survenus depuis le tick précédent :
-// un clic bref entre deux ticks n'est jamais perdu. clickX/Y = position du dernier clic.
-const pointerState = { x: 0, y: 0, down: false, worldX: 0, worldY: 0, inside: false, clicks: 0, clickX: 0, clickY: 0 };
-let pendingClicks = 0, pendingClickX = 0, pendingClickY = 0;
+// clicks = clics gauches (mousedown dans le canvas, ou tap tactile) depuis le tick précédent : un clic
+// bref entre deux ticks n'est jamais perdu ; clickX/Y = position du dernier. dragX/dragY = glissement
+// (px logiques) des doigts « tap » depuis le tick précédent ; touch = dernière interaction tactile.
+const pointerState = { x: 0, y: 0, down: false, worldX: 0, worldY: 0, inside: false, clicks: 0, clickX: 0, clickY: 0, dragX: 0, dragY: 0, touch: false };
+let pendingClicks = 0, pendingClickX = 0, pendingClickY = 0, pendingDragX = 0, pendingDragY = 0;
 const tmpWorld = { x: 0, y: 0 };
 let deps = { canvas: null, getAudioTime: () => 0, screenToWorld: null, logicalSize: null };
 let capture = null;              // { action, onDone } pendant un remappage
@@ -53,6 +58,14 @@ let gamepadIndex = -1;
 const padButtons = new Array(32).fill(false); // état précédent des boutons manette
 const stickDir = { up: false, down: false, left: false, right: false };
 let stickX = 0, stickY = 0;
+
+// Tactile : disposition (ui/touch.js), doigts suivis, stick virtuel flottant.
+let touchLayout = null;          // { stickZone:{x,y,w,h}, buttons:[{action,x,y,r}], radius, deadzone }
+const touches = new Map();       // pointerId → { kind:'stick'|'button'|'tap', action, ox, oy, x, y, moved }
+const stick = { active: false, ox: 0, oy: 0, x: 0, y: 0 };   // origine et position du pouce (px logiques)
+const touchButtons = {};         // action → nombre de doigts posés
+const touchInfo = { stick, buttons: touchButtons, seen: false, count: 0 };
+let touchX = 0, touchY = 0;      // axe du stick virtuel (-1..1)
 
 function cloneBindings(src) {
   const out = {};
@@ -104,25 +117,32 @@ function onKeyDown(e) {
   applyList(list, true);
 }
 
-function onKeyUp(e) {
-  const list = keyToActions.get(e.code);
-  if (list) { e.preventDefault(); applyList(list, false); }
-}
+function onKeyUp(e) { const list = keyToActions.get(e.code); if (list) { e.preventDefault(); applyList(list, false); } }
 
-// Perte de focus : tout relâcher pour éviter les touches « collées ».
+// Perte de focus : tout relâcher pour éviter les touches « collées » (doigts compris).
 function releaseAll() {
   for (const a of ACTIONS) { if (down[a]) { keyCount[a] = 1; press(a, false); } keyCount[a] = 0; }
+  for (const a of Object.keys(touchButtons)) touchButtons[a] = 0;
+  touches.clear(); stick.active = false; touchX = touchY = 0; pointerState.down = false;
 }
 
-function updatePointer(e) {
+// Position d'un événement en pixels logiques (souris : sans borne ; doigts : bornée au canvas).
+function toLogical(e, clampIt) {
   const c = deps.canvas;
-  if (!c) return;
   const r = c.getBoundingClientRect();
   const size = deps.logicalSize ? deps.logicalSize() : null;
   const lw = size ? size.w : c.width, lh = size ? size.h : c.height;
-  pointerState.x = (e.clientX - r.left) / (r.width || 1) * lw;
-  pointerState.y = (e.clientY - r.top) / (r.height || 1) * lh;
-  pointerState.inside = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+  let x = (e.clientX - r.left) / (r.width || 1) * lw, y = (e.clientY - r.top) / (r.height || 1) * lh;
+  if (clampIt) { x = Math.max(0, Math.min(lw, x)); y = Math.max(0, Math.min(lh, y)); }
+  pointerState.inside = clampIt || (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom);
+  return { x, y };
+}
+
+function updatePointer(e) {
+  if (!deps.canvas) return;
+  const p = toLogical(e, false);
+  pointerState.x = p.x; pointerState.y = p.y;
+  if (e.type === 'mousemove' && !(e.sourceCapabilities && e.sourceCapabilities.firesTouchEvents)) pointerState.touch = false;
 }
 
 function onMouseDown(e) {
@@ -142,6 +162,93 @@ function onMouseUp(e) {
   if (e.button === 0) pointerState.down = false;
   applyList(keyToActions.get('Mouse' + e.button), false);
 }
+
+// ---- Tactile (Pointer Events, pointerType ≠ 'mouse') --------------------------------------------
+
+function touchButtonAt(x, y) {
+  if (!touchLayout) return null;
+  const list = touchLayout.buttons;
+  for (let i = 0; i < list.length; i++) {
+    const b = list[i], rr = b.r + (b.pad || 0);
+    if ((x - b.x) * (x - b.x) + (y - b.y) * (y - b.y) <= rr * rr) return b;
+  }
+  return null;
+}
+
+function inZone(z, x, y) { return !!z && x >= z.x && x < z.x + z.w && y >= z.y && y < z.y + z.h; }
+
+function onPointerDown(e) {
+  if (e.pointerType === 'mouse' || !deps.canvas || isTypingTarget(e)) return;
+  e.preventDefault();                 // pas d'événements souris de compatibilité, pas de zoom
+  touchInfo.seen = true; pointerState.touch = true;
+  const p = toLogical(e, true);
+  pointerState.x = p.x; pointerState.y = p.y; pointerState.down = true;
+  const tch = { kind: 'tap', action: null, ox: p.x, oy: p.y, x: p.x, y: p.y, moved: false };
+  const b = touchButtonAt(p.x, p.y);
+  if (b && !capture) { tch.kind = 'button'; tch.action = b.action; touchButtons[b.action] = (touchButtons[b.action] || 0) + 1; press(b.action, true); }
+  else if (touchLayout && !stick.active && inZone(touchLayout.stickZone, p.x, p.y)) {
+    tch.kind = 'stick'; stick.active = true; stick.ox = stick.x = p.x; stick.oy = stick.y = p.y; touchX = touchY = 0;
+  }
+  touches.set(e.pointerId, tch);
+  touchInfo.count = touches.size;
+}
+
+function onPointerMove(e) {
+  const tch = touches.get(e.pointerId);
+  if (!tch) return;
+  e.preventDefault();
+  const p = toLogical(e, true);
+  pointerState.x = p.x; pointerState.y = p.y;
+  if (tch.kind === 'stick') {
+    const R = touchLayout ? touchLayout.radius : 40, dz = touchLayout ? touchLayout.deadzone : 0.12;
+    let dx = p.x - stick.ox, dy = p.y - stick.oy;
+    let len = Math.hypot(dx, dy);
+    if (len > R) { stick.ox = p.x - dx / len * R; stick.oy = p.y - dy / len * R; dx = p.x - stick.ox; dy = p.y - stick.oy; len = R; } // la base suit le pouce
+    stick.x = p.x; stick.y = p.y;
+    const k = len < R * dz ? 0 : Math.min(1, (len - R * dz) / (R - R * dz));
+    touchX = len > 0 ? dx / len * k : 0; touchY = len > 0 ? dy / len * k : 0;
+  } else if (tch.kind === 'tap') {
+    pendingDragX += p.x - tch.x; pendingDragY += p.y - tch.y;
+    if (!tch.moved && Math.hypot(p.x - tch.ox, p.y - tch.oy) > TAP_SLOP) tch.moved = true;
+  }
+  tch.x = p.x; tch.y = p.y;
+}
+
+function onPointerUp(e) {
+  const tch = touches.get(e.pointerId);
+  if (!tch) return;
+  e.preventDefault();
+  touches.delete(e.pointerId);
+  touchInfo.count = touches.size;
+  if (tch.kind === 'button') { touchButtons[tch.action] = Math.max(0, (touchButtons[tch.action] || 1) - 1); press(tch.action, false); }
+  else if (tch.kind === 'stick') { stick.active = false; touchX = touchY = 0; }
+  else if (!tch.moved && e.type === 'pointerup') { pendingClicks++; pendingClickX = tch.x; pendingClickY = tch.y; }
+  pointerState.down = touches.size > 0;
+}
+
+// Bloque le zoom par pincement / double-tap et le défilement de la page (hors champs de saisie).
+function blockTouchDefault(e) { if (!isTypingTarget(e)) e.preventDefault(); }
+
+/**
+ * Disposition des commandes tactiles (ui/touch.js), ou null hors jeu : les doigts déjà posés sur
+ * un bouton ou le stick sont relâchés proprement (aucun clic fantôme).
+ */
+export function setTouchLayout(layout) {
+  if (layout === touchLayout) return;
+  touchLayout = layout;
+  if (layout) return;
+  for (const tch of touches.values()) {
+    if (tch.kind === 'button') { touchButtons[tch.action] = 0; press(tch.action, false); }
+    tch.kind = 'tap'; tch.moved = true;
+  }
+  stick.active = false; touchX = touchY = 0;
+}
+
+/** État tactile pour le rendu (objet réutilisé) : stick {active, ox, oy, x, y}, buttons {action → doigts}, seen. */
+export function touchState() { return touchInfo; }
+
+/** Annule les clics latchés de ce tick (voile « tourne ton téléphone »). */
+export function consumeClicks() { pointerState.clicks = 0; pendingClicks = 0; }
 
 function finishCapture(key, button) {
   const c = capture; capture = null;
@@ -199,6 +306,13 @@ export function initInput({ canvas, getAudioTime, screenToWorld = null, logicalS
     window.addEventListener('mouseup', onMouseUp);
     window.addEventListener('mousemove', updatePointer);
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+    // Doigts : écoutés sur la fenêtre (les bandes noires autour du canvas comptent aussi).
+    window.addEventListener('pointerdown', onPointerDown, { passive: false });
+    window.addEventListener('pointermove', onPointerMove, { passive: false });
+    window.addEventListener('pointerup', onPointerUp, { passive: false });
+    window.addEventListener('pointercancel', onPointerUp, { passive: false });
+    for (const ev of ['touchstart', 'touchmove', 'touchend', 'gesturestart']) document.addEventListener(ev, blockTouchDefault, { passive: false });
+    canvas.addEventListener('dblclick', (e) => e.preventDefault());
   }
   rebuildMaps();
 }
@@ -212,6 +326,7 @@ export function tickInput() {
   }
   pointerState.clicks = pendingClicks; pendingClicks = 0;
   if (pointerState.clicks) { pointerState.clickX = pendingClickX; pointerState.clickY = pendingClickY; }
+  pointerState.dragX = pendingDragX; pointerState.dragY = pendingDragY; pendingDragX = pendingDragY = 0;
   if (deps.screenToWorld) {
     const w = deps.screenToWorld(pointerState.x, pointerState.y, tmpWorld);
     pointerState.worldX = w.x; pointerState.worldY = w.y;
@@ -222,10 +337,11 @@ export function isDown(action) { return down[action] === true; }
 export function justPressed(action) { return just[action] === true; }
 export function pressedAt(action) { return at[action] || 0; }
 
-/** Direction normalisée (-1..1) : clavier prioritaire, sinon stick gauche. */
+/** Direction normalisée (-1..1) : clavier prioritaire, sinon stick tactile, sinon stick gauche manette. */
 export function axis() {
   let x = (down.right ? 1 : 0) - (down.left ? 1 : 0);
   let y = (down.down ? 1 : 0) - (down.up ? 1 : 0);
+  if (x === 0 && y === 0) { x = touchX; y = touchY; }
   if (x === 0 && y === 0) { x = stickX; y = stickY; }
   const len = Math.hypot(x, y);
   if (len > 1) { x /= len; y /= len; }

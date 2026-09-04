@@ -2,11 +2,12 @@
 // volumes, langue, secousses, particules, flashs, plein écran, échelle, ips,
 // indicateur de rythme, Mesure assistée / Sans rythme, remappage complet
 // (clavier + manette), export/import/reset de la sauvegarde. Liste défilante ;
-// ↑↓ choisir, ◄► régler, Entrée activer, Échap retour.
+// ↑↓ choisir, ◄► régler, Entrée activer, Échap retour ; au doigt : glisser = défiler, toucher = régler.
 
 import { playUi } from '../audio/sfx.js';
 import { t } from './i18n.js';
 import * as states from './states.js';
+import { isActive as touchActive } from './touch.js';
 import { buildItems } from './options-items.js';
 import { capture, beginCapture, resetBindings, confirmReset } from './options-data.js';
 import { panel, text, hit, backdrop, heading, C } from './widgets.js';
@@ -22,8 +23,9 @@ export function createOptions() {
     importSave: () => { playUi('ui_confirm'); states.push('savetext', { mode: 'import' }); },
     resetSave: confirmReset,
   });
-  let sel = firstSelectable(0, 1), scroll = 0;
+  let sel = firstSelectable(0, 1), scroll = 0, dragAcc = 0;
   const visibleRows = Math.floor((LIST.h - 10) / LIST.rowH);
+  const maxScroll = () => Math.max(0, items.length - visibleRows);
 
   function firstSelectable(from, d) {
     let i = from;
@@ -57,11 +59,18 @@ export function createOptions() {
   return {
     freezes: true,
     opaque: true,
-    enter() { sel = firstSelectable(0, 1); scroll = 0; playUi('ui_confirm'); },
+    enter() { sel = firstSelectable(0, 1); scroll = 0; dragAcc = 0; playUi('ui_confirm'); },
+    /** Position de défilement (tests). */
+    scrollTop() { return scroll; },
     exit() {},
     update() {
       if (capture.action) return;
       const m = states.mouse;
+      if (m.dragY) {   // glissement au doigt : une ligne par rowH parcourus
+        dragAcc -= m.dragY;
+        const rows = Math.trunc(dragAcc / LIST.rowH);
+        if (rows) { scroll = Math.max(0, Math.min(maxScroll(), scroll + rows)); dragAcc -= rows * LIST.rowH; }
+      }
       const end = Math.min(items.length, scroll + visibleRows);
       if (m.moved) for (let i = scroll; i < end; i++) {
         if (items[i].type !== 'section' && items[i].type !== 'info' && hit(rowRect(i), m.x, m.y) && sel !== i) { sel = i; playUi('ui_move'); }
@@ -105,7 +114,7 @@ export function createOptions() {
         ui.fillStyle = C.bronze; ui.fillRect(LIST.x + LIST.w - 6, LIST.y + 5 + (trackH - knob) * (scroll / (items.length - visibleRows)), 2, knob);
       }
       const it = items[sel];
-      const note = it && it.note ? it.note() : t('ui.options.hint');
+      const note = it && it.note ? it.note() : t(touchActive() ? 'ui.touch.nav_hint' : 'ui.options.hint');
       text(ui, note, W / 2, H - 27, { size: 8, align: 'center', color: C.encreClaire });
     },
   };

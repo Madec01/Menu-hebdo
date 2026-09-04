@@ -1,7 +1,7 @@
 // ui/credits.js — écran de crédits défilant : chaque auteur et licence lus
 // dans les sections `credits` des deux manifestes (assets/manifest.json et
 // assets/audio/manifest.json), polices, musique originale, fabrication. ↓
-// accélère, Échap revient. Écran empilable.
+// accélère, Échap revient, glisser au doigt fait défiler. Écran empilable.
 
 import { playUi } from '../audio/sfx.js';
 import { isDown } from '../core/input.js';
@@ -58,8 +58,10 @@ export function createCredits(deps) {
     enter() { lines = []; y = H - 70; total = 0; },
     exit() {},
     update(_, realDt) {
-      const fast = isDown('menuDown') || isDown('down') || states.mouse.down;
-      y -= (fast ? FAST : SPEED) * realDt;
+      const m = states.mouse;
+      if (m.dragY) y = Math.min(H - 70, y + m.dragY);
+      const fast = isDown('menuDown') || isDown('down') || (m.down && !m.dragY);
+      if (!m.dragY) y -= (fast ? FAST : SPEED) * realDt;
       if (total > 0 && y < -total) y = H - 70;
       if (states.mouse.clicked && states.mouse.y < 20) { playUi('ui_cancel'); states.pop(); }
     },

@@ -2,9 +2,17 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Mobile : pas de zoom (pincement/double-tap), encoche couverte (viewport-fit), appli plein écran une fois ajoutée à l'écran d'accueil. -->
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="CARILLON">
+<meta name="theme-color" content="#16130f">
 <title>CARILLON</title>
-<link rel="icon" href="data:,">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="assets/icon-192.png">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
 <link rel="stylesheet" href="src/style.css">
 </head>
 <body>

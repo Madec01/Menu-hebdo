@@ -153,5 +153,5 @@ export function drawBeatHalo(ctx) {
  */
 export function updateLighting(dt) {
   flickerT += dt;
-  if (pulse > 0.01) addGlow(haloX, haloY, haloRadius * 2.4, haloColor, pulse * 0.4);
+  if (pulse > 0.01) addGlow(haloX, haloY, haloRadius * 2.4, haloColor, pulse * 0.22);
 }

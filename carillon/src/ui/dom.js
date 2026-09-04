@@ -1,6 +1,6 @@
 // ui/dom.js — champs DOM discrets posés par-dessus le canvas (seed manuelle,
 // export/import de sauvegarde). Positionnés en pixels logiques convertis par
-// l'échelle entière du renderer ; input.js ignore le clavier quand un champ
+// l'échelle CSS du renderer (logicalSize().cssScale) ; input.js ignore le clavier quand un champ
 // a le focus (isTypingTarget). Un seul champ visible à la fois.
 
 import * as renderer from '../render/renderer.js';
@@ -13,7 +13,8 @@ function ensure() {
 }
 
 function place(el, x, y, w, h) {
-  const s = renderer.logicalSize().scale;
+  const ls = renderer.logicalSize();
+  const s = ls.cssScale || ls.scale;   // pixels CSS par pixel logique (mode tactile : échelle physique ≠ CSS)
   el.style.left = canvas.offsetLeft + x * s + 'px';
   el.style.top = canvas.offsetTop + y * s + 'px';
   el.style.width = w * s + 'px';

@@ -305,7 +305,24 @@
       "key_Mouse0": "Clic G",
       "key_Mouse1": "Clic M",
       "key_Mouse2": "Clic D",
-      "pad_button": "Bouton {n}"
+      "pad_button": "Bouton {n}",
+      "section_touch": "Tactile",
+      "touch": "Commandes tactiles",
+      "touch_auto": "Auto",
+      "touch_on": "Oui",
+      "touch_off": "Non",
+      "touch_note": "Auto : activées sur un écran tactile.",
+      "touch_size": "Taille des boutons",
+      "touch_size_small": "Petits",
+      "touch_size_normal": "Normaux",
+      "touch_size_large": "Grands",
+      "touch_hand": "Main directrice",
+      "touch_hand_right": "Droite (boutons à droite)",
+      "touch_hand_left": "Gauche (boutons à gauche)",
+      "vibrate": "Vibration",
+      "vibrate_note": "Une pulsation légère sur chaque Parfait, si le téléphone le permet.",
+      "fullscreen_note": "Bascule le plein écran (touche Échap pour en sortir).",
+      "fullscreen_unsupported": "Plein écran indisponible ici : ajoute CARILLON à l’écran d’accueil (Partager → Sur l’écran d’accueil)."
     },
     "credits": {
       "title": "Crédits",
@@ -363,6 +380,21 @@
       "bonus_resonance": "Résonance +1",
       "bonus_card": "Carte offerte",
       "bonus_bronze": "Bronze"
+    },
+    "touch": {
+      "dash": "Volée",
+      "parry": "Parade",
+      "pause": "Pause",
+      "fullscreen": "Plein écran",
+      "hint": "Pouce gauche : marcher · Volée sur le temps · Parade contre les coups",
+      "nav_hint": "Touche pour choisir · glisse pour faire défiler",
+      "rotate": "Tourne ton téléphone",
+      "rotate_sub": "CARILLON se joue en paysage. Touche l’écran pour continuer quand même.",
+      "a2hs_title": "Plein écran",
+      "a2hs": "Ajoute CARILLON à l’écran d’accueil (Partager → Sur l’écran d’accueil) pour jouer en plein écran.",
+      "fullscreen_on": "Plein écran",
+      "fullscreen_off": "Quitter le plein écran",
+      "card_hint": "Touche une carte pour la prendre"
     }
   }
 }

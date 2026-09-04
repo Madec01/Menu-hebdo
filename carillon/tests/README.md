@@ -11,6 +11,7 @@ seul `perf.mjs` a besoin de Playwright et de Chromium.
 | `dps.mjs` | DPS théorique de chaque Timbre (niv 1 et 7) et de chaque fusion, cible seule et groupe | `node tests/dps.mjs` |
 | `perf.mjs` | Run réelle en navigateur, saut à la minute 10, fps/frameMs sur 10 s, 404 et erreurs console | `node tests/perf.mjs` |
 | `game-test.html` | Page de test manuelle de l'agent D (`src/game/_test/`), inchangée | `http://localhost:8080/carillon/src/game/_test/game-test.html` |
+| `mobile.mjs` | Jouabilité mobile (agent T) : émulation tactile Playwright 812×375 @3 (iPhone), 915×412 @2.625 (Android), FR et EN — tap « Cliquez pour sonner », titre → hub → nuit → Relique, joystick virtuel et taps Volée calés sur le temps (≥ 60 % de Parfait), cartes au tap, pause au bouton, options qui défilent au doigt, voile portrait ; captures dans `--out` | `node tests/mobile.mjs [--devices iphone,android,lowdpi] [--langs fr,en] [--out dir]` |
 | `timbres-audio.mjs` | Enregistre à l'oreille (MediaRecorder) 8 mesures de Timbres qui chantent : Battant seul, 4 armes, 6 armes → `tests/results/timbres/` | `node tests/timbres-audio.mjs` |
 | `timbres-analyze.py` | Analyse des prises (soundfile/numpy) : hauteurs mesurées vs journal, gamme, variation par mesure, crête < −1 dBFS, ≤ 3 voix par temps | `python3 tests/timbres-analyze.py` |
 

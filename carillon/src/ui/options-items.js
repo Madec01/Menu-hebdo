@@ -7,6 +7,7 @@ import { bus } from '../core/events.js';
 import { getSave, commit } from '../core/save.js';
 import { ACTIONS, getBindings, hasGamepad } from '../core/input.js';
 import { t, has } from './i18n.js';
+import { TOUCH_DEFAULTS } from './touch.js';
 
 const pct = (v) => t('ui.options.percent', { value: Math.round(v * 100) });
 let layoutMap = null;   // KeyboardLayoutMap (Chromium) : KeyW → « z » sur un clavier AZERTY
@@ -46,7 +47,7 @@ export function setOption(key, value) {
   bus.emit('options:change', { key, value });
 }
 
-export function getOption(key) { return getSave().options[key]; }
+export function getOption(key) { const v = getSave().options[key]; return v === undefined && key in TOUCH_DEFAULTS ? TOUCH_DEFAULTS[key] : v; }
 
 /** Échelles de pixel proposées : auto + celles qui tiennent dans la fenêtre (au moins ×2). */
 function scaleValues() {
@@ -63,7 +64,7 @@ export function buildItems(handlers) {
   // values : tableau ou fonction renvoyant le tableau (échelles qui tiennent dans la fenêtre).
   const choice = (key, labelKey, values, labelOf, note = null) => items.push({ type: 'choice', key, label: () => t('ui.options.' + labelKey), value: () => labelOf(getOption(key)), note,
     adjust(d) { const vs = typeof values === 'function' ? values() : values; const i = Math.max(0, vs.indexOf(getOption(key))); setOption(key, vs[(i + d + vs.length) % vs.length]); } });
-  const toggle = (key, labelKey, onChange = null) => items.push({ type: 'toggle', key, label: () => t('ui.options.' + labelKey), value: () => t(getOption(key) ? 'ui.common.on' : 'ui.common.off'),
+  const toggle = (key, labelKey, onChange = null, note = null) => items.push({ type: 'toggle', key, label: () => t('ui.options.' + labelKey), value: () => t(getOption(key) ? 'ui.common.on' : 'ui.common.off'), note,
     adjust() { setOption(key, !getOption(key)); if (onChange) onChange(getOption(key)); } });
   const action = (labelKey, fn, valueFn = null) => items.push({ type: 'action', label: () => t('ui.options.' + labelKey), value: valueFn || (() => ''), adjust: fn });
 
@@ -72,13 +73,18 @@ export function buildItems(handlers) {
   section('display');
   choice('lang', 'lang', ['fr', 'en'], (v) => t('ui.options.lang_' + v));
   choice('scale', 'scale', scaleValues, (v) => (v ? t('ui.options.scale_n', { n: v }) : t('ui.options.scale_auto')));
-  toggle('fullscreen', 'fullscreen');
+  toggle('fullscreen', 'fullscreen', null, () => t('ui.options.fullscreen_note'));
   slider('shake', 'shake'); slider('particles', 'particles');
   toggle('reduceFlash', 'reduce_flash');
   toggle('showFps', 'show_fps');
   section('game');
   choice('beatIndicator', 'beat_indicator', ['both', 'visual', 'audio', 'none'], (v) => t('ui.options.beat_' + v));
   choice('assist', 'assist', ['none', 'assisted', 'norhythm'], (v) => t('ui.options.assist_' + v), () => t('ui.options.assist_note'));
+  section('touch');
+  choice('touch', 'touch', ['auto', 'on', 'off'], (v) => t('ui.options.touch_' + v), () => t('ui.options.touch_note'));
+  choice('touchSize', 'touch_size', ['small', 'normal', 'large'], (v) => t('ui.options.touch_size_' + v));
+  choice('touchHand', 'touch_hand', ['right', 'left'], (v) => t('ui.options.touch_hand_' + v));
+  toggle('vibrate', 'vibrate', null, () => t('ui.options.vibrate_note'));
   section('controls');
   items.push({ type: 'info', label: () => t('ui.options.gamepad'), value: () => t(hasGamepad() ? 'ui.options.gamepad_yes' : 'ui.options.gamepad_no') });
   for (const a of ACTIONS) items.push({ type: 'binding', action: a, label: () => t('ui.options.action_' + a), value: () => bindingLabel(a), adjust: () => handlers.capture(a) });

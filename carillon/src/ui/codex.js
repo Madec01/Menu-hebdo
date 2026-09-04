@@ -1,7 +1,7 @@
 // ui/codex.js — codex empilable : onglets Bestiaire / Timbres / Accords /
 // Fusions / Reliques / Feuillets / Hauts-faits. Liste défilante à gauche, détail à
 // droite (codex-pages.js) ; les Feuillets s'ouvrent dans le lecteur (lore.js).
-// ◄► onglet, ↑↓ entrée, Entrée lire, Échap retour.
+// ◄► onglet, ↑↓ entrée, Entrée lire, Échap retour ; au doigt : glisser la liste = défiler.
 
 import { playUi } from '../audio/sfx.js';
 import { t } from './i18n.js';
@@ -17,7 +17,7 @@ const DETAIL = { x: 188, y: 46, w: 282, h: 194 };
 const LEAF_GRID = { x: 22, y: 50, cols: 8, cellW: 56, cellH: 40 };
 
 export function createCodex() {
-  let tab = 0, sel = 0, scroll = 0, time = 0, items = [];
+  let tab = 0, sel = 0, scroll = 0, time = 0, items = [], dragAcc = 0;
   const tabRects = [];
   const leafRects = [];
   const tabId = () => TABS[tab];
@@ -71,11 +71,18 @@ export function createCodex() {
   return {
     freezes: true,
     opaque: true,
-    enter(p) { tab = p && p.tab ? Math.max(0, TABS.indexOf(p.tab)) : 0; sel = 0; time = 0; refresh(); },
+    enter(p) { tab = p && p.tab ? Math.max(0, TABS.indexOf(p.tab)) : 0; sel = 0; time = 0; dragAcc = 0; refresh(); },
+    /** Position de défilement de la liste (tests). */
+    scrollTop() { return scroll; },
     exit() {},
     update(_, realDt) {
       time += realDt;
       const m = states.mouse;
+      if (m.dragY && tabId() !== 'leaves') {
+        dragAcc -= m.dragY;
+        const rows = Math.trunc(dragAcc / LIST.rowH);
+        if (rows) { scroll = Math.max(0, Math.min(Math.max(0, items.length - visibleRows), scroll + rows)); dragAcc -= rows * LIST.rowH; }
+      }
       if (m.moved) {
         if (tabId() === 'leaves') { for (let i = 0; i < leafRects.length; i++) if (hit(leafRects[i], m.x, m.y) && sel !== i) { sel = i; playUi('ui_move'); } }
         else for (let i = scroll; i < Math.min(items.length, scroll + visibleRows); i++) {

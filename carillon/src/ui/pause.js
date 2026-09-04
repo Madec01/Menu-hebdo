@@ -1,12 +1,13 @@
 // ui/pause.js — pause (timeScale 0 via freezes) : reprendre, options, build
 // courant (Timbres, Accords, dégâts par arme), abandonner avec dialogue de
-// confirmation. Échap / pause reprend.
+// confirmation. Échap / pause reprend. Bouton plein écran (icône) dans le panneau.
 
 import { hasGamepad } from '../core/input.js';
 import { playUi } from '../audio/sfx.js';
 import { t, fmtTime } from './i18n.js';
 import * as states from './states.js';
-import { panel, text, icon, createMenu, dimmer, heading, pips, C } from './widgets.js';
+import * as touch from './touch.js';
+import { panel, text, icon, createMenu, dimmer, heading, pips, hit, C } from './widgets.js';
 
 const W = 480, H = 270;
 
@@ -21,6 +22,7 @@ export function createPause(deps) {
     { label: () => t('ui.pause.abandon'), rect: rect(3), action: abandon, icon: 'ui_mort' },
   ];
   const menu = createMenu(items, { size: 10 });
+  let fsRect = { x: PX + PW - 26, y: PY + 6, w: 18, h: 18 };
 
   function resume() { playUi('ui_cancel'); states.pop(); }
 
@@ -72,7 +74,10 @@ export function createPause(deps) {
     update() {
       const m = states.mouse;
       if (m.moved && menu.hover(m.x, m.y)) playUi('ui_move');
-      if (m.clicked) { const it = menu.at(m.x, m.y); if (it) it.action(); }
+      if (m.clicked) {
+        if (hit(fsRect, m.x, m.y)) { playUi('ui_confirm'); touch.toggleFullscreen(); return; }
+        const it = menu.at(m.x, m.y); if (it) it.action();
+      }
     },
     handleAction(a) {
       if (a === 'menuUp') { if (menu.move(-1)) playUi('ui_move'); return true; }
@@ -85,6 +90,7 @@ export function createPause(deps) {
       dimmer(ui, W, H, 0.6, states.rampOf('pause'));
       panel(ui, PX, PY, PW, PH, 'parchment');
       heading(ui, t('ui.pause.title'), PX + PW / 2, PY + 8, 18);
+      fsRect = touch.fullscreenButton(ui, PX + PW - (touch.isActive() ? 32 : 26), PY + 8);
       menu.render(ui);
       const g = deps.game ? deps.game.gameState() : null;
       if (g && g.run) {
@@ -92,7 +98,7 @@ export function createPause(deps) {
         text(ui, t('ui.pause.parish', { parish: t('parish.' + g.run.parishId + '.name'), character: t('char.' + g.run.characterId + '.name') }), PX + PW / 2, PY + PH - 44, { size: 8, align: 'center', color: C.encreClaire });
       }
       if (showBuild) renderBuild(ui);
-      text(ui, t(hasGamepad() ? 'ui.common.nav_hint_pad' : 'ui.common.nav_hint'), PX + PW / 2, PY + PH - 24, { size: 7, align: 'center', color: C.encreClaire });
+      text(ui, t(touch.isActive() ? 'ui.touch.nav_hint' : hasGamepad() ? 'ui.common.nav_hint_pad' : 'ui.common.nav_hint'), PX + PW / 2, PY + PH - 24, { size: 7, align: 'center', color: C.encreClaire });
     },
   };
 }

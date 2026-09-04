@@ -15,14 +15,23 @@ export const C = Object.freeze({
 const FRAME = { parchment: 'frame_parchment', bronze: 'frame_bronze', dark: 'frame_dark' };
 const fontCache = new Map();
 const wrapCache = new Map();
+let textBump = 0;   // px ajoutés à toutes les tailles de police (mode tactile sur petit écran : +1)
 
-/** Chaîne ctx.font mémorisée. kind : 'ui' | 'display'. */
+/** Chaîne ctx.font mémorisée. kind : 'ui' | 'display'. La taille inclut le décalage tactile. */
 export function fontOf(kind, size) {
-  const k = kind + size;
+  const k = kind + (size + textBump);
   let f = fontCache.get(k);
-  if (!f) { f = font(kind === 'display' ? 'CarillonDisplay' : 'CarillonUi', size); fontCache.set(k, f); }
+  if (!f) { f = font(kind === 'display' ? 'CarillonDisplay' : 'CarillonUi', size + textBump); fontCache.set(k, f); }
   return f;
 }
+
+/** Décalage global des tailles de police (ui/touch.js) ; vide le cache de repliement. */
+export function setTextBump(n) {
+  const v = Math.max(0, n | 0);
+  if (v === textBump) return;
+  textBump = v; wrapCache.clear();
+}
+export function textBumpValue() { return textBump; }
 
 /** Cadre 9-slice. style : 'parchment' | 'bronze' | 'dark'. */
 export function panel(ctx, x, y, w, h, style = 'parchment') {
@@ -85,7 +94,7 @@ const EMPTY = Object.freeze({});
 
 /** Découpe str en lignes tenant dans maxWidth (mémorisé par police). */
 export function wrap(ctx, str, maxWidth, kind = 'ui', size = 10) {
-  const key = kind + size + '|' + maxWidth + '|' + str;
+  const key = kind + (size + textBump) + '|' + maxWidth + '|' + str;
   let lines = wrapCache.get(key);
   if (lines) return lines;
   ctx.font = fontOf(kind, size);

@@ -305,7 +305,24 @@
       "key_Mouse0": "L Click",
       "key_Mouse1": "M Click",
       "key_Mouse2": "R Click",
-      "pad_button": "Button {n}"
+      "pad_button": "Button {n}",
+      "section_touch": "Touch",
+      "touch": "Touch controls",
+      "touch_auto": "Auto",
+      "touch_on": "On",
+      "touch_off": "Off",
+      "touch_note": "Auto: enabled on a touch screen.",
+      "touch_size": "Button size",
+      "touch_size_small": "Small",
+      "touch_size_normal": "Normal",
+      "touch_size_large": "Large",
+      "touch_hand": "Dominant hand",
+      "touch_hand_right": "Right (buttons on the right)",
+      "touch_hand_left": "Left (buttons on the left)",
+      "vibrate": "Vibration",
+      "vibrate_note": "A light pulse on every Perfect, if the phone allows it.",
+      "fullscreen_note": "Toggles full screen (press Esc to leave).",
+      "fullscreen_unsupported": "Full screen is not available here: add CARILLON to your home screen (Share → Add to Home Screen)."
     },
     "credits": {
       "title": "Credits",
@@ -363,6 +380,21 @@
       "bonus_resonance": "Resonance +1",
       "bonus_card": "Free card",
       "bonus_bronze": "Bronze"
+    },
+    "touch": {
+      "dash": "Peal",
+      "parry": "Parry",
+      "pause": "Pause",
+      "fullscreen": "Full screen",
+      "hint": "Left thumb: walk · Peal on the beat · Parry against blows",
+      "nav_hint": "Tap to choose · drag to scroll",
+      "rotate": "Turn your phone",
+      "rotate_sub": "CARILLON is played in landscape. Tap the screen to carry on anyway.",
+      "a2hs_title": "Full screen",
+      "a2hs": "Add CARILLON to your home screen (Share → Add to Home Screen) to play full screen.",
+      "fullscreen_on": "Full screen",
+      "fullscreen_off": "Leave full screen",
+      "card_hint": "Tap a card to take it"
     }
   }
 }

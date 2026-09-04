@@ -26,8 +26,8 @@ const stack = [];             // [{ name, screen, age }]
 const fade = { phase: null, t: 0, next: null, params: null, sound: null };
 let generation = 0;           // incrémenté à chaque changement de pile (coupe la distribution d'actions)
 
-/** État de la souris en pixels logiques (objet réutilisé). */
-export const mouse = { x: 0, y: 0, down: false, clicked: false, moved: false, inside: false, wasDown: false, lastX: -1, lastY: -1 };
+/** État de la souris en pixels logiques (objet réutilisé). dragX/dragY : glissement tactile du tick (défilement au doigt). */
+export const mouse = { x: 0, y: 0, down: false, clicked: false, moved: false, inside: false, wasDown: false, lastX: -1, lastY: -1, dragX: 0, dragY: 0 };
 
 /** screens : { nom → écran créé }. */
 export function initStates(defs) { screens = defs; }
@@ -107,6 +107,7 @@ function updateMouse() {
   if (mouse.clicked) { mouse.x = p.clickX; mouse.y = p.clickY; }
   mouse.wasDown = p.down;
   mouse.down = p.down;
+  mouse.dragX = p.dragX; mouse.dragY = p.dragY;
 }
 
 /** Tick : fondu, souris, actions vers le sommet, update de chaque écran de la pile. */
@@ -135,12 +136,13 @@ export function update(dt, realDt) {
   // Seul l'écran du sommet voit la souris (clic, survol) ; les écrans du dessous continuent
   // leur update (animations, jeu) sans réagir au pointeur.
   let clicked = mouse.clicked;
-  const moved = mouse.moved;
+  const moved = mouse.moved, dragX = mouse.dragX, dragY = mouse.dragY;
   for (let i = 0; i < stack.length; i++) {
     const e = stack[i];
     const gen = generation;
     const isTop = i === stack.length - 1;
     mouse.clicked = isTop && clicked; mouse.moved = isTop && moved;
+    mouse.dragX = isTop ? dragX : 0; mouse.dragY = isTop ? dragY : 0;
     e.age += realDt;
     if (e.screen.update) e.screen.update(dt, realDt);
     if (generation !== gen) clicked = false; // la pile a changé : le clic ne sert qu'une fois

@@ -9,6 +9,7 @@ import { hasGamepad } from '../core/input.js';
 import { t } from './i18n.js';
 import { def as dataDef } from './gamedata.js';
 import * as states from './states.js';
+import { isActive as touchActive } from './touch.js';
 import { card, text, button, dimmer, hit, heading, C } from './widgets.js';
 
 const W = 480, H = 270;
@@ -96,7 +97,7 @@ export function createLevelUp(deps) {
       }
       const n = rerolls();
       if (n > 0) button(ui, { ...rerollRect, label: t('ui.levelup.reroll', { count: n }), size: 9, focused: false });
-      text(ui, t(hasGamepad() ? 'ui.levelup.hint_pad' : 'ui.levelup.hint'), W / 2, H - 36, { size: 8, align: 'center', color: C.gris, shadow: true });
+      text(ui, t(touchActive() ? 'ui.touch.card_hint' : hasGamepad() ? 'ui.levelup.hint_pad' : 'ui.levelup.hint'), W / 2, H - 36, { size: 8, align: 'center', color: C.gris, shadow: true });
     },
   };
 }
