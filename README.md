@@ -31,3 +31,16 @@ Aucune dépendance, aucun serveur nécessaire.
 ## Ennemis
 
 Vase (fonce sur toi), Chauve-souris (rapide et erratique), Tourelle (tire à distance), Brute (charge après un temps de préparation), Mage (garde ses distances et tire), et un boss par étage avec des anneaux de projectiles et des charges.
+
+---
+
+## Autre projet de ce dépôt
+
+### TERRA NOVA — `terra-nova/`
+
+Jeu de gestion et de terraformation dont le plateau est une planète 3D
+procédurale (Three.js). Voir [`terra-nova/README.md`](terra-nova/README.md).
+
+```bash
+cd terra-nova && npm install && npm run dev
+```
