@@ -1,0 +1,461 @@
+{
+ "id": "victory",
+ "title": "L'aube sonnée",
+ "status": "esquisse",
+ "bpm": 96,
+ "beatsPerBar": 4,
+ "bars": 8,
+ "key": "D",
+ "mode": "mixolydien",
+ "layers": [
+  {
+   "tier": 0,
+   "name": "bourdon",
+   "instrument": "contrabass",
+   "gain": 0.7,
+   "events": [
+    {
+     "bar": 0,
+     "beat": 0,
+     "note": "D2",
+     "dur": 16
+    },
+    {
+     "bar": 4,
+     "beat": 0,
+     "note": "G2",
+     "dur": 8
+    },
+    {
+     "bar": 6,
+     "beat": 0,
+     "note": "D2",
+     "dur": 8
+    }
+   ]
+  },
+  {
+   "tier": 0,
+   "name": "orgue",
+   "instrument": "organ",
+   "gain": 0.35,
+   "events": [
+    {
+     "bar": 0,
+     "beat": 0,
+     "note": "D3",
+     "dur": 16
+    },
+    {
+     "bar": 0,
+     "beat": 0,
+     "note": "A3",
+     "dur": 16
+    },
+    {
+     "bar": 0,
+     "beat": 0,
+     "note": "F#4",
+     "dur": 16
+    },
+    {
+     "bar": 4,
+     "beat": 0,
+     "note": "G3",
+     "dur": 8
+    },
+    {
+     "bar": 4,
+     "beat": 0,
+     "note": "D4",
+     "dur": 8
+    },
+    {
+     "bar": 4,
+     "beat": 0,
+     "note": "B4",
+     "dur": 8
+    },
+    {
+     "bar": 6,
+     "beat": 0,
+     "note": "D3",
+     "dur": 8
+    },
+    {
+     "bar": 6,
+     "beat": 0,
+     "note": "A3",
+     "dur": 8
+    },
+    {
+     "bar": 6,
+     "beat": 0,
+     "note": "F#4",
+     "dur": 8
+    }
+   ]
+  },
+  {
+   "tier": 1,
+   "name": "tambour",
+   "instrument": "frame_drum",
+   "gain": 0.8,
+   "pattern": {
+    "steps": 8,
+    "hits": [
+     [
+      "low",
+      0,
+      1.0
+     ],
+     [
+      "high",
+      3,
+      0.6
+     ],
+     [
+      "low",
+      4,
+      0.8
+     ],
+     [
+      "high",
+      6,
+      0.6
+     ]
+    ]
+   },
+   "repeatBars": 1
+  },
+  {
+   "tier": 1,
+   "name": "tambourin",
+   "instrument": "tambourine",
+   "gain": 0.5,
+   "pattern": {
+    "steps": 8,
+    "hits": [
+     [
+      "hit",
+      2,
+      0.7
+     ],
+     [
+      "shake",
+      5,
+      0.4
+     ],
+     [
+      "hit",
+      6,
+      0.7
+     ]
+    ]
+   },
+   "repeatBars": 1
+  },
+  {
+   "tier": 2,
+   "name": "flute",
+   "instrument": "recorder",
+   "gain": 0.6,
+   "events": [
+    {
+     "bar": 0,
+     "beat": 0.0,
+     "note": "D5",
+     "dur": 1.0
+    },
+    {
+     "bar": 0,
+     "beat": 1.0,
+     "note": "F#5",
+     "dur": 1.0
+    },
+    {
+     "bar": 0,
+     "beat": 2.0,
+     "note": "A5",
+     "dur": 2.0
+    },
+    {
+     "bar": 1,
+     "beat": 0.0,
+     "note": "B5",
+     "dur": 1.0
+    },
+    {
+     "bar": 1,
+     "beat": 1.0,
+     "note": "A5",
+     "dur": 1.0
+    },
+    {
+     "bar": 1,
+     "beat": 2.0,
+     "note": "F#5",
+     "dur": 2.0
+    },
+    {
+     "bar": 2,
+     "beat": 0.0,
+     "note": "G5",
+     "dur": 1.0
+    },
+    {
+     "bar": 2,
+     "beat": 1.0,
+     "note": "A5",
+     "dur": 1.0
+    },
+    {
+     "bar": 2,
+     "beat": 2.0,
+     "note": "B5",
+     "dur": 1.0
+    },
+    {
+     "bar": 2,
+     "beat": 3.0,
+     "note": "C6",
+     "dur": 1.0
+    },
+    {
+     "bar": 3,
+     "beat": 0.0,
+     "note": "A5",
+     "dur": 4.0
+    },
+    {
+     "bar": 4,
+     "beat": 0.0,
+     "note": "D6",
+     "dur": 1.0
+    },
+    {
+     "bar": 4,
+     "beat": 1.0,
+     "note": "C6",
+     "dur": 1.0
+    },
+    {
+     "bar": 4,
+     "beat": 2.0,
+     "note": "A5",
+     "dur": 2.0
+    },
+    {
+     "bar": 5,
+     "beat": 0.0,
+     "note": "B5",
+     "dur": 1.0
+    },
+    {
+     "bar": 5,
+     "beat": 1.0,
+     "note": "A5",
+     "dur": 1.0
+    },
+    {
+     "bar": 5,
+     "beat": 2.0,
+     "note": "F#5",
+     "dur": 1.0
+    },
+    {
+     "bar": 5,
+     "beat": 3.0,
+     "note": "D5",
+     "dur": 1.0
+    },
+    {
+     "bar": 6,
+     "beat": 0.0,
+     "note": "E5",
+     "dur": 1.0
+    },
+    {
+     "bar": 6,
+     "beat": 1.0,
+     "note": "F#5",
+     "dur": 1.0
+    },
+    {
+     "bar": 6,
+     "beat": 2.0,
+     "note": "G5",
+     "dur": 1.0
+    },
+    {
+     "bar": 6,
+     "beat": 3.0,
+     "note": "E5",
+     "dur": 1.0
+    },
+    {
+     "bar": 7,
+     "beat": 0.0,
+     "note": "D5",
+     "dur": 4.0
+    }
+   ]
+  },
+  {
+   "tier": 3,
+   "name": "voix",
+   "instrument": "choir",
+   "gain": 0.6,
+   "events": [
+    {
+     "bar": 0,
+     "beat": 0,
+     "note": "D3",
+     "dur": 16
+    },
+    {
+     "bar": 0,
+     "beat": 0,
+     "note": "A3",
+     "dur": 16
+    },
+    {
+     "bar": 0,
+     "beat": 0,
+     "note": "F#4",
+     "dur": 16
+    },
+    {
+     "bar": 0,
+     "beat": 0,
+     "note": "D5",
+     "dur": 16
+    },
+    {
+     "bar": 4,
+     "beat": 0,
+     "note": "G3",
+     "dur": 8
+    },
+    {
+     "bar": 4,
+     "beat": 0,
+     "note": "D4",
+     "dur": 8
+    },
+    {
+     "bar": 4,
+     "beat": 0,
+     "note": "B4",
+     "dur": 8
+    },
+    {
+     "bar": 6,
+     "beat": 0,
+     "note": "D3",
+     "dur": 8
+    },
+    {
+     "bar": 6,
+     "beat": 0,
+     "note": "A3",
+     "dur": 8
+    },
+    {
+     "bar": 6,
+     "beat": 0,
+     "note": "F#4",
+     "dur": 8
+    },
+    {
+     "bar": 6,
+     "beat": 0,
+     "note": "D5",
+     "dur": 8
+    }
+   ]
+  },
+  {
+   "tier": 3,
+   "name": "cloches",
+   "instrument": "tubular_bells",
+   "gain": 0.7,
+   "events": [
+    {
+     "bar": 0,
+     "beat": 0,
+     "note": "D4",
+     "dur": 2
+    },
+    {
+     "bar": 0,
+     "beat": 2,
+     "note": "A4",
+     "dur": 2
+    },
+    {
+     "bar": 1,
+     "beat": 0,
+     "note": "F#4",
+     "dur": 2
+    },
+    {
+     "bar": 1,
+     "beat": 2,
+     "note": "D5",
+     "dur": 2
+    },
+    {
+     "bar": 4,
+     "beat": 0,
+     "note": "G4",
+     "dur": 2
+    },
+    {
+     "bar": 4,
+     "beat": 2,
+     "note": "B4",
+     "dur": 2
+    },
+    {
+     "bar": 6,
+     "beat": 0,
+     "note": "D5",
+     "dur": 4
+    }
+   ]
+  },
+  {
+   "tier": 3,
+   "name": "clarines",
+   "instrument": "hand_chimes",
+   "gain": 0.4,
+   "pattern": {
+    "steps": 8,
+    "hits": [
+     [
+      "D6",
+      1,
+      0.5
+     ],
+     [
+      "A6",
+      3,
+      0.4
+     ],
+     [
+      "F#6",
+      5,
+      0.5
+     ],
+     [
+      "F#6",
+      7,
+      0.4
+     ]
+    ]
+   },
+   "repeatBars": 1
+  }
+ ]
+}

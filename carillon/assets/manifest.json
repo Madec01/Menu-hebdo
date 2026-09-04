@@ -1,0 +1,3962 @@
+{
+ "version": 1,
+ "generated": "2026-09-04",
+ "palette": {
+  "suie": "#16130f",
+  "tourbe": "#2a241c",
+  "mousse": "#4a5540",
+  "os": "#d8cdb4",
+  "bronze": "#c9973f",
+  "braise": "#e0603a",
+  "gris_silence": "#8f8d93"
+ },
+ "sprites": {
+  "wren": {
+   "file": "sprites/wren.png",
+   "frameW": 64,
+   "frameH": 64,
+   "anchor": [
+    0.5,
+    0.9
+   ],
+   "anims": {
+    "idle_up": {
+     "row": 0,
+     "frames": 2,
+     "fps": 2,
+     "loop": true
+    },
+    "idle_left": {
+     "row": 1,
+     "frames": 2,
+     "fps": 2,
+     "loop": true
+    },
+    "idle_down": {
+     "row": 2,
+     "frames": 2,
+     "fps": 2,
+     "loop": true
+    },
+    "idle_right": {
+     "row": 3,
+     "frames": 2,
+     "fps": 2,
+     "loop": true
+    },
+    "walk_up": {
+     "row": 4,
+     "frames": 9,
+     "fps": 12,
+     "loop": true
+    },
+    "walk_left": {
+     "row": 5,
+     "frames": 9,
+     "fps": 12,
+     "loop": true
+    },
+    "walk_down": {
+     "row": 6,
+     "frames": 9,
+     "fps": 12,
+     "loop": true
+    },
+    "walk_right": {
+     "row": 7,
+     "frames": 9,
+     "fps": 12,
+     "loop": true
+    },
+    "attack_up": {
+     "row": 8,
+     "frames": 6,
+     "fps": 14,
+     "loop": false
+    },
+    "attack_left": {
+     "row": 9,
+     "frames": 6,
+     "fps": 14,
+     "loop": false
+    },
+    "attack_down": {
+     "row": 10,
+     "frames": 6,
+     "fps": 14,
+     "loop": false
+    },
+    "attack_right": {
+     "row": 11,
+     "frames": 6,
+     "fps": 14,
+     "loop": false
+    },
+    "hurt": {
+     "row": 12,
+     "frames": 6,
+     "fps": 8,
+     "loop": false
+    },
+    "die": {
+     "row": 12,
+     "frames": 6,
+     "fps": 8,
+     "loop": false
+    }
+   },
+   "shadow": 10,
+   "credit": "ulpc",
+   "kind": "player"
+  },
+  "osric": {
+   "file": "sprites/osric.png",
+   "frameW": 64,
+   "frameH": 64,
+   "anchor": [
+    0.5,
+    0.9
+   ],
+   "anims": {
+    "idle_up": {
+     "row": 0,
+     "frames": 2,
+     "fps": 2,
+     "loop": true
+    },
+    "idle_left": {
+     "row": 1,
+     "frames": 2,
+     "fps": 2,
+     "loop": true
+    },
+    "idle_down": {
+     "row": 2,
+     "frames": 2,
+     "fps": 2,
+     "loop": true
+    },
+    "idle_right": {
+     "row": 3,
+     "frames": 2,
+     "fps": 2,
+     "loop": true
+    },
+    "walk_up": {
+     "row": 4,
+     "frames": 9,
+     "fps": 12,
+     "loop": true
+    },
+    "walk_left": {
+     "row": 5,
+     "frames": 9,
+     "fps": 12,
+     "loop": true
+    },
+    "walk_down": {
+     "row": 6,
+     "frames": 9,
+     "fps": 12,
+     "loop": true
+    },
+    "walk_right": {
+     "row": 7,
+     "frames": 9,
+     "fps": 12,
+     "loop": true
+    },
+    "attack_up": {
+     "row": 8,
+     "frames": 6,
+     "fps": 14,
+     "loop": false
+    },
+    "attack_left": {
+     "row": 9,
+     "frames": 6,
+     "fps": 14,
+     "loop": false
+    },
+    "attack_down": {
+     "row": 10,
+     "frames": 6,
+     "fps": 14,
+     "loop": false
+    },
+    "attack_right": {
+     "row": 11,
+     "frames": 6,
+     "fps": 14,
+     "loop": false
+    },
+    "hurt": {
+     "row": 12,
+     "frames": 6,
+     "fps": 8,
+     "loop": false
+    },
+    "die": {
+     "row": 12,
+     "frames": 6,
+     "fps": 8,
+     "loop": false
+    }
+   },
+   "shadow": 10,
+   "credit": "ulpc",
+   "kind": "player"
+  },
+  "maren": {
+   "file": "sprites/maren.png",
+   "frameW": 64,
+   "frameH": 64,
+   "anchor": [
+    0.5,
+    0.9
+   ],
+   "anims": {
+    "idle_up": {
+     "row": 0,
+     "frames": 2,
+     "fps": 2,
+     "loop": true
+    },
+    "idle_left": {
+     "row": 1,
+     "frames": 2,
+     "fps": 2,
+     "loop": true
+    },
+    "idle_down": {
+     "row": 2,
+     "frames": 2,
+     "fps": 2,
+     "loop": true
+    },
+    "idle_right": {
+     "row": 3,
+     "frames": 2,
+     "fps": 2,
+     "loop": true
+    },
+    "walk_up": {
+     "row": 4,
+     "frames": 9,
+     "fps": 12,
+     "loop": true
+    },
+    "walk_left": {
+     "row": 5,
+     "frames": 9,
+     "fps": 12,
+     "loop": true
+    },
+    "walk_down": {
+     "row": 6,
+     "frames": 9,
+     "fps": 12,
+     "loop": true
+    },
+    "walk_right": {
+     "row": 7,
+     "frames": 9,
+     "fps": 12,
+     "loop": true
+    },
+    "attack_up": {
+     "row": 8,
+     "frames": 6,
+     "fps": 14,
+     "loop": false
+    },
+    "attack_left": {
+     "row": 9,
+     "frames": 6,
+     "fps": 14,
+     "loop": false
+    },
+    "attack_down": {
+     "row": 10,
+     "frames": 6,
+     "fps": 14,
+     "loop": false
+    },
+    "attack_right": {
+     "row": 11,
+     "frames": 6,
+     "fps": 14,
+     "loop": false
+    },
+    "hurt": {
+     "row": 12,
+     "frames": 6,
+     "fps": 8,
+     "loop": false
+    },
+    "die": {
+     "row": 12,
+     "frames": 6,
+     "fps": 8,
+     "loop": false
+    }
+   },
+   "shadow": 10,
+   "credit": "ulpc",
+   "kind": "player"
+  },
+  "le_muet": {
+   "file": "sprites/le_muet.png",
+   "frameW": 64,
+   "frameH": 64,
+   "anchor": [
+    0.5,
+    0.9
+   ],
+   "anims": {
+    "idle_up": {
+     "row": 0,
+     "frames": 2,
+     "fps": 2,
+     "loop": true
+    },
+    "idle_left": {
+     "row": 1,
+     "frames": 2,
+     "fps": 2,
+     "loop": true
+    },
+    "idle_down": {
+     "row": 2,
+     "frames": 2,
+     "fps": 2,
+     "loop": true
+    },
+    "idle_right": {
+     "row": 3,
+     "frames": 2,
+     "fps": 2,
+     "loop": true
+    },
+    "walk_up": {
+     "row": 4,
+     "frames": 9,
+     "fps": 12,
+     "loop": true
+    },
+    "walk_left": {
+     "row": 5,
+     "frames": 9,
+     "fps": 12,
+     "loop": true
+    },
+    "walk_down": {
+     "row": 6,
+     "frames": 9,
+     "fps": 12,
+     "loop": true
+    },
+    "walk_right": {
+     "row": 7,
+     "frames": 9,
+     "fps": 12,
+     "loop": true
+    },
+    "attack_up": {
+     "row": 8,
+     "frames": 8,
+     "fps": 14,
+     "loop": false
+    },
+    "attack_left": {
+     "row": 9,
+     "frames": 8,
+     "fps": 14,
+     "loop": false
+    },
+    "attack_down": {
+     "row": 10,
+     "frames": 8,
+     "fps": 14,
+     "loop": false
+    },
+    "attack_right": {
+     "row": 11,
+     "frames": 8,
+     "fps": 14,
+     "loop": false
+    },
+    "hurt": {
+     "row": 12,
+     "frames": 6,
+     "fps": 8,
+     "loop": false
+    },
+    "die": {
+     "row": 12,
+     "frames": 6,
+     "fps": 8,
+     "loop": false
+    }
+   },
+   "shadow": 10,
+   "credit": "ulpc",
+   "kind": "player"
+  },
+  "feutre": {
+   "file": "sprites/feutre.png",
+   "frameW": 64,
+   "frameH": 64,
+   "anchor": [
+    0.5,
+    0.9
+   ],
+   "anims": {
+    "idle_up": {
+     "row": 0,
+     "frames": 2,
+     "fps": 2,
+     "loop": true
+    },
+    "idle_left": {
+     "row": 1,
+     "frames": 2,
+     "fps": 2,
+     "loop": true
+    },
+    "idle_down": {
+     "row": 2,
+     "frames": 2,
+     "fps": 2,
+     "loop": true
+    },
+    "idle_right": {
+     "row": 3,
+     "frames": 2,
+     "fps": 2,
+     "loop": true
+    },
+    "walk_up": {
+     "row": 4,
+     "frames": 9,
+     "fps": 12,
+     "loop": true
+    },
+    "walk_left": {
+     "row": 5,
+     "frames": 9,
+     "fps": 12,
+     "loop": true
+    },
+    "walk_down": {
+     "row": 6,
+     "frames": 9,
+     "fps": 12,
+     "loop": true
+    },
+    "walk_right": {
+     "row": 7,
+     "frames": 9,
+     "fps": 12,
+     "loop": true
+    },
+    "attack_up": {
+     "row": 8,
+     "frames": 6,
+     "fps": 14,
+     "loop": false
+    },
+    "attack_left": {
+     "row": 9,
+     "frames": 6,
+     "fps": 14,
+     "loop": false
+    },
+    "attack_down": {
+     "row": 10,
+     "frames": 6,
+     "fps": 14,
+     "loop": false
+    },
+    "attack_right": {
+     "row": 11,
+     "frames": 6,
+     "fps": 14,
+     "loop": false
+    },
+    "hurt": {
+     "row": 12,
+     "frames": 6,
+     "fps": 8,
+     "loop": false
+    },
+    "die": {
+     "row": 12,
+     "frames": 6,
+     "fps": 8,
+     "loop": false
+    },
+    "idle": {
+     "row": 2,
+     "frames": 2,
+     "fps": 2,
+     "loop": true
+    },
+    "walk": {
+     "row": 6,
+     "frames": 9,
+     "fps": 12,
+     "loop": true
+    },
+    "attack": {
+     "row": 10,
+     "frames": 6,
+     "fps": 14,
+     "loop": false
+    }
+   },
+   "shadow": 10,
+   "credit": "ulpc",
+   "kind": "enemy",
+   "directional": true
+  },
+  "fossoyeur": {
+   "file": "sprites/fossoyeur.png",
+   "frameW": 64,
+   "frameH": 64,
+   "anchor": [
+    0.5,
+    0.9
+   ],
+   "anims": {
+    "idle_up": {
+     "row": 0,
+     "frames": 2,
+     "fps": 2,
+     "loop": true
+    },
+    "idle_left": {
+     "row": 1,
+     "frames": 2,
+     "fps": 2,
+     "loop": true
+    },
+    "idle_down": {
+     "row": 2,
+     "frames": 2,
+     "fps": 2,
+     "loop": true
+    },
+    "idle_right": {
+     "row": 3,
+     "frames": 2,
+     "fps": 2,
+     "loop": true
+    },
+    "walk_up": {
+     "row": 4,
+     "frames": 9,
+     "fps": 12,
+     "loop": true
+    },
+    "walk_left": {
+     "row": 5,
+     "frames": 9,
+     "fps": 12,
+     "loop": true
+    },
+    "walk_down": {
+     "row": 6,
+     "frames": 9,
+     "fps": 12,
+     "loop": true
+    },
+    "walk_right": {
+     "row": 7,
+     "frames": 9,
+     "fps": 12,
+     "loop": true
+    },
+    "attack_up": {
+     "row": 8,
+     "frames": 8,
+     "fps": 14,
+     "loop": false
+    },
+    "attack_left": {
+     "row": 9,
+     "frames": 8,
+     "fps": 14,
+     "loop": false
+    },
+    "attack_down": {
+     "row": 10,
+     "frames": 8,
+     "fps": 14,
+     "loop": false
+    },
+    "attack_right": {
+     "row": 11,
+     "frames": 8,
+     "fps": 14,
+     "loop": false
+    },
+    "hurt": {
+     "row": 12,
+     "frames": 6,
+     "fps": 8,
+     "loop": false
+    },
+    "die": {
+     "row": 12,
+     "frames": 6,
+     "fps": 8,
+     "loop": false
+    },
+    "idle": {
+     "row": 2,
+     "frames": 2,
+     "fps": 2,
+     "loop": true
+    },
+    "walk": {
+     "row": 6,
+     "frames": 9,
+     "fps": 12,
+     "loop": true
+    },
+    "attack": {
+     "row": 10,
+     "frames": 8,
+     "fps": 14,
+     "loop": false
+    }
+   },
+   "shadow": 10,
+   "credit": "ulpc",
+   "kind": "enemy",
+   "directional": true
+  },
+  "veuve_grise": {
+   "file": "sprites/veuve_grise.png",
+   "frameW": 64,
+   "frameH": 64,
+   "anchor": [
+    0.5,
+    0.9
+   ],
+   "anims": {
+    "idle_up": {
+     "row": 0,
+     "frames": 2,
+     "fps": 2,
+     "loop": true
+    },
+    "idle_left": {
+     "row": 1,
+     "frames": 2,
+     "fps": 2,
+     "loop": true
+    },
+    "idle_down": {
+     "row": 2,
+     "frames": 2,
+     "fps": 2,
+     "loop": true
+    },
+    "idle_right": {
+     "row": 3,
+     "frames": 2,
+     "fps": 2,
+     "loop": true
+    },
+    "walk_up": {
+     "row": 4,
+     "frames": 9,
+     "fps": 12,
+     "loop": true
+    },
+    "walk_left": {
+     "row": 5,
+     "frames": 9,
+     "fps": 12,
+     "loop": true
+    },
+    "walk_down": {
+     "row": 6,
+     "frames": 9,
+     "fps": 12,
+     "loop": true
+    },
+    "walk_right": {
+     "row": 7,
+     "frames": 9,
+     "fps": 12,
+     "loop": true
+    },
+    "attack_up": {
+     "row": 8,
+     "frames": 6,
+     "fps": 14,
+     "loop": false
+    },
+    "attack_left": {
+     "row": 9,
+     "frames": 6,
+     "fps": 14,
+     "loop": false
+    },
+    "attack_down": {
+     "row": 10,
+     "frames": 6,
+     "fps": 14,
+     "loop": false
+    },
+    "attack_right": {
+     "row": 11,
+     "frames": 6,
+     "fps": 14,
+     "loop": false
+    },
+    "hurt": {
+     "row": 12,
+     "frames": 6,
+     "fps": 8,
+     "loop": false
+    },
+    "die": {
+     "row": 12,
+     "frames": 6,
+     "fps": 8,
+     "loop": false
+    },
+    "idle": {
+     "row": 2,
+     "frames": 2,
+     "fps": 2,
+     "loop": true
+    },
+    "walk": {
+     "row": 6,
+     "frames": 9,
+     "fps": 12,
+     "loop": true
+    },
+    "attack": {
+     "row": 10,
+     "frames": 6,
+     "fps": 14,
+     "loop": false
+    }
+   },
+   "shadow": 10,
+   "credit": "ulpc",
+   "kind": "enemy",
+   "directional": true
+  },
+  "cierge": {
+   "file": "sprites/cierge.png",
+   "frameW": 64,
+   "frameH": 64,
+   "anchor": [
+    0.5,
+    0.9
+   ],
+   "anims": {
+    "idle_up": {
+     "row": 0,
+     "frames": 2,
+     "fps": 2,
+     "loop": true
+    },
+    "idle_left": {
+     "row": 1,
+     "frames": 2,
+     "fps": 2,
+     "loop": true
+    },
+    "idle_down": {
+     "row": 2,
+     "frames": 2,
+     "fps": 2,
+     "loop": true
+    },
+    "idle_right": {
+     "row": 3,
+     "frames": 2,
+     "fps": 2,
+     "loop": true
+    },
+    "walk_up": {
+     "row": 4,
+     "frames": 9,
+     "fps": 12,
+     "loop": true
+    },
+    "walk_left": {
+     "row": 5,
+     "frames": 9,
+     "fps": 12,
+     "loop": true
+    },
+    "walk_down": {
+     "row": 6,
+     "frames": 9,
+     "fps": 12,
+     "loop": true
+    },
+    "walk_right": {
+     "row": 7,
+     "frames": 9,
+     "fps": 12,
+     "loop": true
+    },
+    "attack_up": {
+     "row": 8,
+     "frames": 8,
+     "fps": 14,
+     "loop": false
+    },
+    "attack_left": {
+     "row": 9,
+     "frames": 8,
+     "fps": 14,
+     "loop": false
+    },
+    "attack_down": {
+     "row": 10,
+     "frames": 8,
+     "fps": 14,
+     "loop": false
+    },
+    "attack_right": {
+     "row": 11,
+     "frames": 8,
+     "fps": 14,
+     "loop": false
+    },
+    "hurt": {
+     "row": 12,
+     "frames": 6,
+     "fps": 8,
+     "loop": false
+    },
+    "die": {
+     "row": 12,
+     "frames": 6,
+     "fps": 8,
+     "loop": false
+    },
+    "idle": {
+     "row": 2,
+     "frames": 2,
+     "fps": 2,
+     "loop": true
+    },
+    "walk": {
+     "row": 6,
+     "frames": 9,
+     "fps": 12,
+     "loop": true
+    },
+    "attack": {
+     "row": 10,
+     "frames": 8,
+     "fps": 14,
+     "loop": false
+    }
+   },
+   "shadow": 10,
+   "credit": "ulpc",
+   "kind": "enemy",
+   "directional": true
+  },
+  "maitre": {
+   "file": "sprites/maitre.png",
+   "frameW": 64,
+   "frameH": 64,
+   "anchor": [
+    0.5,
+    0.9
+   ],
+   "anims": {
+    "idle_up": {
+     "row": 0,
+     "frames": 2,
+     "fps": 2,
+     "loop": true
+    },
+    "idle_left": {
+     "row": 1,
+     "frames": 2,
+     "fps": 2,
+     "loop": true
+    },
+    "idle_down": {
+     "row": 2,
+     "frames": 2,
+     "fps": 2,
+     "loop": true
+    },
+    "idle_right": {
+     "row": 3,
+     "frames": 2,
+     "fps": 2,
+     "loop": true
+    },
+    "walk_up": {
+     "row": 4,
+     "frames": 9,
+     "fps": 12,
+     "loop": true
+    },
+    "walk_left": {
+     "row": 5,
+     "frames": 9,
+     "fps": 12,
+     "loop": true
+    },
+    "walk_down": {
+     "row": 6,
+     "frames": 9,
+     "fps": 12,
+     "loop": true
+    },
+    "walk_right": {
+     "row": 7,
+     "frames": 9,
+     "fps": 12,
+     "loop": true
+    },
+    "attack_up": {
+     "row": 8,
+     "frames": 6,
+     "fps": 14,
+     "loop": false
+    },
+    "attack_left": {
+     "row": 9,
+     "frames": 6,
+     "fps": 14,
+     "loop": false
+    },
+    "attack_down": {
+     "row": 10,
+     "frames": 6,
+     "fps": 14,
+     "loop": false
+    },
+    "attack_right": {
+     "row": 11,
+     "frames": 6,
+     "fps": 14,
+     "loop": false
+    },
+    "hurt": {
+     "row": 12,
+     "frames": 6,
+     "fps": 8,
+     "loop": false
+    },
+    "die": {
+     "row": 12,
+     "frames": 6,
+     "fps": 8,
+     "loop": false
+    },
+    "idle": {
+     "row": 2,
+     "frames": 2,
+     "fps": 2,
+     "loop": true
+    },
+    "walk": {
+     "row": 6,
+     "frames": 9,
+     "fps": 12,
+     "loop": true
+    },
+    "attack": {
+     "row": 10,
+     "frames": 6,
+     "fps": 14,
+     "loop": false
+    }
+   },
+   "shadow": 10,
+   "credit": "ulpc",
+   "kind": "boss",
+   "directional": true
+  },
+  "baillon": {
+   "file": "sprites/baillon.png",
+   "frameW": 50,
+   "frameH": 64,
+   "anchor": [
+    0.5,
+    0.8
+   ],
+   "anims": {
+    "idle_up": {
+     "row": 0,
+     "frames": 4,
+     "fps": 6,
+     "loop": true
+    },
+    "idle_left": {
+     "row": 1,
+     "frames": 4,
+     "fps": 6,
+     "loop": true
+    },
+    "idle_down": {
+     "row": 2,
+     "frames": 4,
+     "fps": 6,
+     "loop": true
+    },
+    "idle_right": {
+     "row": 3,
+     "frames": 4,
+     "fps": 6,
+     "loop": true
+    },
+    "attack_up": {
+     "row": 4,
+     "frames": 5,
+     "fps": 12,
+     "loop": false
+    },
+    "attack_left": {
+     "row": 5,
+     "frames": 5,
+     "fps": 12,
+     "loop": false
+    },
+    "attack_down": {
+     "row": 6,
+     "frames": 5,
+     "fps": 12,
+     "loop": false
+    },
+    "attack_right": {
+     "row": 7,
+     "frames": 5,
+     "fps": 12,
+     "loop": false
+    },
+    "die_up": {
+     "row": 8,
+     "frames": 1,
+     "fps": 8,
+     "loop": false
+    },
+    "die_left": {
+     "row": 9,
+     "frames": 1,
+     "fps": 8,
+     "loop": false
+    },
+    "die_down": {
+     "row": 10,
+     "frames": 1,
+     "fps": 8,
+     "loop": false
+    },
+    "die_right": {
+     "row": 11,
+     "frames": 1,
+     "fps": 8,
+     "loop": false
+    },
+    "walk_up": {
+     "row": 0,
+     "frames": 4,
+     "fps": 6,
+     "loop": true
+    },
+    "walk_left": {
+     "row": 1,
+     "frames": 4,
+     "fps": 6,
+     "loop": true
+    },
+    "walk_down": {
+     "row": 2,
+     "frames": 4,
+     "fps": 6,
+     "loop": true
+    },
+    "walk_right": {
+     "row": 3,
+     "frames": 4,
+     "fps": 6,
+     "loop": true
+    },
+    "idle": {
+     "row": 2,
+     "frames": 4,
+     "fps": 6,
+     "loop": true
+    },
+    "walk": {
+     "row": 2,
+     "frames": 4,
+     "fps": 6,
+     "loop": true
+    },
+    "attack": {
+     "row": 6,
+     "frames": 5,
+     "fps": 12,
+     "loop": false
+    },
+    "die": {
+     "row": 10,
+     "frames": 1,
+     "fps": 8,
+     "loop": false
+    }
+   },
+   "shadow": 6,
+   "credit": "tmw_skull-fire",
+   "kind": "enemy",
+   "directional": true
+  },
+  "ouateux": {
+   "file": "sprites/ouateux.png",
+   "frameW": 80,
+   "frameH": 80,
+   "anchor": [
+    0.5,
+    0.92
+   ],
+   "anims": {
+    "idle_up": {
+     "row": 0,
+     "frames": 3,
+     "fps": 6,
+     "loop": true
+    },
+    "idle_left": {
+     "row": 1,
+     "frames": 2,
+     "fps": 6,
+     "loop": true
+    },
+    "idle_down": {
+     "row": 2,
+     "frames": 2,
+     "fps": 6,
+     "loop": true
+    },
+    "idle_right": {
+     "row": 3,
+     "frames": 2,
+     "fps": 6,
+     "loop": true
+    },
+    "walk_up": {
+     "row": 4,
+     "frames": 4,
+     "fps": 10,
+     "loop": true
+    },
+    "walk_left": {
+     "row": 5,
+     "frames": 4,
+     "fps": 10,
+     "loop": true
+    },
+    "walk_down": {
+     "row": 6,
+     "frames": 4,
+     "fps": 10,
+     "loop": true
+    },
+    "walk_right": {
+     "row": 7,
+     "frames": 4,
+     "fps": 10,
+     "loop": true
+    },
+    "attack_up": {
+     "row": 8,
+     "frames": 4,
+     "fps": 12,
+     "loop": false
+    },
+    "attack_left": {
+     "row": 9,
+     "frames": 4,
+     "fps": 12,
+     "loop": false
+    },
+    "attack_down": {
+     "row": 10,
+     "frames": 4,
+     "fps": 12,
+     "loop": false
+    },
+    "attack_right": {
+     "row": 11,
+     "frames": 4,
+     "fps": 12,
+     "loop": false
+    },
+    "die_up": {
+     "row": 12,
+     "frames": 1,
+     "fps": 8,
+     "loop": false
+    },
+    "die_left": {
+     "row": 13,
+     "frames": 1,
+     "fps": 8,
+     "loop": false
+    },
+    "die_down": {
+     "row": 14,
+     "frames": 1,
+     "fps": 8,
+     "loop": false
+    },
+    "die_right": {
+     "row": 15,
+     "frames": 1,
+     "fps": 8,
+     "loop": false
+    },
+    "idle": {
+     "row": 2,
+     "frames": 2,
+     "fps": 6,
+     "loop": true
+    },
+    "walk": {
+     "row": 6,
+     "frames": 4,
+     "fps": 10,
+     "loop": true
+    },
+    "attack": {
+     "row": 10,
+     "frames": 4,
+     "fps": 12,
+     "loop": false
+    },
+    "die": {
+     "row": 14,
+     "frames": 1,
+     "fps": 8,
+     "loop": false
+    }
+   },
+   "shadow": 16,
+   "credit": "tmw_sasquatch",
+   "kind": "enemy",
+   "directional": true
+  },
+  "rampe_suie": {
+   "file": "sprites/rampe_suie.png",
+   "frameW": 45,
+   "frameH": 45,
+   "anchor": [
+    0.5,
+    0.8
+   ],
+   "anims": {
+    "idle_up": {
+     "row": 0,
+     "frames": 1,
+     "fps": 6,
+     "loop": true
+    },
+    "idle_left": {
+     "row": 1,
+     "frames": 1,
+     "fps": 6,
+     "loop": true
+    },
+    "idle_down": {
+     "row": 2,
+     "frames": 1,
+     "fps": 6,
+     "loop": true
+    },
+    "idle_right": {
+     "row": 3,
+     "frames": 1,
+     "fps": 6,
+     "loop": true
+    },
+    "walk_up": {
+     "row": 4,
+     "frames": 5,
+     "fps": 10,
+     "loop": true
+    },
+    "walk_left": {
+     "row": 5,
+     "frames": 5,
+     "fps": 10,
+     "loop": true
+    },
+    "walk_down": {
+     "row": 6,
+     "frames": 5,
+     "fps": 10,
+     "loop": true
+    },
+    "walk_right": {
+     "row": 7,
+     "frames": 5,
+     "fps": 10,
+     "loop": true
+    },
+    "attack_up": {
+     "row": 8,
+     "frames": 3,
+     "fps": 12,
+     "loop": false
+    },
+    "attack_left": {
+     "row": 9,
+     "frames": 3,
+     "fps": 12,
+     "loop": false
+    },
+    "attack_down": {
+     "row": 10,
+     "frames": 3,
+     "fps": 12,
+     "loop": false
+    },
+    "attack_right": {
+     "row": 11,
+     "frames": 3,
+     "fps": 12,
+     "loop": false
+    },
+    "die_up": {
+     "row": 12,
+     "frames": 1,
+     "fps": 8,
+     "loop": false
+    },
+    "die_left": {
+     "row": 13,
+     "frames": 1,
+     "fps": 8,
+     "loop": false
+    },
+    "die_down": {
+     "row": 14,
+     "frames": 1,
+     "fps": 8,
+     "loop": false
+    },
+    "die_right": {
+     "row": 15,
+     "frames": 1,
+     "fps": 8,
+     "loop": false
+    },
+    "idle": {
+     "row": 2,
+     "frames": 1,
+     "fps": 6,
+     "loop": true
+    },
+    "walk": {
+     "row": 6,
+     "frames": 5,
+     "fps": 10,
+     "loop": true
+    },
+    "attack": {
+     "row": 10,
+     "frames": 3,
+     "fps": 12,
+     "loop": false
+    },
+    "die": {
+     "row": 14,
+     "frames": 1,
+     "fps": 8,
+     "loop": false
+    }
+   },
+   "shadow": 10,
+   "credit": "tmw_larvespa",
+   "kind": "enemy",
+   "directional": true
+  },
+  "choeur_muet": {
+   "file": "sprites/choeur_muet.png",
+   "frameW": 64,
+   "frameH": 64,
+   "anchor": [
+    0.5,
+    0.75
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 8,
+     "fps": 6,
+     "loop": true
+    },
+    "attack": {
+     "row": 1,
+     "frames": 8,
+     "fps": 12,
+     "loop": false
+    },
+    "die": {
+     "row": 2,
+     "frames": 5,
+     "fps": 8,
+     "loop": false
+    },
+    "walk": {
+     "row": 0,
+     "frames": 8,
+     "fps": 6,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "tmw_wisp",
+   "kind": "enemy",
+   "directional": false
+  },
+  "veuve_suie": {
+   "file": "sprites/veuve_suie.png",
+   "frameW": 96,
+   "frameH": 96,
+   "anchor": [
+    0.5,
+    0.8
+   ],
+   "anims": {
+    "idle_up": {
+     "row": 0,
+     "frames": 1,
+     "fps": 6,
+     "loop": true
+    },
+    "idle_left": {
+     "row": 1,
+     "frames": 1,
+     "fps": 6,
+     "loop": true
+    },
+    "idle_down": {
+     "row": 2,
+     "frames": 1,
+     "fps": 6,
+     "loop": true
+    },
+    "idle_right": {
+     "row": 3,
+     "frames": 1,
+     "fps": 6,
+     "loop": true
+    },
+    "walk_up": {
+     "row": 4,
+     "frames": 9,
+     "fps": 10,
+     "loop": true
+    },
+    "walk_left": {
+     "row": 5,
+     "frames": 9,
+     "fps": 10,
+     "loop": true
+    },
+    "walk_down": {
+     "row": 6,
+     "frames": 9,
+     "fps": 10,
+     "loop": true
+    },
+    "walk_right": {
+     "row": 7,
+     "frames": 9,
+     "fps": 10,
+     "loop": true
+    },
+    "attack_up": {
+     "row": 8,
+     "frames": 9,
+     "fps": 12,
+     "loop": false
+    },
+    "attack_left": {
+     "row": 9,
+     "frames": 9,
+     "fps": 12,
+     "loop": false
+    },
+    "attack_down": {
+     "row": 10,
+     "frames": 9,
+     "fps": 12,
+     "loop": false
+    },
+    "attack_right": {
+     "row": 11,
+     "frames": 9,
+     "fps": 12,
+     "loop": false
+    },
+    "die_up": {
+     "row": 12,
+     "frames": 5,
+     "fps": 8,
+     "loop": false
+    },
+    "die_left": {
+     "row": 13,
+     "frames": 5,
+     "fps": 8,
+     "loop": false
+    },
+    "die_down": {
+     "row": 14,
+     "frames": 5,
+     "fps": 8,
+     "loop": false
+    },
+    "die_right": {
+     "row": 15,
+     "frames": 5,
+     "fps": 8,
+     "loop": false
+    },
+    "idle": {
+     "row": 2,
+     "frames": 1,
+     "fps": 6,
+     "loop": true
+    },
+    "walk": {
+     "row": 6,
+     "frames": 9,
+     "fps": 10,
+     "loop": true
+    },
+    "attack": {
+     "row": 10,
+     "frames": 9,
+     "fps": 12,
+     "loop": false
+    },
+    "die": {
+     "row": 14,
+     "frames": 5,
+     "fps": 8,
+     "loop": false
+    }
+   },
+   "shadow": 28,
+   "credit": "tmw_spider-queen",
+   "kind": "boss",
+   "directional": true
+  },
+  "bourdon_fele": {
+   "file": "sprites/bourdon_fele.png",
+   "frameW": 96,
+   "frameH": 96,
+   "anchor": [
+    0.5,
+    0.9
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 1,
+     "fps": 1,
+     "loop": true
+    },
+    "walk": {
+     "row": 0,
+     "frames": 1,
+     "fps": 1,
+     "loop": true
+    },
+    "attack": {
+     "row": 1,
+     "frames": 8,
+     "fps": 12,
+     "loop": false
+    },
+    "die": {
+     "row": 2,
+     "frames": 3,
+     "fps": 6,
+     "loop": false
+    }
+   },
+   "shadow": 30,
+   "credit": "gameicons_lorc",
+   "kind": "boss",
+   "directional": false,
+   "note": "Icône SVG rastérisée à 88 px, seuil alpha, teinte bronze : pas un sprite pixel art natif (voir rapport)."
+  },
+  "prop_cendrelune_dead_tree_a": {
+   "file": "sprites/props/prop_cendrelune_dead_tree_a.png",
+   "frameW": 125,
+   "frameH": 142,
+   "anchor": [
+    0.5,
+    0.95
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 1,
+     "fps": 1,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "lpc_revised",
+   "kind": "prop",
+   "parish": "cendrelune"
+  },
+  "prop_cendrelune_dead_tree_b": {
+   "file": "sprites/props/prop_cendrelune_dead_tree_b.png",
+   "frameW": 128,
+   "frameH": 142,
+   "anchor": [
+    0.5,
+    0.95
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 1,
+     "fps": 1,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "lpc_revised",
+   "kind": "prop",
+   "parish": "cendrelune"
+  },
+  "prop_cendrelune_stele": {
+   "file": "sprites/props/prop_cendrelune_stele.png",
+   "frameW": 64,
+   "frameH": 63,
+   "anchor": [
+    0.5,
+    0.95
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 1,
+     "fps": 1,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "lpc_revised",
+   "kind": "prop",
+   "parish": "cendrelune"
+  },
+  "prop_cendrelune_slab": {
+   "file": "sprites/props/prop_cendrelune_slab.png",
+   "frameW": 64,
+   "frameH": 26,
+   "anchor": [
+    0.5,
+    0.95
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 1,
+     "fps": 1,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "lpc_revised",
+   "kind": "prop",
+   "parish": "cendrelune"
+  },
+  "prop_cendrelune_campfire": {
+   "file": "sprites/props/prop_cendrelune_campfire.png",
+   "frameW": 32,
+   "frameH": 32,
+   "anchor": [
+    0.5,
+    0.9
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 4,
+     "fps": 8,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "lpc_revised",
+   "kind": "prop",
+   "parish": "cendrelune",
+   "light": true
+  },
+  "prop_tourbes_dead_tree_a": {
+   "file": "sprites/props/prop_tourbes_dead_tree_a.png",
+   "frameW": 125,
+   "frameH": 142,
+   "anchor": [
+    0.5,
+    0.95
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 1,
+     "fps": 1,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "lpc_revised",
+   "kind": "prop",
+   "parish": "tourbes"
+  },
+  "prop_tourbes_dead_tree_c": {
+   "file": "sprites/props/prop_tourbes_dead_tree_c.png",
+   "frameW": 96,
+   "frameH": 144,
+   "anchor": [
+    0.5,
+    0.95
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 1,
+     "fps": 1,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "lpc_revised",
+   "kind": "prop",
+   "parish": "tourbes"
+  },
+  "prop_tourbes_fern": {
+   "file": "sprites/props/prop_tourbes_fern.png",
+   "frameW": 81,
+   "frameH": 52,
+   "anchor": [
+    0.5,
+    0.95
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 1,
+     "fps": 1,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "lpc_revised",
+   "kind": "prop",
+   "parish": "tourbes"
+  },
+  "prop_tourbes_conifer": {
+   "file": "sprites/props/prop_tourbes_conifer.png",
+   "frameW": 25,
+   "frameH": 10,
+   "anchor": [
+    0.5,
+    0.95
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 1,
+     "fps": 1,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "lpc_revised",
+   "kind": "prop",
+   "parish": "tourbes"
+  },
+  "prop_val_des_cordes_furnace": {
+   "file": "sprites/props/prop_val_des_cordes_furnace.png",
+   "frameW": 128,
+   "frameH": 96,
+   "anchor": [
+    0.5,
+    0.95
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 1,
+     "fps": 1,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "lpc_revised",
+   "kind": "prop",
+   "parish": "val_des_cordes"
+  },
+  "prop_val_des_cordes_smelter": {
+   "file": "sprites/props/prop_val_des_cordes_smelter.png",
+   "frameW": 64,
+   "frameH": 40,
+   "anchor": [
+    0.5,
+    0.95
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 1,
+     "fps": 1,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "lpc_revised",
+   "kind": "prop",
+   "parish": "val_des_cordes"
+  },
+  "prop_val_des_cordes_bellows": {
+   "file": "sprites/props/prop_val_des_cordes_bellows.png",
+   "frameW": 64,
+   "frameH": 52,
+   "anchor": [
+    0.5,
+    0.95
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 1,
+     "fps": 1,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "lpc_revised",
+   "kind": "prop",
+   "parish": "val_des_cordes"
+  },
+  "prop_val_des_cordes_workbench": {
+   "file": "sprites/props/prop_val_des_cordes_workbench.png",
+   "frameW": 61,
+   "frameH": 62,
+   "anchor": [
+    0.5,
+    0.95
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 1,
+     "fps": 1,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "lpc_revised",
+   "kind": "prop",
+   "parish": "val_des_cordes"
+  },
+  "prop_val_des_cordes_forge": {
+   "file": "sprites/props/prop_val_des_cordes_forge.png",
+   "frameW": 160,
+   "frameH": 103,
+   "anchor": [
+    0.5,
+    0.95
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 1,
+     "fps": 1,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "lpc_revised",
+   "kind": "prop",
+   "parish": "val_des_cordes"
+  },
+  "prop_val_des_cordes_table": {
+   "file": "sprites/props/prop_val_des_cordes_table.png",
+   "frameW": 63,
+   "frameH": 63,
+   "anchor": [
+    0.5,
+    0.95
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 1,
+     "fps": 1,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "lpc_revised",
+   "kind": "prop",
+   "parish": "val_des_cordes"
+  },
+  "prop_val_des_cordes_coal": {
+   "file": "sprites/props/prop_val_des_cordes_coal.png",
+   "frameW": 95,
+   "frameH": 36,
+   "anchor": [
+    0.5,
+    0.95
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 1,
+     "fps": 1,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "lpc_revised",
+   "kind": "prop",
+   "parish": "val_des_cordes"
+  },
+  "prop_val_des_cordes_window": {
+   "file": "sprites/props/prop_val_des_cordes_window.png",
+   "frameW": 32,
+   "frameH": 59,
+   "anchor": [
+    0.5,
+    0.95
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 1,
+     "fps": 1,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "lpc_revised",
+   "kind": "prop",
+   "parish": "val_des_cordes"
+  },
+  "prop_val_des_cordes_cauldron": {
+   "file": "sprites/props/prop_val_des_cordes_cauldron.png",
+   "frameW": 32,
+   "frameH": 32,
+   "anchor": [
+    0.5,
+    0.9
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 4,
+     "fps": 8,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "lpc_revised",
+   "kind": "prop",
+   "parish": "val_des_cordes",
+   "light": true
+  },
+  "prop_nef_noyee_pillar": {
+   "file": "sprites/props/prop_nef_noyee_pillar.png",
+   "frameW": 32,
+   "frameH": 96,
+   "anchor": [
+    0.5,
+    0.95
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 1,
+     "fps": 1,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "lpc_revised",
+   "kind": "prop",
+   "parish": "nef_noyee"
+  },
+  "prop_nef_noyee_pillar_light": {
+   "file": "sprites/props/prop_nef_noyee_pillar_light.png",
+   "frameW": 32,
+   "frameH": 96,
+   "anchor": [
+    0.5,
+    0.95
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 1,
+     "fps": 1,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "lpc_revised",
+   "kind": "prop",
+   "parish": "nef_noyee"
+  },
+  "prop_nef_noyee_arch": {
+   "file": "sprites/props/prop_nef_noyee_arch.png",
+   "frameW": 69,
+   "frameH": 70,
+   "anchor": [
+    0.5,
+    0.95
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 1,
+     "fps": 1,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "lpc_revised",
+   "kind": "prop",
+   "parish": "nef_noyee"
+  },
+  "prop_nef_noyee_window": {
+   "file": "sprites/props/prop_nef_noyee_window.png",
+   "frameW": 32,
+   "frameH": 59,
+   "anchor": [
+    0.5,
+    0.95
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 1,
+     "fps": 1,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "lpc_revised",
+   "kind": "prop",
+   "parish": "nef_noyee"
+  },
+  "prop_nef_noyee_window_lit": {
+   "file": "sprites/props/prop_nef_noyee_window_lit.png",
+   "frameW": 32,
+   "frameH": 59,
+   "anchor": [
+    0.5,
+    0.95
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 1,
+     "fps": 1,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "lpc_revised",
+   "kind": "prop",
+   "parish": "nef_noyee"
+  },
+  "prop_nef_noyee_bars": {
+   "file": "sprites/props/prop_nef_noyee_bars.png",
+   "frameW": 38,
+   "frameH": 64,
+   "anchor": [
+    0.5,
+    0.95
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 1,
+     "fps": 1,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "lpc_revised",
+   "kind": "prop",
+   "parish": "nef_noyee"
+  },
+  "prop_nef_noyee_altar": {
+   "file": "sprites/props/prop_nef_noyee_altar.png",
+   "frameW": 64,
+   "frameH": 26,
+   "anchor": [
+    0.5,
+    0.95
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 1,
+     "fps": 1,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "lpc_revised",
+   "kind": "prop",
+   "parish": "nef_noyee"
+  },
+  "prop_nef_noyee_statue": {
+   "file": "sprites/props/prop_nef_noyee_statue.png",
+   "frameW": 64,
+   "frameH": 63,
+   "anchor": [
+    0.5,
+    0.95
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 1,
+     "fps": 1,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "lpc_revised",
+   "kind": "prop",
+   "parish": "nef_noyee"
+  },
+  "prop_beffroi_ladder": {
+   "file": "sprites/props/prop_beffroi_ladder.png",
+   "frameW": 26,
+   "frameH": 83,
+   "anchor": [
+    0.5,
+    0.95
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 1,
+     "fps": 1,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "lpc_revised",
+   "kind": "prop",
+   "parish": "beffroi"
+  },
+  "prop_beffroi_lamp_post": {
+   "file": "sprites/props/prop_beffroi_lamp_post.png",
+   "frameW": 18,
+   "frameH": 80,
+   "anchor": [
+    0.5,
+    0.95
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 1,
+     "fps": 1,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "lpc_revised",
+   "kind": "prop",
+   "parish": "beffroi"
+  },
+  "prop_beffroi_lamp_post_b": {
+   "file": "sprites/props/prop_beffroi_lamp_post_b.png",
+   "frameW": 18,
+   "frameH": 80,
+   "anchor": [
+    0.5,
+    0.95
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 1,
+     "fps": 1,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "lpc_revised",
+   "kind": "prop",
+   "parish": "beffroi"
+  },
+  "prop_beffroi_steps": {
+   "file": "sprites/props/prop_beffroi_steps.png",
+   "frameW": 96,
+   "frameH": 48,
+   "anchor": [
+    0.5,
+    0.95
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 1,
+     "fps": 1,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "lpc_revised",
+   "kind": "prop",
+   "parish": "beffroi"
+  },
+  "prop_beffroi_stairs": {
+   "file": "sprites/props/prop_beffroi_stairs.png",
+   "frameW": 96,
+   "frameH": 96,
+   "anchor": [
+    0.5,
+    0.95
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 1,
+     "fps": 1,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "lpc_revised",
+   "kind": "prop",
+   "parish": "beffroi"
+  },
+  "prop_beffroi_bench": {
+   "file": "sprites/props/prop_beffroi_bench.png",
+   "frameW": 56,
+   "frameH": 42,
+   "anchor": [
+    0.5,
+    0.95
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 1,
+     "fps": 1,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "lpc_revised",
+   "kind": "prop",
+   "parish": "beffroi"
+  },
+  "prop_beffroi_window_lit": {
+   "file": "sprites/props/prop_beffroi_window_lit.png",
+   "frameW": 32,
+   "frameH": 59,
+   "anchor": [
+    0.5,
+    0.95
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 1,
+     "fps": 1,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "lpc_revised",
+   "kind": "prop",
+   "parish": "beffroi"
+  },
+  "proj_cloche": {
+   "file": "sprites/proj_cloche.png",
+   "frameW": 32,
+   "frameH": 32,
+   "anchor": [
+    0.5,
+    0.5
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 4,
+     "fps": 10,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "tmw_silverbell",
+   "kind": "fx"
+  },
+  "proj_clochette": {
+   "file": "sprites/proj_clochette.png",
+   "frameW": 16,
+   "frameH": 16,
+   "anchor": [
+    0.5,
+    0.5
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 4,
+     "fps": 12,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "tmw_silverbell",
+   "kind": "fx"
+  },
+  "proj_grelot": {
+   "file": "sprites/proj_grelot.png",
+   "frameW": 16,
+   "frameH": 16,
+   "anchor": [
+    0.5,
+    0.5
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 4,
+     "fps": 14,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "tmw_silverbell",
+   "kind": "fx"
+  },
+  "proj_onde": {
+   "file": "sprites/proj_onde.png",
+   "frameW": 72,
+   "frameH": 72,
+   "anchor": [
+    0.5,
+    0.5
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 4,
+     "fps": 10,
+     "loop": false
+    }
+   },
+   "shadow": 0,
+   "credit": "gameicons_skoll",
+   "kind": "fx"
+  },
+  "proj_aura": {
+   "file": "sprites/proj_aura.png",
+   "frameW": 64,
+   "frameH": 64,
+   "anchor": [
+    0.5,
+    0.5
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 4,
+     "fps": 6,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "gameicons_lorc",
+   "kind": "fx"
+  },
+  "proj_cor": {
+   "file": "sprites/proj_cor.png",
+   "frameW": 28,
+   "frameH": 28,
+   "anchor": [
+    0.5,
+    0.5
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 4,
+     "fps": 8,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "gameicons_lorc",
+   "kind": "fx"
+  },
+  "proj_crecelle": {
+   "file": "sprites/proj_crecelle.png",
+   "frameW": 26,
+   "frameH": 26,
+   "anchor": [
+    0.5,
+    0.5
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 4,
+     "fps": 16,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "gameicons_delapouite",
+   "kind": "fx"
+  },
+  "proj_chaine": {
+   "file": "sprites/proj_chaine.png",
+   "frameW": 32,
+   "frameH": 32,
+   "anchor": [
+    0.5,
+    0.5
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 4,
+     "fps": 12,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "gameicons_lorc",
+   "kind": "fx"
+  },
+  "proj_diapason": {
+   "file": "sprites/proj_diapason.png",
+   "frameW": 28,
+   "frameH": 28,
+   "anchor": [
+    0.5,
+    0.5
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 4,
+     "fps": 20,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "gameicons_lorc",
+   "kind": "fx"
+  },
+  "echo": {
+   "file": "sprites/echo.png",
+   "frameW": 24,
+   "frameH": 24,
+   "anchor": [
+    0.5,
+    0.5
+   ],
+   "anims": {
+    "small": {
+     "row": 0,
+     "frames": 1,
+     "fps": 1,
+     "loop": true
+    },
+    "medium": {
+     "row": 0,
+     "frames": 1,
+     "fps": 1,
+     "loop": true,
+     "col": 1
+    },
+    "large": {
+     "row": 0,
+     "frames": 1,
+     "fps": 1,
+     "loop": true,
+     "col": 2
+    },
+    "idle": {
+     "row": 0,
+     "frames": 3,
+     "fps": 0,
+     "loop": false
+    }
+   },
+   "shadow": 0,
+   "credit": "tmw_gemstone",
+   "kind": "fx",
+   "note": "colonne 0 petit, 1 moyen, 2 grand Écho"
+  },
+  "eclat_bronze": {
+   "file": "sprites/eclat_bronze.png",
+   "frameW": 32,
+   "frameH": 20,
+   "anchor": [
+    0.5,
+    0.5
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 2,
+     "fps": 4,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "lpc_revised",
+   "kind": "fx"
+  },
+  "pickups": {
+   "file": "sprites/pickups.png",
+   "frameW": 32,
+   "frameH": 32,
+   "anchor": [
+    0.5,
+    0.5
+   ],
+   "anims": {
+    "heal": {
+     "row": 0,
+     "frames": 1,
+     "fps": 1,
+     "loop": true,
+     "col": 0
+    },
+    "chime": {
+     "row": 0,
+     "frames": 1,
+     "fps": 1,
+     "loop": true,
+     "col": 1
+    },
+    "relic": {
+     "row": 0,
+     "frames": 1,
+     "fps": 1,
+     "loop": true,
+     "col": 2
+    },
+    "bronze": {
+     "row": 0,
+     "frames": 1,
+     "fps": 1,
+     "loop": true,
+     "col": 3
+    },
+    "idle": {
+     "row": 0,
+     "frames": 4,
+     "fps": 0,
+     "loop": false
+    }
+   },
+   "shadow": 0,
+   "credit": "tmw_items",
+   "kind": "fx",
+   "note": "col 0 soin (potion), 1 carillon (cloche os), 2 relique (crâne), 3 lingot de bronze (LPC Revised)"
+  },
+  "torch": {
+   "file": "sprites/torch.png",
+   "frameW": 32,
+   "frameH": 32,
+   "anchor": [
+    0.5,
+    0.9
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 3,
+     "fps": 8,
+     "loop": true
+    },
+    "off": {
+     "row": 1,
+     "frames": 1,
+     "fps": 1,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "lpc_revised",
+   "kind": "fx",
+   "light": true
+  },
+  "braise": {
+   "file": "sprites/braise.png",
+   "frameW": 32,
+   "frameH": 32,
+   "anchor": [
+    0.5,
+    0.9
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 4,
+     "fps": 8,
+     "loop": true
+    },
+    "off": {
+     "row": 1,
+     "frames": 1,
+     "fps": 1,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "lpc_revised",
+   "kind": "fx",
+   "light": true
+  },
+  "title_cloche": {
+   "file": "sprites/title_cloche.png",
+   "frameW": 192,
+   "frameH": 192,
+   "anchor": [
+    0.5,
+    0.5
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 1,
+     "fps": 1,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "gameicons_lorc",
+   "kind": "title"
+  },
+  "title_beffroi": {
+   "file": "sprites/title_beffroi.png",
+   "frameW": 240,
+   "frameH": 240,
+   "anchor": [
+    0.5,
+    0.5
+   ],
+   "anims": {
+    "idle": {
+     "row": 0,
+     "frames": 1,
+     "fps": 1,
+     "loop": true
+    }
+   },
+   "shadow": 0,
+   "credit": "gameicons_delapouite",
+   "kind": "title"
+  }
+ },
+ "tiles": {
+  "cendrelune": {
+   "file": "tiles/cendrelune.png",
+   "tileW": 32,
+   "tileH": 32,
+   "columns": 8,
+   "credit": "lpc_revised",
+   "ground": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32,
+    33
+   ],
+   "groundGroups": {
+    "ash": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5
+    ],
+    "dirt": [
+     6,
+     7,
+     8,
+     9,
+     10,
+     11
+    ],
+    "grass_dead": [
+     12,
+     13,
+     14,
+     15,
+     16,
+     17
+    ],
+    "patch": [
+     18,
+     19,
+     20,
+     21
+    ],
+    "rubble": [
+     22,
+     23,
+     24,
+     25
+    ],
+    "edge_grass_dirt": [
+     26,
+     27,
+     28,
+     29,
+     30,
+     31,
+     32,
+     33
+    ]
+   },
+   "walls": [
+    34,
+    35,
+    36,
+    37,
+    38,
+    39,
+    40,
+    41,
+    42
+   ],
+   "props": {
+    "ashes": 43,
+    "fence_l": 44,
+    "fence_m": 45,
+    "fence_r": 46,
+    "post": 47,
+    "rock_s": 48,
+    "rock_m": 49,
+    "skull": 50,
+    "bones": 51,
+    "crate": 52,
+    "barrel": 53,
+    "lumber": 54,
+    "hay": 55,
+    "tuft": 56,
+    "tuft2": 57,
+    "dry": 58,
+    "dry2": 59,
+    "stain": 60,
+    "splat": 61
+   }
+  },
+  "tourbes": {
+   "file": "tiles/tourbes.png",
+   "tileW": 32,
+   "tileH": 32,
+   "columns": 8,
+   "credit": "lpc_revised",
+   "ground": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51
+   ],
+   "groundGroups": {
+    "grass": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5
+    ],
+    "mud": [
+     6,
+     7,
+     8,
+     9,
+     10,
+     11
+    ],
+    "water": [
+     12,
+     13,
+     14,
+     15
+    ],
+    "deep": [
+     16,
+     17,
+     18,
+     19
+    ],
+    "bank_grass": [
+     20,
+     21,
+     22,
+     23,
+     24,
+     25,
+     26,
+     27
+    ],
+    "bank_mud": [
+     28,
+     29,
+     30,
+     31,
+     32,
+     33,
+     34,
+     35
+    ],
+    "edge_grass_mud": [
+     36,
+     37,
+     38,
+     39,
+     40,
+     41,
+     42,
+     43
+    ],
+    "river_h": [
+     44,
+     45,
+     46,
+     47
+    ],
+    "river_v": [
+     48,
+     49,
+     50,
+     51
+    ]
+   },
+   "walls": [],
+   "props": {
+    "mushroom_a": 52,
+    "mushroom_b": 53,
+    "mushroom_c": 54,
+    "mushroom_big": 55,
+    "mushroom_big2": 56,
+    "spores": 57,
+    "reed": 58,
+    "reed2": 59,
+    "lily": 60,
+    "lily2": 61,
+    "tall_grass": 62,
+    "tall_grass2": 63,
+    "bush": 64,
+    "bush2": 65,
+    "rock_s": 66,
+    "rock_m": 67,
+    "skull": 68,
+    "bone": 69,
+    "moss": 70
+   }
+  },
+  "val_des_cordes": {
+   "file": "tiles/val_des_cordes.png",
+   "tileW": 32,
+   "tileH": 32,
+   "columns": 8,
+   "credit": "lpc_revised",
+   "ground": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13
+   ],
+   "groundGroups": {
+    "stone": [
+     0,
+     1,
+     2,
+     3
+    ],
+    "stone_dark": [
+     4,
+     5,
+     6
+    ],
+    "dirt": [
+     7,
+     8
+    ],
+    "plank": [
+     9,
+     10,
+     11,
+     12,
+     13
+    ]
+   },
+   "walls": [
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22
+   ],
+   "props": {
+    "anvil": 23,
+    "anvil2": 24,
+    "grindstone": 25,
+    "bucket": 26,
+    "tongs": 27,
+    "hammer": 28,
+    "crate": 29,
+    "barrel": 30,
+    "chest": 31,
+    "lumber": 32,
+    "stain": 33,
+    "candle": 34,
+    "candle2": 35,
+    "lantern": 36
+   }
+  },
+  "nef_noyee": {
+   "file": "tiles/nef_noyee.png",
+   "tileW": 32,
+   "tileH": 32,
+   "columns": 8,
+   "credit": "lpc_revised",
+   "ground": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25
+   ],
+   "groundGroups": {
+    "flag": [
+     0,
+     1,
+     2,
+     3
+    ],
+    "flag_dark": [
+     4,
+     5,
+     6,
+     7
+    ],
+    "water": [
+     8,
+     9,
+     10,
+     11
+    ],
+    "deep": [
+     12,
+     13,
+     14,
+     15,
+     16,
+     17
+    ],
+    "bank": [
+     18,
+     19,
+     20,
+     21,
+     22,
+     23,
+     24,
+     25
+    ]
+   },
+   "walls": [
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34
+   ],
+   "props": {
+    "candle": 35,
+    "candle2": 36,
+    "candle3": 37,
+    "cobweb": 38,
+    "cobweb2": 39,
+    "moss": 40,
+    "chains": 41,
+    "crack": 42,
+    "stain": 43,
+    "skull": 44,
+    "skulls": 45,
+    "bones": 46,
+    "lily": 47,
+    "lily2": 48
+   }
+  },
+  "beffroi": {
+   "file": "tiles/beffroi.png",
+   "tileW": 32,
+   "tileH": 32,
+   "columns": 8,
+   "credit": "lpc_revised",
+   "ground": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+   ],
+   "groundGroups": {
+    "plank": [
+     0,
+     1,
+     2,
+     3,
+     4
+    ],
+    "plank_dark": [
+     5,
+     6,
+     7,
+     8
+    ],
+    "stone": [
+     9,
+     10,
+     11,
+     12,
+     13,
+     14
+    ]
+   },
+   "walls": [
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32
+   ],
+   "props": {
+    "lantern": 33,
+    "lantern2": 34,
+    "candle": 35,
+    "candle2": 36,
+    "chains": 37,
+    "crate": 38,
+    "barrel": 39,
+    "chest": 40,
+    "bucket": 41,
+    "lumber": 42,
+    "hay": 43,
+    "cobweb": 44,
+    "crack": 45
+   }
+  }
+ },
+ "ui": {
+  "frame_parchment": {
+   "file": "ui/frame_parchment.png",
+   "slice": [
+    14,
+    14,
+    14,
+    14
+   ],
+   "credit": "kenney"
+  },
+  "frame_bronze": {
+   "file": "ui/frame_bronze.png",
+   "slice": [
+    14,
+    14,
+    14,
+    14
+   ],
+   "credit": "kenney"
+  },
+  "frame_dark": {
+   "file": "ui/frame_dark.png",
+   "slice": [
+    14,
+    14,
+    14,
+    14
+   ],
+   "credit": "kenney"
+  },
+  "button": {
+   "file": "ui/button.png",
+   "slice": [
+    10,
+    10,
+    10,
+    10
+   ],
+   "credit": "kenney"
+  },
+  "button_pressed": {
+   "file": "ui/button_pressed.png",
+   "slice": [
+    10,
+    10,
+    10,
+    10
+   ],
+   "credit": "kenney"
+  },
+  "gauge_bg": {
+   "file": "ui/gauge_bg.png",
+   "slice": [
+    10,
+    10,
+    10,
+    10
+   ],
+   "credit": "kenney"
+  },
+  "gauge_fill": {
+   "file": "ui/gauge_fill.png",
+   "slice": [
+    10,
+    10,
+    10,
+    10
+   ],
+   "credit": "kenney"
+  },
+  "gauge_fill_hot": {
+   "file": "ui/gauge_fill_hot.png",
+   "slice": [
+    10,
+    10,
+    10,
+    10
+   ],
+   "credit": "kenney"
+  },
+  "card_face": {
+   "file": "ui/card_face.png",
+   "slice": [
+    14,
+    14,
+    14,
+    14
+   ],
+   "credit": "kenney",
+   "note": "face de carte de missel 96×128 (parchemin)"
+  },
+  "card_back": {
+   "file": "ui/card_back.png",
+   "slice": [
+    14,
+    14,
+    14,
+    14
+   ],
+   "credit": "kenney",
+   "note": "dos de carte 96×128 (bronze sur suie, emblème game-icons)"
+  },
+  "cursor": {
+   "file": "ui/cursor.png",
+   "slice": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "credit": "kenney",
+   "frameW": 16,
+   "frameH": 16,
+   "map": {
+    "pointer": 0,
+    "hand": 1,
+    "target": 2
+   },
+   "hotspot": [
+    1,
+    1
+   ]
+  },
+  "icons": {
+   "file": "ui/icons.png",
+   "frameW": 32,
+   "frameH": 32,
+   "columns": 8,
+   "map": {
+    "battant": 0,
+    "clarine": 1,
+    "bourdon": 2,
+    "grelots": 3,
+    "tocsin": 4,
+    "cor_de_brume": 5,
+    "crecelle": 6,
+    "chaine_d_angelus": 7,
+    "diapason": 8,
+    "ferrure": 9,
+    "souffle": 10,
+    "contrepoids": 11,
+    "corde_de_chanvre": 12,
+    "cire_d_abeille": 13,
+    "metronome": 14,
+    "etain": 15,
+    "echo": 16,
+    "fusion_glas": 17,
+    "fusion_carillon": 18,
+    "fusion_tonnerre": 19,
+    "fusion_requiem": 20,
+    "ui_bronze": 21,
+    "ui_coeur": 22,
+    "ui_mort": 23,
+    "ui_options": 24,
+    "ui_son": 25,
+    "ui_musique": 26,
+    "ui_lanterne": 27,
+    "ui_sceau": 28
+   },
+   "credit": "gameicons",
+   "sources": {
+    "battant": "lorc/ringing-bell.svg",
+    "clarine": "lorc/bell-shield.svg",
+    "bourdon": "delapouite/gong.svg",
+    "grelots": "caro-asercion/windchimes.svg",
+    "tocsin": "delapouite/ringing-alarm.svg",
+    "cor_de_brume": "lorc/hunting-horn.svg",
+    "crecelle": "delapouite/maracas.svg",
+    "chaine_d_angelus": "lorc/wavy-chains.svg",
+    "diapason": "lorc/tune-pitch.svg",
+    "ferrure": "lorc/anvil.svg",
+    "souffle": "delapouite/bellows.svg",
+    "contrepoids": "delapouite/weight.svg",
+    "corde_de_chanvre": "delapouite/rope-coil.svg",
+    "cire_d_abeille": "lorc/honeycomb.svg",
+    "metronome": "delapouite/metronome.svg",
+    "etain": "delapouite/melting-metal.svg",
+    "echo": "lorc/echo-ripples.svg",
+    "fusion_glas": "lorc/candle-skull.svg",
+    "fusion_carillon": "delapouite/church.svg",
+    "fusion_tonnerre": "lorc/sonic-boom.svg",
+    "fusion_requiem": "lorc/ghost.svg",
+    "ui_bronze": "delapouite/two-coins.svg",
+    "ui_coeur": "lorc/candle-flame.svg",
+    "ui_mort": "lorc/skull-signet.svg",
+    "ui_options": "lorc/cog.svg",
+    "ui_son": "skoll/sound-waves.svg",
+    "ui_musique": "lorc/double-quaver.svg",
+    "ui_lanterne": "lorc/lantern-flame.svg",
+    "ui_sceau": "lorc/wax-seal.svg"
+   }
+  }
+ },
+ "fonts": {
+  "display": {
+   "file": "fonts/UnifrakturCook-Bold.ttf",
+   "family": "CarillonDisplay",
+   "credit": "font_unifrakturcook",
+   "licenseFile": "fonts/OFL-unifrakturcook.txt"
+  },
+  "ui": {
+   "file": "fonts/VT323-Regular.ttf",
+   "family": "CarillonUi",
+   "credit": "font_vt323",
+   "licenseFile": "fonts/OFL-vt323.txt"
+  },
+  "ui_alt": {
+   "file": "fonts/PixelifySans[wght].ttf",
+   "family": "CarillonUiAlt",
+   "credit": "font_pixelifysans",
+   "licenseFile": "fonts/OFL-pixelifysans.txt"
+  }
+ },
+ "credits": {
+  "ulpc": {
+   "title": "Universal LPC Spritesheet Character Generator (calques composés avec Pillow)",
+   "authors": [
+    "Benjamin K. Smith (BenCreating)",
+    "Bluecarrot16",
+    "Dr. Jamgo",
+    "Durrani",
+    "Eliza Wyatt (ElizaWy)",
+    "ElizaWy",
+    "Evert",
+    "Inboxninja",
+    "JaidynReiman",
+    "Joe White",
+    "Johannes Sjölund (wulax)",
+    "Luke Mehl",
+    "Manuel Riecke (MrBeast)",
+    "Matthew Krohn (makrohn)",
+    "MuffinElZangano",
+    "Napsio",
+    "Nila122",
+    "Pierre Vigier (pvigier)",
+    "Sander Frenken (castelonia)",
+    "Stephen Challener (Redshrike)",
+    "TheraHedwig",
+    "bluecarrot16",
+    "dalonedrau",
+    "drjamgo@hotmail.com"
+   ],
+   "license": "CC-BY-SA 3.0 / OGA-BY 3.0 (chaque calque est multi-licencié OGA-BY 3.0, CC-BY-SA 3.0, GPL 3.0 ; utilisé ici sous CC-BY-SA 3.0)",
+   "source": "https://opengameart.org/content/lpc-collection",
+   "downloadedFrom": "https://github.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator.git (git clone, commit d44ea7d6)",
+   "evidence": "CREDITS.csv (une ligne par fichier de spritesheets/) + README.md § Licensing",
+   "files": [
+    "body/bodies/female/hurt.png",
+    "body/bodies/female/idle.png",
+    "body/bodies/female/slash.png",
+    "body/bodies/female/thrust.png",
+    "body/bodies/female/walk.png",
+    "body/bodies/male/hurt.png",
+    "body/bodies/male/idle.png",
+    "body/bodies/male/slash.png",
+    "body/bodies/male/thrust.png",
+    "body/bodies/male/walk.png",
+    "body/bodies/muscular/hurt.png",
+    "body/bodies/muscular/idle.png",
+    "body/bodies/muscular/slash.png",
+    "body/bodies/muscular/walk.png",
+    "body/bodies/skeleton/hurt.png",
+    "body/bodies/skeleton/idle.png",
+    "body/bodies/skeleton/thrust.png",
+    "body/bodies/skeleton/walk.png",
+    "body/bodies/zombie/hurt.png",
+    "body/bodies/zombie/slash.png",
+    "body/bodies/zombie/walk.png",
+    "cape/solid/bg/hurt.png",
+    "cape/solid/bg/idle.png",
+    "cape/solid/bg/slash.png",
+    "cape/solid/bg/thrust.png",
+    "cape/solid/bg/walk.png",
+    "cape/solid/fg/hurt.png",
+    "cape/solid/fg/idle.png",
+    "cape/solid/fg/slash.png",
+    "cape/solid/fg/thrust.png",
+    "cape/solid/fg/walk.png",
+    "dress/slit/female/hurt.png",
+    "dress/slit/female/idle.png",
+    "dress/slit/female/slash.png",
+    "dress/slit/female/walk.png",
+    "feet/boots/revised/male/hurt.png",
+    "feet/boots/revised/male/idle.png",
+    "feet/boots/revised/male/slash.png",
+    "feet/boots/revised/male/thrust.png",
+    "feet/boots/revised/male/walk.png",
+    "feet/boots/revised/thin/hurt.png",
+    "feet/boots/revised/thin/idle.png",
+    "feet/boots/revised/thin/slash.png",
+    "feet/boots/revised/thin/walk.png",
+    "hair/buzzcut/adult/hurt.png",
+    "hair/buzzcut/adult/idle.png",
+    "hair/buzzcut/adult/slash.png",
+    "hair/buzzcut/adult/walk.png",
+    "hair/long/adult/hurt.png",
+    "hair/long/adult/idle.png",
+    "hair/long/adult/slash.png",
+    "hair/long/adult/walk.png",
+    "hair/messy1/adult/hurt.png",
+    "hair/messy1/adult/idle.png",
+    "hair/messy1/adult/slash.png",
+    "hair/messy1/adult/walk.png",
+    "hat/cloth/hood/adult/hurt.png",
+    "hat/cloth/hood/adult/idle.png",
+    "hat/cloth/hood/adult/slash.png",
+    "hat/cloth/hood/adult/thrust.png",
+    "hat/cloth/hood/adult/walk.png",
+    "head/heads/human/female/hurt.png",
+    "head/heads/human/female/idle.png",
+    "head/heads/human/female/slash.png",
+    "head/heads/human/female/thrust.png",
+    "head/heads/human/female/walk.png",
+    "head/heads/human/male/hurt.png",
+    "head/heads/human/male/idle.png",
+    "head/heads/human/male/slash.png",
+    "head/heads/human/male/walk.png",
+    "head/heads/human/male_gaunt/hurt.png",
+    "head/heads/human/male_gaunt/idle.png",
+    "head/heads/human/male_gaunt/slash.png",
+    "head/heads/human/male_gaunt/thrust.png",
+    "head/heads/human/male_gaunt/walk.png",
+    "head/heads/human/male_plump/hurt.png",
+    "head/heads/human/male_plump/idle.png",
+    "head/heads/human/male_plump/slash.png",
+    "head/heads/human/male_plump/walk.png",
+    "head/heads/skeleton/adult/hurt.png",
+    "head/heads/skeleton/adult/idle.png",
+    "head/heads/skeleton/adult/thrust.png",
+    "head/heads/skeleton/adult/walk.png",
+    "head/heads/zombie/adult/hurt.png",
+    "head/heads/zombie/adult/idle.png",
+    "head/heads/zombie/adult/slash.png",
+    "head/heads/zombie/adult/walk.png",
+    "legs/pants/male/hurt.png",
+    "legs/pants/male/idle.png",
+    "legs/pants/male/slash.png",
+    "legs/pants/male/thrust.png",
+    "legs/pants/male/walk.png",
+    "legs/pants/thin/hurt.png",
+    "legs/pants/thin/idle.png",
+    "legs/pants/thin/slash.png",
+    "legs/pants/thin/walk.png",
+    "shadow/adult/hurt.png",
+    "shadow/adult/idle.png",
+    "shadow/adult/slash.png",
+    "shadow/adult/thrust.png",
+    "shadow/adult/walk.png",
+    "tools/shovel/bg/thrust.png",
+    "tools/shovel/bg/walk.png",
+    "tools/shovel/fg/thrust.png",
+    "tools/shovel/fg/walk.png",
+    "torso/aprons/apron/male/hurt.png",
+    "torso/aprons/apron/male/slash.png",
+    "torso/aprons/apron/male/walk.png",
+    "torso/clothes/longsleeve/longsleeve/female/hurt.png",
+    "torso/clothes/longsleeve/longsleeve/female/idle.png",
+    "torso/clothes/longsleeve/longsleeve/female/slash.png",
+    "torso/clothes/longsleeve/longsleeve/female/walk.png",
+    "torso/clothes/longsleeve/longsleeve/male/hurt.png",
+    "torso/clothes/longsleeve/longsleeve/male/idle.png",
+    "torso/clothes/longsleeve/longsleeve/male/slash.png",
+    "torso/clothes/longsleeve/longsleeve/male/thrust.png",
+    "torso/clothes/longsleeve/longsleeve/male/walk.png",
+    "torso/clothes/robe/female/hurt.png",
+    "torso/clothes/robe/female/walk.png",
+    "torso/waist/sash/male/hurt.png",
+    "torso/waist/sash/male/slash.png",
+    "torso/waist/sash/male/walk.png",
+    "weapon/magic/simple/background/thrust.png",
+    "weapon/magic/simple/background/walk.png",
+    "weapon/magic/simple/foreground/hurt.png",
+    "weapon/magic/simple/foreground/thrust.png",
+    "weapon/magic/simple/foreground/walk.png"
+   ]
+  },
+  "lpc_revised": {
+   "title": "LPC Revised (ElizaWy/LPC) — terrains, murs, sols, objets",
+   "authors": [
+    "BlueCarrot16",
+    "Eliza Wyatt (DeathsDarling)",
+    "Hyptosis",
+    "Lanea Zimmerman (Sharm)",
+    "Lanea Zimmerman (aka Sharm)"
+   ],
+   "license": "OGA-BY 3.0",
+   "source": "https://opengameart.org/users/deaths-darling (voir Credits.txt de chaque dossier)",
+   "downloadedFrom": "https://github.com/ElizaWy/LPC.git (git clone --depth 1, commit f07f7f58)",
+   "evidence": "README.md + Credits.txt (racine) + Credits.txt de chaque dossier utilisé",
+   "files": [
+    "Objects/Furniture/Barrel.png",
+    "Objects/Furniture/Cauldron.png",
+    "Objects/Furniture/Chest.png",
+    "Objects/Furniture/Crate.png",
+    "Objects/Furniture/Ladder.png",
+    "Objects/Furniture/Lighting, Outdoors.png",
+    "Objects/Furniture/Smithing/Anvils.png",
+    "Objects/Furniture/Smithing/Bellows.png",
+    "Objects/Furniture/Smithing/Coal Piles.png",
+    "Objects/Furniture/Smithing/Forge A.png",
+    "Objects/Furniture/Smithing/Furnace A.png",
+    "Objects/Furniture/Smithing/Grindstone.png",
+    "Objects/Furniture/Smithing/Smelter.png",
+    "Objects/Furniture/Smithing/Workbench, Smith.png",
+    "Objects/Furniture/Stone Slab.png",
+    "Objects/Furniture/Table, Rough Wood.png",
+    "Objects/Furniture/Table, Workshop.png",
+    "Objects/Furniture/Wolf Stone.png",
+    "Objects/Small Items/Buckets.png",
+    "Objects/Small Items/Dungeon Elements.png",
+    "Objects/Small Items/Fire, Camp.png",
+    "Objects/Small Items/Hay & Straw.png",
+    "Objects/Small Items/Lighting, Table.png",
+    "Objects/Small Items/Lumber.png",
+    "Objects/Small Items/Ores & Ingots/Alloys.png",
+    "Objects/Small Items/Skeletons A.png",
+    "Objects/Small Items/Tools, Smithing.png",
+    "Objects/Wall Items/Lighting, Wall.png",
+    "Structure/Doors/64x64px Arched Doors/Arched Doorway A.png",
+    "Structure/Fences/Plain Fence A.png",
+    "Structure/Floor/Gritty Dirt.png",
+    "Structure/Floor/Tile A.png",
+    "Structure/Floor/Tile B.png",
+    "Structure/Floor/Wood Floor A.png",
+    "Structure/Misc/Prison A.png",
+    "Structure/Pillars/Stone Pillar A.png",
+    "Structure/Stairs/Short Steps A.png",
+    "Structure/Stairs/Wood Interior Stairs A.png",
+    "Structure/Walls/Jagged Stone Walls.png",
+    "Structure/Windows/Stone Windows A.png",
+    "Terrain/Rocks, Grasslands.png",
+    "Terrain/mushrooms.png",
+    "Terrain/plants_autumn.png",
+    "Terrain/terrain_autumn.png",
+    "Terrain/trees_winter.png"
+   ]
+  },
+  "tmw_skull-fire": {
+   "title": "The Mana World — skull-fire.png",
+   "authors": [
+    "Modanung"
+   ],
+   "license": "GPLv2, CC BY-SA 3.0 (utilisé sous CC BY-SA 3.0)",
+   "source": "https://themanaworld.org",
+   "downloadedFrom": "https://github.com/themanaworld/tmwa-client-data.git (clone sans blobs + sparse-checkout, commit 36f5aab)",
+   "evidence": "license.md ligne 1131 : ``graphics/sprites/monsters/skull-fire.png` | Modanung | GPLv2, CC BY-SA 3.0`",
+   "files": [
+    "graphics/sprites/monsters/skull-fire.png",
+    "graphics/sprites/monsters/skull-fire.xml"
+   ]
+  },
+  "tmw_sasquatch": {
+   "title": "The Mana World — sasquatch.png",
+   "authors": [
+    "Xtreem"
+   ],
+   "license": "GPLv2, CC BY-SA 3.0 (utilisé sous CC BY-SA 3.0)",
+   "source": "https://themanaworld.org",
+   "downloadedFrom": "https://github.com/themanaworld/tmwa-client-data.git (clone sans blobs + sparse-checkout, commit 36f5aab)",
+   "evidence": "license.md ligne 1127 : ``graphics/sprites/monsters/sasquatch.png` | Xtreem | GPLv2, CC BY-SA 3.0`",
+   "files": [
+    "graphics/sprites/monsters/sasquatch.png",
+    "graphics/sprites/monsters/sasquatch.xml"
+   ]
+  },
+  "tmw_larvespa": {
+   "title": "The Mana World — larvespa.png",
+   "authors": [
+    "Arikel"
+   ],
+   "license": "GPLv2, CC BY-SA 3.0 (utilisé sous CC BY-SA 3.0)",
+   "source": "https://themanaworld.org",
+   "downloadedFrom": "https://github.com/themanaworld/tmwa-client-data.git (clone sans blobs + sparse-checkout, commit 36f5aab)",
+   "evidence": "license.md ligne 1096 : ``graphics/sprites/monsters/larvespa.png` | Arikel | GPLv2, CC BY-SA 3.0`",
+   "files": [
+    "graphics/sprites/monsters/larvespa.png",
+    "graphics/sprites/monsters/larvespa.xml"
+   ]
+  },
+  "tmw_wisp": {
+   "title": "The Mana World — wisp.png",
+   "authors": [
+    "Crush"
+   ],
+   "license": "GPLv2, CC BY-SA 3.0 (utilisé sous CC BY-SA 3.0)",
+   "source": "https://themanaworld.org",
+   "downloadedFrom": "https://github.com/themanaworld/tmwa-client-data.git (clone sans blobs + sparse-checkout, commit 36f5aab)",
+   "evidence": "license.md ligne 1159 : ``graphics/sprites/monsters/wisp.png` | Crush | GPLv2, CC BY-SA 3.0`",
+   "files": [
+    "graphics/sprites/monsters/wisp.png",
+    "graphics/sprites/monsters/wisp.xml"
+   ]
+  },
+  "tmw_spider-queen": {
+   "title": "The Mana World — spider-queen.png",
+   "authors": [
+    "Hocus"
+   ],
+   "license": "MIT, GPLv2, CC BY-SA 3.0 (utilisé sous CC BY-SA 3.0)",
+   "source": "https://themanaworld.org",
+   "downloadedFrom": "https://github.com/themanaworld/tmwa-client-data.git (clone sans blobs + sparse-checkout, commit 36f5aab)",
+   "evidence": "license.md ligne 1146 : ``graphics/sprites/monsters/spider-queen.png` | Hocus | MIT, GPLv2, CC BY-SA 3.0`",
+   "files": [
+    "graphics/sprites/monsters/spider-queen.png",
+    "graphics/sprites/monsters/spider-queen.xml"
+   ]
+  },
+  "tmw_silverbell": {
+   "title": "The Mana World — silverbell.png (cloche)",
+   "authors": [
+    "Enchilado",
+    "FotherJ"
+   ],
+   "license": "GPLv2, CC BY-SA 3.0 (utilisé sous CC BY-SA 3.0)",
+   "source": "https://themanaworld.org",
+   "downloadedFrom": "https://github.com/themanaworld/tmwa-client-data.git (sparse-checkout graphics/items, commit 36f5aab)",
+   "evidence": "license.md ligne 528",
+   "files": [
+    "graphics/items/generic/silverbell.png"
+   ]
+  },
+  "tmw_gemstone": {
+   "title": "The Mana World — gemstone-a.png (Écho)",
+   "authors": [
+    "Crush",
+    "Enchilado"
+   ],
+   "license": "GPLv2, CC BY-SA 3.0 (utilisé sous CC BY-SA 3.0)",
+   "source": "https://themanaworld.org",
+   "downloadedFrom": "https://github.com/themanaworld/tmwa-client-data.git (sparse-checkout graphics/items, commit 36f5aab)",
+   "evidence": "license.md ligne 462",
+   "files": [
+    "graphics/items/generic/gemstone-a.png"
+   ]
+  },
+  "tmw_items": {
+   "title": "The Mana World — potion a, crâne, cloche (pickups)",
+   "authors": [
+    "Enchilado",
+    "FotherJ",
+    "Varuna"
+   ],
+   "license": "GPLv2, CC BY-SA 3.0 (utilisé sous CC BY-SA 3.0)",
+   "source": "https://themanaworld.org",
+   "downloadedFrom": "https://github.com/themanaworld/tmwa-client-data.git (sparse-checkout graphics/items, commit 36f5aab)",
+   "evidence": "license.md ligne 665 ; license.md ligne 530 ; license.md ligne 528",
+   "files": [
+    "graphics/items/use/potions/a.png",
+    "graphics/items/generic/skull.png",
+    "graphics/items/generic/silverbell.png"
+   ]
+  },
+  "kenney": {
+   "title": "Kenney — Fantasy UI Borders, Pixel UI Pack, Cursor Pixel Pack (miroir Tiddybub/2d-assets)",
+   "authors": [
+    "Kenney (kenney.nl)"
+   ],
+   "license": "CC0 1.0",
+   "source": "https://kenney.nl/assets/fantasy-ui-borders ; https://kenney.nl/assets/pixel-ui-pack ; https://kenney.nl/assets/cursor-pixel-pack",
+   "downloadedFrom": "https://github.com/Tiddybub/2d-assets.git (git clone --depth 1, commit e0cbe0d9)",
+   "evidence": "LICENSE (racine, CC0) + ui/fantasy-ui-borders/License.txt, ui/pixel-ui-pack/License.txt, ui/cursor-pixel-pack/License.txt + SOURCE.md de chaque pack",
+   "files": [
+    "ui/fantasy-ui-borders/PNG/Default/Panel/panel-000.png",
+    "ui/fantasy-ui-borders/PNG/Default/Transparent center/panel-transparent-center-000.png",
+    "ui/pixel-ui-pack/9-Slice/Ancient/brown.png",
+    "ui/pixel-ui-pack/9-Slice/Ancient/brown_pressed.png",
+    "ui/pixel-ui-pack/9-Slice/Ancient/grey_pressed.png",
+    "ui/pixel-ui-pack/9-Slice/Outline/yellow.png",
+    "ui/cursor-pixel-pack/Tilemap/tilemap.png"
+   ]
+  },
+  "gameicons_caro-asercion": {
+   "title": "game-icons.net — icônes de Caro Asercion (SVG rastérisés avec cairosvg)",
+   "authors": [
+    "Caro Asercion"
+   ],
+   "license": "CC BY 3.0",
+   "source": "https://game-icons.net",
+   "downloadedFrom": "https://github.com/game-icons/icons.git (git clone --depth 1, commit 82d9488)",
+   "evidence": "license.txt (racine : « Icons provided under the Creative Commons 3.0 BY »)",
+   "files": [
+    "caro-asercion/windchimes.svg"
+   ]
+  },
+  "gameicons_delapouite": {
+   "title": "game-icons.net — icônes de Delapouite (SVG rastérisés avec cairosvg)",
+   "authors": [
+    "Delapouite"
+   ],
+   "license": "CC BY 3.0",
+   "source": "https://game-icons.net",
+   "downloadedFrom": "https://github.com/game-icons/icons.git (git clone --depth 1, commit 82d9488)",
+   "evidence": "license.txt (racine : « Icons provided under the Creative Commons 3.0 BY »)",
+   "files": [
+    "delapouite/bellows.svg",
+    "delapouite/church.svg",
+    "delapouite/gong.svg",
+    "delapouite/maracas.svg",
+    "delapouite/melting-metal.svg",
+    "delapouite/metronome.svg",
+    "delapouite/ringing-alarm.svg",
+    "delapouite/rope-coil.svg",
+    "delapouite/two-coins.svg",
+    "delapouite/weight.svg"
+   ]
+  },
+  "gameicons_lorc": {
+   "title": "game-icons.net — icônes de Lorc (SVG rastérisés avec cairosvg)",
+   "authors": [
+    "Lorc"
+   ],
+   "license": "CC BY 3.0",
+   "source": "https://game-icons.net",
+   "downloadedFrom": "https://github.com/game-icons/icons.git (git clone --depth 1, commit 82d9488)",
+   "evidence": "license.txt (racine : « Icons provided under the Creative Commons 3.0 BY »)",
+   "files": [
+    "lorc/anvil.svg",
+    "lorc/aura.svg",
+    "lorc/bell-shield.svg",
+    "lorc/candle-flame.svg",
+    "lorc/candle-skull.svg",
+    "lorc/cog.svg",
+    "lorc/double-quaver.svg",
+    "lorc/echo-ripples.svg",
+    "lorc/ghost.svg",
+    "lorc/honeycomb.svg",
+    "lorc/hunting-horn.svg",
+    "lorc/lantern-flame.svg",
+    "lorc/ringing-bell.svg",
+    "lorc/skull-signet.svg",
+    "lorc/sonic-boom.svg",
+    "lorc/tune-pitch.svg",
+    "lorc/wavy-chains.svg",
+    "lorc/wax-seal.svg"
+   ]
+  },
+  "gameicons_skoll": {
+   "title": "game-icons.net — icônes de Skoll (SVG rastérisés avec cairosvg)",
+   "authors": [
+    "Skoll"
+   ],
+   "license": "CC BY 3.0",
+   "source": "https://game-icons.net",
+   "downloadedFrom": "https://github.com/game-icons/icons.git (git clone --depth 1, commit 82d9488)",
+   "evidence": "license.txt (racine : « Icons provided under the Creative Commons 3.0 BY »)",
+   "files": [
+    "skoll/sound-waves.svg"
+   ]
+  },
+  "gameicons": {
+   "title": "game-icons.net — planche ui/icons.png (Timbres, Accords, fusions, UI)",
+   "authors": [
+    "Caro Asercion",
+    "Delapouite",
+    "Lorc",
+    "Skoll"
+   ],
+   "license": "CC BY 3.0",
+   "source": "https://game-icons.net",
+   "downloadedFrom": "https://github.com/game-icons/icons.git (git clone --depth 1, commit 82d9488)",
+   "evidence": "license.txt",
+   "files": [
+    "caro-asercion/windchimes.svg",
+    "delapouite/bellows.svg",
+    "delapouite/church.svg",
+    "delapouite/gong.svg",
+    "delapouite/maracas.svg",
+    "delapouite/melting-metal.svg",
+    "delapouite/metronome.svg",
+    "delapouite/ringing-alarm.svg",
+    "delapouite/rope-coil.svg",
+    "delapouite/two-coins.svg",
+    "delapouite/weight.svg",
+    "lorc/anvil.svg",
+    "lorc/aura.svg",
+    "lorc/bell-shield.svg",
+    "lorc/candle-flame.svg",
+    "lorc/candle-skull.svg",
+    "lorc/cog.svg",
+    "lorc/double-quaver.svg",
+    "lorc/echo-ripples.svg",
+    "lorc/ghost.svg",
+    "lorc/honeycomb.svg",
+    "lorc/hunting-horn.svg",
+    "lorc/lantern-flame.svg",
+    "lorc/ringing-bell.svg",
+    "lorc/skull-signet.svg",
+    "lorc/sonic-boom.svg",
+    "lorc/tune-pitch.svg",
+    "lorc/wavy-chains.svg",
+    "lorc/wax-seal.svg",
+    "skoll/sound-waves.svg"
+   ]
+  },
+  "font_unifrakturcook": {
+   "title": "UnifrakturCook (police OFL)",
+   "authors": [
+    "Peter Wiegel",
+    "j. 'mach' wust"
+   ],
+   "license": "OFL 1.1",
+   "source": "https://fonts.google.com/specimen/UnifrakturCook",
+   "downloadedFrom": "https://raw.githubusercontent.com/google/fonts/main/ofl/unifrakturcook/UnifrakturCook-Bold.ttf",
+   "evidence": "https://raw.githubusercontent.com/google/fonts/main/ofl/unifrakturcook/OFL.txt (copié dans assets/fonts/OFL-unifrakturcook.txt)",
+   "files": [
+    "fonts/UnifrakturCook-Bold.ttf"
+   ]
+  },
+  "font_vt323": {
+   "title": "VT323 (police OFL)",
+   "authors": [
+    "Peter Hull"
+   ],
+   "license": "OFL 1.1",
+   "source": "https://fonts.google.com/specimen/VT323",
+   "downloadedFrom": "https://raw.githubusercontent.com/google/fonts/main/ofl/vt323/VT323-Regular.ttf",
+   "evidence": "https://raw.githubusercontent.com/google/fonts/main/ofl/vt323/OFL.txt (copié dans assets/fonts/OFL-vt323.txt)",
+   "files": [
+    "fonts/VT323-Regular.ttf"
+   ]
+  },
+  "font_pixelifysans": {
+   "title": "Pixelify Sans (police OFL)",
+   "authors": [
+    "Stefie Justprince"
+   ],
+   "license": "OFL 1.1",
+   "source": "https://fonts.google.com/specimen/Pixelify+Sans",
+   "downloadedFrom": "https://raw.githubusercontent.com/google/fonts/main/ofl/pixelifysans/PixelifySans%5Bwght%5D.ttf",
+   "evidence": "https://raw.githubusercontent.com/google/fonts/main/ofl/pixelifysans/OFL.txt (copié dans assets/fonts/OFL-pixelifysans.txt)",
+   "files": [
+    "fonts/PixelifySans[wght].ttf"
+   ]
+  }
+ }
+}

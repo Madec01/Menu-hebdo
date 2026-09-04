@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CARILLON — planche des assets</title>
+<style>
+  /* Page autonome : aucun CDN, aucune dépendance. Lit ../assets/manifest.json et audio/manifest.json. */
+  @font-face { font-family: 'CarillonDisplay'; src: url('fonts/UnifrakturCook-Bold.ttf'); }
+  @font-face { font-family: 'CarillonUi'; src: url('fonts/VT323-Regular.ttf'); }
+  @font-face { font-family: 'CarillonUiAlt'; src: url('fonts/PixelifySans[wght].ttf'); }
+  :root { --suie:#16130f; --tourbe:#2a241c; --mousse:#4a5540; --os:#d8cdb4; --bronze:#c9973f; --braise:#e0603a; --gris:#8f8d93; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--suie); color:var(--os); font-family:'CarillonUi', monospace; font-size:20px; line-height:1.25; }
+  header { padding:28px 32px 12px; border-bottom:2px solid var(--bronze); background:linear-gradient(var(--tourbe), var(--suie)); }
+  h1 { font-family:'CarillonDisplay', serif; font-weight:normal; font-size:56px; margin:0; color:var(--bronze); letter-spacing:2px; }
+  h2 { font-family:'CarillonDisplay', serif; font-weight:normal; font-size:34px; color:var(--bronze); margin:36px 0 10px; border-bottom:1px solid var(--tourbe); }
+  h3 { font-weight:normal; font-size:22px; margin:16px 0 6px; color:var(--os); }
+  header p { margin:6px 0 0; color:var(--gris); }
+  main { padding:8px 32px 60px; max-width:1500px; }
+  .grid { display:flex; flex-wrap:wrap; gap:14px; }
+  .card { background:var(--tourbe); border:2px solid #4a3a22; border-radius:2px; padding:10px 12px; min-width:180px; box-shadow: inset 0 0 0 1px #1c1710; }
+  .card .name { color:var(--bronze); font-size:22px; }
+  .card .meta { color:var(--gris); font-size:16px; }
+  canvas { image-rendering: pixelated; image-rendering: crisp-edges; display:block; background:#100e0b; margin:6px 0; border:1px solid #3a2f1c; }
+  .frames { display:flex; flex-wrap:wrap; gap:6px; }
+  .anim { display:inline-block; text-align:center; margin:4px; }
+  .anim small { display:block; color:var(--gris); font-size:14px; }
+  .sheet-toggle { color:var(--gris); cursor:pointer; text-decoration:underline; font-size:15px; }
+  .sheet { display:none; max-width:100%; border:1px solid #3a2f1c; margin-top:6px; }
+  .sheet.on { display:block; }
+  .swatch { width:120px; height:80px; border:2px solid #3a2f1c; padding:6px; font-size:15px; display:flex; flex-direction:column; justify-content:flex-end; }
+  .btn { font-family:'CarillonUi', monospace; font-size:19px; color:var(--os); background:var(--tourbe); border:2px solid var(--bronze); padding:6px 12px; cursor:pointer; margin:3px; }
+  .btn:hover { background:#3a3124; }
+  .btn.playing { background:var(--bronze); color:var(--suie); }
+  #unlock { position:fixed; inset:0; background:rgba(22,19,15,.96); display:flex; align-items:center; justify-content:center; flex-direction:column; z-index:10; cursor:pointer; }
+  #unlock .bell { font-family:'CarillonDisplay', serif; font-size:64px; color:var(--bronze); }
+  #unlock p { color:var(--gris); }
+  .warn { color:var(--braise); }
+  .fontline { font-size:40px; margin:6px 0; }
+  table { border-collapse:collapse; font-size:16px; }
+  td, th { border:1px solid #3a2f1c; padding:3px 8px; text-align:left; vertical-align:top; }
+  th { color:var(--bronze); font-weight:normal; }
+  .tiny { font-size:15px; color:var(--gris); }
+</style>
+</head>
+<body>
+<div id="unlock"><div class="bell">Cliquez pour sonner</div><p>déverrouille l'audio (AudioContext) et lance les animations</p></div>
+<header>
+  <h1>CARILLON — planche des assets</h1>
+  <p id="status">Chargement de manifest.json…</p>
+</header>
+<main>
+  <h2>Palette</h2>
+  <div class="grid" id="palette"></div>
+
+  <h2>Polices</h2>
+  <div id="fonts"></div>
+
+  <h2>Sonneurs</h2>
+  <div class="grid" id="players"></div>
+
+  <h2>Bestiaire et boss</h2>
+  <div class="grid" id="enemies"></div>
+
+  <h2>Timbres, Échos, pickups, lumières, écran-titre</h2>
+  <div class="grid" id="fx"></div>
+
+  <h2>Tilesets des paroisses</h2>
+  <div id="tiles"></div>
+
+  <h2>Props</h2>
+  <div class="grid" id="props"></div>
+
+  <h2>Interface (9-slice, cartes, curseur, icônes)</h2>
+  <div class="grid" id="ui"></div>
+
+  <h2>Audio (assets/audio/manifest.json)</h2>
+  <div id="audio"><span class="tiny">…</span></div>
+
+  <h2>Crédits (résumé du manifeste)</h2>
+  <div id="credits"></div>
+</main>
+<script>
+(function () {
+  'use strict';
+  const SCALE = 3;
+  const $ = (id) => document.getElementById(id);
+  const images = new Map();
+  const animators = [];
+  let running = false;
+
+  function loadImage(src) {
+    if (images.has(src)) return images.get(src);
+    const p = new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => rej(new Error('404 ' + src)); im.src = src; });
+    images.set(src, p);
+    return p;
+  }
+
+  function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+
+  // Un canvas par animation : joue frames à fps, ×SCALE, sans lissage.
+  function animCanvas(img, sp, name, a) {
+    const fw = sp.frameW, fh = sp.frameH;
+    const c = el('canvas'); c.width = fw * SCALE; c.height = fh * SCALE;
+    const ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = false;
+    const col0 = a.col || 0;
+    const draw = (i) => { ctx.clearRect(0, 0, c.width, c.height); ctx.drawImage(img, (col0 + i) * fw, a.row * fh, fw, fh, 0, 0, fw * SCALE, fh * SCALE); };
+    draw(0);
+    let i = 0, acc = 0;
+    animators.push((dt) => {
+      if (a.frames <= 1 || !a.fps) return;
+      acc += dt; const step = 1 / a.fps;
+      while (acc >= step) { acc -= step; i = i + 1; if (i >= a.frames) { i = a.loop === false ? a.frames - 1 : 0; if (a.loop === false && Math.random() < 0.02) i = 0; } draw(i); }
+    });
+    const wrap = el('div', 'anim'); wrap.appendChild(c); wrap.appendChild(el('small', null, name + ' ' + a.frames + 'f/' + a.fps + 'fps')); return wrap;
+  }
+
+  function sheetToggle(img, file) {
+    const t = el('span', 'sheet-toggle', 'feuille ' + file + ' (' + img.width + '×' + img.height + ')');
+    const im = el('img', 'sheet'); im.src = file; im.style.imageRendering = 'pixelated';
+    t.onclick = () => im.classList.toggle('on');
+    const d = el('div'); d.appendChild(t); d.appendChild(im); return d;
+  }
+
+  async function spriteCard(id, sp, container, filter) {
+    const card = el('div', 'card');
+    card.appendChild(el('div', 'name', id));
+    card.appendChild(el('div', 'meta', sp.file + ' · ' + sp.frameW + '×' + sp.frameH + ' · ancre ' + JSON.stringify(sp.anchor) + ' · crédit ' + sp.credit + (sp.note ? ' · ' + sp.note : '')));
+    container.appendChild(card);
+    try {
+      const img = await loadImage(sp.file);
+      const frames = el('div', 'frames');
+      for (const [name, a] of Object.entries(sp.anims)) {
+        if (filter && !filter(name)) continue;
+        frames.appendChild(animCanvas(img, sp, name, a));
+      }
+      card.appendChild(frames);
+      card.appendChild(sheetToggle(img, sp.file));
+    } catch (e) { card.appendChild(el('div', 'warn', 'IMAGE MANQUANTE : ' + e.message)); }
+  }
+
+  const dirFilter = (n) => !/_(up|left|right)$/.test(n);
+
+  async function tilesetBlock(id, t) {
+    const box = el('div', 'card'); box.style.marginBottom = '14px';
+    box.appendChild(el('div', 'name', id));
+    box.appendChild(el('div', 'meta', t.file + ' · ' + t.tileW + '×' + t.tileH + ' · sol : ' + t.ground.length + ' tuiles · murs : ' + (t.walls || []).length + ' · props : ' + Object.keys(t.props).length));
+    $('tiles').appendChild(box);
+    try {
+      const img = await loadImage(t.file);
+      const c = el('canvas'); c.width = img.width * 2; c.height = img.height * 2;
+      const ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = false; ctx.drawImage(img, 0, 0, c.width, c.height);
+      // index de chaque tuile
+      ctx.font = '11px monospace'; ctx.fillStyle = '#e0603a';
+      const cols = t.columns || (img.width / t.tileW);
+      const n = Math.floor(img.width / t.tileW) * Math.floor(img.height / t.tileH);
+      for (let i = 0; i < n; i++) { const x = (i % cols) * t.tileW * 2, y = Math.floor(i / cols) * t.tileH * 2; ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(x, y, 18, 12); ctx.fillStyle = '#d8cdb4'; ctx.fillText(i, x + 1, y + 10); }
+      box.appendChild(c);
+      const legend = el('div', 'tiny');
+      legend.textContent = 'groupes de sol : ' + Object.entries(t.groundGroups || {}).map(([k, v]) => k + ' [' + v.join(',') + ']').join(' · ') + ' — props : ' + Object.entries(t.props).map(([k, v]) => k + '=' + v).join(', ');
+      box.appendChild(legend);
+    } catch (e) { box.appendChild(el('div', 'warn', 'IMAGE MANQUANTE : ' + e.message)); }
+  }
+
+  async function uiCard(id, u) {
+    const card = el('div', 'card'); card.appendChild(el('div', 'name', id));
+    card.appendChild(el('div', 'meta', u.file + (u.slice ? ' · slice ' + JSON.stringify(u.slice) : '') + ' · crédit ' + u.credit + (u.note ? ' · ' + u.note : '')));
+    $('ui').appendChild(card);
+    try {
+      const img = await loadImage(u.file);
+      if (u.map && u.frameW) {
+        const cols = u.columns || Math.floor(img.width / u.frameW);
+        const c = el('canvas'); c.width = img.width * 2; c.height = img.height * 2;
+        const ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = false; ctx.drawImage(img, 0, 0, c.width, c.height);
+        card.appendChild(c);
+        const t = el('div', 'tiny', Object.entries(u.map).map(([k, v]) => v + ':' + k).join('  '));
+        card.appendChild(t);
+      } else if (u.slice && u.slice[0] > 0) {
+        // démonstration du 9-slice à deux tailles
+        for (const [w, h] of [[img.width, img.height], [180, 70], [96, 128]]) {
+          const c = el('canvas'); c.width = w * 2; c.height = h * 2;
+          const ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = false;
+          nineSlice(ctx, img, u.slice, 0, 0, w, h, 2); card.appendChild(c);
+        }
+      } else {
+        const c = el('canvas'); c.width = img.width * SCALE; c.height = img.height * SCALE;
+        const ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = false; ctx.drawImage(img, 0, 0, c.width, c.height); card.appendChild(c);
+      }
+    } catch (e) { card.appendChild(el('div', 'warn', 'IMAGE MANQUANTE : ' + e.message)); }
+  }
+
+  function nineSlice(ctx, img, s, x, y, w, h, k) {
+    const [t, r, b, l] = s; const W = img.width, H = img.height;
+    const sx = [0, l, W - r, W], sy = [0, t, H - b, H];
+    const dx = [0, l, w - r, w], dy = [0, t, h - b, h];
+    for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) {
+      const sw = sx[i + 1] - sx[i], sh = sy[j + 1] - sy[j], dw = dx[i + 1] - dx[i], dh = dy[j + 1] - dy[j];
+      if (sw <= 0 || sh <= 0 || dw <= 0 || dh <= 0) continue;
+      ctx.drawImage(img, sx[i], sy[j], sw, sh, (x + dx[i]) * k, (y + dy[j]) * k, dw * k, dh * k);
+    }
+  }
+
+  // ------------------------------------------------------------ audio
+  let actx = null;
+  const buffers = new Map();
+  let current = null;
+  async function playFile(url, btn, loop) {
+    if (!actx) return;
+    if (current) { try { current.src.stop(); } catch (e) {} current.btn.classList.remove('playing'); if (current.btn === btn) { current = null; return; } current = null; }
+    let buf = buffers.get(url);
+    if (!buf) {
+      const r = await fetch(url); if (!r.ok) { btn.classList.add('warn'); btn.textContent += ' (404)'; return; }
+      buf = await actx.decodeAudioData(await r.arrayBuffer()); buffers.set(url, buf);
+    }
+    const src = actx.createBufferSource(); src.buffer = buf; src.loop = !!loop; src.connect(actx.destination); src.start();
+    btn.classList.add('playing'); current = { src, btn };
+    src.onended = () => { btn.classList.remove('playing'); if (current && current.src === src) current = null; };
+  }
+  function soundButton(label, url, loop) {
+    const b = el('button', 'btn', label); b.title = url; b.onclick = () => playFile(url, b, loop); return b;
+  }
+  async function buildAudio() {
+    const box = $('audio'); box.innerHTML = '';
+    let am;
+    try { const r = await fetch('audio/manifest.json'); if (!r.ok) throw new Error(r.status); am = await r.json(); }
+    catch (e) { box.appendChild(el('p', 'warn', 'assets/audio/manifest.json absent ou illisible (' + e.message + ') — l\'agent B ne l\'a pas encore livré.')); return; }
+    const sec = (title) => { box.appendChild(el('h3', null, title)); const g = el('div', 'grid'); box.appendChild(g); return g; };
+    if (am.sfx) { const g = sec('Bruitages (' + Object.keys(am.sfx).length + ')'); for (const [id, s] of Object.entries(am.sfx)) { const files = s.files || (s.file ? [s.file] : []); files.forEach((f, i) => g.appendChild(soundButton(id + (files.length > 1 ? ' ' + (i + 1) : ''), f))); } }
+    if (am.samples) { const g = sec('Échantillons instrumentaux (' + Object.keys(am.samples).length + ')'); for (const [id, s] of Object.entries(am.samples)) { const files = s.files || {}; const d = el('div', 'card'); d.appendChild(el('div', 'name', id + ' · ' + (s.kind || ''))); for (const [k, v] of Object.entries(files)) { (Array.isArray(v) ? v : [v]).forEach((f, i) => d.appendChild(soundButton(k + (Array.isArray(v) && v.length > 1 ? ' ' + (i + 1) : ''), f))); } g.appendChild(d); } }
+    if (am.tracks) { const g = sec('Pistes (' + Object.keys(am.tracks).length + ')'); for (const [id, t] of Object.entries(am.tracks)) { if (t.file) g.appendChild(soundButton('♪ ' + id + (t.bpm ? ' · ' + t.bpm + ' BPM' : ''), t.file, true)); else g.appendChild(el('span', 'btn', '♪ ' + id + ' → partition ' + (t.score || '?') + ' (jouée par music.js)')); } }
+    if (am.credits) { const p = el('p', 'tiny', 'Crédits audio : ' + Object.entries(am.credits).map(([k, c]) => k + ' — ' + (c.title || '') + ' (' + (c.license || '') + ')').join(' · ')); box.appendChild(p); }
+  }
+
+  // ------------------------------------------------------------ construction
+  async function build() {
+    let m;
+    try { const r = await fetch('manifest.json'); if (!r.ok) throw new Error(r.status); m = await r.json(); }
+    catch (e) { $('status').textContent = 'manifest.json introuvable (' + e.message + ') — sers le dossier avec ./serve.sh puis ouvre http://localhost:8080/assets/preview.html'; $('status').className = 'warn'; return; }
+    const ns = Object.keys(m.sprites).length, nt = Object.keys(m.tiles).length, nu = Object.keys(m.ui).length;
+    $('status').textContent = 'manifest v' + m.version + ' (' + m.generated + ') — ' + ns + ' sprites, ' + nt + ' tilesets, ' + nu + ' éléments UI, ' + Object.keys(m.fonts).length + ' polices, ' + Object.keys(m.credits).length + ' entrées de crédits. Rendu ×' + SCALE + ', imageSmoothingEnabled=false.';
+    for (const [k, v] of Object.entries(m.palette || {})) { const s = el('div', 'swatch', k + ' ' + v); s.style.background = v; s.style.color = (k === 'os' || k === 'bronze' || k === 'gris_silence') ? '#16130f' : '#d8cdb4'; $('palette').appendChild(s); }
+    for (const [k, f] of Object.entries(m.fonts)) { const d = el('div', 'fontline', k + ' · ' + f.family + ' · ' + f.file + ' — Les cloches de Cendrelune se sont tues à l\'aube.'); d.style.fontFamily = "'" + f.family + "', serif"; $('fonts').appendChild(d); }
+    for (const [id, sp] of Object.entries(m.sprites)) {
+      if (sp.kind === 'player') await spriteCard(id, sp, $('players'), dirFilter);
+      else if (sp.kind === 'enemy' || sp.kind === 'boss') await spriteCard(id + (sp.kind === 'boss' ? '  (boss)' : ''), sp, $('enemies'), dirFilter);
+      else if (sp.kind === 'prop') await spriteCard(id, sp, $('props'));
+      else await spriteCard(id, sp, $('fx'));
+    }
+    for (const [id, t] of Object.entries(m.tiles)) await tilesetBlock(id, t);
+    for (const [id, u] of Object.entries(m.ui)) await uiCard(id, u);
+    const tb = el('table'); tb.innerHTML = '<tr><th>clé</th><th>titre</th><th>licence</th><th>téléchargé depuis</th><th>preuve</th></tr>';
+    for (const [k, c] of Object.entries(m.credits)) { const tr = el('tr'); for (const v of [k, c.title, c.license, c.downloadedFrom, c.evidence]) { const td = el('td', null, v); tr.appendChild(td); } tb.appendChild(tr); }
+    $('credits').appendChild(tb);
+    await buildAudio();
+    // boucle d'animation
+    let last = performance.now();
+    function tick(now) { const dt = Math.min(0.1, (now - last) / 1000); last = now; if (running) for (const a of animators) a(dt); requestAnimationFrame(tick); }
+    requestAnimationFrame(tick);
+  }
+
+  $('unlock').addEventListener('click', () => {
+    try { actx = new (window.AudioContext || window.webkitAudioContext)(); actx.resume(); } catch (e) { console.warn('AudioContext indisponible', e); }
+    running = true; $('unlock').style.display = 'none';
+  });
+  build();
+})();
+</script>
+</body>
+</html>

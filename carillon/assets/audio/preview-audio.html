@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CARILLON — checkpoint audio</title>
+<!--
+  Page de contrôle de l'agent B (audio). Vanilla, sans CDN, sans oscillateur :
+  tout ce qui sonne ici est un AudioBufferSourceNode lisant un fichier réel.
+  Ouvrir via ./serve.sh puis http://localhost:8080/assets/audio/preview-audio.html
+  Le moteur (sampler, séquenceur à lookahead, bus) est dans preview-audio.js.
+-->
+<style>
+  :root {
+    --suie: #16130f; --tourbe: #2a241c; --mousse: #4a5540; --os: #d8cdb4;
+    --bronze: #c9973f; --braise: #e0603a; --silence: #8f8d93;
+    --os-dim: rgba(216, 205, 180, .55); --bronze-dim: rgba(201, 151, 63, .28);
+    --display: "CarillonDisplay", "UnifrakturCook", "Palatino Linotype", "Book Antiqua", "Palatino", Georgia, serif;
+    --body: "CarillonUi", "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, "Times New Roman", serif;
+    --mono: "Courier Prime", "Courier New", monospace;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--suie); }
+  body {
+    margin: 0; color: var(--os); font-family: var(--body); font-size: 15px; line-height: 1.5;
+    background:
+      radial-gradient(ellipse at 50% -10%, rgba(201,151,63,.10), transparent 55%),
+      radial-gradient(ellipse at 50% 110%, rgba(224,96,58,.06), transparent 50%),
+      var(--suie);
+    min-height: 100vh; overflow-x: hidden;
+  }
+  /* grain de suie et vignette, dans la DA (pas de néon) */
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: .35; mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .85 0 0 0 0 .8 0 0 0 0 .7 0 0 0 .5 0'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>");
+  }
+  body::after {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.65) 100%);
+  }
+  main { position: relative; z-index: 1; max-width: 1180px; margin: 0 auto; padding: 32px 24px 80px; }
+
+  header { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 24px; padding-bottom: 18px; border-bottom: 1px solid var(--bronze-dim); }
+  h1 { font-family: var(--display); font-weight: 400; font-size: clamp(38px, 6vw, 64px); letter-spacing: .12em; margin: 0; line-height: 1; color: var(--os); text-shadow: 0 0 24px rgba(201,151,63,.25); }
+  h1 small { display: block; font-family: var(--body); font-size: 14px; letter-spacing: .3em; text-transform: uppercase; color: var(--bronze); margin-top: 10px; }
+  header .stats { font-family: var(--mono); font-size: 12px; color: var(--silence); text-align: right; line-height: 1.7; }
+  header .stats b { color: var(--os); font-weight: 400; }
+
+  h2 { font-family: var(--display); font-weight: 400; font-size: 28px; letter-spacing: .08em; margin: 48px 0 6px; color: var(--os); }
+  h2::before { content: "◆ "; color: var(--bronze); font-size: 14px; vertical-align: middle; }
+  .lead { color: var(--os-dim); margin: 0 0 18px; max-width: 70ch; }
+  h3 { font-family: var(--body); font-weight: 400; font-size: 12px; letter-spacing: .28em; text-transform: uppercase; color: var(--bronze); margin: 22px 0 8px; }
+
+  /* déblocage : « Cliquez pour sonner » */
+  #unlock { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: rgba(22,19,15,.94); cursor: pointer; transition: opacity .6s; }
+  #unlock.gone { opacity: 0; pointer-events: none; }
+  #unlock .bell { font-family: var(--display); font-size: clamp(28px, 5vw, 48px); letter-spacing: .2em; color: var(--os); text-align: center; }
+  #unlock .bell span { display: block; font-family: var(--body); font-size: 14px; letter-spacing: .35em; text-transform: uppercase; color: var(--bronze); margin-top: 14px; }
+  #unlock .ring { width: 160px; height: 160px; margin: 0 auto 28px; border-radius: 50%; border: 1px solid var(--bronze); box-shadow: 0 0 0 12px rgba(201,151,63,.08), 0 0 60px rgba(201,151,63,.2) inset; animation: breathe 3s ease-in-out infinite; }
+  @keyframes breathe { 50% { transform: scale(1.06); box-shadow: 0 0 0 18px rgba(201,151,63,.05), 0 0 80px rgba(201,151,63,.3) inset; } }
+
+  /* la Mesure */
+  .mesure { display: grid; grid-template-columns: 300px 1fr; gap: 28px; align-items: start; padding: 22px; border: 1px solid var(--bronze-dim); background: linear-gradient(180deg, rgba(42,36,28,.55), rgba(22,19,15,.2)); position: relative; }
+  .mesure::before, .mesure::after { content: ""; position: absolute; width: 14px; height: 14px; border: 1px solid var(--bronze); }
+  .mesure::before { top: -1px; left: -1px; border-right: 0; border-bottom: 0; }
+  .mesure::after { bottom: -1px; right: -1px; border-left: 0; border-top: 0; }
+  .halo-wrap { display: grid; place-items: center; height: 300px; position: relative; }
+  .halo { width: 150px; height: 150px; border-radius: 50%; border: 1px solid var(--bronze); position: relative; transform-origin: center; }
+  .halo::after { content: ""; position: absolute; inset: 12px; border-radius: 50%; background: radial-gradient(circle, rgba(201,151,63,.55), rgba(201,151,63,0) 70%); opacity: var(--glow, 0); }
+  .halo .ground { position: absolute; left: 50%; top: 50%; width: 260px; height: 90px; transform: translate(-50%, -20%) scaleY(.35); border-radius: 50%; border: 1px solid rgba(201,151,63,.35); opacity: var(--glow, 0); pointer-events: none; }
+  .beats { position: absolute; bottom: 8px; display: flex; gap: 10px; }
+  .beats i { width: 10px; height: 10px; border-radius: 50%; border: 1px solid var(--bronze); opacity: .35; transition: opacity .05s; }
+  .beats i.on { opacity: 1; background: var(--bronze); box-shadow: 0 0 10px var(--bronze); }
+  .beats i:first-child { width: 12px; height: 12px; }
+  .counter { position: absolute; top: 6px; left: 0; right: 0; text-align: center; font-family: var(--mono); font-size: 12px; color: var(--silence); }
+  .counter b { color: var(--bronze); font-weight: 400; }
+
+  .controls { display: grid; gap: 14px; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  label.sel { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--os-dim); }
+  select, button, input[type=range] { font-family: inherit; }
+  select { background: var(--tourbe); color: var(--os); border: 1px solid var(--bronze-dim); padding: 7px 10px; font-size: 14px; }
+  button { cursor: pointer; background: var(--tourbe); color: var(--os); border: 1px solid var(--bronze-dim); padding: 7px 14px; font-size: 14px; letter-spacing: .04em; transition: border-color .15s, background .15s, transform .05s; }
+  button:hover { border-color: var(--bronze); }
+  button:active { transform: translateY(1px); }
+  button.primary { background: var(--bronze); color: var(--suie); border-color: var(--bronze); font-weight: 600; }
+  button.primary:hover { background: #dcae54; }
+  .tiers { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .tiers button { padding: 12px 8px; text-align: left; line-height: 1.25; border-left: 3px solid transparent; }
+  .tiers button b { display: block; font-family: var(--display); font-size: 20px; letter-spacing: .05em; font-weight: 400; }
+  .tiers button small { display: block; color: var(--silence); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; margin-top: 3px; }
+  .tiers button.on { border-left-color: var(--bronze); background: rgba(201,151,63,.14); }
+  .tiers button.on b { color: var(--bronze); }
+  .slider { display: grid; grid-template-columns: 150px 1fr 60px; align-items: center; gap: 12px; font-size: 13px; color: var(--os-dim); }
+  .slider output { font-family: var(--mono); font-size: 12px; color: var(--os); text-align: right; }
+  input[type=range] { -webkit-appearance: none; appearance: none; height: 2px; background: var(--bronze-dim); outline: none; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--bronze); border: 1px solid var(--suie); cursor: pointer; }
+  input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--bronze); border: 1px solid var(--suie); cursor: pointer; }
+  .layers { font-family: var(--mono); font-size: 12px; color: var(--silence); display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 3px 16px; }
+  .layers span { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; border-bottom: 1px dotted rgba(143,141,147,.2); }
+  .layers span.live { color: var(--os); }
+  .layers span.live::before { content: "●"; color: var(--bronze); margin-right: 6px; }
+  .layers span:not(.live)::before { content: "○"; margin-right: 6px; }
+  .judge { font-family: var(--display); font-size: 22px; letter-spacing: .1em; color: var(--bronze); min-height: 28px; }
+  .judge.rate { color: var(--braise); }
+  .hint { font-size: 12px; color: var(--silence); }
+  kbd { font-family: var(--mono); font-size: 11px; border: 1px solid var(--bronze-dim); padding: 1px 5px; color: var(--os); }
+
+  /* bruitages et instruments */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+  .grid button { text-align: left; padding: 8px 10px; display: grid; gap: 2px; }
+  .grid button small { color: var(--silence); font-family: var(--mono); font-size: 10px; }
+  .grid button.playing { border-color: var(--bronze); box-shadow: 0 0 12px rgba(201,151,63,.25) inset; }
+  .grid button.mandatory::after { content: "§8"; float: right; color: var(--bronze); font-family: var(--mono); font-size: 10px; }
+  .inst { display: grid; grid-template-columns: 210px 1fr; gap: 14px; align-items: start; padding: 10px 0; border-bottom: 1px solid rgba(201,151,63,.12); }
+  .inst .name { font-family: var(--display); font-size: 19px; letter-spacing: .05em; }
+  .inst .name small { display: block; font-family: var(--mono); font-size: 10px; color: var(--silence); letter-spacing: 0; margin-top: 2px; }
+  .keys { display: flex; flex-wrap: wrap; gap: 4px; }
+  .keys button { padding: 5px 8px; font-family: var(--mono); font-size: 12px; min-width: 44px; }
+  .keys button.loop { border-bottom: 2px solid var(--mousse); }
+  .keys button.playing { background: rgba(201,151,63,.2); border-color: var(--bronze); }
+  .amb { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px; }
+  .amb button.on { background: rgba(74,85,64,.5); border-color: var(--mousse); }
+  footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--bronze-dim); font-size: 12px; color: var(--silence); }
+  footer a { color: var(--bronze); }
+  @media (max-width: 800px) { .mesure { grid-template-columns: 1fr; } .inst { grid-template-columns: 1fr; } header { grid-template-columns: 1fr; } header .stats { text-align: left; } }
+</style>
+</head>
+<body>
+<div id="unlock"><div class="bell"><div class="ring"></div>Cliquez pour sonner<span>déblocage de l'AudioContext</span></div></div>
+<main>
+  <header>
+    <h1>CARILLON<small>Checkpoint audio — agent B, phase 1</small></h1>
+    <div class="stats" id="stats">chargement du manifeste…</div>
+  </header>
+
+  <h2>La Mesure</h2>
+  <p class="lead">Partition JSON jouée par un séquenceur à <em>lookahead</em> sur <code>AudioContext.currentTime</code> (jamais <code>setInterval</code>) à partir d'instruments échantillonnés. Les quatre crans de Résonance ajoutent une couche chacun, en fondu de 200 ms, sans jamais désynchroniser les autres. Appuyez sur <kbd>Espace</kbd> en rythme pour tester la fenêtre de jugement.</p>
+  <section class="mesure">
+    <div class="halo-wrap">
+      <div class="counter">mesure <b id="bar">–</b> · temps <b id="beat">–</b> · <b id="bpm">–</b> BPM</div>
+      <div class="halo" id="halo"><div class="ground"></div></div>
+      <div class="beats" id="beats"><i></i><i></i><i></i><i></i></div>
+    </div>
+    <div class="controls">
+      <div class="row">
+        <label class="sel">Piste <select id="track"></select></label>
+        <button class="primary" id="play">▶ Jouer</button>
+        <button id="stop">■ Arrêter</button>
+        <span class="hint" id="trackinfo"></span>
+      </div>
+      <div class="tiers" id="tiers">
+        <button data-tier="0" class="on"><b>×1</b>bourdon<small>cran 0</small></button>
+        <button data-tier="1"><b>×1.4</b>+ percussions<small>cran 1</small></button>
+        <button data-tier="2"><b>×1.8</b>+ vielle<small>cran 2</small></button>
+        <button data-tier="3"><b>×2.5</b>+ voix &amp; cloches<small>cran 3</small></button>
+      </div>
+      <div class="slider"><span>Aura de Feutre (passe-bas)</span><input type="range" id="lowpass" min="0" max="1" step="0.01" value="0"><output id="lowpass-out">20 kHz</output></div>
+      <div class="slider"><span>Volume musique</span><input type="range" id="vol-music" min="0" max="1" step="0.01" value="0.8"><output id="vol-music-out">0.80</output></div>
+      <div class="slider"><span>Volume bruitages</span><input type="range" id="vol-sfx" min="0" max="1" step="0.01" value="0.9"><output id="vol-sfx-out">0.90</output></div>
+      <div class="judge" id="judge"></div>
+      <div class="layers" id="layers"></div>
+    </div>
+  </section>
+
+  <h2>Bruitages</h2>
+  <p class="lead">Un clic joue une variante au hasard (jamais la même deux fois de suite) avec ±8 % de hauteur, comme <code>sfx.play</code>. Les identifiants marqués §8 sont ceux du contrat ARCHITECTURE.md. Tout est fabriqué à partir d'échantillons réels ; voir CREDITS-audio.md et la note de chaque bouton.</p>
+  <div id="sfx"></div>
+  <h3>Ambiances (field recordings, boucles)</h3>
+  <div class="amb" id="amb"></div>
+
+  <h2>Instruments</h2>
+  <p class="lead">Chaque note est un fichier ; le sampler transpose vers la note demandée à partir de l'échantillon le plus proche (<code>playbackRate</code>). Les notes soulignées de mousse sont bouclées (points de boucle calculés aux passages par zéro, fondu croisé pré-calculé) : maintenez le clic pour tenir la note.</p>
+  <div id="inst"></div>
+
+  <footer>Sources : VCSL et VSCO 2 CE (CC0, Versilian), Sonatina Symphonic Orchestra (CC Sampling Plus), Karoryfer Cowsynth (CC0), Kenney (CC0), rubberduck (CC0), Ben Burnes (CC0), field recordings CC0 / CC BY via Muges/ambientsounds. Détail fichier par fichier dans <a href="CREDITS-audio.md">CREDITS-audio.md</a>, manifeste dans <a href="manifest.json">manifest.json</a>.</footer>
+</main>
+<script src="preview-audio.js"></script>
+</body>
+</html>

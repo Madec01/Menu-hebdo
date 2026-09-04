@@ -1,0 +1,515 @@
+{
+ "id": "menu",
+ "title": "Le dernier apprenti",
+ "status": "complete",
+ "bpm": 84,
+ "beatsPerBar": 4,
+ "bars": 16,
+ "key": "A",
+ "mode": "éolien",
+ "layers": [
+  {
+   "tier": 0,
+   "name": "bourdon",
+   "instrument": "contrabass",
+   "gain": 0.7,
+   "events": [
+    {
+     "bar": 0,
+     "beat": 0,
+     "note": "A1",
+     "dur": 32
+    },
+    {
+     "bar": 8,
+     "beat": 0,
+     "note": "F2",
+     "dur": 8
+    },
+    {
+     "bar": 10,
+     "beat": 0,
+     "note": "G2",
+     "dur": 8
+    },
+    {
+     "bar": 12,
+     "beat": 0,
+     "note": "A1",
+     "dur": 16
+    }
+   ]
+  },
+  {
+   "tier": 0,
+   "name": "verres",
+   "instrument": "wine_glasses",
+   "gain": 0.3,
+   "events": [
+    {
+     "bar": 0,
+     "beat": 0,
+     "note": "E5",
+     "dur": 32
+    },
+    {
+     "bar": 0,
+     "beat": 0,
+     "note": "A5",
+     "dur": 32
+    },
+    {
+     "bar": 8,
+     "beat": 0,
+     "note": "A5",
+     "dur": 8
+    },
+    {
+     "bar": 8,
+     "beat": 0,
+     "note": "C6",
+     "dur": 8
+    },
+    {
+     "bar": 10,
+     "beat": 0,
+     "note": "G5",
+     "dur": 8
+    },
+    {
+     "bar": 10,
+     "beat": 0,
+     "note": "B5",
+     "dur": 8
+    },
+    {
+     "bar": 12,
+     "beat": 0,
+     "note": "E5",
+     "dur": 16
+    },
+    {
+     "bar": 12,
+     "beat": 0,
+     "note": "A5",
+     "dur": 16
+    }
+   ]
+  },
+  {
+   "tier": 1,
+   "name": "harpe",
+   "instrument": "folk_harp",
+   "gain": 0.6,
+   "pattern": {
+    "steps": 8,
+    "hits": [
+     [
+      "A2",
+      0,
+      0.9
+     ],
+     [
+      "E3",
+      1,
+      0.6
+     ],
+     [
+      "A3",
+      2,
+      0.7
+     ],
+     [
+      "C4",
+      3,
+      0.6
+     ],
+     [
+      "E4",
+      4,
+      0.8
+     ],
+     [
+      "C4",
+      5,
+      0.5
+     ],
+     [
+      "A3",
+      6,
+      0.6
+     ],
+     [
+      "E3",
+      7,
+      0.5
+     ]
+    ]
+   },
+   "repeatBars": 1
+  },
+  {
+   "tier": 1,
+   "name": "main",
+   "instrument": "frame_drum",
+   "gain": 0.35,
+   "pattern": {
+    "steps": 4,
+    "hits": [
+     [
+      "hand",
+      0,
+      0.8
+     ],
+     [
+      "muted",
+      2,
+      0.4
+     ],
+     [
+      "hand",
+      3,
+      0.5
+     ]
+    ]
+   },
+   "repeatBars": 1
+  },
+  {
+   "tier": 2,
+   "name": "vielle",
+   "instrument": "psaltery_bow",
+   "gain": 0.6,
+   "events": [
+    {
+     "bar": 2,
+     "beat": 0.0,
+     "note": "E5",
+     "dur": 2.0
+    },
+    {
+     "bar": 2,
+     "beat": 2.0,
+     "note": "G5",
+     "dur": 1.0
+    },
+    {
+     "bar": 2,
+     "beat": 3.0,
+     "note": "A5",
+     "dur": 1.0
+    },
+    {
+     "bar": 3,
+     "beat": 0.0,
+     "note": "C6",
+     "dur": 2.0
+    },
+    {
+     "bar": 3,
+     "beat": 2.0,
+     "note": "B5",
+     "dur": 1.0
+    },
+    {
+     "bar": 3,
+     "beat": 3.0,
+     "note": "A5",
+     "dur": 1.0
+    },
+    {
+     "bar": 4,
+     "beat": 0.0,
+     "note": "G5",
+     "dur": 2.0
+    },
+    {
+     "bar": 4,
+     "beat": 2.0,
+     "note": "E5",
+     "dur": 1.0
+    },
+    {
+     "bar": 4,
+     "beat": 3.0,
+     "note": "D5",
+     "dur": 1.0
+    },
+    {
+     "bar": 5,
+     "beat": 0.0,
+     "note": "E5",
+     "dur": 4.0
+    },
+    {
+     "bar": 6,
+     "beat": 0.0,
+     "note": "A5",
+     "dur": 1.5
+    },
+    {
+     "bar": 6,
+     "beat": 1.5,
+     "note": "G5",
+     "dur": 0.5
+    },
+    {
+     "bar": 6,
+     "beat": 2.0,
+     "note": "E5",
+     "dur": 2.0
+    },
+    {
+     "bar": 7,
+     "beat": 0.0,
+     "note": "D5",
+     "dur": 1.0
+    },
+    {
+     "bar": 7,
+     "beat": 1.0,
+     "note": "C5",
+     "dur": 1.0
+    },
+    {
+     "bar": 7,
+     "beat": 2.0,
+     "note": "D5",
+     "dur": 2.0
+    },
+    {
+     "bar": 8,
+     "beat": 0.0,
+     "note": "F5",
+     "dur": 2.0
+    },
+    {
+     "bar": 8,
+     "beat": 2.0,
+     "note": "E5",
+     "dur": 1.0
+    },
+    {
+     "bar": 8,
+     "beat": 3.0,
+     "note": "D5",
+     "dur": 1.0
+    },
+    {
+     "bar": 9,
+     "beat": 0.0,
+     "note": "E5",
+     "dur": 4.0
+    },
+    {
+     "bar": 10,
+     "beat": 0.0,
+     "note": "G5",
+     "dur": 2.0
+    },
+    {
+     "bar": 10,
+     "beat": 2.0,
+     "note": "F5",
+     "dur": 1.0
+    },
+    {
+     "bar": 10,
+     "beat": 3.0,
+     "note": "E5",
+     "dur": 1.0
+    },
+    {
+     "bar": 11,
+     "beat": 0.0,
+     "note": "D5",
+     "dur": 2.0
+    },
+    {
+     "bar": 11,
+     "beat": 2.0,
+     "note": "C5",
+     "dur": 1.0
+    },
+    {
+     "bar": 11,
+     "beat": 3.0,
+     "note": "B4",
+     "dur": 1.0
+    },
+    {
+     "bar": 12,
+     "beat": 0.0,
+     "note": "C5",
+     "dur": 2.0
+    },
+    {
+     "bar": 12,
+     "beat": 2.0,
+     "note": "D5",
+     "dur": 1.0
+    },
+    {
+     "bar": 12,
+     "beat": 3.0,
+     "note": "E5",
+     "dur": 1.0
+    },
+    {
+     "bar": 13,
+     "beat": 0.0,
+     "note": "A5",
+     "dur": 4.0
+    }
+   ]
+  },
+  {
+   "tier": 3,
+   "name": "voix",
+   "instrument": "choir",
+   "gain": 0.5,
+   "events": [
+    {
+     "bar": 0,
+     "beat": 0,
+     "note": "A2",
+     "dur": 32
+    },
+    {
+     "bar": 0,
+     "beat": 0,
+     "note": "E3",
+     "dur": 32
+    },
+    {
+     "bar": 0,
+     "beat": 0,
+     "note": "A3",
+     "dur": 32
+    },
+    {
+     "bar": 0,
+     "beat": 0,
+     "note": "C4",
+     "dur": 32
+    },
+    {
+     "bar": 8,
+     "beat": 0,
+     "note": "A2",
+     "dur": 8
+    },
+    {
+     "bar": 8,
+     "beat": 0,
+     "note": "F3",
+     "dur": 8
+    },
+    {
+     "bar": 8,
+     "beat": 0,
+     "note": "C4",
+     "dur": 8
+    },
+    {
+     "bar": 8,
+     "beat": 0,
+     "note": "A4",
+     "dur": 8
+    },
+    {
+     "bar": 10,
+     "beat": 0,
+     "note": "G2",
+     "dur": 8
+    },
+    {
+     "bar": 10,
+     "beat": 0,
+     "note": "G3",
+     "dur": 8
+    },
+    {
+     "bar": 10,
+     "beat": 0,
+     "note": "B3",
+     "dur": 8
+    },
+    {
+     "bar": 10,
+     "beat": 0,
+     "note": "D4",
+     "dur": 8
+    },
+    {
+     "bar": 12,
+     "beat": 0,
+     "note": "A2",
+     "dur": 16
+    },
+    {
+     "bar": 12,
+     "beat": 0,
+     "note": "E3",
+     "dur": 16
+    },
+    {
+     "bar": 12,
+     "beat": 0,
+     "note": "A3",
+     "dur": 16
+    },
+    {
+     "bar": 12,
+     "beat": 0,
+     "note": "C4",
+     "dur": 16
+    }
+   ]
+  },
+  {
+   "tier": 3,
+   "name": "clarines",
+   "instrument": "hand_chimes",
+   "gain": 0.35,
+   "events": [
+    {
+     "bar": 7,
+     "beat": 2.0,
+     "note": "A5",
+     "dur": 0.5
+    },
+    {
+     "bar": 7,
+     "beat": 2.5,
+     "note": "C6",
+     "dur": 0.5
+    },
+    {
+     "bar": 7,
+     "beat": 3.0,
+     "note": "E6",
+     "dur": 1.0
+    },
+    {
+     "bar": 14,
+     "beat": 0.0,
+     "note": "A5",
+     "dur": 1.0
+    },
+    {
+     "bar": 14,
+     "beat": 1.0,
+     "note": "E6",
+     "dur": 1.0
+    },
+    {
+     "bar": 14,
+     "beat": 2.0,
+     "note": "A6",
+     "dur": 2.0
+    }
+   ]
+  }
+ ]
+}

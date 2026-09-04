@@ -1,0 +1,1879 @@
+{
+ "version": 1,
+ "_notes": [
+  "Chemins relatifs à assets/. Notes en notation scientifique (A4 = 440 Hz), hauteurs mesurées.",
+  "samples.<i>.kind = pitched (files par note, loop par note [début, fin] en secondes) | percussion (files par variante = round-robins ; loop par nom de fichier pour les drones).",
+  "sfx.<id>.files = variantes ; gain = volume de base ; pitchVar facultatif ; bus facultatif (ui) ; kind = ambience pour les boucles d'ambiance (loop = [0, durée]).",
+  "tracks.<id>.score = partition § 9.3 ; status = complete | esquisse."
+ ],
+ "sfx": {
+  "hit_light": {
+   "files": [
+    "audio/sfx/hit_light_1.ogg",
+    "audio/sfx/hit_light_2.ogg",
+    "audio/sfx/hit_light_3.ogg"
+   ],
+   "gain": 0.85,
+   "credit": "vcsl",
+   "note": "Tambour sur cadre étouffé + woodblock + clochette népalaise (−5 st)."
+  },
+  "hit_heavy": {
+   "files": [
+    "audio/sfx/hit_heavy_1.ogg",
+    "audio/sfx/hit_heavy_2.ogg",
+    "audio/sfx/hit_heavy_3.ogg"
+   ],
+   "gain": 0.9,
+   "credit": "vcsl",
+   "note": "Grosse caisse + enclume filtrée (2,5 kHz)."
+  },
+  "hit_crit": {
+   "files": [
+    "audio/sfx/hit_crit_1.ogg",
+    "audio/sfx/hit_crit_2.ogg",
+    "audio/sfx/hit_crit_3.ogg"
+   ],
+   "gain": 0.9,
+   "credit": "vcsl",
+   "note": "Enclume + hand chime aiguë + grosse caisse."
+  },
+  "enemy_die": {
+   "files": [
+    "audio/sfx/enemy_die_1.ogg",
+    "audio/sfx/enemy_die_2.ogg",
+    "audio/sfx/enemy_die_3.ogg"
+   ],
+   "gain": 0.8,
+   "credit": "kenney_rpg+rubberduck+vcsl",
+   "note": "Feutre qui se défait : tissu (Kenney) + boue (rubberduck) + chime inversée."
+  },
+  "enemy_die_big": {
+   "files": [
+    "audio/sfx/enemy_die_big_1.ogg",
+    "audio/sfx/enemy_die_big_2.ogg"
+   ],
+   "gain": 0.85,
+   "credit": "vcsl+rubberduck",
+   "note": "Gong doux (−5 st) + grosse caisse + boue."
+  },
+  "boss_hit": {
+   "files": [
+    "audio/sfx/boss_hit_1.ogg",
+    "audio/sfx/boss_hit_2.ogg",
+    "audio/sfx/boss_hit_3.ogg"
+   ],
+   "gain": 0.9,
+   "credit": "vcsl",
+   "note": "Timbale + tambour de frein martelé + enclume."
+  },
+  "boss_roar": {
+   "files": [
+    "audio/sfx/boss_roar_1.ogg",
+    "audio/sfx/boss_roar_2.ogg"
+   ],
+   "gain": 0.95,
+   "credit": "vcsl",
+   "note": "Didgeridoo (aboiement, −7/−10 st, étiré) convolué avec une queue de gong + tambour de frein archet inversé + timbale + gong raclé."
+  },
+  "player_step": {
+   "files": [
+    "audio/sfx/player_step_1.ogg",
+    "audio/sfx/player_step_2.ogg",
+    "audio/sfx/player_step_3.ogg",
+    "audio/sfx/player_step_4.ogg",
+    "audio/sfx/player_step_5.ogg"
+   ],
+   "gain": 0.5,
+   "credit": "kenney_impact+rubberduck",
+   "pitchVar": 0.1,
+   "note": "Pas dans l'herbe (Kenney) + boue légère (rubberduck)."
+  },
+  "player_hurt": {
+   "files": [
+    "audio/sfx/player_hurt_1.ogg",
+    "audio/sfx/player_hurt_2.ogg",
+    "audio/sfx/player_hurt_3.ogg"
+   ],
+   "gain": 0.9,
+   "credit": "vcsl+kenney_rpg",
+   "note": "Cœur de bronze fêlé : clochette népalaise (−9 st) + tissu + caisse claire à cordes."
+  },
+  "player_death": {
+   "files": [
+    "audio/sfx/player_death_1.ogg"
+   ],
+   "gain": 1.0,
+   "credit": "vcsl",
+   "note": "Cloche C4 inversée puis frappée une octave plus bas + gong + carillon éolien descendant (−4 st) + grosse caisse."
+  },
+  "dash": {
+   "files": [
+    "audio/sfx/dash_1.ogg",
+    "audio/sfx/dash_2.ogg",
+    "audio/sfx/dash_3.ogg"
+   ],
+   "gain": 0.7,
+   "credit": "burnes+vcsl",
+   "note": "Volée : woosh organique (Ben Burnes) + grelots."
+  },
+  "parry_ok": {
+   "files": [
+    "audio/sfx/parry_ok_1.ogg",
+    "audio/sfx/parry_ok_2.ogg"
+   ],
+   "gain": 0.9,
+   "credit": "vcsl",
+   "note": "Vrai « ting » de bronze : cymbalettes + hand chime + triangle."
+  },
+  "parry_miss": {
+   "files": [
+    "audio/sfx/parry_miss_1.ogg",
+    "audio/sfx/parry_miss_2.ogg"
+   ],
+   "gain": 0.7,
+   "credit": "vcsl",
+   "note": "« Tock » sourd : cloche de vache étouffée (−4 st) + woodblock pp."
+  },
+  "resonance_1": {
+   "files": [
+    "audio/sfx/resonance_1_1.ogg"
+   ],
+   "gain": 0.8,
+   "credit": "vcsl",
+   "note": "Cran 1 : cloche tubulaire D4 seule."
+  },
+  "resonance_2": {
+   "files": [
+    "audio/sfx/resonance_2_1.ogg"
+   ],
+   "gain": 0.8,
+   "credit": "vcsl",
+   "note": "Cran 2 : cloche D4 + hand chimes D4/A4 (quinte)."
+  },
+  "resonance_3": {
+   "files": [
+    "audio/sfx/resonance_3_1.ogg"
+   ],
+   "gain": 0.8,
+   "credit": "vcsl",
+   "note": "Cran 3 : accord D4/F#4/A4 en hand chimes + cloche A4."
+  },
+  "resonance_4": {
+   "files": [
+    "audio/sfx/resonance_4_1.ogg"
+   ],
+   "gain": 0.85,
+   "credit": "vcsl",
+   "note": "Cran 4 : accord D5/F#5/A5 + cloches D4/D5 + arbre à cloches."
+  },
+  "resonance_drop": {
+   "files": [
+    "audio/sfx/resonance_drop_1.ogg"
+   ],
+   "gain": 0.8,
+   "credit": "vcsl",
+   "note": "Chute : cloche C4 transposée −7 st, carillon éolien descendant, tambour étouffé."
+  },
+  "level_up": {
+   "files": [
+    "audio/sfx/level_up_1.ogg"
+   ],
+   "gain": 0.85,
+   "credit": "vcsl",
+   "note": "Arpège D4-F#4-A4-D5 en hand chimes + arbre à cloches."
+  },
+  "card_flip": {
+   "files": [
+    "audio/sfx/card_flip_1.ogg",
+    "audio/sfx/card_flip_2.ogg",
+    "audio/sfx/card_flip_3.ogg"
+   ],
+   "gain": 0.7,
+   "credit": "kenney_rpg",
+   "note": "Feuillet retourné (Kenney RPG Audio, bookFlip)."
+  },
+  "card_pick": {
+   "files": [
+    "audio/sfx/card_pick_1.ogg"
+   ],
+   "gain": 0.8,
+   "credit": "kenney_rpg+vcsl",
+   "note": "Cuir manipulé + hand chime A4."
+  },
+  "xp_pickup": {
+   "files": [
+    "audio/sfx/xp_pickup_1.ogg",
+    "audio/sfx/xp_pickup_2.ogg",
+    "audio/sfx/xp_pickup_3.ogg"
+   ],
+   "gain": 0.55,
+   "credit": "vcsl",
+   "pitchVar": 0.06,
+   "note": "Écho ramassé : coups isolés de l'arbre à cloches."
+  },
+  "xp_pickup_big": {
+   "files": [
+    "audio/sfx/xp_pickup_big_1.ogg"
+   ],
+   "gain": 0.7,
+   "credit": "vcsl",
+   "note": "Gros écho : arbre à cloches + hand chime D5 + glissando."
+  },
+  "bell_minute": {
+   "files": [
+    "audio/sfx/bell_minute_1.ogg"
+   ],
+   "gain": 0.8,
+   "credit": "vcsl",
+   "note": "Sonnerie horaire : cloches tubulaires C4 et G4 une octave plus bas (C3, G3)."
+  },
+  "bell_tier": {
+   "files": [
+    "audio/sfx/bell_tier_1.ogg"
+   ],
+   "gain": 0.85,
+   "credit": "vcsl",
+   "note": "Palier de Sourdine : cloche inversée puis gong + cloche grave (−17 st)."
+  },
+  "silence_cry": {
+   "files": [
+    "audio/sfx/silence_cry_1.ogg",
+    "audio/sfx/silence_cry_2.ogg",
+    "audio/sfx/silence_cry_3.ogg"
+   ],
+   "gain": 0.85,
+   "credit": "vcsl",
+   "note": "Cri du Silence : aboiement de didgeridoo transposé (−6/−9/−12 st), étiré, convolué avec un verre frotté ; psaltérion à archet et tambour de frein archet inversés ; passe-bas 4,5 kHz."
+  },
+  "silence_burst": {
+   "files": [
+    "audio/sfx/silence_burst_1.ogg"
+   ],
+   "gain": 0.95,
+   "credit": "vcsl",
+   "note": "Éclat du Silence : ocean drum inversé (montée) puis grosse caisse, gong raclé (−5 st), tambour de frein (−8 st)."
+  },
+  "ui_move": {
+   "files": [
+    "audio/sfx/ui_move_1.ogg",
+    "audio/sfx/ui_move_2.ogg"
+   ],
+   "gain": 0.5,
+   "credit": "vcsl",
+   "note": "Woodblock pp.",
+   "bus": "ui"
+  },
+  "ui_confirm": {
+   "files": [
+    "audio/sfx/ui_confirm_1.ogg"
+   ],
+   "gain": 0.6,
+   "credit": "vcsl",
+   "note": "Hand chime D5 + woodblock.",
+   "bus": "ui"
+  },
+  "ui_cancel": {
+   "files": [
+    "audio/sfx/ui_cancel_1.ogg"
+   ],
+   "gain": 0.6,
+   "credit": "vcsl",
+   "note": "Woodblock (−3 st) + cloche étouffée.",
+   "bus": "ui"
+  },
+  "weapon_battant": {
+   "files": [
+    "audio/sfx/weapon_battant_1.ogg",
+    "audio/sfx/weapon_battant_2.ogg"
+   ],
+   "gain": 0.6,
+   "credit": "vcsl",
+   "note": "Battant : tambour sur cadre + clochette népalaise."
+  },
+  "weapon_clarine": {
+   "files": [
+    "audio/sfx/weapon_clarine_1.ogg",
+    "audio/sfx/weapon_clarine_2.ogg"
+   ],
+   "gain": 0.5,
+   "credit": "vcsl",
+   "pitchVar": 0.05,
+   "note": "Clarine : hand chimes E6/A6 (étiquettes E5/A5)."
+  },
+  "weapon_bourdon": {
+   "files": [
+    "audio/sfx/weapon_bourdon_1.ogg",
+    "audio/sfx/weapon_bourdon_2.ogg"
+   ],
+   "gain": 0.6,
+   "credit": "vcsl",
+   "note": "Bourdon : cloche C3 filtrée + grosse caisse."
+  },
+  "weapon_grelots": {
+   "files": [
+    "audio/sfx/weapon_grelots_1.ogg",
+    "audio/sfx/weapon_grelots_2.ogg"
+   ],
+   "gain": 0.5,
+   "credit": "vcsl",
+   "note": "Grelots."
+  },
+  "weapon_tocsin": {
+   "files": [
+    "audio/sfx/weapon_tocsin_1.ogg",
+    "audio/sfx/weapon_tocsin_2.ogg"
+   ],
+   "gain": 0.6,
+   "credit": "vcsl",
+   "note": "Tocsin : cloche F4/G4 + enclume."
+  },
+  "weapon_cor": {
+   "files": [
+    "audio/sfx/weapon_cor_1.ogg",
+    "audio/sfx/weapon_cor_2.ogg"
+   ],
+   "gain": 0.6,
+   "credit": "vsco2",
+   "note": "Cor de Brume : cor d'harmonie staccato (VSCO 2 CE)."
+  },
+  "weapon_crecelle": {
+   "files": [
+    "audio/sfx/weapon_crecelle_1.ogg",
+    "audio/sfx/weapon_crecelle_2.ogg"
+   ],
+   "gain": 0.55,
+   "credit": "vcsl",
+   "note": "Crécelle."
+  },
+  "weapon_chaine": {
+   "files": [
+    "audio/sfx/weapon_chaine_1.ogg",
+    "audio/sfx/weapon_chaine_2.ogg"
+   ],
+   "gain": 0.55,
+   "credit": "rubberduck+vcsl",
+   "note": "Chaîne d'Angélus : clés/chaîne (rubberduck) + hand chime."
+  },
+  "weapon_diapason": {
+   "files": [
+    "audio/sfx/weapon_diapason_1.ogg",
+    "audio/sfx/weapon_diapason_2.ogg"
+   ],
+   "gain": 0.5,
+   "credit": "vcsl",
+   "note": "Diapason : verre frotté D6, enveloppe douce."
+  },
+  "fusion": {
+   "files": [
+    "audio/sfx/fusion_1.ogg"
+   ],
+   "gain": 0.85,
+   "credit": "vcsl",
+   "note": "Fusion : gong doux + cloches D4/A4 + arbre à cloches."
+  },
+  "achievement": {
+   "files": [
+    "audio/sfx/achievement_1.ogg"
+   ],
+   "gain": 0.8,
+   "credit": "vcsl",
+   "note": "Arpège A-C#-E-A en hand chimes + cymbalettes."
+  },
+  "lore_unlock": {
+   "files": [
+    "audio/sfx/lore_unlock_1.ogg"
+   ],
+   "gain": 0.7,
+   "credit": "kenney_rpg+vcsl",
+   "note": "Feuillet du Battant : livre ouvert (Kenney) + hand chime grave."
+  },
+  "victory_bell": {
+   "files": [
+    "audio/sfx/victory_bell_1.ogg"
+   ],
+   "gain": 0.9,
+   "credit": "vcsl",
+   "note": "Volée de victoire : cloches D4-F4-A4-D5 + arbre à cloches + hand chimes."
+  },
+  "ambience_wind": {
+   "files": [
+    "audio/sfx/ambience_wind.ogg"
+   ],
+   "gain": 0.5,
+   "loop": [
+    0.0,
+    58.5
+   ],
+   "credit": "ambientsounds_wind",
+   "note": "Vent (felix.blume, CC0) ; boucle 60 s.",
+   "bus": "sfx",
+   "kind": "ambience"
+  },
+  "ambience_fire": {
+   "files": [
+    "audio/sfx/ambience_fire.ogg"
+   ],
+   "gain": 0.5,
+   "loop": [
+    0.0,
+    48.5
+   ],
+   "credit": "ambientsounds_fire",
+   "note": "Feu de cheminée (inchadney, CC0) ; boucle 50 s.",
+   "bus": "sfx",
+   "kind": "ambience"
+  },
+  "ambience_rain": {
+   "files": [
+    "audio/sfx/ambience_rain.ogg"
+   ],
+   "gain": 0.5,
+   "loop": [
+    0.0,
+    43.5
+   ],
+   "credit": "ambientsounds_rain",
+   "note": "Pluie forte (D W, CC BY) ; boucle 45 s.",
+   "bus": "sfx",
+   "kind": "ambience"
+  },
+  "ambience_storm": {
+   "files": [
+    "audio/sfx/ambience_storm.ogg"
+   ],
+   "gain": 0.5,
+   "loop": [
+    0.0,
+    58.5
+   ],
+   "credit": "ambientsounds_storm",
+   "note": "Orage (RHumphries, CC BY) ; boucle 60 s.",
+   "bus": "sfx",
+   "kind": "ambience"
+  },
+  "ambience_sea": {
+   "files": [
+    "audio/sfx/ambience_sea.ogg"
+   ],
+   "gain": 0.5,
+   "loop": [
+    0.0,
+    28.5
+   ],
+   "credit": "vcsl",
+   "note": "Ocean drum (VCSL, CC0) : ressac de la Nef Noyée ; passe-bas 3 kHz ; boucle 30 s.",
+   "bus": "sfx",
+   "kind": "ambience"
+  }
+ },
+ "samples": {
+  "tubular_bells": {
+   "kind": "pitched",
+   "files": {
+    "C4": "audio/samples/tubular_bells/C4.ogg",
+    "D4": "audio/samples/tubular_bells/D4.ogg",
+    "E4": "audio/samples/tubular_bells/E4.ogg",
+    "F4": "audio/samples/tubular_bells/F4.ogg",
+    "G4": "audio/samples/tubular_bells/G4.ogg",
+    "A4": "audio/samples/tubular_bells/A4.ogg",
+    "B4": "audio/samples/tubular_bells/B4.ogg",
+    "C5": "audio/samples/tubular_bells/C5.ogg",
+    "D5": "audio/samples/tubular_bells/D5.ogg",
+    "E5": "audio/samples/tubular_bells/E5.ogg",
+    "F5": "audio/samples/tubular_bells/F5.ogg"
+   },
+   "credit": "vcsl",
+   "note": "Tubular Bells 2, vélocité forte ; notation scientifique vérifiée."
+  },
+  "hand_chimes": {
+   "kind": "pitched",
+   "files": {
+    "C4": "audio/samples/hand_chimes/C4.ogg",
+    "D4": "audio/samples/hand_chimes/D4.ogg",
+    "E4": "audio/samples/hand_chimes/E4.ogg",
+    "F#4": "audio/samples/hand_chimes/F#4.ogg",
+    "G#4": "audio/samples/hand_chimes/G#4.ogg",
+    "A#4": "audio/samples/hand_chimes/A#4.ogg",
+    "C5": "audio/samples/hand_chimes/C5.ogg",
+    "D5": "audio/samples/hand_chimes/D5.ogg",
+    "E5": "audio/samples/hand_chimes/E5.ogg",
+    "F#5": "audio/samples/hand_chimes/F#5.ogg",
+    "G#5": "audio/samples/hand_chimes/G#5.ogg",
+    "A5": "audio/samples/hand_chimes/A5.ogg",
+    "C6": "audio/samples/hand_chimes/C6.ogg",
+    "D6": "audio/samples/hand_chimes/D6.ogg",
+    "E6": "audio/samples/hand_chimes/E6.ogg",
+    "F#6": "audio/samples/hand_chimes/F#6.ogg",
+    "G#6": "audio/samples/hand_chimes/G#6.ogg",
+    "A#6": "audio/samples/hand_chimes/A#6.ogg"
+   },
+   "credit": "vcsl",
+   "note": "Hand Chimes ; étiquettes VCSL +12 (mesuré)."
+  },
+  "psaltery_bow": {
+   "kind": "pitched",
+   "files": {
+    "A#4": "audio/samples/psaltery_bow/A#4.ogg",
+    "C5": "audio/samples/psaltery_bow/C5.ogg",
+    "D5": "audio/samples/psaltery_bow/D5.ogg",
+    "E5": "audio/samples/psaltery_bow/E5.ogg",
+    "F#5": "audio/samples/psaltery_bow/F#5.ogg",
+    "G#5": "audio/samples/psaltery_bow/G#5.ogg",
+    "A#5": "audio/samples/psaltery_bow/A#5.ogg",
+    "C6": "audio/samples/psaltery_bow/C6.ogg",
+    "D6": "audio/samples/psaltery_bow/D6.ogg",
+    "E6": "audio/samples/psaltery_bow/E6.ogg",
+    "F#6": "audio/samples/psaltery_bow/F#6.ogg"
+   },
+   "loop": {
+    "A#4": [
+     1.1179,
+     1.7693
+    ],
+    "C5": [
+     0.5001,
+     2.4852
+    ],
+    "D5": [
+     0.7643,
+     1.6965
+    ],
+    "E5": [
+     1.332,
+     2.5985
+    ],
+    "F#5": [
+     1.7119,
+     2.1211
+    ],
+    "G#5": [
+     0.8608,
+     2.3161
+    ],
+    "A#5": [
+     0.4186,
+     1.8505
+    ],
+    "C6": [
+     0.5089,
+     1.9984
+    ],
+    "D6": [
+     0.7463,
+     1.3513
+    ],
+    "E6": [
+     0.5313,
+     1.6392
+    ],
+    "F#6": [
+     0.4874,
+     1.2738
+    ]
+   },
+   "credit": "vcsl",
+   "note": "Psaltérion à archet (≈ vielle) ; étiquettes +12 ; boucles crossfadées."
+  },
+  "psaltery_pluck": {
+   "kind": "pitched",
+   "files": {
+    "A#4": "audio/samples/psaltery_pluck/A#4.ogg",
+    "C5": "audio/samples/psaltery_pluck/C5.ogg",
+    "D5": "audio/samples/psaltery_pluck/D5.ogg",
+    "E5": "audio/samples/psaltery_pluck/E5.ogg",
+    "F#5": "audio/samples/psaltery_pluck/F#5.ogg",
+    "G#5": "audio/samples/psaltery_pluck/G#5.ogg",
+    "A#5": "audio/samples/psaltery_pluck/A#5.ogg",
+    "C6": "audio/samples/psaltery_pluck/C6.ogg",
+    "D6": "audio/samples/psaltery_pluck/D6.ogg",
+    "E6": "audio/samples/psaltery_pluck/E6.ogg",
+    "F#6": "audio/samples/psaltery_pluck/F#6.ogg"
+   },
+   "credit": "vcsl",
+   "note": "Psaltérion pincé ; étiquettes +12."
+  },
+  "organ": {
+   "kind": "pitched",
+   "files": {
+    "C2": "audio/samples/organ/C2.ogg",
+    "D2": "audio/samples/organ/D2.ogg",
+    "E2": "audio/samples/organ/E2.ogg",
+    "F#2": "audio/samples/organ/F#2.ogg",
+    "G#2": "audio/samples/organ/G#2.ogg",
+    "A#2": "audio/samples/organ/A#2.ogg",
+    "C3": "audio/samples/organ/C3.ogg",
+    "D3": "audio/samples/organ/D3.ogg",
+    "E3": "audio/samples/organ/E3.ogg",
+    "F#3": "audio/samples/organ/F#3.ogg",
+    "G#3": "audio/samples/organ/G#3.ogg",
+    "A#3": "audio/samples/organ/A#3.ogg",
+    "C4": "audio/samples/organ/C4.ogg",
+    "D4": "audio/samples/organ/D4.ogg",
+    "E4": "audio/samples/organ/E4.ogg",
+    "F#4": "audio/samples/organ/F#4.ogg",
+    "G#4": "audio/samples/organ/G#4.ogg",
+    "A#4": "audio/samples/organ/A#4.ogg",
+    "C5": "audio/samples/organ/C5.ogg",
+    "D5": "audio/samples/organ/D5.ogg",
+    "E5": "audio/samples/organ/E5.ogg",
+    "F#5": "audio/samples/organ/F#5.ogg",
+    "G#5": "audio/samples/organ/G#5.ogg",
+    "A#5": "audio/samples/organ/A#5.ogg",
+    "C6": "audio/samples/organ/C6.ogg"
+   },
+   "loop": {
+    "C2": [
+     0.3511,
+     4.6591
+    ],
+    "D2": [
+     0.3849,
+     4.5308
+    ],
+    "E2": [
+     0.2735,
+     4.4146
+    ],
+    "F#2": [
+     0.2554,
+     4.8437
+    ],
+    "G#2": [
+     0.2406,
+     4.3859
+    ],
+    "A#2": [
+     0.2608,
+     4.3656
+    ],
+    "C3": [
+     0.2526,
+     4.811
+    ],
+    "D3": [
+     0.2216,
+     4.7924
+    ],
+    "E3": [
+     0.2197,
+     4.6867
+    ],
+    "F#3": [
+     0.1941,
+     4.3522
+    ],
+    "G#3": [
+     0.1873,
+     4.7635
+    ],
+    "A#3": [
+     0.1528,
+     4.4695
+    ],
+    "C4": [
+     0.1845,
+     4.7642
+    ],
+    "D4": [
+     0.169,
+     4.3683
+    ],
+    "E4": [
+     0.1815,
+     4.4428
+    ],
+    "F#4": [
+     0.1821,
+     4.4427
+    ],
+    "G#4": [
+     0.1612,
+     4.5899
+    ],
+    "A#4": [
+     0.1562,
+     4.919
+    ],
+    "C5": [
+     0.1601,
+     4.4774
+    ],
+    "D5": [
+     0.1692,
+     4.4247
+    ],
+    "E5": [
+     0.1592,
+     4.5571
+    ],
+    "F#5": [
+     0.1601,
+     4.5758
+    ],
+    "G#5": [
+     0.1553,
+     4.7692
+    ],
+    "A#5": [
+     0.1579,
+     4.7718
+    ],
+    "C6": [
+     0.163,
+     4.5313
+    ]
+   },
+   "credit": "vcsl",
+   "note": "Orgue Renaissance 8' (Room) ; étiquettes +12 ; boucles."
+  },
+  "recorder": {
+   "kind": "pitched",
+   "files": {
+    "C4": "audio/samples/recorder/C4.ogg",
+    "D4": "audio/samples/recorder/D4.ogg",
+    "E4": "audio/samples/recorder/E4.ogg",
+    "F#4": "audio/samples/recorder/F#4.ogg",
+    "G#4": "audio/samples/recorder/G#4.ogg",
+    "A#4": "audio/samples/recorder/A#4.ogg",
+    "C5": "audio/samples/recorder/C5.ogg",
+    "D5": "audio/samples/recorder/D5.ogg",
+    "E5": "audio/samples/recorder/E5.ogg",
+    "F#5": "audio/samples/recorder/F#5.ogg",
+    "G#5": "audio/samples/recorder/G#5.ogg",
+    "A5": "audio/samples/recorder/A5.ogg",
+    "C6": "audio/samples/recorder/C6.ogg"
+   },
+   "loop": {
+    "C4": [
+     0.4135,
+     3.9078
+    ],
+    "D4": [
+     0.3538,
+     3.8907
+    ],
+    "E4": [
+     0.35,
+     3.9312
+    ],
+    "F#4": [
+     0.185,
+     3.969
+    ],
+    "G#4": [
+     0.1929,
+     4.023
+    ],
+    "A#4": [
+     0.1794,
+     3.9749
+    ],
+    "C5": [
+     0.5001,
+     3.3024
+    ],
+    "D5": [
+     0.1735,
+     3.907
+    ],
+    "E5": [
+     0.1975,
+     4.3695
+    ],
+    "F#5": [
+     0.1763,
+     3.8613
+    ],
+    "G#5": [
+     0.1996,
+     3.9695
+    ],
+    "A5": [
+     0.2173,
+     3.9491
+    ],
+    "C6": [
+     0.2021,
+     3.8748
+    ]
+   },
+   "credit": "vcsl",
+   "note": "Flûte à bec ténor baroque, tenue ; étiquettes +12 ; boucles."
+  },
+  "wine_glasses": {
+   "kind": "pitched",
+   "files": {
+    "D#5": "audio/samples/wine_glasses/D#5.ogg",
+    "F#5": "audio/samples/wine_glasses/F#5.ogg",
+    "A#5": "audio/samples/wine_glasses/A#5.ogg",
+    "D6": "audio/samples/wine_glasses/D6.ogg"
+   },
+   "loop": {
+    "D#5": [
+     0.6692,
+     5.877
+    ],
+    "F#5": [
+     0.2563,
+     4.9358
+    ],
+    "A#5": [
+     0.2501,
+     5.5746
+    ],
+    "D6": [
+     0.2559,
+     5.4076
+    ]
+   },
+   "credit": "vcsl",
+   "note": "Verres frottés ; étiquettes +12 (mesuré) ; boucles."
+  },
+  "folk_harp": {
+   "kind": "pitched",
+   "files": {
+    "D2": "audio/samples/folk_harp/D2.ogg",
+    "E2": "audio/samples/folk_harp/E2.ogg",
+    "F#2": "audio/samples/folk_harp/F#2.ogg",
+    "G#2": "audio/samples/folk_harp/G#2.ogg",
+    "A#2": "audio/samples/folk_harp/A#2.ogg",
+    "C3": "audio/samples/folk_harp/C3.ogg",
+    "D3": "audio/samples/folk_harp/D3.ogg",
+    "E3": "audio/samples/folk_harp/E3.ogg",
+    "F#3": "audio/samples/folk_harp/F#3.ogg",
+    "G#3": "audio/samples/folk_harp/G#3.ogg",
+    "A#3": "audio/samples/folk_harp/A#3.ogg",
+    "C4": "audio/samples/folk_harp/C4.ogg",
+    "D4": "audio/samples/folk_harp/D4.ogg",
+    "E4": "audio/samples/folk_harp/E4.ogg",
+    "F#4": "audio/samples/folk_harp/F#4.ogg",
+    "G#4": "audio/samples/folk_harp/G#4.ogg",
+    "A#4": "audio/samples/folk_harp/A#4.ogg",
+    "C5": "audio/samples/folk_harp/C5.ogg",
+    "D5": "audio/samples/folk_harp/D5.ogg",
+    "E5": "audio/samples/folk_harp/E5.ogg",
+    "F#5": "audio/samples/folk_harp/F#5.ogg",
+    "G#5": "audio/samples/folk_harp/G#5.ogg",
+    "A#5": "audio/samples/folk_harp/A#5.ogg",
+    "C6": "audio/samples/folk_harp/C6.ogg"
+   },
+   "credit": "vcsl",
+   "note": "Harpe celtique, vélocité 3 ; étiquettes +12."
+  },
+  "didgeridoo": {
+   "kind": "percussion",
+   "files": {
+    "drone": [
+     "audio/samples/didgeridoo/drone_1.ogg",
+     "audio/samples/didgeridoo/drone_2.ogg"
+    ],
+    "bark": [
+     "audio/samples/didgeridoo/bark_1.ogg",
+     "audio/samples/didgeridoo/bark_2.ogg"
+    ],
+    "short": [
+     "audio/samples/didgeridoo/short_1.ogg"
+    ]
+   },
+   "loop": {
+    "drone_1": [
+     0.2,
+     5.3255
+    ],
+    "drone_2": [
+     0.2001,
+     3.7025
+    ]
+   },
+   "credit": "vcsl",
+   "note": "Didgeridoo ≈ C#2 : drones bouclés, aboiements (cris du Silence)."
+  },
+  "frame_drum": {
+   "kind": "percussion",
+   "files": {
+    "low": [
+     "audio/samples/frame_drum/low_1.ogg",
+     "audio/samples/frame_drum/low_2.ogg",
+     "audio/samples/frame_drum/low_3.ogg"
+    ],
+    "high": [
+     "audio/samples/frame_drum/high_1.ogg",
+     "audio/samples/frame_drum/high_2.ogg",
+     "audio/samples/frame_drum/high_3.ogg"
+    ],
+    "muted": [
+     "audio/samples/frame_drum/muted_1.ogg",
+     "audio/samples/frame_drum/muted_2.ogg",
+     "audio/samples/frame_drum/muted_3.ogg"
+    ],
+    "hand": [
+     "audio/samples/frame_drum/hand_1.ogg",
+     "audio/samples/frame_drum/hand_2.ogg"
+    ]
+   },
+   "credit": "vcsl",
+   "note": "Tambour sur cadre (≈ bodhrán) : low/high/muted/hand, 2–3 round-robins."
+  },
+  "bass_drum": {
+   "kind": "percussion",
+   "files": {
+    "hit": [
+     "audio/samples/bass_drum/hit_1.ogg",
+     "audio/samples/bass_drum/hit_2.ogg",
+     "audio/samples/bass_drum/hit_3.ogg"
+    ],
+    "soft": [
+     "audio/samples/bass_drum/soft_1.ogg",
+     "audio/samples/bass_drum/soft_2.ogg"
+    ]
+   },
+   "credit": "vcsl",
+   "note": "Grosse caisse de concert."
+  },
+  "snare_rope": {
+   "kind": "percussion",
+   "files": {
+    "snare": [
+     "audio/samples/snare_rope/snare_1.ogg",
+     "audio/samples/snare_rope/snare_2.ogg",
+     "audio/samples/snare_rope/snare_3.ogg"
+    ],
+    "tenor": [
+     "audio/samples/snare_rope/tenor_1.ogg",
+     "audio/samples/snare_rope/tenor_2.ogg",
+     "audio/samples/snare_rope/tenor_3.ogg"
+    ],
+    "roll": [
+     "audio/samples/snare_rope/roll_1.ogg",
+     "audio/samples/snare_rope/roll_2.ogg"
+    ]
+   },
+   "credit": "vcsl",
+   "note": "Caisse claire à cordes (tambour de procession) : timbre, ténor sans timbre."
+  },
+  "claps": {
+   "kind": "percussion",
+   "files": {
+    "clap": [
+     "audio/samples/claps/clap_1.ogg",
+     "audio/samples/claps/clap_2.ogg",
+     "audio/samples/claps/clap_3.ogg",
+     "audio/samples/claps/clap_4.ogg"
+    ],
+    "solo": [
+     "audio/samples/claps/solo_1.ogg",
+     "audio/samples/claps/solo_2.ogg"
+    ]
+   },
+   "credit": "vcsl",
+   "note": "Claquements de mains (groupe / solo)."
+  },
+  "woodblock": {
+   "kind": "percussion",
+   "files": {
+    "hit": [
+     "audio/samples/woodblock/hit_1.ogg",
+     "audio/samples/woodblock/hit_2.ogg",
+     "audio/samples/woodblock/hit_3.ogg"
+    ],
+    "soft": [
+     "audio/samples/woodblock/soft_1.ogg",
+     "audio/samples/woodblock/soft_2.ogg",
+     "audio/samples/woodblock/soft_3.ogg"
+    ]
+   },
+   "credit": "vcsl",
+   "note": "Woodblock."
+  },
+  "gong": {
+   "kind": "percussion",
+   "files": {
+    "hit": [
+     "audio/samples/gong/hit_1.ogg",
+     "audio/samples/gong/hit_2.ogg",
+     "audio/samples/gong/hit_3.ogg"
+    ],
+    "soft": [
+     "audio/samples/gong/soft_1.ogg"
+    ],
+    "scrape": [
+     "audio/samples/gong/scrape_1.ogg"
+    ]
+   },
+   "credit": "vcsl",
+   "note": "Gong (queues limitées à 8 s)."
+  },
+  "anvil": {
+   "kind": "percussion",
+   "files": {
+    "hit": [
+     "audio/samples/anvil/hit_1.ogg",
+     "audio/samples/anvil/hit_2.ogg",
+     "audio/samples/anvil/hit_3.ogg"
+    ],
+    "soft": [
+     "audio/samples/anvil/soft_1.ogg",
+     "audio/samples/anvil/soft_2.ogg"
+    ]
+   },
+   "credit": "vcsl",
+   "note": "Enclume."
+  },
+  "ratchet": {
+   "kind": "percussion",
+   "files": {
+    "crank": [
+     "audio/samples/ratchet/crank_1.ogg",
+     "audio/samples/ratchet/crank_2.ogg",
+     "audio/samples/ratchet/crank_3.ogg"
+    ],
+    "fast": [
+     "audio/samples/ratchet/fast_1.ogg",
+     "audio/samples/ratchet/fast_2.ogg"
+    ],
+    "slow": [
+     "audio/samples/ratchet/slow_1.ogg"
+    ]
+   },
+   "credit": "vcsl",
+   "note": "Crécelle."
+  },
+  "sleigh_bells": {
+   "kind": "percussion",
+   "files": {
+    "hit": [
+     "audio/samples/sleigh_bells/hit_1.ogg",
+     "audio/samples/sleigh_bells/hit_2.ogg",
+     "audio/samples/sleigh_bells/hit_3.ogg"
+    ],
+    "shake": [
+     "audio/samples/sleigh_bells/shake_1.ogg",
+     "audio/samples/sleigh_bells/shake_2.ogg"
+    ]
+   },
+   "credit": "vcsl",
+   "note": "Grelots."
+  },
+  "hand_bells": {
+   "kind": "percussion",
+   "files": {
+    "hit": [
+     "audio/samples/hand_bells/hit_1.ogg",
+     "audio/samples/hand_bells/hit_2.ogg",
+     "audio/samples/hand_bells/hit_3.ogg"
+    ]
+   },
+   "credit": "vcsl",
+   "note": "Clochettes népalaises (non accordées)."
+  },
+  "bell_tree": {
+   "kind": "percussion",
+   "files": {
+    "stroke": [
+     "audio/samples/bell_tree/stroke_1.ogg",
+     "audio/samples/bell_tree/stroke_2.ogg",
+     "audio/samples/bell_tree/stroke_3.ogg",
+     "audio/samples/bell_tree/stroke_4.ogg",
+     "audio/samples/bell_tree/stroke_5.ogg"
+    ],
+    "hit": [
+     "audio/samples/bell_tree/hit_1.ogg",
+     "audio/samples/bell_tree/hit_2.ogg",
+     "audio/samples/bell_tree/hit_3.ogg",
+     "audio/samples/bell_tree/hit_4.ogg",
+     "audio/samples/bell_tree/hit_5.ogg",
+     "audio/samples/bell_tree/hit_6.ogg"
+    ]
+   },
+   "credit": "vcsl",
+   "note": "Arbre à cloches : glissandi (stroke) et coups isolés (hit, ascendants C5→A#5)."
+  },
+  "tambourine": {
+   "kind": "percussion",
+   "files": {
+    "hit": [
+     "audio/samples/tambourine/hit_1.ogg",
+     "audio/samples/tambourine/hit_2.ogg"
+    ],
+    "shake": [
+     "audio/samples/tambourine/shake_1.ogg",
+     "audio/samples/tambourine/shake_2.ogg"
+    ],
+    "roll": [
+     "audio/samples/tambourine/roll_1.ogg"
+    ]
+   },
+   "credit": "vcsl",
+   "note": "Tambourin."
+  },
+  "timpani": {
+   "kind": "percussion",
+   "files": {
+    "low": [
+     "audio/samples/timpani/low_1.ogg",
+     "audio/samples/timpani/low_2.ogg"
+    ],
+    "mid": [
+     "audio/samples/timpani/mid_1.ogg",
+     "audio/samples/timpani/mid_2.ogg"
+    ],
+    "high": [
+     "audio/samples/timpani/high_1.ogg",
+     "audio/samples/timpani/high_2.ogg"
+    ]
+   },
+   "credit": "vcsl",
+   "note": "Timbales (boss)."
+  },
+  "triangle": {
+   "kind": "percussion",
+   "files": {
+    "hit": [
+     "audio/samples/triangle/hit_1.ogg",
+     "audio/samples/triangle/hit_2.ogg"
+    ],
+    "muted": [
+     "audio/samples/triangle/muted_1.ogg",
+     "audio/samples/triangle/muted_2.ogg"
+    ]
+   },
+   "credit": "vcsl",
+   "note": "Triangle (ouvert / étouffé)."
+  },
+  "finger_cymbals": {
+   "kind": "percussion",
+   "files": {
+    "hit": [
+     "audio/samples/finger_cymbals/hit_1.ogg"
+    ]
+   },
+   "credit": "vcsl",
+   "note": "Cymbalettes (« ting » de bronze)."
+  },
+  "slapstick": {
+   "kind": "percussion",
+   "files": {
+    "hit": [
+     "audio/samples/slapstick/hit_1.ogg",
+     "audio/samples/slapstick/hit_2.ogg",
+     "audio/samples/slapstick/hit_3.ogg"
+    ]
+   },
+   "credit": "vcsl",
+   "note": "Fouet (slapstick)."
+  },
+  "contrabass": {
+   "kind": "pitched",
+   "files": {
+    "E1": "audio/samples/contrabass/E1.ogg",
+    "F#1": "audio/samples/contrabass/F#1.ogg",
+    "G1": "audio/samples/contrabass/G1.ogg",
+    "A#1": "audio/samples/contrabass/A#1.ogg",
+    "C2": "audio/samples/contrabass/C2.ogg",
+    "D2": "audio/samples/contrabass/D2.ogg",
+    "E2": "audio/samples/contrabass/E2.ogg",
+    "F#2": "audio/samples/contrabass/F#2.ogg",
+    "G#2": "audio/samples/contrabass/G#2.ogg",
+    "A2": "audio/samples/contrabass/A2.ogg",
+    "C#3": "audio/samples/contrabass/C#3.ogg",
+    "E3": "audio/samples/contrabass/E3.ogg",
+    "G#3": "audio/samples/contrabass/G#3.ogg",
+    "B3": "audio/samples/contrabass/B3.ogg"
+   },
+   "loop": {
+    "E1": [
+     0.3094,
+     5.2688
+    ],
+    "F#1": [
+     0.3001,
+     5.2817
+    ],
+    "G1": [
+     0.2121,
+     5.3834
+    ],
+    "A#1": [
+     0.3421,
+     5.078
+    ],
+    "C2": [
+     0.3695,
+     5.4229
+    ],
+    "D2": [
+     0.2968,
+     5.3937
+    ],
+    "E2": [
+     0.2006,
+     5.3916
+    ],
+    "F#2": [
+     0.3803,
+     5.3366
+    ],
+    "G#2": [
+     0.4061,
+     5.4236
+    ],
+    "A2": [
+     0.3945,
+     5.3257
+    ],
+    "C#3": [
+     0.3567,
+     4.9293
+    ],
+    "E3": [
+     0.2131,
+     5.22
+    ],
+    "G#3": [
+     0.2191,
+     5.4087
+    ],
+    "B3": [
+     0.5243,
+     5.2544
+    ]
+   },
+   "credit": "vsco2",
+   "note": "Contrebasse solo, tenue sans vibrato, v3 ; étiquettes +12 (mesuré) ; boucles."
+  },
+  "cello": {
+   "kind": "pitched",
+   "files": {
+    "C2": "audio/samples/cello/C2.ogg",
+    "E2": "audio/samples/cello/E2.ogg",
+    "G2": "audio/samples/cello/G2.ogg",
+    "B2": "audio/samples/cello/B2.ogg",
+    "D3": "audio/samples/cello/D3.ogg",
+    "F3": "audio/samples/cello/F3.ogg",
+    "A3": "audio/samples/cello/A3.ogg",
+    "C4": "audio/samples/cello/C4.ogg",
+    "E4": "audio/samples/cello/E4.ogg",
+    "G4": "audio/samples/cello/G4.ogg",
+    "B4": "audio/samples/cello/B4.ogg",
+    "D5": "audio/samples/cello/D5.ogg",
+    "F5": "audio/samples/cello/F5.ogg"
+   },
+   "loop": {
+    "C2": [
+     0.5004,
+     5.3464
+    ],
+    "E2": [
+     0.5004,
+     5.1393
+    ],
+    "G2": [
+     0.2112,
+     4.9498
+    ],
+    "B2": [
+     0.2532,
+     5.3998
+    ],
+    "D3": [
+     0.3001,
+     5.3
+    ],
+    "F3": [
+     0.2966,
+     5.3875
+    ],
+    "A3": [
+     0.2168,
+     5.1907
+    ],
+    "C4": [
+     0.2002,
+     5.1477
+    ],
+    "E4": [
+     0.3007,
+     5.0861
+    ],
+    "G4": [
+     0.203,
+     5.3024
+    ],
+    "B4": [
+     0.5001,
+     5.3535
+    ],
+    "D5": [
+     0.2486,
+     5.2125
+    ],
+    "F5": [
+     0.5,
+     5.2552
+    ]
+   },
+   "credit": "vsco2",
+   "note": "Violoncelles (section), tenue vibrato, v3 ; étiquettes +12 ; boucles."
+  },
+  "viola": {
+   "kind": "pitched",
+   "files": {
+    "C3": "audio/samples/viola/C3.ogg",
+    "D3": "audio/samples/viola/D3.ogg",
+    "E3": "audio/samples/viola/E3.ogg",
+    "G3": "audio/samples/viola/G3.ogg",
+    "B3": "audio/samples/viola/B3.ogg",
+    "D4": "audio/samples/viola/D4.ogg",
+    "F4": "audio/samples/viola/F4.ogg",
+    "A4": "audio/samples/viola/A4.ogg",
+    "C5": "audio/samples/viola/C5.ogg",
+    "E5": "audio/samples/viola/E5.ogg",
+    "G5": "audio/samples/viola/G5.ogg",
+    "B5": "audio/samples/viola/B5.ogg",
+    "D6": "audio/samples/viola/D6.ogg"
+   },
+   "loop": {
+    "C3": [
+     0.3589,
+     4.883
+    ],
+    "D3": [
+     0.262,
+     5.3404
+    ],
+    "E3": [
+     0.2343,
+     4.9493
+    ],
+    "G3": [
+     0.2323,
+     5.0894
+    ],
+    "B3": [
+     0.3003,
+     5.3995
+    ],
+    "D4": [
+     0.3141,
+     5.3412
+    ],
+    "F4": [
+     0.2229,
+     4.935
+    ],
+    "A4": [
+     0.3046,
+     5.1217
+    ],
+    "C5": [
+     0.2338,
+     4.9175
+    ],
+    "E5": [
+     0.3,
+     5.3778
+    ],
+    "G5": [
+     0.2295,
+     5.0426
+    ],
+    "B5": [
+     0.5,
+     4.9075
+    ],
+    "D6": [
+     0.4242,
+     4.9201
+    ]
+   },
+   "credit": "vsco2",
+   "note": "Altos (section), tenue vibrato, v2 ; étiquettes +12 ; boucles."
+  },
+  "violin": {
+   "kind": "pitched",
+   "files": {
+    "G3": "audio/samples/violin/G3.ogg",
+    "A3": "audio/samples/violin/A3.ogg",
+    "C4": "audio/samples/violin/C4.ogg",
+    "E4": "audio/samples/violin/E4.ogg",
+    "G4": "audio/samples/violin/G4.ogg",
+    "A4": "audio/samples/violin/A4.ogg",
+    "C5": "audio/samples/violin/C5.ogg",
+    "E5": "audio/samples/violin/E5.ogg",
+    "G5": "audio/samples/violin/G5.ogg",
+    "A5": "audio/samples/violin/A5.ogg",
+    "C6": "audio/samples/violin/C6.ogg",
+    "E6": "audio/samples/violin/E6.ogg"
+   },
+   "loop": {
+    "G3": [
+     0.2003,
+     5.1147
+    ],
+    "A3": [
+     0.5,
+     4.9607
+    ],
+    "C4": [
+     0.2003,
+     5.2817
+    ],
+    "E4": [
+     0.5,
+     5.3345
+    ],
+    "G4": [
+     0.2257,
+     5.2624
+    ],
+    "A4": [
+     0.3,
+     5.2529
+    ],
+    "C5": [
+     0.2274,
+     4.8555
+    ],
+    "E5": [
+     0.5003,
+     4.9232
+    ],
+    "G5": [
+     0.2335,
+     5.1562
+    ],
+    "A5": [
+     0.2003,
+     5.1946
+    ],
+    "C6": [
+     0.2149,
+     5.1573
+    ],
+    "E6": [
+     0.3141,
+     5.2058
+    ]
+   },
+   "credit": "vsco2",
+   "note": "Violon solo, archet vibrato, forte ; notation scientifique vérifiée ; boucles."
+  },
+  "horn": {
+   "kind": "pitched",
+   "files": {
+    "C2": "audio/samples/horn/C2.ogg",
+    "D#2": "audio/samples/horn/D#2.ogg",
+    "G2": "audio/samples/horn/G2.ogg",
+    "A#2": "audio/samples/horn/A#2.ogg",
+    "D3": "audio/samples/horn/D3.ogg",
+    "F3": "audio/samples/horn/F3.ogg",
+    "A3": "audio/samples/horn/A3.ogg",
+    "C4": "audio/samples/horn/C4.ogg"
+   },
+   "loop": {
+    "C2": [
+     0.2614,
+     3.1641
+    ],
+    "D#2": [
+     0.2197,
+     3.4451
+    ],
+    "G2": [
+     0.5005,
+     4.4773
+    ],
+    "A#2": [
+     0.2389,
+     4.3657
+    ],
+    "D3": [
+     0.2473,
+     4.882
+    ],
+    "F3": [
+     0.3185,
+     4.4587
+    ],
+    "A3": [
+     0.2012,
+     4.7649
+    ],
+    "C4": [
+     0.2176,
+     4.604
+    ]
+   },
+   "credit": "vsco2",
+   "note": "Cor d'harmonie, tenue, v3 (Cor de Brume) ; étiquettes +12 ; boucles."
+  },
+  "choir": {
+   "kind": "pitched",
+   "files": {
+    "G2": "audio/samples/choir/G2.ogg",
+    "A#2": "audio/samples/choir/A#2.ogg",
+    "C#3": "audio/samples/choir/C#3.ogg",
+    "E3": "audio/samples/choir/E3.ogg",
+    "G3": "audio/samples/choir/G3.ogg",
+    "A#3": "audio/samples/choir/A#3.ogg",
+    "C#4": "audio/samples/choir/C#4.ogg",
+    "E4": "audio/samples/choir/E4.ogg",
+    "G4": "audio/samples/choir/G4.ogg",
+    "A#4": "audio/samples/choir/A#4.ogg",
+    "C#5": "audio/samples/choir/C#5.ogg",
+    "E5": "audio/samples/choir/E5.ogg",
+    "G5": "audio/samples/choir/G5.ogg",
+    "A#5": "audio/samples/choir/A#5.ogg"
+   },
+   "loop": {
+    "G2": [
+     4.2744,
+     7.3372
+    ],
+    "A#2": [
+     4.1931,
+     7.1122
+    ],
+    "C#3": [
+     3.9986,
+     7.0872
+    ],
+    "E3": [
+     4.2878,
+     7.6495
+    ],
+    "G3": [
+     4.2717,
+     7.7905
+    ],
+    "A#3": [
+     4.2181,
+     7.0256
+    ],
+    "C#4": [
+     4.3052,
+     7.7991
+    ],
+    "E4": [
+     4.2654,
+     7.6375
+    ],
+    "G4": [
+     4.2838,
+     7.4863
+    ],
+    "A#4": [
+     4.2705,
+     7.8593
+    ],
+    "C#5": [
+     4.2889,
+     7.3666
+    ],
+    "E5": [
+     4.1513,
+     6.894
+    ],
+    "G5": [
+     4.273,
+     7.6888
+    ],
+    "A#5": [
+     4.2613,
+     7.4116
+    ]
+   },
+   "credit": "sso",
+   "note": "Chœur mixte (hommes G2–E4, femmes G4–A#5), « aah » ; points de boucle du SFZ vérifiés et crossfadés."
+  },
+  "bagpipe": {
+   "kind": "pitched",
+   "files": {
+    "F4": "audio/samples/bagpipe/F4.ogg",
+    "G4": "audio/samples/bagpipe/G4.ogg",
+    "A4": "audio/samples/bagpipe/A4.ogg",
+    "C5": "audio/samples/bagpipe/C5.ogg",
+    "D5": "audio/samples/bagpipe/D5.ogg",
+    "E5": "audio/samples/bagpipe/E5.ogg"
+   },
+   "loop": {
+    "F4": [
+     0.149,
+     3.3728
+    ],
+    "G4": [
+     0.15,
+     2.9397
+    ],
+    "A4": [
+     0.3001,
+     3.3982
+    ],
+    "C5": [
+     0.1501,
+     3.4291
+    ],
+    "D5": [
+     0.1498,
+     3.0473
+    ],
+    "E5": [
+     0.1501,
+     3.2135
+    ]
+   },
+   "credit": "cowsynth",
+   "note": "Chanter de cornemuse médiévale (hauteurs mesurées : étiquettes +12) ; mono ; boucles."
+  },
+  "bagpipe_drone": {
+   "kind": "pitched",
+   "files": {
+    "G2": "audio/samples/bagpipe_drone/G2.ogg",
+    "A2": "audio/samples/bagpipe_drone/A2.ogg"
+   },
+   "loop": {
+    "G2": [
+     0.3005,
+     5.9078
+    ],
+    "A2": [
+     0.2505,
+     5.9434
+    ]
+   },
+   "credit": "cowsynth",
+   "note": "Bourdons de cornemuse G2 / A2 (hauteurs mesurées) ; mono ; boucles."
+  },
+  "bagpipe_chirp": {
+   "kind": "percussion",
+   "files": {
+    "chirp": [
+     "audio/samples/bagpipe_chirp/chirp_1.ogg",
+     "audio/samples/bagpipe_chirp/chirp_2.ogg",
+     "audio/samples/bagpipe_chirp/chirp_3.ogg"
+    ]
+   },
+   "credit": "cowsynth",
+   "note": "Pépiements de cornemuse (ornements)."
+  }
+ },
+ "tracks": {
+  "menu": {
+   "score": "src/data/music/menu.json",
+   "bpm": 84,
+   "bars": 16,
+   "status": "complete",
+   "title": "Le dernier apprenti",
+   "credit": "original"
+  },
+  "hub": {
+   "score": "src/data/music/hub.json",
+   "bpm": 88,
+   "bars": 8,
+   "status": "esquisse",
+   "title": "Le Beffroi Mère — carte des paroisses",
+   "credit": "original"
+  },
+  "cendrelune": {
+   "score": "src/data/music/cendrelune.json",
+   "bpm": 96,
+   "bars": 16,
+   "status": "complete",
+   "title": "Cendrelune — la veillée des cendres",
+   "credit": "original"
+  },
+  "tourbes": {
+   "score": "src/data/music/tourbes.json",
+   "bpm": 88,
+   "bars": 8,
+   "status": "esquisse",
+   "title": "Les Tourbes — la marche des noyés",
+   "credit": "original"
+  },
+  "val_des_cordes": {
+   "score": "src/data/music/val_des_cordes.json",
+   "bpm": 104,
+   "bars": 8,
+   "status": "esquisse",
+   "title": "Val-des-Cordes — la ronde des pendus",
+   "credit": "original"
+  },
+  "nef_noyee": {
+   "score": "src/data/music/nef_noyee.json",
+   "bpm": 84,
+   "bars": 8,
+   "status": "esquisse",
+   "title": "La Nef Noyée — psaume sous l'eau",
+   "credit": "original"
+  },
+  "beffroi_mere": {
+   "score": "src/data/music/beffroi_mere.json",
+   "bpm": 100,
+   "bars": 8,
+   "status": "esquisse",
+   "title": "Le Beffroi Mère — la cloche-mère",
+   "credit": "original"
+  },
+  "boss": {
+   "score": "src/data/music/boss.json",
+   "bpm": 110,
+   "bars": 8,
+   "status": "esquisse",
+   "title": "Le Bourdon Fêlé",
+   "credit": "original"
+  },
+  "victory": {
+   "score": "src/data/music/victory.json",
+   "bpm": 96,
+   "bars": 8,
+   "status": "esquisse",
+   "title": "L'aube sonnée",
+   "credit": "original"
+  },
+  "death": {
+   "score": "src/data/music/death.json",
+   "bpm": 72,
+   "bars": 8,
+   "status": "esquisse",
+   "title": "Le Silence a mangé le son",
+   "credit": "original"
+  }
+ },
+ "credits": {
+  "vcsl": {
+   "title": "Versilian Community Sample Library (VCSL) 1.2",
+   "authors": [
+    "Versilian Studios LLC (Samuel Gossner)",
+    "Simon Dalzell (Ivy Audio) pour l'orgue"
+   ],
+   "license": "CC0 1.0",
+   "source": "https://github.com/sgossner/VCSL",
+   "downloadedFrom": "https://github.com/sgossner/VCSL (git clone)",
+   "evidence": "LICENSE (CC0 1.0 Universal) + README.md « This collection is under a Creative Commons 0 license »"
+  },
+  "vsco2": {
+   "title": "VSCO 2 Community Edition",
+   "authors": [
+    "Versilian Studios (Sam Gossner)",
+    "Simon Dalzell (Ivy Audio)",
+    "Elan Hickler (découpe)"
+   ],
+   "license": "CC0 1.0",
+   "source": "https://github.com/sgossner/VSCO-2-CE",
+   "downloadedFrom": "https://github.com/sgossner/VSCO-2-CE (git clone --filter=blob:none, sparse-checkout Strings/*, Brass/F Horn)",
+   "evidence": "LICENSE (CC0 1.0 Universal) ; Readme.txt demande un crédit (fourni)"
+  },
+  "sso": {
+   "title": "Sonatina Symphonic Orchestra (chœur mixte)",
+   "authors": [
+    "Mattias Westlund",
+    "Peter Eastman (dépôt)",
+    "Signal Experiments (boucles)"
+   ],
+   "license": "CC Sampling Plus 1.0",
+   "source": "https://github.com/peastman/sso",
+   "downloadedFrom": "https://github.com/peastman/sso (git clone sparse « Samples-looped/Chorus »)",
+   "evidence": "LICENSE « may be used and distributed under the terms of the Creative Commons Sampling Plus 1.0 license »"
+  },
+  "cowsynth": {
+   "title": "Karoryfer Samples — Cowsynth (cornemuse médiévale)",
+   "authors": [
+    "Karoryfer Lecolds"
+   ],
+   "license": "CC0 1.0",
+   "source": "https://github.com/sfzinstruments/karoryfer.cowsynth",
+   "downloadedFrom": "https://github.com/sfzinstruments/karoryfer.cowsynth (git clone, dossier natural/)",
+   "evidence": "LICENSE (CC0 1.0 Universal) ; readme.txt « Royalty-free for all commercial and non-commercial use »"
+  },
+  "kenney_impact": {
+   "title": "Kenney — Impact Sounds 1.0",
+   "authors": [
+    "Kenney (www.kenney.nl)"
+   ],
+   "license": "CC0 1.0",
+   "source": "https://kenney.nl/assets/impact-sounds",
+   "downloadedFrom": "https://github.com/lavenderdotpet/CC0-Public-Domain-Sounds (git clone sparse « kenney_impactsounds »)",
+   "evidence": "kenney_impactsounds/License.txt « License: (Creative Commons Zero, CC0) »"
+  },
+  "kenney_rpg": {
+   "title": "Kenney — RPG Audio",
+   "authors": [
+    "Kenney Vleugels (Kenney.nl)"
+   ],
+   "license": "CC0 1.0",
+   "source": "https://kenney.nl/assets/rpg-audio",
+   "downloadedFrom": "https://github.com/lavenderdotpet/CC0-Public-Domain-Sounds (git clone sparse « kenney_rpgaudio »)",
+   "evidence": "kenney_rpgaudio/License.txt « License (Creative Commons Zero, CC0) »"
+  },
+  "rubberduck": {
+   "title": "rubberduck — packs CC0 (25 mud SFX, 100 wood/metal SFX)",
+   "authors": [
+    "rubberduck (OpenGameArt)"
+   ],
+   "license": "CC0 1.0",
+   "source": "https://opengameart.org/users/rubberduck",
+   "downloadedFrom": "https://github.com/lavenderdotpet/CC0-Public-Domain-Sounds (git clone sparse « 25-CC0-mud-sfx », « 100-CC0-wood-metal-SFX »)",
+   "evidence": "LICENSE à la racine du dépôt (CC0 1.0 Universal) couvrant l'ensemble « collection of cc0 sounds » ; noms de packs « CC0 »"
+  },
+  "burnes": {
+   "title": "Micro Pack — Organic Wooshes",
+   "authors": [
+    "Benjamin Burnes (Abstraction)"
+   ],
+   "license": "CC0 1.0",
+   "source": "https://abstractionmusic.com",
+   "downloadedFrom": "https://github.com/lavenderdotpet/CC0-Public-Domain-Sounds (git clone sparse « Micro Pack - Organic Wooshes »)",
+   "evidence": "« Micro Pack - Organic Wooshes/_README.txt » : « These sounds are public domain (Creative Commons 0) »"
+  },
+  "ambientsounds_wind": {
+   "title": "Wind (felix.blume)",
+   "authors": [
+    "felix.blume"
+   ],
+   "license": "CC0 1.0",
+   "source": "http://www.freesound.org/people/felix.blume/sounds/139337/",
+   "downloadedFrom": "https://github.com/Muges/ambientsounds (git clone, wind.ogg)",
+   "evidence": "readme.md du dépôt : « Wind by felix.blume (CC0) »"
+  },
+  "ambientsounds_fire": {
+   "title": "Fireplace (inchadney)",
+   "authors": [
+    "inchadney"
+   ],
+   "license": "CC0 1.0",
+   "source": "http://www.freesound.org/people/inchadney/sounds/132534/",
+   "downloadedFrom": "https://github.com/Muges/ambientsounds (git clone, fireplace.ogg)",
+   "evidence": "readme.md du dépôt : « Fireplace by inchadney (CC0) »"
+  },
+  "ambientsounds_rain": {
+   "title": "Heavy Rain (D W)",
+   "authors": [
+    "D W"
+   ],
+   "license": "CC BY 3.0",
+   "source": "http://www.freesound.org/people/D%20W/sounds/136971/",
+   "downloadedFrom": "https://github.com/Muges/ambientsounds (git clone, heavy-rain.ogg)",
+   "evidence": "readme.md du dépôt : « Heavy Rain by D W (CC BY) »"
+  },
+  "ambientsounds_storm": {
+   "title": "Thunderstorm (RHumphries)",
+   "authors": [
+    "RHumphries"
+   ],
+   "license": "CC BY 3.0",
+   "source": "http://www.freesound.org/people/RHumphries/sounds/2523/",
+   "downloadedFrom": "https://github.com/Muges/ambientsounds (git clone, thunderstorm.ogg)",
+   "evidence": "readme.md du dépôt : « Thunderstorm by RHumphries (CC BY) »"
+  },
+  "original": {
+   "title": "Partitions CARILLON",
+   "authors": [
+    "Équipe CARILLON (agent B, 2026)"
+   ],
+   "license": "Même licence que le jeu",
+   "source": "src/data/music/",
+   "downloadedFrom": "—",
+   "evidence": "—"
+  }
+ }
+}

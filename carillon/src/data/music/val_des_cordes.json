@@ -1,0 +1,409 @@
+{
+ "id": "val_des_cordes",
+ "title": "Val-des-Cordes — la ronde des pendus",
+ "status": "esquisse",
+ "bpm": 104,
+ "beatsPerBar": 4,
+ "bars": 8,
+ "key": "E",
+ "mode": "dorien",
+ "layers": [
+  {
+   "tier": 0,
+   "name": "bourdon",
+   "instrument": "cello",
+   "gain": 0.65,
+   "events": [
+    {
+     "bar": 0,
+     "beat": 0,
+     "note": "E2",
+     "dur": 16
+    },
+    {
+     "bar": 0,
+     "beat": 0,
+     "note": "B2",
+     "dur": 16
+    },
+    {
+     "bar": 4,
+     "beat": 0,
+     "note": "D2",
+     "dur": 8
+    },
+    {
+     "bar": 4,
+     "beat": 0,
+     "note": "A2",
+     "dur": 8
+    },
+    {
+     "bar": 6,
+     "beat": 0,
+     "note": "E2",
+     "dur": 8
+    },
+    {
+     "bar": 6,
+     "beat": 0,
+     "note": "B2",
+     "dur": 8
+    }
+   ]
+  },
+  {
+   "tier": 1,
+   "name": "tambour",
+   "instrument": "frame_drum",
+   "gain": 0.9,
+   "pattern": {
+    "steps": 8,
+    "hits": [
+     [
+      "low",
+      0,
+      1.0
+     ],
+     [
+      "high",
+      2,
+      0.5
+     ],
+     [
+      "high",
+      3,
+      0.7
+     ],
+     [
+      "low",
+      4,
+      0.8
+     ],
+     [
+      "high",
+      6,
+      0.6
+     ],
+     [
+      "muted",
+      7,
+      0.4
+     ]
+    ]
+   },
+   "repeatBars": 1
+  },
+  {
+   "tier": 1,
+   "name": "bois",
+   "instrument": "woodblock",
+   "gain": 0.45,
+   "pattern": {
+    "steps": 8,
+    "hits": [
+     [
+      "hit",
+      1,
+      0.5
+     ],
+     [
+      "soft",
+      5,
+      0.4
+     ],
+     [
+      "hit",
+      6,
+      0.5
+     ]
+    ]
+   },
+   "repeatBars": 1
+  },
+  {
+   "tier": 2,
+   "name": "violon",
+   "instrument": "violin",
+   "gain": 0.55,
+   "events": [
+    {
+     "bar": 0,
+     "beat": 0.0,
+     "note": "E5",
+     "dur": 1.0
+    },
+    {
+     "bar": 0,
+     "beat": 1.0,
+     "note": "G5",
+     "dur": 1.0
+    },
+    {
+     "bar": 0,
+     "beat": 2.0,
+     "note": "B5",
+     "dur": 1.5
+    },
+    {
+     "bar": 0,
+     "beat": 3.5,
+     "note": "A5",
+     "dur": 0.5
+    },
+    {
+     "bar": 1,
+     "beat": 0.0,
+     "note": "G5",
+     "dur": 1.0
+    },
+    {
+     "bar": 1,
+     "beat": 1.0,
+     "note": "F#5",
+     "dur": 1.0
+    },
+    {
+     "bar": 1,
+     "beat": 2.0,
+     "note": "E5",
+     "dur": 2.0
+    },
+    {
+     "bar": 2,
+     "beat": 0.0,
+     "note": "D5",
+     "dur": 1.0
+    },
+    {
+     "bar": 2,
+     "beat": 1.0,
+     "note": "E5",
+     "dur": 1.0
+    },
+    {
+     "bar": 2,
+     "beat": 2.0,
+     "note": "F#5",
+     "dur": 1.5
+    },
+    {
+     "bar": 2,
+     "beat": 3.5,
+     "note": "G5",
+     "dur": 0.5
+    },
+    {
+     "bar": 3,
+     "beat": 0.0,
+     "note": "F#5",
+     "dur": 1.0
+    },
+    {
+     "bar": 3,
+     "beat": 1.0,
+     "note": "E5",
+     "dur": 1.0
+    },
+    {
+     "bar": 3,
+     "beat": 2.0,
+     "note": "D5",
+     "dur": 2.0
+    },
+    {
+     "bar": 4,
+     "beat": 0.0,
+     "note": "E5",
+     "dur": 1.0
+    },
+    {
+     "bar": 4,
+     "beat": 1.0,
+     "note": "G5",
+     "dur": 1.0
+    },
+    {
+     "bar": 4,
+     "beat": 2.0,
+     "note": "B5",
+     "dur": 1.0
+    },
+    {
+     "bar": 4,
+     "beat": 3.0,
+     "note": "C#6",
+     "dur": 1.0
+    },
+    {
+     "bar": 5,
+     "beat": 0.0,
+     "note": "B5",
+     "dur": 1.0
+    },
+    {
+     "bar": 5,
+     "beat": 1.0,
+     "note": "A5",
+     "dur": 1.0
+    },
+    {
+     "bar": 5,
+     "beat": 2.0,
+     "note": "G5",
+     "dur": 1.0
+    },
+    {
+     "bar": 5,
+     "beat": 3.0,
+     "note": "F#5",
+     "dur": 1.0
+    },
+    {
+     "bar": 6,
+     "beat": 0.0,
+     "note": "G5",
+     "dur": 1.5
+    },
+    {
+     "bar": 6,
+     "beat": 1.5,
+     "note": "A5",
+     "dur": 0.5
+    },
+    {
+     "bar": 6,
+     "beat": 2.0,
+     "note": "G5",
+     "dur": 1.0
+    },
+    {
+     "bar": 6,
+     "beat": 3.0,
+     "note": "D5",
+     "dur": 1.0
+    },
+    {
+     "bar": 7,
+     "beat": 0.0,
+     "note": "E5",
+     "dur": 4.0
+    }
+   ]
+  },
+  {
+   "tier": 2,
+   "name": "pince",
+   "instrument": "psaltery_pluck",
+   "gain": 0.4,
+   "pattern": {
+    "steps": 8,
+    "hits": [
+     [
+      "E5",
+      0,
+      0.7
+     ],
+     [
+      "B5",
+      2,
+      0.5
+     ],
+     [
+      "E5",
+      4,
+      0.6
+     ],
+     [
+      "G5",
+      6,
+      0.5
+     ]
+    ]
+   },
+   "repeatBars": 1
+  },
+  {
+   "tier": 3,
+   "name": "voix",
+   "instrument": "choir",
+   "gain": 0.5,
+   "events": [
+    {
+     "bar": 0,
+     "beat": 0,
+     "note": "E3",
+     "dur": 16
+    },
+    {
+     "bar": 0,
+     "beat": 0,
+     "note": "B3",
+     "dur": 16
+    },
+    {
+     "bar": 0,
+     "beat": 0,
+     "note": "G4",
+     "dur": 16
+    },
+    {
+     "bar": 4,
+     "beat": 0,
+     "note": "D3",
+     "dur": 8
+    },
+    {
+     "bar": 4,
+     "beat": 0,
+     "note": "A3",
+     "dur": 8
+    },
+    {
+     "bar": 4,
+     "beat": 0,
+     "note": "F#4",
+     "dur": 8
+    },
+    {
+     "bar": 6,
+     "beat": 0,
+     "note": "E3",
+     "dur": 8
+    },
+    {
+     "bar": 6,
+     "beat": 0,
+     "note": "B3",
+     "dur": 8
+    },
+    {
+     "bar": 6,
+     "beat": 0,
+     "note": "G4",
+     "dur": 8
+    }
+   ]
+  },
+  {
+   "tier": 3,
+   "name": "cloches",
+   "instrument": "tubular_bells",
+   "gain": 0.45,
+   "events": [
+    {
+     "bar": 0,
+     "beat": 0,
+     "note": "E4",
+     "dur": 4
+    },
+    {
+     "bar": 4,
+     "beat": 0,
+     "note": "B4",
+     "dur": 4
+    }
+   ]
+  }
+ ]
+}

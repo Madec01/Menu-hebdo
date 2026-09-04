@@ -1,0 +1,870 @@
+{
+ "id": "cendrelune",
+ "title": "Cendrelune — la veillée des cendres",
+ "status": "complete",
+ "bpm": 96,
+ "beatsPerBar": 4,
+ "bars": 16,
+ "key": "D",
+ "mode": "dorien",
+ "layers": [
+  {
+   "tier": 0,
+   "name": "bourdon",
+   "instrument": "contrabass",
+   "gain": 0.8,
+   "events": [
+    {
+     "bar": 0,
+     "beat": 0,
+     "note": "D2",
+     "dur": 16
+    },
+    {
+     "bar": 4,
+     "beat": 0,
+     "note": "D2",
+     "dur": 16
+    },
+    {
+     "bar": 8,
+     "beat": 0,
+     "note": "C2",
+     "dur": 16
+    },
+    {
+     "bar": 12,
+     "beat": 0,
+     "note": "D2",
+     "dur": 8
+    },
+    {
+     "bar": 14,
+     "beat": 0,
+     "note": "A1",
+     "dur": 4
+    },
+    {
+     "bar": 15,
+     "beat": 0,
+     "note": "D2",
+     "dur": 4
+    }
+   ]
+  },
+  {
+   "tier": 0,
+   "name": "orgue",
+   "instrument": "organ",
+   "gain": 0.28,
+   "events": [
+    {
+     "bar": 0,
+     "beat": 0,
+     "note": "D3",
+     "dur": 32
+    },
+    {
+     "bar": 0,
+     "beat": 0,
+     "note": "A3",
+     "dur": 32
+    },
+    {
+     "bar": 8,
+     "beat": 0,
+     "note": "C3",
+     "dur": 16
+    },
+    {
+     "bar": 8,
+     "beat": 0,
+     "note": "G3",
+     "dur": 16
+    },
+    {
+     "bar": 12,
+     "beat": 0,
+     "note": "D3",
+     "dur": 8
+    },
+    {
+     "bar": 12,
+     "beat": 0,
+     "note": "A3",
+     "dur": 8
+    },
+    {
+     "bar": 14,
+     "beat": 0,
+     "note": "A2",
+     "dur": 4
+    },
+    {
+     "bar": 14,
+     "beat": 0,
+     "note": "E3",
+     "dur": 4
+    },
+    {
+     "bar": 15,
+     "beat": 0,
+     "note": "D3",
+     "dur": 4
+    },
+    {
+     "bar": 15,
+     "beat": 0,
+     "note": "A3",
+     "dur": 4
+    }
+   ]
+  },
+  {
+   "tier": 1,
+   "name": "tambour",
+   "instrument": "frame_drum",
+   "gain": 0.9,
+   "pattern": {
+    "steps": 8,
+    "hits": [
+     [
+      "low",
+      0,
+      1.0
+     ],
+     [
+      "muted",
+      2,
+      0.45
+     ],
+     [
+      "high",
+      3,
+      0.6
+     ],
+     [
+      "low",
+      4,
+      0.85
+     ],
+     [
+      "high",
+      6,
+      0.55
+     ],
+     [
+      "muted",
+      7,
+      0.4
+     ]
+    ]
+   },
+   "repeatBars": 1
+  },
+  {
+   "tier": 1,
+   "name": "grosse_caisse",
+   "instrument": "bass_drum",
+   "gain": 0.7,
+   "pattern": {
+    "steps": 4,
+    "hits": [
+     [
+      "hit",
+      0,
+      0.9
+     ],
+     [
+      "soft",
+      2,
+      0.5
+     ]
+    ]
+   },
+   "repeatBars": 1
+  },
+  {
+   "tier": 1,
+   "name": "mains",
+   "instrument": "claps",
+   "gain": 0.45,
+   "pattern": {
+    "steps": 8,
+    "hits": [
+     [
+      "clap",
+      2,
+      0.6
+     ],
+     [
+      "clap",
+      6,
+      0.7
+     ]
+    ]
+   },
+   "repeatBars": 1
+  },
+  {
+   "tier": 1,
+   "name": "relance",
+   "instrument": "frame_drum",
+   "gain": 0.8,
+   "events": [
+    {
+     "bar": 7,
+     "beat": 3,
+     "note": "high",
+     "dur": 0.5
+    },
+    {
+     "bar": 7,
+     "beat": 3.5,
+     "note": "high",
+     "dur": 0.5
+    },
+    {
+     "bar": 15,
+     "beat": 2,
+     "note": "low",
+     "dur": 0.5
+    },
+    {
+     "bar": 15,
+     "beat": 2.5,
+     "note": "high",
+     "dur": 0.5
+    },
+    {
+     "bar": 15,
+     "beat": 3,
+     "note": "high",
+     "dur": 0.5
+    },
+    {
+     "bar": 15,
+     "beat": 3.5,
+     "note": "low",
+     "dur": 0.5
+    }
+   ]
+  },
+  {
+   "tier": 2,
+   "name": "vielle",
+   "instrument": "psaltery_bow",
+   "gain": 0.75,
+   "events": [
+    {
+     "bar": 0,
+     "beat": 0.0,
+     "note": "D5",
+     "dur": 1.0
+    },
+    {
+     "bar": 0,
+     "beat": 1.0,
+     "note": "F5",
+     "dur": 1.0
+    },
+    {
+     "bar": 0,
+     "beat": 2.0,
+     "note": "A5",
+     "dur": 1.5
+    },
+    {
+     "bar": 0,
+     "beat": 3.5,
+     "note": "G5",
+     "dur": 0.5
+    },
+    {
+     "bar": 1,
+     "beat": 0.0,
+     "note": "F5",
+     "dur": 1.0
+    },
+    {
+     "bar": 1,
+     "beat": 1.0,
+     "note": "E5",
+     "dur": 1.0
+    },
+    {
+     "bar": 1,
+     "beat": 2.0,
+     "note": "D5",
+     "dur": 2.0
+    },
+    {
+     "bar": 2,
+     "beat": 0.0,
+     "note": "C5",
+     "dur": 1.0
+    },
+    {
+     "bar": 2,
+     "beat": 1.0,
+     "note": "D5",
+     "dur": 1.0
+    },
+    {
+     "bar": 2,
+     "beat": 2.0,
+     "note": "E5",
+     "dur": 1.5
+    },
+    {
+     "bar": 2,
+     "beat": 3.5,
+     "note": "F5",
+     "dur": 0.5
+    },
+    {
+     "bar": 3,
+     "beat": 0.0,
+     "note": "E5",
+     "dur": 1.0
+    },
+    {
+     "bar": 3,
+     "beat": 1.0,
+     "note": "D5",
+     "dur": 1.0
+    },
+    {
+     "bar": 3,
+     "beat": 2.0,
+     "note": "C5",
+     "dur": 2.0
+    },
+    {
+     "bar": 4,
+     "beat": 0.0,
+     "note": "D5",
+     "dur": 1.0
+    },
+    {
+     "bar": 4,
+     "beat": 1.0,
+     "note": "F5",
+     "dur": 1.0
+    },
+    {
+     "bar": 4,
+     "beat": 2.0,
+     "note": "A5",
+     "dur": 1.5
+    },
+    {
+     "bar": 4,
+     "beat": 3.5,
+     "note": "G5",
+     "dur": 0.5
+    },
+    {
+     "bar": 5,
+     "beat": 0.0,
+     "note": "F5",
+     "dur": 1.0
+    },
+    {
+     "bar": 5,
+     "beat": 1.0,
+     "note": "E5",
+     "dur": 1.0
+    },
+    {
+     "bar": 5,
+     "beat": 2.0,
+     "note": "D5",
+     "dur": 2.0
+    },
+    {
+     "bar": 6,
+     "beat": 0.0,
+     "note": "A5",
+     "dur": 1.0
+    },
+    {
+     "bar": 6,
+     "beat": 1.0,
+     "note": "G5",
+     "dur": 1.0
+    },
+    {
+     "bar": 6,
+     "beat": 2.0,
+     "note": "F5",
+     "dur": 1.0
+    },
+    {
+     "bar": 6,
+     "beat": 3.0,
+     "note": "E5",
+     "dur": 1.0
+    },
+    {
+     "bar": 7,
+     "beat": 0.0,
+     "note": "D5",
+     "dur": 3.0
+    },
+    {
+     "bar": 8,
+     "beat": 0.0,
+     "note": "C5",
+     "dur": 1.0
+    },
+    {
+     "bar": 8,
+     "beat": 1.0,
+     "note": "E5",
+     "dur": 1.0
+    },
+    {
+     "bar": 8,
+     "beat": 2.0,
+     "note": "G5",
+     "dur": 1.5
+    },
+    {
+     "bar": 8,
+     "beat": 3.5,
+     "note": "A5",
+     "dur": 0.5
+    },
+    {
+     "bar": 9,
+     "beat": 0.0,
+     "note": "G5",
+     "dur": 1.0
+    },
+    {
+     "bar": 9,
+     "beat": 1.0,
+     "note": "F5",
+     "dur": 1.0
+    },
+    {
+     "bar": 9,
+     "beat": 2.0,
+     "note": "E5",
+     "dur": 2.0
+    },
+    {
+     "bar": 10,
+     "beat": 0.0,
+     "note": "F5",
+     "dur": 1.0
+    },
+    {
+     "bar": 10,
+     "beat": 1.0,
+     "note": "G5",
+     "dur": 1.0
+    },
+    {
+     "bar": 10,
+     "beat": 2.0,
+     "note": "A5",
+     "dur": 1.0
+    },
+    {
+     "bar": 10,
+     "beat": 3.0,
+     "note": "B5",
+     "dur": 1.0
+    },
+    {
+     "bar": 11,
+     "beat": 0.0,
+     "note": "A5",
+     "dur": 1.0
+    },
+    {
+     "bar": 11,
+     "beat": 1.0,
+     "note": "G5",
+     "dur": 1.0
+    },
+    {
+     "bar": 11,
+     "beat": 2.0,
+     "note": "F5",
+     "dur": 1.0
+    },
+    {
+     "bar": 11,
+     "beat": 3.0,
+     "note": "E5",
+     "dur": 1.0
+    },
+    {
+     "bar": 12,
+     "beat": 0.0,
+     "note": "D5",
+     "dur": 1.0
+    },
+    {
+     "bar": 12,
+     "beat": 1.0,
+     "note": "F5",
+     "dur": 1.0
+    },
+    {
+     "bar": 12,
+     "beat": 2.0,
+     "note": "A5",
+     "dur": 1.5
+    },
+    {
+     "bar": 12,
+     "beat": 3.5,
+     "note": "B5",
+     "dur": 0.5
+    },
+    {
+     "bar": 13,
+     "beat": 0.0,
+     "note": "A5",
+     "dur": 1.0
+    },
+    {
+     "bar": 13,
+     "beat": 1.0,
+     "note": "G5",
+     "dur": 1.0
+    },
+    {
+     "bar": 13,
+     "beat": 2.0,
+     "note": "F5",
+     "dur": 1.0
+    },
+    {
+     "bar": 13,
+     "beat": 3.0,
+     "note": "E5",
+     "dur": 1.0
+    },
+    {
+     "bar": 14,
+     "beat": 0.0,
+     "note": "E5",
+     "dur": 1.5
+    },
+    {
+     "bar": 14,
+     "beat": 1.5,
+     "note": "F5",
+     "dur": 0.5
+    },
+    {
+     "bar": 14,
+     "beat": 2.0,
+     "note": "E5",
+     "dur": 1.0
+    },
+    {
+     "bar": 14,
+     "beat": 3.0,
+     "note": "C5",
+     "dur": 1.0
+    },
+    {
+     "bar": 15,
+     "beat": 0.0,
+     "note": "D5",
+     "dur": 4.0
+    }
+   ]
+  },
+  {
+   "tier": 2,
+   "name": "alto",
+   "instrument": "viola",
+   "gain": 0.42,
+   "events": [
+    {
+     "bar": 0,
+     "beat": 0,
+     "note": "A4",
+     "dur": 8
+    },
+    {
+     "bar": 2,
+     "beat": 0,
+     "note": "F4",
+     "dur": 8
+    },
+    {
+     "bar": 4,
+     "beat": 0,
+     "note": "A4",
+     "dur": 8
+    },
+    {
+     "bar": 6,
+     "beat": 0,
+     "note": "D4",
+     "dur": 8
+    },
+    {
+     "bar": 8,
+     "beat": 0,
+     "note": "G4",
+     "dur": 8
+    },
+    {
+     "bar": 10,
+     "beat": 0,
+     "note": "E4",
+     "dur": 8
+    },
+    {
+     "bar": 12,
+     "beat": 0,
+     "note": "F4",
+     "dur": 4
+    },
+    {
+     "bar": 13,
+     "beat": 0,
+     "note": "A4",
+     "dur": 4
+    },
+    {
+     "bar": 14,
+     "beat": 0,
+     "note": "E4",
+     "dur": 4
+    },
+    {
+     "bar": 15,
+     "beat": 0,
+     "note": "D4",
+     "dur": 4
+    }
+   ]
+  },
+  {
+   "tier": 3,
+   "name": "voix",
+   "instrument": "choir",
+   "gain": 0.6,
+   "events": [
+    {
+     "bar": 0,
+     "beat": 0,
+     "note": "D3",
+     "dur": 32
+    },
+    {
+     "bar": 0,
+     "beat": 0,
+     "note": "A3",
+     "dur": 32
+    },
+    {
+     "bar": 0,
+     "beat": 0,
+     "note": "F4",
+     "dur": 32
+    },
+    {
+     "bar": 0,
+     "beat": 0,
+     "note": "D5",
+     "dur": 32
+    },
+    {
+     "bar": 8,
+     "beat": 0,
+     "note": "C3",
+     "dur": 16
+    },
+    {
+     "bar": 8,
+     "beat": 0,
+     "note": "G3",
+     "dur": 16
+    },
+    {
+     "bar": 8,
+     "beat": 0,
+     "note": "E4",
+     "dur": 16
+    },
+    {
+     "bar": 8,
+     "beat": 0,
+     "note": "C5",
+     "dur": 16
+    },
+    {
+     "bar": 12,
+     "beat": 0,
+     "note": "D3",
+     "dur": 8
+    },
+    {
+     "bar": 12,
+     "beat": 0,
+     "note": "A3",
+     "dur": 8
+    },
+    {
+     "bar": 12,
+     "beat": 0,
+     "note": "F4",
+     "dur": 8
+    },
+    {
+     "bar": 12,
+     "beat": 0,
+     "note": "D5",
+     "dur": 8
+    },
+    {
+     "bar": 14,
+     "beat": 0,
+     "note": "A2",
+     "dur": 4
+    },
+    {
+     "bar": 14,
+     "beat": 0,
+     "note": "E3",
+     "dur": 4
+    },
+    {
+     "bar": 14,
+     "beat": 0,
+     "note": "C4",
+     "dur": 4
+    },
+    {
+     "bar": 14,
+     "beat": 0,
+     "note": "A4",
+     "dur": 4
+    },
+    {
+     "bar": 15,
+     "beat": 0,
+     "note": "D3",
+     "dur": 4
+    },
+    {
+     "bar": 15,
+     "beat": 0,
+     "note": "A3",
+     "dur": 4
+    },
+    {
+     "bar": 15,
+     "beat": 0,
+     "note": "F4",
+     "dur": 4
+    },
+    {
+     "bar": 15,
+     "beat": 0,
+     "note": "D5",
+     "dur": 4
+    }
+   ]
+  },
+  {
+   "tier": 3,
+   "name": "cloches",
+   "instrument": "tubular_bells",
+   "gain": 0.5,
+   "events": [
+    {
+     "bar": 0,
+     "beat": 0,
+     "note": "D4",
+     "dur": 4
+    },
+    {
+     "bar": 4,
+     "beat": 0,
+     "note": "A4",
+     "dur": 4
+    },
+    {
+     "bar": 8,
+     "beat": 0,
+     "note": "C5",
+     "dur": 4
+    },
+    {
+     "bar": 12,
+     "beat": 0,
+     "note": "D4",
+     "dur": 4
+    },
+    {
+     "bar": 14,
+     "beat": 0,
+     "note": "A4",
+     "dur": 2
+    },
+    {
+     "bar": 15,
+     "beat": 2,
+     "note": "D5",
+     "dur": 2
+    }
+   ]
+  },
+  {
+   "tier": 3,
+   "name": "clarines",
+   "instrument": "hand_chimes",
+   "gain": 0.4,
+   "events": [
+    {
+     "bar": 7,
+     "beat": 2.0,
+     "note": "D6",
+     "dur": 0.5
+    },
+    {
+     "bar": 7,
+     "beat": 2.5,
+     "note": "F6",
+     "dur": 0.5
+    },
+    {
+     "bar": 7,
+     "beat": 3.0,
+     "note": "A6",
+     "dur": 1.0
+    },
+    {
+     "bar": 15,
+     "beat": 1.0,
+     "note": "D6",
+     "dur": 0.5
+    },
+    {
+     "bar": 15,
+     "beat": 1.5,
+     "note": "A6",
+     "dur": 0.5
+    },
+    {
+     "bar": 15,
+     "beat": 2.0,
+     "note": "F#6",
+     "dur": 2.0
+    }
+   ]
+  }
+ ]
+}
