@@ -132,14 +132,21 @@ export function update(dt, realDt) {
       if (generation !== gen) break; // la pile a changé : les autres actions attendront le prochain tick
     }
   } else mouse.clicked = false;
+  // Seul l'écran du sommet voit la souris (clic, survol) ; les écrans du dessous continuent
+  // leur update (animations, jeu) sans réagir au pointeur.
+  let clicked = mouse.clicked;
+  const moved = mouse.moved;
   for (let i = 0; i < stack.length; i++) {
     const e = stack[i];
     const gen = generation;
+    const isTop = i === stack.length - 1;
+    mouse.clicked = isTop && clicked; mouse.moved = isTop && moved;
     e.age += realDt;
     if (e.screen.update) e.screen.update(dt, realDt);
-    if (generation !== gen) mouse.clicked = false; // la pile a changé : le clic ne sert qu'une fois
+    if (generation !== gen) clicked = false; // la pile a changé : le clic ne sert qu'une fois
     if (!stack.includes(e)) break; // l'écran s'est retiré pendant son update
   }
+  mouse.clicked = false; mouse.moved = moved;
 }
 
 /** Rendu : monde de l'écran de base, puis chaque écran sur le calque HUD, puis le fondu. */

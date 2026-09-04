@@ -21,7 +21,7 @@ const NUM_STR = []; // cache des chaînes d'entiers (aucune allocation par frame
 
 let loop = null, getOptions = null;
 let stopUntil = 0, slowUntil = 0, slowScale = 1, baseScale = 1, lastStopEnd = 0;
-const HITSTOP_COOLDOWN_MS = 140;   // un gel ne peut pas en suivre un autre de trop près (Tocsin sur 200 ennemis)
+const HITSTOP_COOLDOWN_MS = 250;   // un gel ne peut pas en suivre un autre de trop près (Tocsin sur 200 ennemis)
 const NUMBER_SHADOW_MAX = 48;      // au-delà, les nombres perdent leur ombre (coût de fillText)
 let fontNormal = '10px monospace', fontCrit = '13px monospace';
 
@@ -54,13 +54,10 @@ function opt(key, def) { const o = getOptions ? getOptions() : null; return o &&
 export function hitStop(ms) {
   if (!loop) return;
   const now = performance.now();
-  const until = now + ms;
-  if (until <= stopUntil) return;
-  if (stopUntil === 0) {
-    if (now < lastStopEnd + HITSTOP_COOLDOWN_MS) return; // gel trop rapproché du précédent : ignoré
-    baseScale = loop.getTimeScale();
-  }
-  stopUntil = until;
+  if (stopUntil > 0) return;                              // déjà gelé : jamais prolongé (sinon gel infini sous les coups en rafale)
+  if (now < lastStopEnd + HITSTOP_COOLDOWN_MS) return;    // gel trop rapproché du précédent : ignoré
+  baseScale = loop.getTimeScale();
+  stopUntil = now + ms;
   loop.setTimeScale(0);
 }
 
