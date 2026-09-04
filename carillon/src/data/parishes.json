@@ -1,0 +1,176 @@
+[
+ {
+  "id": "cendrelune",
+  "name": "parish.cendrelune.name",
+  "desc": "parish.cendrelune.desc",
+  "tileset": "cendrelune",
+  "track": "cendrelune",
+  "boss": "bourdon_fele",
+  "ambient": "#16130f",
+  "fog": [
+   "#2a241c",
+   "#8f8d93"
+  ],
+  "unlock": null,
+  "bronzeReward": 120,
+  "leaves": [
+   "f01",
+   "f02",
+   "f03",
+   "f04",
+   "f05"
+  ],
+  "props": [
+   "prop_cendrelune_dead_tree_a",
+   "prop_cendrelune_dead_tree_b",
+   "prop_cendrelune_stele",
+   "prop_cendrelune_slab"
+  ],
+  "lights": [
+   "prop_cendrelune_campfire"
+  ]
+ },
+ {
+  "id": "tourbes",
+  "name": "parish.tourbes.name",
+  "desc": "parish.tourbes.desc",
+  "tileset": "tourbes",
+  "track": "tourbes",
+  "boss": "bourdon_fele",
+  "ambient": "#14160f",
+  "fog": [
+   "#2a241c",
+   "#4a5540"
+  ],
+  "unlock": {
+   "type": "win",
+   "parish": "cendrelune"
+  },
+  "bronzeReward": 160,
+  "leaves": [
+   "f06",
+   "f07",
+   "f08",
+   "f09",
+   "f10"
+  ],
+  "props": [
+   "prop_tourbes_dead_tree_a",
+   "prop_tourbes_dead_tree_c",
+   "prop_tourbes_fern",
+   "prop_tourbes_conifer"
+  ],
+  "lights": [
+   "torch"
+  ]
+ },
+ {
+  "id": "val_des_cordes",
+  "name": "parish.val_des_cordes.name",
+  "desc": "parish.val_des_cordes.desc",
+  "tileset": "val_des_cordes",
+  "track": "val_des_cordes",
+  "boss": "veuve_suie",
+  "ambient": "#1a1410",
+  "fog": [
+   "#2a241c",
+   "#8f8d93"
+  ],
+  "unlock": {
+   "type": "win",
+   "parish": "tourbes"
+  },
+  "bronzeReward": 200,
+  "leaves": [
+   "f11",
+   "f12",
+   "f13",
+   "f14",
+   "f15"
+  ],
+  "props": [
+   "prop_val_des_cordes_furnace",
+   "prop_val_des_cordes_smelter",
+   "prop_val_des_cordes_bellows",
+   "prop_val_des_cordes_workbench",
+   "prop_val_des_cordes_forge",
+   "prop_val_des_cordes_table",
+   "prop_val_des_cordes_coal"
+  ],
+  "lights": [
+   "prop_val_des_cordes_cauldron",
+   "braise"
+  ]
+ },
+ {
+  "id": "nef_noyee",
+  "name": "parish.nef_noyee.name",
+  "desc": "parish.nef_noyee.desc",
+  "tileset": "nef_noyee",
+  "track": "nef_noyee",
+  "boss": "veuve_suie",
+  "ambient": "#101318",
+  "fog": [
+   "#2a241c",
+   "#8f8d93"
+  ],
+  "unlock": {
+   "type": "win",
+   "parish": "val_des_cordes"
+  },
+  "bronzeReward": 240,
+  "leaves": [
+   "f16",
+   "f17",
+   "f18",
+   "f19",
+   "f20"
+  ],
+  "props": [
+   "prop_nef_noyee_pillar",
+   "prop_nef_noyee_arch",
+   "prop_nef_noyee_bars",
+   "prop_nef_noyee_altar",
+   "prop_nef_noyee_statue"
+  ],
+  "lights": [
+   "prop_nef_noyee_pillar_light",
+   "prop_nef_noyee_window_lit"
+  ]
+ },
+ {
+  "id": "beffroi_mere",
+  "name": "parish.beffroi_mere.name",
+  "desc": "parish.beffroi_mere.desc",
+  "tileset": "beffroi",
+  "track": "beffroi_mere",
+  "boss": "maitre",
+  "ambient": "#16130f",
+  "fog": [
+   "#2a241c",
+   "#c9973f"
+  ],
+  "unlock": {
+   "type": "win",
+   "parish": "nef_noyee"
+  },
+  "bronzeReward": 300,
+  "leaves": [
+   "f21",
+   "f22",
+   "f23",
+   "f24"
+  ],
+  "props": [
+   "prop_beffroi_ladder",
+   "prop_beffroi_steps",
+   "prop_beffroi_stairs",
+   "prop_beffroi_bench"
+  ],
+  "lights": [
+   "prop_beffroi_lamp_post",
+   "prop_beffroi_lamp_post_b",
+   "prop_beffroi_window_lit"
+  ]
+ }
+]

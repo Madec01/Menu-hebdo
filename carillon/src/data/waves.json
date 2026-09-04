@@ -1,0 +1,498 @@
+{
+ "balance": {
+  "xp": {
+   "base": 25,
+   "perLevel": 12,
+   "growth": 1.02,
+   "startLevel": 1
+  },
+  "enemyHp": {
+   "perTier": 1.35,
+   "damagePerTier": 1.12,
+   "speedPerTier": 1.03
+  },
+  "spawn": {
+   "densityPerTier": 0.25,
+   "globalCap": 400,
+   "minDist": 290,
+   "maxDist": 360,
+   "afterBossRate": 0.3
+  },
+  "player": {
+   "dashSpeed": 380,
+   "dashSec": 0.18,
+   "iframesSec": 0.25,
+   "parrySec": 0.2,
+   "parryRadius": 40,
+   "hitInvulnSec": 0.5,
+   "contactCooldownSec": 0.6,
+   "auraSlow": 0.3,
+   "reviveHp": 0.5,
+   "lightRadius": 90
+  },
+  "resonance": {
+   "stepsPerTier": 4,
+   "gainParfait": 2,
+   "gainBon": 1,
+   "lossRate": 1.5,
+   "decayAfterBeats": 4,
+   "decayPerBeat": 1,
+   "mults": [
+    1,
+    1.4,
+    1.8,
+    2.5
+   ],
+   "windowMs": 110,
+   "assistedWindowMult": 3,
+   "norhythmTier": 2
+  },
+  "combat": {
+   "critMult": 2,
+   "bigHitThreshold": 40,
+   "hitStopMs": 40,
+   "flashSec": 0.07,
+   "knockFriction": 8,
+   "markMult": 1.5,
+   "separationForce": 60
+  },
+  "pickups": {
+   "magnetRadius": 60,
+   "magnetSpeed": 260,
+   "collectRadius": 12,
+   "mediumAt": 5,
+   "largeAt": 15,
+   "healPct": 0.3,
+   "healChance": 0.015,
+   "chimeChance": 0.003,
+   "bronzeChance": 0.01,
+   "bronzeValue": 5,
+   "relicHealPct": 0.25,
+   "maxActive": 300,
+   "lifeSec": 60
+  },
+  "bronze": {
+   "win": 1.0,
+   "perMinute": 5,
+   "perKill": 0.05,
+   "perResonance": 40,
+   "lossMult": 0.5
+  },
+  "cards": {
+   "weaponWeight": 60,
+   "passiveWeight": 40,
+   "fusionWeight": 300,
+   "maxWeapons": 6,
+   "maxPassives": 6,
+   "bonusHeal": 0.3,
+   "bonusBronze": 20
+  },
+  "cadence": {
+   "countEvery": 2,
+   "halveRhythmAt": 5,
+   "bounceAreaBonus": 0.1
+  },
+  "boss": {
+   "zoom": 0.85,
+   "zoomSec": 1.5,
+   "introSec": 2.5,
+   "slowMoDeath": 0.4,
+   "slowMoSec": 1.5
+  }
+ },
+ "cendrelune": {
+  "duration": 720,
+  "tierEvery": 120,
+  "spawns": [
+   {
+    "from": 0,
+    "to": 720,
+    "kind": "feutre",
+    "perSec": 0.8,
+    "cap": 60
+   },
+   {
+    "from": 60,
+    "to": 720,
+    "kind": "choeur_muet",
+    "perSec": 0.6,
+    "cap": 40
+   },
+   {
+    "from": 120,
+    "to": 720,
+    "kind": "baillon",
+    "perSec": 0.25,
+    "cap": 12
+   },
+   {
+    "from": 180,
+    "to": 720,
+    "kind": "fossoyeur",
+    "perSec": 0.15,
+    "cap": 8
+   },
+   {
+    "from": 240,
+    "to": 720,
+    "kind": "ouateux",
+    "perSec": 0.08,
+    "cap": 5
+   },
+   {
+    "from": 300,
+    "to": 720,
+    "kind": "rampe_suie",
+    "perSec": 0.1,
+    "cap": 8
+   },
+   {
+    "from": 420,
+    "to": 720,
+    "kind": "veuve_grise",
+    "perSec": 0.08,
+    "cap": 6
+   },
+   {
+    "from": 540,
+    "to": 720,
+    "kind": "cierge",
+    "perSec": 0.03,
+    "cap": 2
+   }
+  ],
+  "events": [
+   {
+    "at": 240,
+    "type": "fissure",
+    "boss": "veuve_grise_elite"
+   },
+   {
+    "at": 480,
+    "type": "fissure",
+    "boss": "cierge_elite"
+   },
+   {
+    "at": 720,
+    "type": "boss",
+    "boss": "bourdon_fele"
+   }
+  ]
+ },
+ "tourbes": {
+  "duration": 720,
+  "tierEvery": 120,
+  "spawns": [
+   {
+    "from": 0,
+    "to": 720,
+    "kind": "feutre",
+    "perSec": 0.9,
+    "cap": 60
+   },
+   {
+    "from": 30,
+    "to": 720,
+    "kind": "rampe_suie",
+    "perSec": 0.15,
+    "cap": 10
+   },
+   {
+    "from": 90,
+    "to": 720,
+    "kind": "choeur_muet",
+    "perSec": 0.7,
+    "cap": 50
+   },
+   {
+    "from": 150,
+    "to": 720,
+    "kind": "ouateux",
+    "perSec": 0.1,
+    "cap": 6
+   },
+   {
+    "from": 200,
+    "to": 720,
+    "kind": "baillon",
+    "perSec": 0.3,
+    "cap": 14
+   },
+   {
+    "from": 300,
+    "to": 720,
+    "kind": "fossoyeur",
+    "perSec": 0.18,
+    "cap": 10
+   },
+   {
+    "from": 400,
+    "to": 720,
+    "kind": "veuve_grise",
+    "perSec": 0.1,
+    "cap": 6
+   },
+   {
+    "from": 500,
+    "to": 720,
+    "kind": "cierge",
+    "perSec": 0.04,
+    "cap": 3
+   }
+  ],
+  "events": [
+   {
+    "at": 240,
+    "type": "fissure",
+    "boss": "rampe_suie_elite"
+   },
+   {
+    "at": 480,
+    "type": "fissure",
+    "boss": "baillon_elite"
+   },
+   {
+    "at": 720,
+    "type": "boss",
+    "boss": "bourdon_fele"
+   }
+  ]
+ },
+ "val_des_cordes": {
+  "duration": 720,
+  "tierEvery": 120,
+  "spawns": [
+   {
+    "from": 0,
+    "to": 720,
+    "kind": "feutre",
+    "perSec": 1.0,
+    "cap": 70
+   },
+   {
+    "from": 40,
+    "to": 720,
+    "kind": "baillon",
+    "perSec": 0.3,
+    "cap": 16
+   },
+   {
+    "from": 100,
+    "to": 720,
+    "kind": "choeur_muet",
+    "perSec": 0.8,
+    "cap": 50
+   },
+   {
+    "from": 160,
+    "to": 720,
+    "kind": "fossoyeur",
+    "perSec": 0.2,
+    "cap": 12
+   },
+   {
+    "from": 240,
+    "to": 720,
+    "kind": "veuve_grise",
+    "perSec": 0.12,
+    "cap": 8
+   },
+   {
+    "from": 300,
+    "to": 720,
+    "kind": "ouateux",
+    "perSec": 0.12,
+    "cap": 6
+   },
+   {
+    "from": 360,
+    "to": 720,
+    "kind": "rampe_suie",
+    "perSec": 0.12,
+    "cap": 8
+   },
+   {
+    "from": 480,
+    "to": 720,
+    "kind": "cierge",
+    "perSec": 0.05,
+    "cap": 3
+   }
+  ],
+  "events": [
+   {
+    "at": 240,
+    "type": "fissure",
+    "boss": "fossoyeur_elite"
+   },
+   {
+    "at": 480,
+    "type": "fissure",
+    "boss": "veuve_grise_elite"
+   },
+   {
+    "at": 720,
+    "type": "boss",
+    "boss": "veuve_suie"
+   }
+  ]
+ },
+ "nef_noyee": {
+  "duration": 720,
+  "tierEvery": 120,
+  "spawns": [
+   {
+    "from": 0,
+    "to": 720,
+    "kind": "feutre",
+    "perSec": 1.1,
+    "cap": 80
+   },
+   {
+    "from": 30,
+    "to": 720,
+    "kind": "choeur_muet",
+    "perSec": 1.0,
+    "cap": 60
+   },
+   {
+    "from": 90,
+    "to": 720,
+    "kind": "fossoyeur",
+    "perSec": 0.22,
+    "cap": 12
+   },
+   {
+    "from": 150,
+    "to": 720,
+    "kind": "ouateux",
+    "perSec": 0.14,
+    "cap": 8
+   },
+   {
+    "from": 200,
+    "to": 720,
+    "kind": "veuve_grise",
+    "perSec": 0.14,
+    "cap": 8
+   },
+   {
+    "from": 300,
+    "to": 720,
+    "kind": "baillon",
+    "perSec": 0.35,
+    "cap": 16
+   },
+   {
+    "from": 360,
+    "to": 720,
+    "kind": "rampe_suie",
+    "perSec": 0.14,
+    "cap": 10
+   },
+   {
+    "from": 420,
+    "to": 720,
+    "kind": "cierge",
+    "perSec": 0.06,
+    "cap": 4
+   }
+  ],
+  "events": [
+   {
+    "at": 240,
+    "type": "fissure",
+    "boss": "cierge_elite"
+   },
+   {
+    "at": 480,
+    "type": "fissure",
+    "boss": "fossoyeur_elite"
+   },
+   {
+    "at": 720,
+    "type": "boss",
+    "boss": "veuve_suie"
+   }
+  ]
+ },
+ "beffroi_mere": {
+  "duration": 720,
+  "tierEvery": 120,
+  "spawns": [
+   {
+    "from": 0,
+    "to": 720,
+    "kind": "feutre",
+    "perSec": 1.2,
+    "cap": 90
+   },
+   {
+    "from": 20,
+    "to": 720,
+    "kind": "choeur_muet",
+    "perSec": 1.0,
+    "cap": 60
+   },
+   {
+    "from": 60,
+    "to": 720,
+    "kind": "baillon",
+    "perSec": 0.4,
+    "cap": 18
+   },
+   {
+    "from": 100,
+    "to": 720,
+    "kind": "fossoyeur",
+    "perSec": 0.25,
+    "cap": 14
+   },
+   {
+    "from": 150,
+    "to": 720,
+    "kind": "ouateux",
+    "perSec": 0.16,
+    "cap": 8
+   },
+   {
+    "from": 200,
+    "to": 720,
+    "kind": "rampe_suie",
+    "perSec": 0.16,
+    "cap": 10
+   },
+   {
+    "from": 250,
+    "to": 720,
+    "kind": "veuve_grise",
+    "perSec": 0.16,
+    "cap": 10
+   },
+   {
+    "from": 300,
+    "to": 720,
+    "kind": "cierge",
+    "perSec": 0.08,
+    "cap": 5
+   }
+  ],
+  "events": [
+   {
+    "at": 240,
+    "type": "fissure",
+    "boss": "baillon_elite"
+   },
+   {
+    "at": 480,
+    "type": "fissure",
+    "boss": "rampe_suie_elite"
+   },
+   {
+    "at": 720,
+    "type": "boss",
+    "boss": "maitre"
+   }
+  ]
+ }
+}

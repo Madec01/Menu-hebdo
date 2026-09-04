@@ -1,0 +1,163 @@
+[
+ {
+  "id": "premiere_aube",
+  "name": "achievement.premiere_aube.name",
+  "desc": "achievement.premiere_aube.desc",
+  "condition": {
+   "type": "run_win",
+   "count": 1
+  }
+ },
+ {
+  "id": "sonneur_confirme",
+  "name": "achievement.sonneur_confirme.name",
+  "desc": "achievement.sonneur_confirme.desc",
+  "condition": {
+   "type": "runs",
+   "count": 10
+  }
+ },
+ {
+  "id": "cent_echos",
+  "name": "achievement.cent_echos.name",
+  "desc": "achievement.cent_echos.desc",
+  "condition": {
+   "type": "echoes_run",
+   "count": 100
+  }
+ },
+ {
+  "id": "mille_silences",
+  "name": "achievement.mille_silences.name",
+  "desc": "achievement.mille_silences.desc",
+  "condition": {
+   "type": "kills_total",
+   "count": 1000
+  }
+ },
+ {
+  "id": "plein_timbre",
+  "name": "achievement.plein_timbre.name",
+  "desc": "achievement.plein_timbre.desc",
+  "condition": {
+   "type": "weapons_run",
+   "count": 6
+  }
+ },
+ {
+  "id": "plein_accord",
+  "name": "achievement.plein_accord.name",
+  "desc": "achievement.plein_accord.desc",
+  "condition": {
+   "type": "passives_run",
+   "count": 6
+  }
+ },
+ {
+  "id": "premiere_fusion",
+  "name": "achievement.premiere_fusion.name",
+  "desc": "achievement.premiere_fusion.desc",
+  "condition": {
+   "type": "fusions_run",
+   "count": 1
+  }
+ },
+ {
+  "id": "quatre_fusions",
+  "name": "achievement.quatre_fusions.name",
+  "desc": "achievement.quatre_fusions.desc",
+  "condition": {
+   "type": "fusions_unlocked",
+   "count": 4
+  }
+ },
+ {
+  "id": "resonance_parfaite",
+  "name": "achievement.resonance_parfaite.name",
+  "desc": "achievement.resonance_parfaite.desc",
+  "condition": {
+   "type": "perfects_run",
+   "count": 50
+  }
+ },
+ {
+  "id": "sans_faute",
+  "name": "achievement.sans_faute.name",
+  "desc": "achievement.sans_faute.desc",
+  "condition": {
+   "type": "run_win_no_miss"
+  }
+ },
+ {
+  "id": "fele_vaincu",
+  "name": "achievement.fele_vaincu.name",
+  "desc": "achievement.fele_vaincu.desc",
+  "condition": {
+   "type": "boss_kill",
+   "boss": "bourdon_fele"
+  }
+ },
+ {
+  "id": "veuve_vaincue",
+  "name": "achievement.veuve_vaincue.name",
+  "desc": "achievement.veuve_vaincue.desc",
+  "condition": {
+   "type": "boss_kill",
+   "boss": "veuve_suie"
+  }
+ },
+ {
+  "id": "maitre_vaincu",
+  "name": "achievement.maitre_vaincu.name",
+  "desc": "achievement.maitre_vaincu.desc",
+  "condition": {
+   "type": "boss_kill",
+   "boss": "maitre"
+  }
+ },
+ {
+  "id": "toutes_paroisses",
+  "name": "achievement.toutes_paroisses.name",
+  "desc": "achievement.toutes_paroisses.desc",
+  "condition": {
+   "type": "parishes_won",
+   "count": 5
+  }
+ },
+ {
+  "id": "tous_sonneurs",
+  "name": "achievement.tous_sonneurs.name",
+  "desc": "achievement.tous_sonneurs.desc",
+  "condition": {
+   "type": "characters_won",
+   "count": 4
+  }
+ },
+ {
+  "id": "feuillets_complets",
+  "name": "achievement.feuillets_complets.name",
+  "desc": "achievement.feuillets_complets.desc",
+  "condition": {
+   "type": "leaves",
+   "count": 24
+  }
+ },
+ {
+  "id": "sans_rythme_victoire",
+  "name": "achievement.sans_rythme_victoire.name",
+  "desc": "achievement.sans_rythme_victoire.desc",
+  "condition": {
+   "type": "run_win_assist",
+   "assist": "norhythm"
+  }
+ },
+ {
+  "id": "muet_victoire",
+  "name": "achievement.muet_victoire.name",
+  "desc": "achievement.muet_victoire.desc",
+  "condition": {
+   "type": "run_win_character",
+   "character": "le_muet"
+  }
+ }
+]

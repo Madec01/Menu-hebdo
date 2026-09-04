@@ -1,0 +1,194 @@
+[
+ {
+  "id": "coeur_de_bronze",
+  "name": "upgrade.coeur_de_bronze.name",
+  "desc": "upgrade.coeur_de_bronze.desc",
+  "cost": [
+   50,
+   120,
+   250
+  ],
+  "stat": "maxHp",
+  "perLevel": 10,
+  "requires": []
+ },
+ {
+  "id": "semelles_de_cuir",
+  "name": "upgrade.semelles_de_cuir.name",
+  "desc": "upgrade.semelles_de_cuir.desc",
+  "cost": [
+   60,
+   140,
+   280
+  ],
+  "stat": "speed",
+  "perLevel": 5,
+  "requires": []
+ },
+ {
+  "id": "ferrure_du_beffroi",
+  "name": "upgrade.ferrure_du_beffroi.name",
+  "desc": "upgrade.ferrure_du_beffroi.desc",
+  "cost": [
+   80,
+   180,
+   350
+  ],
+  "stat": "armor",
+  "perLevel": 1,
+  "requires": [
+   "coeur_de_bronze"
+  ]
+ },
+ {
+  "id": "oreille_fine",
+  "name": "upgrade.oreille_fine.name",
+  "desc": "upgrade.oreille_fine.desc",
+  "cost": [
+   70,
+   160,
+   300
+  ],
+  "stat": "windowMult",
+  "perLevel": 0.1,
+  "requires": []
+ },
+ {
+  "id": "battant_lourd",
+  "name": "upgrade.battant_lourd.name",
+  "desc": "upgrade.battant_lourd.desc",
+  "cost": [
+   90,
+   200,
+   400
+  ],
+  "stat": "damageMult",
+  "perLevel": 0.05,
+  "requires": []
+ },
+ {
+  "id": "aimant_d_echos",
+  "name": "upgrade.aimant_d_echos.name",
+  "desc": "upgrade.aimant_d_echos.desc",
+  "cost": [
+   50,
+   110,
+   220
+  ],
+  "stat": "magnet",
+  "perLevel": 0.25,
+  "requires": []
+ },
+ {
+  "id": "reliquaire",
+  "name": "upgrade.reliquaire.name",
+  "desc": "upgrade.reliquaire.desc",
+  "cost": [
+   80,
+   170,
+   320
+  ],
+  "stat": "xpGain",
+  "perLevel": 0.08,
+  "requires": [
+   "aimant_d_echos"
+  ]
+ },
+ {
+  "id": "cire_de_veillee",
+  "name": "upgrade.cire_de_veillee.name",
+  "desc": "upgrade.cire_de_veillee.desc",
+  "cost": [
+   70,
+   150,
+   300
+  ],
+  "stat": "regen",
+  "perLevel": 0.3,
+  "requires": [
+   "coeur_de_bronze"
+  ]
+ },
+ {
+  "id": "main_sure",
+  "name": "upgrade.main_sure.name",
+  "desc": "upgrade.main_sure.desc",
+  "cost": [
+   90,
+   190,
+   380
+  ],
+  "stat": "crit",
+  "perLevel": 0.03,
+  "requires": [
+   "battant_lourd"
+  ]
+ },
+ {
+  "id": "bourse_de_cuivre",
+  "name": "upgrade.bourse_de_cuivre.name",
+  "desc": "upgrade.bourse_de_cuivre.desc",
+  "cost": [
+   100,
+   220,
+   450
+  ],
+  "stat": "bronzeGain",
+  "perLevel": 0.1,
+  "requires": []
+ },
+ {
+  "id": "second_souffle",
+  "name": "upgrade.second_souffle.name",
+  "desc": "upgrade.second_souffle.desc",
+  "cost": [
+   400
+  ],
+  "stat": "revive",
+  "perLevel": 1,
+  "requires": [
+   "ferrure_du_beffroi"
+  ]
+ },
+ {
+  "id": "contrepoids_de_fonte",
+  "name": "upgrade.contrepoids_de_fonte.name",
+  "desc": "upgrade.contrepoids_de_fonte.desc",
+  "cost": [
+   90,
+   200,
+   400
+  ],
+  "stat": "area",
+  "perLevel": 0.08,
+  "requires": []
+ },
+ {
+  "id": "corde_neuve",
+  "name": "upgrade.corde_neuve.name",
+  "desc": "upgrade.corde_neuve.desc",
+  "cost": [
+   300,
+   600
+  ],
+  "stat": "cadence",
+  "perLevel": 1,
+  "requires": [
+   "contrepoids_de_fonte"
+  ]
+ },
+ {
+  "id": "troisieme_carte",
+  "name": "upgrade.troisieme_carte.name",
+  "desc": "upgrade.troisieme_carte.desc",
+  "cost": [
+   150,
+   350
+  ],
+  "stat": "rerolls",
+  "perLevel": 1,
+  "requires": [
+   "reliquaire"
+  ]
+ }
+]

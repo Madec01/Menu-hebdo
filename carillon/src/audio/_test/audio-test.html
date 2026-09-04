@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>CARILLON — test src/audio</title>
+<link rel="icon" href="data:,">
+<!-- Page de test des modules src/audio/ (agent B). Pilotée par Playwright (run-playwright.mjs)
+     ou à la main : ./serve.sh puis http://localhost:8080/src/audio/_test/audio-test.html -->
+<style>
+  body { background: #16130f; color: #d8cdb4; font: 14px/1.5 Georgia, serif; margin: 0; padding: 24px; }
+  h1 { font-weight: 400; letter-spacing: .1em; color: #c9973f; }
+  button { background: #2a241c; color: #d8cdb4; border: 1px solid #c9973f66; padding: 6px 12px; margin: 3px; cursor: pointer; font: inherit; }
+  #log { font: 12px/1.5 monospace; white-space: pre-wrap; color: #8f8d93; border-top: 1px solid #c9973f44; margin-top: 16px; padding-top: 8px; }
+  .ok { color: #9bb37a; } .ko { color: #e0603a; }
+  #halo { display: inline-block; width: 40px; height: 40px; border-radius: 50%; border: 1px solid #c9973f; vertical-align: middle; margin-left: 12px; }
+</style>
+</head>
+<body>
+<h1>Test src/audio <span id="halo"></span></h1>
+<div>
+  <button id="unlock">Cliquez pour sonner</button>
+  <button data-track="cendrelune">▶ cendrelune</button>
+  <button data-track="boss">▶ boss</button>
+  <button data-track="menu">▶ menu</button>
+  <button id="stop">■ stop</button>
+  <button data-layers="1">cran 0</button><button data-layers="2">cran 1</button><button data-layers="3">cran 2</button><button data-layers="4">cran 3</button>
+  <button data-sfx="parry_ok">parry_ok</button><button data-sfx="hit_heavy">hit_heavy</button><button data-sfx="resonance_4">resonance_4</button>
+  <button id="judge">juger une frappe (maintenant)</button>
+</div>
+<div id="log"></div>
+<script type="module" src="audio-test.js"></script>
+</body>
+</html>
