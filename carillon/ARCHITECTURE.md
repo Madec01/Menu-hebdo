@@ -466,6 +466,18 @@ export function panel(ctx, x, y, w, h, style='parchment') ; button(...) ; gauge(
 
 `RunStats` : `{ parishId, characterId, seed, timeSec, kills, victory, dpsByWeapon, resonanceAvg, bronze, leafUnlocked, level, build: { weapons: [{id, level}], passives: [{id, level}] } }`.
 
+## 11 bis. Mécaniques ajoutées après le premier playtest
+
+### Reliques de paroisse (`src/game/relics.js`, `src/data/relics.json`, `src/ui/relic-pick.js`)
+- Au début de chaque nuit (après le tutoriel, avant la première vague), deux Reliques tirées au rng du run sont proposées ; le joueur en prend une (ou aucune). Une Relique modifie une règle de la run entière, avec un coût ou un revers. Exemples de `relics.json` (≥ 10) :
+  `{ "id": "chapelet_de_cire", "name": "relic.chapelet_de_cire.name", "desc": "…", "icon": "…", "effects": { "magnetAll": true }, "drawbacks": { "xpGain": -0.15 } }`,
+  `clef_du_beffroi` (Fêlures 1 min plus tôt, Bronze ×2), `langue_de_cloche` (Contre-battement renvoie deux fois, fenêtre −20 %), `suif_de_veillee` (régén ×2, vitesse −10 %), `bronze_fele` (dégâts +25 %, PV max −20 %), `oreille_du_maitre` (fenêtre ×1.5, Résonance décroît ×2), `bourse_percee` (Échos ×1.5, aucun soin), `corde_usee` (cadence +1 cran, recul −50 %), `cierge_noir` (ennemis −15 % PV, élites +50 %), `voile_de_brume` (halo ×1.6, ennemis invisibles hors halo).
+- API : `pickRelic(run, relicId)`, `relicMods(run)` → objet de modificateurs lu par player/progression/spawner/pickups/resonance ; événement `relic:pick {relicId}`. Codex : onglet Reliques (découvertes). Bilan : Relique de la nuit.
+
+### Cloche horaire (`src/game/bell-hour.js`, HUD)
+- À chaque `run:minute`, la cloche de la paroisse sonne 4 coups sur les 4 temps de la mesure suivante (sfx `bell_minute` déjà joué ; ajouter un coup par temps, dernier plus fort). Si le joueur exécute un Contre-battement dans la fenêtre du **4ᵉ coup**, il « répond à la cloche » : événement `bell:answered {minute, grade}` → bonus tiré par minute : soin 15 %, +1 cran de Résonance, carte gratuite (niveau bonus) à la 4ᵉ et 8ᵉ minute, Bronze ×1 à la 12ᵉ. Manqué : rien (pas de malus).
+- HUD : bannière « La cloche sonne » avec 4 points qui s'allument sur les coups, le 4ᵉ en bronze ; retour « Répondu ! » ; le halo pulse plus fort pendant la sonnerie. Haut-fait `repondre_a_la_cloche` (10 réponses). Feuillet possible sur `bell_answers`.
+
 ## 12. Périmètres exclusifs des agents
 
 | Agent | Écrit uniquement dans |
