@@ -90,11 +90,32 @@ export function recomputeStats(p) {
   setWindowMs(balance().resonance.windowMs * s.windowMult * assistWindowMult());
 }
 
-function judgeAction(action) {
+// Une menace (ennemi vivant ou projectile de Silence) est-elle à moins de balance.resonance.threatRadius ?
+let threatFound = false, tpx = 0, tpy = 0, tr2 = 0;
+function threatHit(e) { if (threatFound || e.state !== 'alive') return; const dx = e.x - tpx, dy = e.y - tpy; if (dx * dx + dy * dy <= tr2) threatFound = true; }
+function threatNear(p, world) {
+  if (!world) return true;
+  const r = balance().resonance.threatRadius || 0;
+  if (r <= 0) return true;
+  threatFound = false; tpx = p.x; tpy = p.y; tr2 = r * r;
+  world.grid.query(p.x, p.y, r, threatHit);
+  if (threatFound) return true;
+  const items = world.projectiles.items;
+  for (let i = 0; i < items.length; i++) {
+    const o = items[i];
+    if (o.owner !== 'enemy' || o.dead) continue;
+    const dx = o.x - p.x, dy = o.y - p.y;
+    if (dx * dx + dy * dy <= tr2) return true;
+  }
+  return false;
+}
+
+/** Juge une action rythmique ; la Résonance ne se charge que si une menace est proche. */
+function judgeAction(action, p, world) {
   const j = judge(pressedAt(action));
   rhythmPayload.action = action; rhythmPayload.grade = j.grade; rhythmPayload.offsetMs = j.offsetMs;
   bus.emit('rhythm:input', rhythmPayload);
-  onRhythmInput(j.grade);
+  onRhythmInput(j.grade, threatNear(p, world));
   return j.grade;
 }
 
@@ -109,7 +130,7 @@ export function updatePlayer(p, dt, world) {
 
   // Volée (dash) : jugée sur la grille, i-frames, traînée.
   if (p.dashT <= 0 && justPressed('dash')) {
-    judgeAction('dash');
+    judgeAction('dash', p, world);
     p.dashT = B.dashSec; p.iframesT = B.iframesSec;
     const len = Math.hypot(p.facing.x, p.facing.y) || 1;
     p.dashDirX = p.facing.x / len; p.dashDirY = p.facing.y / len;
@@ -119,7 +140,7 @@ export function updatePlayer(p, dt, world) {
   }
   // Contre-battement (parade) : fenêtre courte, résolue dans collision.js.
   if (p.parryT <= 0 && justPressed('parry')) {
-    judgeAction('parry');
+    judgeAction('parry', p, world);
     p.parryT = B.parrySec; p.parryHits = 0;
     emitParticles('parry', p.x, p.y);
   }

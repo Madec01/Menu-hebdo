@@ -46,6 +46,7 @@ export function markEnemy(world, e, sec, bonus, weaponId, executeBelow) {
 /** Inflige `amount` à un ennemi. Renvoie les dégâts réellement appliqués. */
 export function damageEnemy(world, enemy, amount, opts = HIT) {
   if (enemy.state !== 'alive') return 0;
+  if (enemy.boss && enemy.aiState === -1) return 0; // intro du boss : invulnérable jusqu'à `run:boss start`
   const C = balance().combat;
   if (enemy.def.onBeatOnly && !opts.onBeat) {
     // Chœur Muet : un coup hors du temps ne fait que l'écarter.

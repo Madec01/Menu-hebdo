@@ -24,6 +24,8 @@ let stopUntil = 0, slowUntil = 0, slowScale = 1, baseScale = 1, lastStopEnd = 0;
 const HITSTOP_COOLDOWN_MS = 250;   // un gel ne peut pas en suivre un autre de trop près (Tocsin sur 200 ennemis)
 const NUMBER_SHADOW_MAX = 48;      // au-delà, les nombres perdent leur ombre (coût de fillText)
 let fontNormal = '10px monospace', fontCrit = '13px monospace';
+let jitterSeed = 0x9e3779b9; // LCG pour le décalage horizontal des nombres (jamais Math.random)
+function jitter() { jitterSeed = (Math.imul(jitterSeed, 1664525) + 1013904223) >>> 0; return jitterSeed / 4294967296 - 0.5; }
 
 // Nombres flottants (SoA).
 const nx = new Float32Array(MAX_NUMBERS), ny = new Float32Array(MAX_NUMBERS), nvy = new Float32Array(MAX_NUMBERS);
@@ -78,7 +80,7 @@ export function flash(color = '#ffffff', frames = 1) {
 export function damageNumber(x, y, value, { crit = false, onBeat = false } = {}) {
   if (numCount >= MAX_NUMBERS) return;
   const i = numCount++;
-  nx[i] = x + (Math.random() - 0.5) * 8; ny[i] = y; nvy[i] = -38;
+  nx[i] = x + jitter() * 8; ny[i] = y; nvy[i] = -38;
   nlife[i] = crit ? 0.9 : 0.6; nkind[i] = crit ? 1 : onBeat ? 2 : 0;
   ntext[i] = numStr(value);
 }

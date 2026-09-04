@@ -28,7 +28,7 @@ function factory() {
     anim: 'walk', animT: 0, animBase: 'walk', dirX: 0, dirY: 1, moving: false,
     flashT: 0, kx: 0, ky: 0, slow: 1, slowT: 0, contactT: 0, markedT: 0, markBonus: 0, markBy: '', executeBelow: 0,
     aiT: 0, aiState: 0, aiX: 0, aiY: 0, aiBeat: 0, lastBar: -1, boss: false, elite: false, scale: 1,
-    phase: 0, hitById: 0, spawnT: 0, silenceWave: 0, tint: null, _gridStamp: 0, killedBy: '', vulnMult: 1,
+    phase: 0, hitById: 0, spawnT: 0, silenceWave: 0, tint: null, _gridStamp: 0, _gridStamp1: 0, _gridStamp2: 0, _gridStamp3: 0, killedBy: '', vulnMult: 1,
   };
 }
 
@@ -52,9 +52,9 @@ export function spawnEnemy(world, kind, x, y) {
   if (world.enemies.active >= balance().spawn.globalCap && !def.boss && !def.elite) return null;
   const e = world.enemies.acquire();
   const S = balance().enemyHp;
-  const t = Math.max(0, world.tier - 1);
+  const t = def.boss ? 0 : Math.max(0, world.tier - 1); // boss : ni PV ni dégâts au palier ; élites : les deux
   e.kind = kind; e.def = def; e.x = x; e.y = y; e.px = x; e.py = y; e.r = def.radius; e.mass = def.mass;
-  e.maxHp = Math.round(def.hp * (def.boss ? 1 : Math.pow(S.perTier, t)));
+  e.maxHp = Math.round(def.hp * Math.pow(S.perTier, t));
   e.hp = e.maxHp;
   e.speed = def.speed * Math.pow(S.speedPerTier, t);
   e.damage = Math.round(def.damage * Math.pow(S.damagePerTier, t));

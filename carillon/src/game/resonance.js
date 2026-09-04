@@ -67,12 +67,16 @@ function setRaw(next, direction) {
   emitChange(t > old ? 1 : t < old ? -1 : direction);
 }
 
-/** Applique un jugement rythmique ('parfait' | 'bon' | 'rate'). */
-export function onRhythmInput(grade) {
+/**
+ * Applique un jugement rythmique ('parfait' | 'bon' | 'rate'). charge = false : action sans menace
+ * proche (player.js) — la frappe compte pour le tempo (pas de décroissance) mais ne charge ni ne vide
+ * la jauge : impossible de saturer la Résonance en parant dans le vide.
+ */
+export function onRhythmInput(grade, charge = true) {
   const c = cfg();
   st.sinceInput = 0;
   if (grade === 'parfait') st.perfectStreak++; else st.perfectStreak = 0;
-  if (st.assist === 'norhythm') return;
+  if (st.assist === 'norhythm' || !charge) return;
   if (grade === 'rate') { setRaw(st.raw - c.lossRate, -1); return; }
   if (st.blockT > 0) return; // jauge étouffée par un Ouateux : pas de gain
   const g = (grade === 'parfait' ? c.gainParfait : c.gainBon) * st.gain;

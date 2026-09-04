@@ -1,12 +1,14 @@
 // game/cards.js — tirage des 3 cartes de montée de niveau (sous-module de progression.js).
-// Pondération (ARCHITECTURE.md § 11) : 60 % Timbres non maxés, 40 % Accords, fusions disponibles
-// très prioritaires ; jamais deux fois la même carte ; max 6 Timbres + 6 Accords ; à défaut, cartes
-// bonus (soin, bronze). Tout aléa passe par run.cardRng (déterministe).
+// Pondération (ARCHITECTURE.md § 11) : 60 % Timbres non maxés, 40 % Accords ; un objet déjà possédé
+// pèse × ownedWeight, × fusionPartnerWeight si son partenaire de fusion est déjà au maximum ; une
+// fusion disponible (Timbre 7 + Accord 5) est TOUJOURS proposée en première carte ; jamais deux fois
+// la même carte ; max 6 Timbres + 6 Accords ; à défaut, cartes bonus (soin, bronze). Tout aléa passe
+// par run.cardRng (déterministe).
 // Carte : { type: 'weapon'|'passive'|'fusion'|'bonus', id, level, name, desc, icon, isNew, params }.
 
-import { allWeapons, allPassives, balance } from './data.js';
+import { allWeapons, allPassives, allFusions, balance } from './data.js';
 import { findWeapon } from './weapons.js';
-import { findPassive } from './passives.js';
+import { findPassive, isPassiveMaxed } from './passives.js';
 import { availableFusions } from './fusions.js';
 
 const pool = [];   // candidats (réutilisé)
@@ -35,22 +37,32 @@ function bonusCard(id, value) {
   return { type: 'bonus', id, level: 0, name: 'ui.card.bonus_' + id, desc: 'ui.card.bonus_' + id + '_desc', icon: id === 'heal' ? 'ui_coeur' : 'ui_bronze', isNew: false, params: { value } };
 }
 
+// Le partenaire de fusion de cet objet est-il déjà au niveau maximal ?
+function partnerMaxed(p, id, isWeapon) {
+  for (const f of allFusions().values()) {
+    if (isWeapon && f.weapon === id) return isPassiveMaxed(p, f.passive);
+    if (!isWeapon && f.passive === id) { const w = findWeapon(p, f.weapon); return !!w && w.level >= (w.def.maxLevel || 1); }
+  }
+  return false;
+}
+
 /** Construit la liste des candidats pondérés pour ce joueur. */
 function buildCandidates(p) {
   const C = balance().cards;
+  const owned = C.ownedWeight || 1, partner = C.fusionPartnerWeight || owned;
   pool.length = 0; weights.length = 0;
   const fus = availableFusions(p);
   for (let i = 0; i < fus.length; i++) { pool.push(fusionCard(fus[i])); weights.push(C.fusionWeight); }
   const nWeapons = p.weapons.length;
   for (const def of allWeapons().values()) {
     const w = findWeapon(p, def.id);
-    if (w) { if (w.level < def.maxLevel) { pool.push(weaponCard(def, w.level + 1, false)); weights.push(C.weaponWeight); } }
+    if (w) { if (w.level < def.maxLevel) { pool.push(weaponCard(def, w.level + 1, false)); weights.push(C.weaponWeight * (partnerMaxed(p, def.id, true) ? partner : owned)); } }
     else if (nWeapons < C.maxWeapons && !fusedFrom(p, def.id)) { pool.push(weaponCard(def, 1, true)); weights.push(C.weaponWeight); }
   }
   const nPassives = p.passives.length;
   for (const def of allPassives().values()) {
     const pa = findPassive(p, def.id);
-    if (pa) { if (pa.level < def.maxLevel) { pool.push(passiveCard(def, pa.level + 1, false)); weights.push(C.passiveWeight); } }
+    if (pa) { if (pa.level < def.maxLevel) { pool.push(passiveCard(def, pa.level + 1, false)); weights.push(C.passiveWeight * (partnerMaxed(p, def.id, false) ? partner : owned)); } }
     else if (nPassives < C.maxPassives) { pool.push(passiveCard(def, 1, true)); weights.push(C.passiveWeight); }
   }
 }
@@ -69,6 +81,8 @@ export function drawCards(run, p, out, n = 3) {
   const C = balance().cards;
   buildCandidates(p);
   out.length = 0;
+  // Fusion disponible : garantie en première carte.
+  if (pool.length && pool[0].type === 'fusion') { out.push(pool[0]); pool.splice(0, 1); weights.splice(0, 1); }
   while (out.length < n && pool.length > 0) {
     let total = 0;
     for (let i = 0; i < weights.length; i++) total += weights[i];

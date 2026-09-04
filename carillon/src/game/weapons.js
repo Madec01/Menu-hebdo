@@ -134,9 +134,10 @@ export function renderWeapons(ctx, alpha) {
   if (currentWorld) renderProjectiles(ctx, currentWorld, alpha);
 }
 
-/** Cumule les dégâts infligés par une arme (appelé par collision.js). */
+/** Cumule les dégâts infligés par une arme (appelé par collision.js). Seuls les identifiants de
+ *  Timbre ou de fusion sont crédités ('parry', 'carillon_pickup'… n'apparaissent pas au bilan). */
 export function recordDamage(weaponId, amount) {
-  if (!weaponId) return;
+  if (!weaponId || !(weaponDef(weaponId) || fusionDef(weaponId))) return;
   report[weaponId] = (report[weaponId] || 0) + amount;
 }
 

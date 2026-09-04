@@ -181,8 +181,13 @@ function aura(w, p, world) {
   const range = w.stats.range * (screen ? 1 : w.stats.area);
   const dmg = baseDamage(w, p);
   const n = instantArea(w, p, world, p.x, p.y, range, 0, 0, -2, 0, dmg, w.stats.knockback, false);
-  if (screen) { shake(6, 0.3); fxSprite(world, w.def.projectileSprite, p.x, p.y, 0.5, 1, (range * 2) / 64, true, 0, 0, 0.7); }
-  else fxSprite(world, w.def.projectileSprite, p.x, p.y, 0.3, (range * 2) / 64, (range * 2.3) / 64, true, 0, 0, 0.65);
+  // VFX : anneau de bronze au sol qui s'ouvre sur le temps (jamais l'icône agrandie), plus quelques éclats.
+  if (screen) { shake(6, 0.3); spawnRing(world, p.x, p.y + 2, range, 0.55); spawnRing(world, p.x, p.y + 2, range * 0.6, 0.4); }
+  else spawnRing(world, p.x, p.y + 2, range, Math.min(0.45, beatDuration() * w.def.rhythm * 0.9));
+  for (let k = 0; k < (screen ? 10 : 4); k++) {
+    const a = (k / (screen ? 10 : 4)) * Math.PI * 2 + world.time;
+    emitParticles('bell', p.x + Math.cos(a) * range * 0.7, p.y + Math.sin(a) * range * 0.42);
+  }
   return screen || n >= 6;
 }
 
@@ -243,18 +248,54 @@ function chain(w, p, world) {
   return false;
 }
 
-/** Diapason : marque les ennemis (+dégâts subis), aucun dégât direct. Requiem : exécute sous le seuil. */
+/**
+ * Diapason : marque les ennemis (+dégâts subis) et la marque « résonne » : à chaque tir (chaque temps),
+ * tout marqué subit damage × (1 + perAccordLevel × niveaux d'Accords) × Résonance (balance.mark).
+ * Étain (crit) s'applique ; Contrepoids (area) étend la marque aux voisins (spreadPx × (area − 1)).
+ * Requiem : exécute sous le seuil (collision.damageEnemy).
+ */
 function mark(w, p, world) {
+  const M = balance().mark;
   const range = w.stats.range * w.stats.area;
+  const spread = (p.stats.area - 1) * M.spreadPx;
   let last = null;
   for (let k = 0; k < w.stats.count; k++) {
     const t = nearestUnmarked(world, p.x, p.y, range);
     if (!t) break;
     markEnemy(world, t, w.stats.duration, w.stats.markBonus, w.id, w.stats.executeBelow || 0);
     fxSprite(world, w.def.projectileSprite, t.x, t.y - 20, 0.5, 0.6, 1.2, false, 0, -30);
+    if (spread > 0) spreadMark(world, w, t, spread);
     last = t;
   }
-  return last !== null && w.def.behavior === 'mark_execute';
+  // Résonance de la marque : un tick de dégâts sur chaque marqué par ce Timbre.
+  let accords = 0;
+  for (let i = 0; i < p.passives.length; i++) accords += p.passives[i].level;
+  const base = w.stats.damage > 0 ? w.stats.damage : M.fallbackDamage;
+  const dmg = base * (1 + M.perAccordLevel * accords) * p.stats.damageMult * resonanceMult();
+  const items = world.enemies.items;
+  let hits = 0;
+  for (let i = 0; i < items.length; i++) {
+    const e = items[i];
+    if (e.state !== 'alive' || e.markedT <= 0 || e.markBy !== w.id) continue;
+    const crit = rollCrit(world, p.stats.crit);
+    HIT.crit = crit; HIT.onBeat = true; HIT.knockX = 0; HIT.knockY = 0; HIT.source = w.id;
+    damageEnemy(world, e, crit ? dmg * balance().combat.critMult : dmg, HIT);
+    hits++;
+  }
+  return (last !== null && w.def.behavior === 'mark_execute') || hits >= 8;
+}
+
+// Contrepoids : la marque gagne les voisins du marqué (rayon `spread`).
+let sx = 0, sy = 0, sr2 = 0, sw = null, sworld = null;
+function spreadHit(e) {
+  if (e.state !== 'alive' || e.markedT > 0) return;
+  const dx = e.x - sx, dy = e.y - sy;
+  if (dx * dx + dy * dy > sr2) return;
+  markEnemy(sworld, e, sw.stats.duration, sw.stats.markBonus, sw.id, sw.stats.executeBelow || 0);
+}
+function spreadMark(world, w, from, radius) {
+  sx = from.x; sy = from.y; sr2 = radius * radius; sw = w; sworld = world;
+  world.grid.query(from.x, from.y, radius, spreadHit);
 }
 
 let ux = 0, uy = 0, uBest = null, uBestD = 0;

@@ -19,7 +19,7 @@
    "afterBossRate": 0.3
   },
   "player": {
-   "dashSpeed": 380,
+   "dashSpeed": 300,
    "dashSec": 0.18,
    "iframesSec": 0.25,
    "parrySec": 0.2,
@@ -44,8 +44,14 @@
     2.5
    ],
    "windowMs": 110,
+   "threatRadius": 140,
    "assistedWindowMult": 3,
    "norhythmTier": 2
+  },
+  "mark": {
+   "perAccordLevel": 0.35,
+   "spreadPx": 200,
+   "fallbackDamage": 8
   },
   "combat": {
    "critMult": 2,
@@ -84,6 +90,8 @@
    "fusionWeight": 300,
    "maxWeapons": 6,
    "maxPassives": 6,
+   "ownedWeight": 3,
+   "fusionPartnerWeight": 6,
    "bonusHeal": 0.3,
    "bonusBronze": 20
   },

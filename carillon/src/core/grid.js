@@ -2,13 +2,17 @@
 // Les cellules sont des tableaux conservés d'une frame à l'autre (vidés par
 // length = 0), donc aucune allocation après la première frame. Une entité qui
 // chevauche plusieurs cellules n'est rapportée qu'une fois par requête grâce à un
-// tampon (_gridStamp) posé sur l'entité.
+// tampon (_gridStamp) posé sur l'entité. Les requêtes sont réentrantes (une requête
+// lancée depuis le callback d'une autre : chaînes d'éclairs) : chaque profondeur
+// d'imbrication a son propre tampon (_gridStamp, _gridStamp1, _gridStamp2, _gridStamp3).
 
 export function createGrid(cellSize = 64) {
   const inv = 1 / cellSize;
   const cells = new Map(); // clé entière → tableau d'entités
   const used = [];         // cellules remplies depuis le dernier clear (à vider)
-  let stamp = 1;           // identifiant de requête courante
+  const STAMP_KEYS = ['_gridStamp', '_gridStamp1', '_gridStamp2', '_gridStamp3'];
+  const stamps = [1, 1, 1, 1]; // identifiant de requête courante, par profondeur
+  let depth = 0;               // profondeur d'imbrication des requêtes
 
   // Clé entière d'une cellule (coordonnées signées sur 16 bits chacune).
   function key(cx, cy) { return ((cx & 0xffff) << 16) | (cy & 0xffff); }
@@ -23,21 +27,25 @@ export function createGrid(cellSize = 64) {
 
   // Parcourt les cellules couvrant le rectangle et appelle fn pour chaque entité une fois.
   function visit(x0, y0, x1, y1, fn) {
-    stamp++;
+    const d = depth < 3 ? depth : 3;
+    const k = STAMP_KEYS[d], stamp = ++stamps[d];
+    depth++;
     const cx0 = Math.floor(x0 * inv), cy0 = Math.floor(y0 * inv);
     const cx1 = Math.floor(x1 * inv), cy1 = Math.floor(y1 * inv);
-    for (let cy = cy0; cy <= cy1; cy++) {
-      for (let cx = cx0; cx <= cx1; cx++) {
-        const arr = cells.get(key(cx, cy));
-        if (!arr) continue;
-        for (let i = 0; i < arr.length; i++) {
-          const e = arr[i];
-          if (e._gridStamp === stamp) continue;
-          e._gridStamp = stamp;
-          fn(e);
+    try {
+      for (let cy = cy0; cy <= cy1; cy++) {
+        for (let cx = cx0; cx <= cx1; cx++) {
+          const arr = cells.get(key(cx, cy));
+          if (!arr) continue;
+          for (let i = 0; i < arr.length; i++) {
+            const e = arr[i];
+            if (e[k] === stamp) continue;
+            e[k] = stamp;
+            fn(e);
+          }
         }
       }
-    }
+    } finally { depth--; }
   }
 
   return {
