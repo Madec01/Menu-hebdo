@@ -331,23 +331,5 @@
     "confirm": {
       "title": "Sûr ?"
     }
-  },
-  "weapon": {
-    "clarine": {
-      "desc": "{count} {count|clarine tourne|clarines tournent} autour de toi et {count|frappe|frappent} ce {count|qu'elle croise|qu'elles croisent} : {damage} dégâts."
-    },
-    "grelots": {
-      "desc": "Lance {count} {count|grelot|grelots} en éventail à chaque croche : {damage} dégâts chacun."
-    },
-    "crecelle": {
-      "desc": "Crépite {count} {count|éclat|éclats} vers l'ennemi le plus proche à chaque croche : {damage} dégâts."
-    },
-    "chaine_d_angelus": {
-      "desc": "Sur le temps, l'angélus saute d'ennemi en ennemi, {count} fois : {damage} dégâts."
-    },
-    "diapason": {
-      "desc": "Marque {count} {count|ennemi|ennemis} par mesure ; la marque éclate sur le temps suivant : +{bonus} % de dégâts sur les marqués."
-    },
-    "_note": "Surcharges E2 (pluriel {count|un|des}, Diapason +{bonus} %) : à reporter dans fr.json/en.json (agent F) puis supprimer ici."
   }
 }

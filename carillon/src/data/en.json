@@ -26,22 +26,22 @@
     },
     "clarine": {
       "name": "Cowbell",
-      "desc": "{count} cowbells circle around you and strike whatever they cross: {damage} damage.",
+      "desc": "{count} {count|cowbell circles|cowbells circle} around you and {count|strikes|strike} whatever {count|it crosses|they cross}: {damage} damage.",
       "voice": "The cows came home to this sound. The Felts, for their part, back away."
     },
     "bourdon": {
       "name": "Bourdon",
-      "desc": "Every four beats, a wave {area} paces wide pushes back everything that hears it: {damage} damage.",
+      "desc": "Every four beats, a wave {area} {area|pace|paces} wide pushes back everything that hears it: {damage} damage.",
       "voice": "The lowest note is the one that travels farthest."
     },
     "grelots": {
       "name": "Sleigh Bells",
-      "desc": "Throws {count} bells in a fan on every eighth note: {damage} damage each.",
+      "desc": "Throws {count} {count|bell|bells} in a fan on every eighth note: {damage} damage each.",
       "voice": "Maren sewed them onto the lambs' necks so as not to lose them in the marsh."
     },
     "tocsin": {
       "name": "Tocsin",
-      "desc": "A circle {area} paces wide around you bites everything that enters it, on the beat: {damage} damage.",
+      "desc": "A circle {area} {area|pace|paces} wide around you bites everything that enters it, on the beat: {damage} damage.",
       "voice": "When it rings, nobody asks why. They run."
     },
     "cor_de_brume": {
@@ -51,35 +51,71 @@
     },
     "crecelle": {
       "name": "Rattle",
-      "desc": "Crackles {count} splinters toward the nearest enemy on every eighth note: {damage} damage.",
+      "desc": "Crackles {count} {count|splinter|splinters} toward the nearest enemy on every eighth note: {damage} damage.",
       "voice": "The wood you shake when the bronze must stay silent, on Good Friday."
     },
     "chaine_d_angelus": {
       "name": "Angelus Chain",
-      "desc": "On the beat, the angelus leaps from enemy to enemy, {count} times: {damage} damage.",
+      "desc": "On the beat, the angelus leaps from enemy to enemy, {count} {count|time|times}: {damage} damage.",
       "voice": "Three times three strokes, morning, noon and evening. It knows the way from one chest to the next."
     },
     "diapason": {
       "name": "Tuning Fork",
-      "desc": "Marks {count} enemies per bar; the mark bursts on the next beat: {damage} damage.",
+      "desc": "Marks {count} {count|enemy|enemies} per bar; the mark bursts on the next beat: +{bonus}% damage on the marked.",
       "voice": "The only bronze you can carry without having it sewn into you."
     }
   },
   "passive": {
-    "ferrure": { "name": "Ironwork", "desc": "The iron that hoops the bell. Every blow you take hurts a little less." },
-    "souffle": { "name": "Breath", "desc": "The lungs of a ringer climbing the stairs. You walk faster." },
-    "contrepoids": { "name": "Counterweight", "desc": "The mass that carries the bell farther. Your Timbres reach wider." },
-    "corde_de_chanvre": { "name": "Hemp Rope", "desc": "A new rope spliced into the old. Your Timbres fire more often." },
-    "cire_d_abeille": { "name": "Beeswax", "desc": "Put on wounds and on wicks alike. You slowly regain life." },
-    "metronome": { "name": "Metronome", "desc": "The choirmaster's little pendulum. The window of the Measure widens." },
-    "etain": { "name": "Tin", "desc": "Twenty-two parts in a hundred. It gives the note its edge: more critical hits." },
-    "echo": { "name": "Echo", "desc": "What the valley sends back. Your blows bounce to one more enemy." }
+    "ferrure": {
+      "name": "Ironwork",
+      "desc": "The iron that hoops the bell. Every blow you take hurts a little less."
+    },
+    "souffle": {
+      "name": "Breath",
+      "desc": "The lungs of a ringer climbing the stairs. You walk faster."
+    },
+    "contrepoids": {
+      "name": "Counterweight",
+      "desc": "The mass that carries the bell farther. Your Timbres reach wider."
+    },
+    "corde_de_chanvre": {
+      "name": "Hemp Rope",
+      "desc": "A new rope spliced into the old. Your Timbres fire more often."
+    },
+    "cire_d_abeille": {
+      "name": "Beeswax",
+      "desc": "Put on wounds and on wicks alike. You slowly regain life."
+    },
+    "metronome": {
+      "name": "Metronome",
+      "desc": "The choirmaster's little pendulum. The window of the Measure widens."
+    },
+    "etain": {
+      "name": "Tin",
+      "desc": "Twenty-two parts in a hundred. It gives the note its edge: more critical hits."
+    },
+    "echo": {
+      "name": "Echo",
+      "desc": "What the valley sends back. Your blows bounce to one more enemy."
+    }
   },
   "fusion": {
-    "glas": { "name": "Knell", "desc": "Tocsin and Counterweight. Every four beats, the whole parish feels it in the chest: damage across the entire screen." },
-    "carillon": { "name": "Carillon", "desc": "Cowbell and Echo. The bells answer one another and multiply with every blow that lands on the beat." },
-    "tonnerre": { "name": "Thunder", "desc": "Bourdon and Tin. The wave no longer pushes: it splits, and every blow can be critical." },
-    "requiem": { "name": "Requiem", "desc": "Tuning Fork and Metronome. All the marks burst together, on the whole note, and the window stays open." }
+    "glas": {
+      "name": "Knell",
+      "desc": "Tocsin and Counterweight. Every four beats, the whole parish feels it in the chest: damage across the entire screen."
+    },
+    "carillon": {
+      "name": "Carillon",
+      "desc": "Cowbell and Echo. The bells answer one another and multiply with every blow that lands on the beat."
+    },
+    "tonnerre": {
+      "name": "Thunder",
+      "desc": "Bourdon and Tin. The wave no longer pushes: it splits, and every blow can be critical."
+    },
+    "requiem": {
+      "name": "Requiem",
+      "desc": "Tuning Fork and Metronome. All the marks burst together, on the whole note, and the window stays open."
+    }
   },
   "enemy": {
     "feutre": {
@@ -206,40 +242,136 @@
     }
   },
   "upgrade": {
-    "coeur_de_bronze": { "name": "Bronze Heart", "desc": "One more stitch around the Clapper. Maximum life increased." },
-    "semelles_de_cuir": { "name": "Leather Soles", "desc": "Ox leather, greased with tallow. You walk faster through the mud." },
-    "ferrure_du_beffroi": { "name": "Belfry Ironwork", "desc": "The iron of the beams, reforged into plates. Armor increased." },
-    "oreille_fine": { "name": "Keen Ear", "desc": "Nights spent listening to the bell over the wind. The window of the Measure widens." },
-    "battant_lourd": { "name": "Heavy Clapper", "desc": "One more weight at the end of the arm. All your damage increases." },
-    "aimant_d_echos": { "name": "Echo Lodestone", "desc": "A black stone from the Val that calls to bronze. Echoes come to you from farther away." },
-    "reliquaire": { "name": "Reliquary", "desc": "A tin box to keep what you pick up. Every Echo is worth more." },
-    "cire_de_veillee": { "name": "Wake Wax", "desc": "The wax that runs from the candles, kept in a pot. You regain life during the night." },
-    "main_sure": { "name": "Steady Hand", "desc": "The gesture of a ringer who no longer looks at the rope. More critical hits." },
-    "bourse_de_cuivre": { "name": "Copper Purse", "desc": "For the pieces of bronze gathered in the morning. You bring back more Bronze from every night." },
-    "second_souffle": { "name": "Second Wind", "desc": "The Clapper starts again once, by itself, when the heart stops. Once per night." },
-    "contrepoids_de_fonte": { "name": "Cast-Iron Counterweight", "desc": "The block that balances the bell of the Beffroi Mère. All your Timbres reach wider." },
-    "corde_neuve": { "name": "New Rope", "desc": "Hemp from the Val, spliced into the old. All your Timbres fire more often." },
-    "troisieme_carte": { "name": "Third Card", "desc": "The right to turn over one more card. One more reroll per night at each level." }
+    "coeur_de_bronze": {
+      "name": "Bronze Heart",
+      "desc": "One more stitch around the Clapper. Maximum life increased."
+    },
+    "semelles_de_cuir": {
+      "name": "Leather Soles",
+      "desc": "Ox leather, greased with tallow. You walk faster through the mud."
+    },
+    "ferrure_du_beffroi": {
+      "name": "Belfry Ironwork",
+      "desc": "The iron of the beams, reforged into plates. Armor increased."
+    },
+    "oreille_fine": {
+      "name": "Keen Ear",
+      "desc": "Nights spent listening to the bell over the wind. The window of the Measure widens."
+    },
+    "battant_lourd": {
+      "name": "Heavy Clapper",
+      "desc": "One more weight at the end of the arm. All your damage increases."
+    },
+    "aimant_d_echos": {
+      "name": "Echo Lodestone",
+      "desc": "A black stone from the Val that calls to bronze. Echoes come to you from farther away."
+    },
+    "reliquaire": {
+      "name": "Reliquary",
+      "desc": "A tin box to keep what you pick up. Every Echo is worth more."
+    },
+    "cire_de_veillee": {
+      "name": "Wake Wax",
+      "desc": "The wax that runs from the candles, kept in a pot. You regain life during the night."
+    },
+    "main_sure": {
+      "name": "Steady Hand",
+      "desc": "The gesture of a ringer who no longer looks at the rope. More critical hits."
+    },
+    "bourse_de_cuivre": {
+      "name": "Copper Purse",
+      "desc": "For the pieces of bronze gathered in the morning. You bring back more Bronze from every night."
+    },
+    "second_souffle": {
+      "name": "Second Wind",
+      "desc": "The Clapper starts again once, by itself, when the heart stops. Once per night."
+    },
+    "contrepoids_de_fonte": {
+      "name": "Cast-Iron Counterweight",
+      "desc": "The block that balances the bell of the Beffroi Mère. All your Timbres reach wider."
+    },
+    "corde_neuve": {
+      "name": "New Rope",
+      "desc": "Hemp from the Val, spliced into the old. All your Timbres fire more often."
+    },
+    "troisieme_carte": {
+      "name": "Third Card",
+      "desc": "The right to turn over one more card. One more reroll per night at each level."
+    }
   },
   "achievement": {
-    "premiere_aube": { "name": "First Dawn", "desc": "Hold until dawn once." },
-    "sonneur_confirme": { "name": "Seasoned Ringer", "desc": "Hold until dawn ten times." },
-    "cent_echos": { "name": "A Hundred Echoes", "desc": "Silence a hundred things in a single night." },
-    "mille_silences": { "name": "A Thousand Silences", "desc": "Silence a thousand things in a single night." },
-    "plein_timbre": { "name": "Full Timbre", "desc": "Carry six Timbres at once." },
-    "plein_accord": { "name": "Full Chord", "desc": "Carry six Chords at once." },
-    "premiere_fusion": { "name": "First Fusion", "desc": "Melt a Timbre and a Chord together." },
-    "quatre_fusions": { "name": "Four Fusions", "desc": "Discover all four fusions." },
-    "resonance_parfaite": { "name": "Perfect Resonance", "desc": "Hold the fourth notch of Resonance for a full minute." },
-    "sans_faute": { "name": "Faultless", "desc": "Finish a night without a single stroke off the beat." },
-    "fele_vaincu": { "name": "The Cracked One Is Quiet", "desc": "Silence the Cracked Bourdon." },
-    "veuve_vaincue": { "name": "The Wake Is Over", "desc": "Silence the Soot Widow." },
-    "maitre_vaincu": { "name": "What Remains", "desc": "Silence what remains of the Master." },
-    "toutes_paroisses": { "name": "Every Parish", "desc": "Hold until dawn in all five parishes." },
-    "tous_sonneurs": { "name": "Every Ringer", "desc": "Hold until dawn with all four ringers." },
-    "feuillets_complets": { "name": "The Whole Notebook", "desc": "Recover all twenty-four Leaves of the Clapper." },
-    "sans_rythme_victoire": { "name": "In Its Own Time", "desc": "Hold until dawn in No Rhythm mode." },
-    "muet_victoire": { "name": "One More Name", "desc": "Hold until dawn with Le Muet." }
+    "premiere_aube": {
+      "name": "First Dawn",
+      "desc": "Hold until dawn once."
+    },
+    "sonneur_confirme": {
+      "name": "Seasoned Ringer",
+      "desc": "Hold until dawn ten times."
+    },
+    "cent_echos": {
+      "name": "A Hundred Echoes",
+      "desc": "Silence a hundred things in a single night."
+    },
+    "mille_silences": {
+      "name": "A Thousand Silences",
+      "desc": "Silence a thousand things in a single night."
+    },
+    "plein_timbre": {
+      "name": "Full Timbre",
+      "desc": "Carry six Timbres at once."
+    },
+    "plein_accord": {
+      "name": "Full Chord",
+      "desc": "Carry six Chords at once."
+    },
+    "premiere_fusion": {
+      "name": "First Fusion",
+      "desc": "Melt a Timbre and a Chord together."
+    },
+    "quatre_fusions": {
+      "name": "Four Fusions",
+      "desc": "Discover all four fusions."
+    },
+    "resonance_parfaite": {
+      "name": "Perfect Resonance",
+      "desc": "Hold the fourth notch of Resonance for a full minute."
+    },
+    "sans_faute": {
+      "name": "Faultless",
+      "desc": "Finish a night without a single stroke off the beat."
+    },
+    "fele_vaincu": {
+      "name": "The Cracked One Is Quiet",
+      "desc": "Silence the Cracked Bourdon."
+    },
+    "veuve_vaincue": {
+      "name": "The Wake Is Over",
+      "desc": "Silence the Soot Widow."
+    },
+    "maitre_vaincu": {
+      "name": "What Remains",
+      "desc": "Silence what remains of the Master."
+    },
+    "toutes_paroisses": {
+      "name": "Every Parish",
+      "desc": "Hold until dawn in all five parishes."
+    },
+    "tous_sonneurs": {
+      "name": "Every Ringer",
+      "desc": "Hold until dawn with all four ringers."
+    },
+    "feuillets_complets": {
+      "name": "The Whole Notebook",
+      "desc": "Recover all twenty-four Leaves of the Clapper."
+    },
+    "sans_rythme_victoire": {
+      "name": "In Its Own Time",
+      "desc": "Hold until dawn in No Rhythm mode."
+    },
+    "muet_victoire": {
+      "name": "One More Name",
+      "desc": "Hold until dawn with Le Muet."
+    }
   },
   "lore": {
     "f01": {

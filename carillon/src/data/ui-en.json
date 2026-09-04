@@ -331,23 +331,5 @@
     "confirm": {
       "title": "Sure?"
     }
-  },
-  "weapon": {
-    "clarine": {
-      "desc": "{count} {count|cowbell circles|cowbells circle} around you and {count|strikes|strike} whatever {count|it crosses|they cross}: {damage} damage."
-    },
-    "grelots": {
-      "desc": "Throws {count} {count|bell|bells} in a fan on every eighth note: {damage} damage each."
-    },
-    "crecelle": {
-      "desc": "Crackles {count} {count|splinter|splinters} toward the nearest enemy on every eighth note: {damage} damage."
-    },
-    "chaine_d_angelus": {
-      "desc": "On the beat, the angelus leaps from enemy to enemy, {count} {count|time|times}: {damage} damage."
-    },
-    "diapason": {
-      "desc": "Marks {count} {count|enemy|enemies} per bar; the mark bursts on the next beat: +{bonus}% damage on the marked."
-    },
-    "_note": "Surcharges E2 (pluriel {count|un|des}, Diapason +{bonus} %) : à reporter dans fr.json/en.json (agent F) puis supprimer ici."
   }
 }

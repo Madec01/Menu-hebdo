@@ -26,7 +26,7 @@
     },
     "clarine": {
       "name": "Clarine",
-      "desc": "{count} clarines tournent autour de toi et frappent ce qu'elles croisent : {damage} dégâts.",
+      "desc": "{count} {count|clarine tourne|clarines tournent} autour de toi et {count|frappe|frappent} ce {count|qu'elle croise|qu'elles croisent} : {damage} dégâts.",
       "voice": "Les vaches rentraient à ce son. Les Feutres, eux, reculent."
     },
     "bourdon": {
@@ -36,7 +36,7 @@
     },
     "grelots": {
       "name": "Grelots",
-      "desc": "Lance {count} grelots en éventail à chaque croche : {damage} dégâts chacun.",
+      "desc": "Lance {count} {count|grelot|grelots} en éventail à chaque croche : {damage} dégâts chacun.",
       "voice": "Maren en cousait au cou des agneaux pour ne pas les perdre dans le marais."
     },
     "tocsin": {
@@ -51,7 +51,7 @@
     },
     "crecelle": {
       "name": "Crécelle",
-      "desc": "Crépite {count} éclats vers l'ennemi le plus proche à chaque croche : {damage} dégâts.",
+      "desc": "Crépite {count} {count|éclat|éclats} vers l'ennemi le plus proche à chaque croche : {damage} dégâts.",
       "voice": "Le bois qu'on agite quand le bronze doit se taire, le Vendredi saint."
     },
     "chaine_d_angelus": {
@@ -61,25 +61,61 @@
     },
     "diapason": {
       "name": "Diapason",
-      "desc": "Marque {count} ennemis par mesure ; la marque éclate sur le temps suivant : {damage} dégâts.",
+      "desc": "Marque {count} {count|ennemi|ennemis} par mesure ; la marque éclate sur le temps suivant : +{bonus} % de dégâts sur les marqués.",
       "voice": "Le seul bronze qu'on peut porter sans qu'on vous l'ait cousu."
     }
   },
   "passive": {
-    "ferrure": { "name": "Ferrure", "desc": "Le fer qui cercle la cloche. Chaque coup reçu fait un peu moins mal." },
-    "souffle": { "name": "Souffle", "desc": "Les poumons d'un sonneur qui monte les marches. Tu marches plus vite." },
-    "contrepoids": { "name": "Contrepoids", "desc": "La masse qui fait aller la cloche plus loin. Tes Timbres portent plus large." },
-    "corde_de_chanvre": { "name": "Corde de chanvre", "desc": "Une corde neuve épissée dans la vieille. Tes Timbres tirent plus souvent." },
-    "cire_d_abeille": { "name": "Cire d'abeille", "desc": "On en met sur les plaies et sur les mèches. Tu regagnes de la vie lentement." },
-    "metronome": { "name": "Métronome", "desc": "Le petit balancier du maître de chant. La fenêtre de la Mesure s'élargit." },
-    "etain": { "name": "Étain", "desc": "Vingt-deux parts sur cent. C'est lui qui donne le tranchant à la note : plus de coups critiques." },
-    "echo": { "name": "Écho", "desc": "Ce que la vallée renvoie. Tes coups rebondissent sur un ennemi de plus." }
+    "ferrure": {
+      "name": "Ferrure",
+      "desc": "Le fer qui cercle la cloche. Chaque coup reçu fait un peu moins mal."
+    },
+    "souffle": {
+      "name": "Souffle",
+      "desc": "Les poumons d'un sonneur qui monte les marches. Tu marches plus vite."
+    },
+    "contrepoids": {
+      "name": "Contrepoids",
+      "desc": "La masse qui fait aller la cloche plus loin. Tes Timbres portent plus large."
+    },
+    "corde_de_chanvre": {
+      "name": "Corde de chanvre",
+      "desc": "Une corde neuve épissée dans la vieille. Tes Timbres tirent plus souvent."
+    },
+    "cire_d_abeille": {
+      "name": "Cire d'abeille",
+      "desc": "On en met sur les plaies et sur les mèches. Tu regagnes de la vie lentement."
+    },
+    "metronome": {
+      "name": "Métronome",
+      "desc": "Le petit balancier du maître de chant. La fenêtre de la Mesure s'élargit."
+    },
+    "etain": {
+      "name": "Étain",
+      "desc": "Vingt-deux parts sur cent. C'est lui qui donne le tranchant à la note : plus de coups critiques."
+    },
+    "echo": {
+      "name": "Écho",
+      "desc": "Ce que la vallée renvoie. Tes coups rebondissent sur un ennemi de plus."
+    }
   },
   "fusion": {
-    "glas": { "name": "Glas", "desc": "Tocsin et Contrepoids. Tous les quatre temps, la paroisse entière l'entend dans la poitrine : dégâts sur tout l'écran." },
-    "carillon": { "name": "Carillon", "desc": "Clarine et Écho. Les clarines se répondent et se multiplient à chaque coup qui tombe sur le temps." },
-    "tonnerre": { "name": "Tonnerre", "desc": "Bourdon et Étain. L'onde ne repousse plus : elle fend, et chaque coup peut être critique." },
-    "requiem": { "name": "Requiem", "desc": "Diapason et Métronome. Toutes les marques éclatent ensemble, sur la ronde, et la fenêtre reste ouverte." }
+    "glas": {
+      "name": "Glas",
+      "desc": "Tocsin et Contrepoids. Tous les quatre temps, la paroisse entière l'entend dans la poitrine : dégâts sur tout l'écran."
+    },
+    "carillon": {
+      "name": "Carillon",
+      "desc": "Clarine et Écho. Les clarines se répondent et se multiplient à chaque coup qui tombe sur le temps."
+    },
+    "tonnerre": {
+      "name": "Tonnerre",
+      "desc": "Bourdon et Étain. L'onde ne repousse plus : elle fend, et chaque coup peut être critique."
+    },
+    "requiem": {
+      "name": "Requiem",
+      "desc": "Diapason et Métronome. Toutes les marques éclatent ensemble, sur la ronde, et la fenêtre reste ouverte."
+    }
   },
   "enemy": {
     "feutre": {
@@ -206,40 +242,136 @@
     }
   },
   "upgrade": {
-    "coeur_de_bronze": { "name": "Cœur de bronze", "desc": "Une couture de plus autour du Battant. Vie maximale augmentée." },
-    "semelles_de_cuir": { "name": "Semelles de cuir", "desc": "Du cuir de bœuf, graissé au suif. Tu marches plus vite dans la boue." },
-    "ferrure_du_beffroi": { "name": "Ferrure du beffroi", "desc": "Le fer des poutres, reforgé en plaques. Armure augmentée." },
-    "oreille_fine": { "name": "Oreille fine", "desc": "Des nuits à écouter la cloche par-dessus le vent. La fenêtre de la Mesure s'élargit." },
-    "battant_lourd": { "name": "Battant lourd", "desc": "Une masse de plus au bout du bras. Tous tes dégâts augmentent." },
-    "aimant_d_echos": { "name": "Aimant d'échos", "desc": "Une pierre noire du Val qui appelle le bronze. Les Échos viennent à toi de plus loin." },
-    "reliquaire": { "name": "Reliquaire", "desc": "Une boîte d'étain pour garder ce qu'on ramasse. Chaque Écho vaut davantage." },
-    "cire_de_veillee": { "name": "Cire de veillée", "desc": "La cire qui coule des cierges, gardée dans un pot. Tu regagnes de la vie pendant la nuit." },
-    "main_sure": { "name": "Main sûre", "desc": "Le geste du sonneur qui ne regarde plus la corde. Plus de coups critiques." },
-    "bourse_de_cuivre": { "name": "Bourse de cuivre", "desc": "On y met les morceaux de bronze ramassés au matin. Tu rapportes plus de Bronze de chaque nuit." },
-    "second_souffle": { "name": "Second souffle", "desc": "Le Battant repart une fois, tout seul, quand le cœur s'arrête. Une fois par nuit." },
-    "contrepoids_de_fonte": { "name": "Contrepoids de fonte", "desc": "Le bloc qui balance la cloche du Beffroi Mère. Tous tes Timbres portent plus large." },
-    "corde_neuve": { "name": "Corde neuve", "desc": "Du chanvre du Val, épissé dans l'ancien. Tous tes Timbres tirent plus souvent." },
-    "troisieme_carte": { "name": "Troisième carte", "desc": "Le droit de retourner une carte de plus. Une relance de plus par nuit à chaque niveau." }
+    "coeur_de_bronze": {
+      "name": "Cœur de bronze",
+      "desc": "Une couture de plus autour du Battant. Vie maximale augmentée."
+    },
+    "semelles_de_cuir": {
+      "name": "Semelles de cuir",
+      "desc": "Du cuir de bœuf, graissé au suif. Tu marches plus vite dans la boue."
+    },
+    "ferrure_du_beffroi": {
+      "name": "Ferrure du beffroi",
+      "desc": "Le fer des poutres, reforgé en plaques. Armure augmentée."
+    },
+    "oreille_fine": {
+      "name": "Oreille fine",
+      "desc": "Des nuits à écouter la cloche par-dessus le vent. La fenêtre de la Mesure s'élargit."
+    },
+    "battant_lourd": {
+      "name": "Battant lourd",
+      "desc": "Une masse de plus au bout du bras. Tous tes dégâts augmentent."
+    },
+    "aimant_d_echos": {
+      "name": "Aimant d'échos",
+      "desc": "Une pierre noire du Val qui appelle le bronze. Les Échos viennent à toi de plus loin."
+    },
+    "reliquaire": {
+      "name": "Reliquaire",
+      "desc": "Une boîte d'étain pour garder ce qu'on ramasse. Chaque Écho vaut davantage."
+    },
+    "cire_de_veillee": {
+      "name": "Cire de veillée",
+      "desc": "La cire qui coule des cierges, gardée dans un pot. Tu regagnes de la vie pendant la nuit."
+    },
+    "main_sure": {
+      "name": "Main sûre",
+      "desc": "Le geste du sonneur qui ne regarde plus la corde. Plus de coups critiques."
+    },
+    "bourse_de_cuivre": {
+      "name": "Bourse de cuivre",
+      "desc": "On y met les morceaux de bronze ramassés au matin. Tu rapportes plus de Bronze de chaque nuit."
+    },
+    "second_souffle": {
+      "name": "Second souffle",
+      "desc": "Le Battant repart une fois, tout seul, quand le cœur s'arrête. Une fois par nuit."
+    },
+    "contrepoids_de_fonte": {
+      "name": "Contrepoids de fonte",
+      "desc": "Le bloc qui balance la cloche du Beffroi Mère. Tous tes Timbres portent plus large."
+    },
+    "corde_neuve": {
+      "name": "Corde neuve",
+      "desc": "Du chanvre du Val, épissé dans l'ancien. Tous tes Timbres tirent plus souvent."
+    },
+    "troisieme_carte": {
+      "name": "Troisième carte",
+      "desc": "Le droit de retourner une carte de plus. Une relance de plus par nuit à chaque niveau."
+    }
   },
   "achievement": {
-    "premiere_aube": { "name": "Première aube", "desc": "Tenir jusqu'à l'aube une fois." },
-    "sonneur_confirme": { "name": "Sonneur confirmé", "desc": "Tenir jusqu'à l'aube dix fois." },
-    "cent_echos": { "name": "Cent échos", "desc": "Faire taire cent choses en une seule nuit." },
-    "mille_silences": { "name": "Mille silences", "desc": "Faire taire mille choses en une seule nuit." },
-    "plein_timbre": { "name": "Plein timbre", "desc": "Porter six Timbres à la fois." },
-    "plein_accord": { "name": "Plein accord", "desc": "Porter six Accords à la fois." },
-    "premiere_fusion": { "name": "Première fusion", "desc": "Fondre un Timbre et un Accord ensemble." },
-    "quatre_fusions": { "name": "Quatre fusions", "desc": "Découvrir les quatre fusions." },
-    "resonance_parfaite": { "name": "Résonance parfaite", "desc": "Tenir le quatrième cran de Résonance pendant une minute entière." },
-    "sans_faute": { "name": "Sans faute", "desc": "Finir une nuit sans un seul coup hors du temps." },
-    "fele_vaincu": { "name": "Le Fêlé s'est tu", "desc": "Faire taire le Bourdon Fêlé." },
-    "veuve_vaincue": { "name": "La veillée est finie", "desc": "Faire taire la Veuve de Suie." },
-    "maitre_vaincu": { "name": "Ce qui reste", "desc": "Faire taire ce qui reste du Maître." },
-    "toutes_paroisses": { "name": "Toutes les paroisses", "desc": "Tenir jusqu'à l'aube dans les cinq paroisses." },
-    "tous_sonneurs": { "name": "Tous les sonneurs", "desc": "Tenir jusqu'à l'aube avec les quatre sonneurs." },
-    "feuillets_complets": { "name": "Le carnet entier", "desc": "Retrouver les vingt-quatre Feuillets du Battant." },
-    "sans_rythme_victoire": { "name": "À sa propre mesure", "desc": "Tenir jusqu'à l'aube en mode Sans rythme." },
-    "muet_victoire": { "name": "Un nom de plus", "desc": "Tenir jusqu'à l'aube avec le Muet." }
+    "premiere_aube": {
+      "name": "Première aube",
+      "desc": "Tenir jusqu'à l'aube une fois."
+    },
+    "sonneur_confirme": {
+      "name": "Sonneur confirmé",
+      "desc": "Tenir jusqu'à l'aube dix fois."
+    },
+    "cent_echos": {
+      "name": "Cent échos",
+      "desc": "Faire taire cent choses en une seule nuit."
+    },
+    "mille_silences": {
+      "name": "Mille silences",
+      "desc": "Faire taire mille choses en une seule nuit."
+    },
+    "plein_timbre": {
+      "name": "Plein timbre",
+      "desc": "Porter six Timbres à la fois."
+    },
+    "plein_accord": {
+      "name": "Plein accord",
+      "desc": "Porter six Accords à la fois."
+    },
+    "premiere_fusion": {
+      "name": "Première fusion",
+      "desc": "Fondre un Timbre et un Accord ensemble."
+    },
+    "quatre_fusions": {
+      "name": "Quatre fusions",
+      "desc": "Découvrir les quatre fusions."
+    },
+    "resonance_parfaite": {
+      "name": "Résonance parfaite",
+      "desc": "Tenir le quatrième cran de Résonance pendant une minute entière."
+    },
+    "sans_faute": {
+      "name": "Sans faute",
+      "desc": "Finir une nuit sans un seul coup hors du temps."
+    },
+    "fele_vaincu": {
+      "name": "Le Fêlé s'est tu",
+      "desc": "Faire taire le Bourdon Fêlé."
+    },
+    "veuve_vaincue": {
+      "name": "La veillée est finie",
+      "desc": "Faire taire la Veuve de Suie."
+    },
+    "maitre_vaincu": {
+      "name": "Ce qui reste",
+      "desc": "Faire taire ce qui reste du Maître."
+    },
+    "toutes_paroisses": {
+      "name": "Toutes les paroisses",
+      "desc": "Tenir jusqu'à l'aube dans les cinq paroisses."
+    },
+    "tous_sonneurs": {
+      "name": "Tous les sonneurs",
+      "desc": "Tenir jusqu'à l'aube avec les quatre sonneurs."
+    },
+    "feuillets_complets": {
+      "name": "Le carnet entier",
+      "desc": "Retrouver les vingt-quatre Feuillets du Battant."
+    },
+    "sans_rythme_victoire": {
+      "name": "À sa propre mesure",
+      "desc": "Tenir jusqu'à l'aube en mode Sans rythme."
+    },
+    "muet_victoire": {
+      "name": "Un nom de plus",
+      "desc": "Tenir jusqu'à l'aube avec le Muet."
+    }
   },
   "lore": {
     "f01": {
