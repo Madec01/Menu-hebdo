@@ -16,7 +16,8 @@
     "beat3": "A third time. There. When you hold the Measure, I strike harder, and the night sings with us.",
     "levelup": "The Echoes rise to your heart. Choose a Timbre or a Chord; I will get used to it.",
     "goal": "Hold until dawn. Twelve minutes. At the end there will be a Bourdon, and it will have to be silenced.",
-    "done": "That is all I know. The rest is learned by ringing."
+    "done": "That is all I know. The rest is learned by ringing.",
+    "bell": "The bell rings four strokes. A Counter-beat on the fourth, and it answers you."
   },
   "weapon": {
     "battant": {
@@ -375,6 +376,10 @@
     "tous_timbres": {
       "name": "Every Timbre",
       "desc": "Unlock all nine starting Timbres, in play or at the Belfry."
+    },
+    "repondre_a_la_cloche": {
+      "name": "Answer the Bell",
+      "desc": "Answer the hourly bell ten times, on the fourth stroke."
     }
   },
   "lore": {
@@ -473,6 +478,48 @@
     "f24": {
       "title": "What remains",
       "text": "Register of Cendrelune, unknown hand: Anselme, ringer, come at Michaelmas. Stayed. Beneath, in a hand I recognise, the letters as if written in a mirror: He rings from dawn toward night, from the last stroke to the first. Do not answer him on the beat. Answer off the beat; that is where I still am."
+    }
+  },
+  "relic": {
+    "chapelet_de_cire": {
+      "name": "Wax Rosary",
+      "desc": "Every Echo comes to you, wherever it falls. Cost: Echoes −15%."
+    },
+    "clef_du_beffroi": {
+      "name": "Belfry Key",
+      "desc": "Bronze earned ×2. Cost: Fissures open one minute earlier."
+    },
+    "langue_de_cloche": {
+      "name": "Bell Tongue",
+      "desc": "The Counter-beat reflects twice. Cost: strike window −20%."
+    },
+    "suif_de_veillee": {
+      "name": "Vigil Tallow",
+      "desc": "Regeneration ×2, and a little wick even without Wax. Cost: speed −10%."
+    },
+    "bronze_fele": {
+      "name": "Cracked Bronze",
+      "desc": "Damage +25%. Cost: maximum life −20%."
+    },
+    "oreille_du_maitre": {
+      "name": "Master's Ear",
+      "desc": "Strike window ×1.5. Cost: Resonance fades twice as fast."
+    },
+    "bourse_percee": {
+      "name": "Torn Purse",
+      "desc": "Echoes ×1.5. Cost: no healing all night."
+    },
+    "corde_usee": {
+      "name": "Worn Rope",
+      "desc": "Cadence +1 notch (one more shot). Cost: knockback −50%."
+    },
+    "cierge_noir": {
+      "name": "Black Candle",
+      "desc": "Enemies −15% life. Cost: Fissures have +50% life."
+    },
+    "voile_de_brume": {
+      "name": "Veil of Fog",
+      "desc": "Clapper halo ×1.6. Cost: outside the halo, the fog hides everything."
     }
   }
 }

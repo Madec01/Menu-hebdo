@@ -5,7 +5,8 @@
 // (run:end → 'results'). À la mort : ralenti (fx.slowMo, joueur), voile qui
 // s'assombrit et « Le Battant se tait » avant le bilan ; à l'aube : « L'aube est
 // sonnée » sur victory_bell. enter({ parishId, characterId, seed, seedText, tutorial, weaponId }) ;
-// weaponId = Timbre de départ choisi au hub, transmis tel quel à startGame.
+// weaponId = Timbre de départ choisi au hub, transmis tel quel à startGame. Reliques (§ 11 bis) :
+// l'écran 'relicpick' est posé après le tutoriel (ou dès le départ), sauf noRelic (tests).
 
 import { bus } from '../core/events.js';
 import { getSave } from '../core/save.js';
@@ -52,6 +53,16 @@ export function createRun(deps) {
     unsubs.push(bus.on('resonance:change', (e) => { tier3 = e.tier >= 3; }));
     unsubs.push(bus.on('beat', () => { if (tier3 && active) camera.shake(1.5, 0.08); }));
     unsubs.push(bus.on('options:change', (e) => { if (e.key === 'beatIndicator') applyMetronome(); }));
+    unsubs.push(bus.on('ui:close', (e) => { if (e.screen === 'tutorial' && active) offerRelics(); }));
+  }
+
+  /** Écran de Reliques : les deux propositions de la run (game/relics.js), sauf choix déjà fait. */
+  function offerRelics() {
+    if (!active || !params || params.noRelic || !deps.game.relicOffer) return;
+    const g = deps.game.gameState();
+    if (!g.run || g.run.relicPicked || states.has('relicpick')) return;
+    const choices = deps.game.relicOffer();
+    if (choices && choices.length) states.push('relicpick', { choices });
   }
 
   function unsubscribe() { for (const u of unsubs) u(); unsubs.length = 0; }
@@ -84,6 +95,7 @@ export function createRun(deps) {
       applyMetronome();
       bus.emit('run:start', { parishId: p.parishId, characterId: p.characterId, seed: p.seed, tutorial: !!p.tutorial });
       if (p.tutorial) states.push('tutorial', { forced: !!p.forceTutorial });
+      else offerRelics();
     },
     exit() {
       active = false;

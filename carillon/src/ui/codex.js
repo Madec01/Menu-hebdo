@@ -1,5 +1,5 @@
 // ui/codex.js — codex empilable : onglets Bestiaire / Timbres / Accords /
-// Fusions / Feuillets / Hauts-faits. Liste défilante à gauche, détail à
+// Fusions / Reliques / Feuillets / Hauts-faits. Liste défilante à gauche, détail à
 // droite (codex-pages.js) ; les Feuillets s'ouvrent dans le lecteur (lore.js).
 // ◄► onglet, ↑↓ entrée, Entrée lire, Échap retour.
 
@@ -48,7 +48,7 @@ export function createCodex() {
       const r = { x, y: TAB_Y, w, h: TAB_H };
       tabRects.push(r);
       panel(ui, r.x, r.y, r.w, r.h, i === tab ? 'bronze' : 'dark');
-      text(ui, label, r.x + r.w / 2, r.y + r.h / 2, { size: 9, align: 'center', baseline: 'middle', color: i === tab ? C.clair : C.os });
+      text(ui, label, r.x + r.w / 2, r.y + r.h / 2, { size: 9, align: 'center', baseline: 'middle', color: i === tab ? C.clair : C.os, maxWidth: r.w - 6 });
       x += w + 4;
     }
   }

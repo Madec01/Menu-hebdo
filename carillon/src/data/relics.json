@@ -1,0 +1,22 @@
+[
+  { "id": "chapelet_de_cire", "name": "relic.chapelet_de_cire.name", "desc": "relic.chapelet_de_cire.desc", "icon": "cire_d_abeille",
+    "effects": { "magnetAll": true }, "drawbacks": { "xpGain": -0.15 } },
+  { "id": "clef_du_beffroi", "name": "relic.clef_du_beffroi.name", "desc": "relic.clef_du_beffroi.desc", "icon": "ui_sceau",
+    "effects": { "bronzeMult": 2 }, "drawbacks": { "fissureEarlySec": 60 } },
+  { "id": "langue_de_cloche", "name": "relic.langue_de_cloche.name", "desc": "relic.langue_de_cloche.desc", "icon": "clarine",
+    "effects": { "parryTwice": true }, "drawbacks": { "windowMult": -0.2 } },
+  { "id": "suif_de_veillee", "name": "relic.suif_de_veillee.name", "desc": "relic.suif_de_veillee.desc", "icon": "ui_lanterne",
+    "effects": { "regenMult": 2, "regenFlat": 0.5 }, "drawbacks": { "speedMult": -0.1 } },
+  { "id": "bronze_fele", "name": "relic.bronze_fele.name", "desc": "relic.bronze_fele.desc", "icon": "ui_bronze",
+    "effects": { "damageMult": 0.25 }, "drawbacks": { "maxHpMult": -0.2 } },
+  { "id": "oreille_du_maitre", "name": "relic.oreille_du_maitre.name", "desc": "relic.oreille_du_maitre.desc", "icon": "metronome",
+    "effects": { "windowScale": 1.5 }, "drawbacks": { "decayMult": 2 } },
+  { "id": "bourse_percee", "name": "relic.bourse_percee.name", "desc": "relic.bourse_percee.desc", "icon": "echo",
+    "effects": { "xpGain": 0.5 }, "drawbacks": { "noHeal": true } },
+  { "id": "corde_usee", "name": "relic.corde_usee.name", "desc": "relic.corde_usee.desc", "icon": "corde_de_chanvre",
+    "effects": { "cadence": 2 }, "drawbacks": { "knockbackMult": 0.5 } },
+  { "id": "cierge_noir", "name": "relic.cierge_noir.name", "desc": "relic.cierge_noir.desc", "icon": "ui_mort",
+    "effects": { "enemyHpMult": 0.85 }, "drawbacks": { "eliteHpMult": 1.5 } },
+  { "id": "voile_de_brume", "name": "relic.voile_de_brume.name", "desc": "relic.voile_de_brume.desc", "icon": "ui_son",
+    "effects": { "haloMult": 1.6 }, "drawbacks": { "hideOutsideHalo": true } }
+]

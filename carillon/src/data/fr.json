@@ -16,7 +16,8 @@
     "beat3": "Une troisième fois. Là. Quand tu tiens la Mesure, je frappe plus fort, et la nuit chante avec nous.",
     "levelup": "Les Échos te montent au cœur. Choisis un Timbre ou un Accord ; je m'y ferai.",
     "goal": "Tiens jusqu'à l'aube. Douze minutes. À la fin il y aura un Bourdon, et il faudra le faire taire.",
-    "done": "C'est tout ce que je sais. Le reste, on l'apprend en sonnant."
+    "done": "C'est tout ce que je sais. Le reste, on l'apprend en sonnant.",
+    "bell": "La cloche sonne quatre coups. Un Contre-battement sur le quatrième, et elle te répond."
   },
   "weapon": {
     "battant": {
@@ -375,6 +376,10 @@
     "tous_timbres": {
       "name": "Tous les Timbres",
       "desc": "Débloquer les neuf Timbres de départ, en jeu ou au Beffroi."
+    },
+    "repondre_a_la_cloche": {
+      "name": "Répondre à la cloche",
+      "desc": "Répondre dix fois à la cloche horaire, sur le quatrième coup."
     }
   },
   "lore": {
@@ -473,6 +478,48 @@
     "f24": {
       "title": "Ce qui reste",
       "text": "Registre de Cendrelune, main inconnue : Anselme, sonneur, venu à la Saint-Michel. Resté. Au-dessous, d'une main que je reconnais, les lettres comme écrites en miroir : Il sonne de l'aube vers la nuit, du dernier coup au premier. Ne lui réponds pas sur le temps. Réponds à contretemps ; c'est là que je suis encore."
+    }
+  },
+  "relic": {
+    "chapelet_de_cire": {
+      "name": "Chapelet de cire",
+      "desc": "Tous les Échos viennent à toi, d'où qu'ils tombent. Revers : Échos −15 %."
+    },
+    "clef_du_beffroi": {
+      "name": "Clef du Beffroi",
+      "desc": "Bronze rapporté ×2. Revers : les Fêlures s'ouvrent une minute plus tôt."
+    },
+    "langue_de_cloche": {
+      "name": "Langue de cloche",
+      "desc": "Le Contre-battement renvoie deux fois. Revers : fenêtre de frappe −20 %."
+    },
+    "suif_de_veillee": {
+      "name": "Suif de veillée",
+      "desc": "Régénération ×2, et un peu de mèche même sans Cire. Revers : vitesse −10 %."
+    },
+    "bronze_fele": {
+      "name": "Bronze fêlé",
+      "desc": "Dégâts +25 %. Revers : vie maximale −20 %."
+    },
+    "oreille_du_maitre": {
+      "name": "Oreille du Maître",
+      "desc": "Fenêtre de frappe ×1,5. Revers : la Résonance retombe deux fois plus vite."
+    },
+    "bourse_percee": {
+      "name": "Bourse percée",
+      "desc": "Échos ×1,5. Revers : aucun soin de toute la nuit."
+    },
+    "corde_usee": {
+      "name": "Corde usée",
+      "desc": "Cadence +1 cran (un tir de plus). Revers : recul des coups −50 %."
+    },
+    "cierge_noir": {
+      "name": "Cierge noir",
+      "desc": "Ennemis −15 % de vie. Revers : les Fêlures ont +50 % de vie."
+    },
+    "voile_de_brume": {
+      "name": "Voile de brume",
+      "desc": "Halo du Battant ×1,6. Revers : hors du halo, la brume cache tout."
     }
   }
 }

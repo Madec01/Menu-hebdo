@@ -47,7 +47,7 @@ async function main() {
   await page.mouse.click(720, 405);
   await page.waitForFunction(() => window.carillon.states.topName() === 'title' && !window.carillon.states.isTransitioning(), null, { timeout: 20000 });
   // Lancement direct d'une run (sans tutoriel).
-  await page.evaluate(() => window.carillon.states.replace('run', { parishId: 'cendrelune', characterId: 'wren', seed: 4242, tutorial: false }, { fade: false, sound: null }));
+  await page.evaluate(() => window.carillon.states.replace('run', { parishId: 'cendrelune', characterId: 'wren', seed: 4242, tutorial: false, noRelic: true }, { fade: false, sound: null }));
   await page.waitForFunction(() => window.carillon.deps.game && window.carillon.deps.game.isGameActive(), null, { timeout: 20000 });
   await page.waitForTimeout(1500);
 

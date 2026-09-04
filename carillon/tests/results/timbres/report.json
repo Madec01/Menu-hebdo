@@ -1,0 +1,119 @@
+{
+ "url": "http://localhost:8080/carillon/index.html",
+ "consoleErrors": [],
+ "pageErrors": [],
+ "badResponses": [],
+ "phases": {
+  "battant": {
+   "label": "battant",
+   "t0": 4.2811791383219955,
+   "t1": 27.74204081632653,
+   "screen": "run",
+   "acState": "running",
+   "gameActive": true,
+   "elapsedAudio": 23.460861678004534,
+   "bpm": 96,
+   "beatDur": 0.625,
+   "barSec": 2.857142857142857,
+   "maxVoices": 42,
+   "voices": {
+    "sampleRate": 44100,
+    "seconds": 23.45997732426304,
+    "samples": 1034585
+   },
+   "master": {
+    "sampleRate": 44100,
+    "seconds": 23.45997732426304,
+    "samples": 1034585
+   },
+   "roster": [
+    "battant"
+   ],
+   "weapons": [
+    "battant:1"
+   ]
+  },
+  "quatre": {
+   "label": "quatre",
+   "t0": 29.280362811791385,
+   "t1": 49.9112925170068,
+   "screen": "run",
+   "acState": "running",
+   "gameActive": true,
+   "elapsedAudio": 20.630929705215415,
+   "bpm": 96,
+   "beatDur": 0.625,
+   "barSec": 2.5,
+   "maxVoices": 40,
+   "voices": {
+    "sampleRate": 44100,
+    "seconds": 20.579977324263037,
+    "samples": 907577
+   },
+   "master": {
+    "sampleRate": 44100,
+    "seconds": 20.579977324263037,
+    "samples": 907577
+   },
+   "roster": [
+    "bourdon",
+    "battant",
+    "chaine_d_angelus",
+    "clarine"
+   ],
+   "weapons": [
+    "battant:1",
+    "clarine:1",
+    "bourdon:2",
+    "chaine_d_angelus:1"
+   ]
+  },
+  "six": {
+   "label": "six",
+   "t0": 51.78049886621315,
+   "t1": 62.400725623582765,
+   "screen": "run",
+   "acState": "running",
+   "gameActive": true,
+   "elapsedAudio": 10.620226757369615,
+   "bpm": 96,
+   "beatDur": 0.625,
+   "barSec": 2.5,
+   "maxVoices": 31,
+   "voices": {
+    "sampleRate": 44100,
+    "seconds": 10.619977324263038,
+    "samples": 468341
+   },
+   "master": {
+    "sampleRate": 44100,
+    "seconds": 10.619977324263038,
+    "samples": 468341
+   },
+   "roster": [
+    "bourdon",
+    "tocsin",
+    "battant",
+    "chaine_d_angelus",
+    "clarine",
+    "grelots"
+   ],
+   "weapons": [
+    "battant:1",
+    "clarine:1",
+    "bourdon:2",
+    "chaine_d_angelus:1",
+    "tocsin:1",
+    "grelots:1"
+   ]
+  }
+ },
+ "prep": {
+  "ready": true,
+  "track": "cendrelune",
+  "chord": "Dm",
+  "sampleRate": 44100,
+  "mediaRecorder": true
+ },
+ "ok": true
+}

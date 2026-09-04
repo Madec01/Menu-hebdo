@@ -28,6 +28,7 @@ export function leafCondition(c, f, save) {
     case 'fusion': return f.fusions.indexOf(c.fusion) >= 0 || save.unlocked.fusions.indexOf(c.fusion) >= 0;
     case 'resonance_max_time': return f.maxTierTime >= c.seconds;
     case 'runs': return save.stats.runs >= c.count;
+    case 'bell_answers': return f.bellAnswers >= c.count || (save.stats.bellAnswers || 0) >= c.count;
     default: return false;
   }
 }
@@ -52,6 +53,7 @@ export function achievementCondition(c, f, save) {
     case 'run_win_assist': return f.victory && f.assist === c.assist;
     case 'run_win_character': return f.victory && f.characterId === c.character;
     case 'weapons_unlocked': return save.unlocked.weapons.length >= c.count;
+    case 'bell_answers': return (save.stats.bellAnswers || 0) >= c.count;
     default: return false;
   }
 }

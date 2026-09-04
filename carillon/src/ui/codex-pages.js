@@ -2,16 +2,17 @@
 // panneau de détail (bestiaire rempli par save.codex, Timbres, Accords,
 // fusions découvertes, hauts-faits). Les Feuillets sont rendus par ui/lore.js.
 // L'onglet Timbres indique si le Timbre est débloqué en départ (start-weapons.js).
+// Onglet Reliques (§ 11 bis) : découvertes = portées au moins une nuit (save.codex.relics).
 
 import { getSave } from '../core/save.js';
 import * as atlas from '../render/atlas.js';
 import { t, has } from './i18n.js';
-import { enemies, weapons, passives, fusions } from './gamedata.js';
+import { enemies, weapons, passives, fusions, relics } from './gamedata.js';
 import { achievementList } from './achievements.js';
 import { isStartWeaponUnlocked, unlockLevel, weaponCost, weaponParams } from './start-weapons.js';
 import { text, paragraph, icon, pips, heading, C } from './widgets.js';
 
-export const TABS = ['bestiary', 'weapons', 'passives', 'fusions', 'leaves', 'achievements'];
+export const TABS = ['bestiary', 'weapons', 'passives', 'fusions', 'relics', 'leaves', 'achievements'];
 
 function nameKey(def) { return has('enemy.' + def.id + '.name') ? 'enemy.' + def.id + '.name' : def.name; }
 function loreKey(def) { return has('enemy.' + def.id + '.lore') ? 'enemy.' + def.id + '.lore' : def.lore; }
@@ -33,6 +34,10 @@ export function pageItems(tab) {
     case 'fusions': return fusions().map((d) => {
       const known = save.unlocked.fusions.indexOf(d.id) >= 0;
       return { id: d.id, def: d, kind: 'fusion', known, label: known ? t(d.name) : t('ui.common.unknown'), icon: known ? d.icon : 'ui_sceau' };
+    });
+    case 'relics': return relics().map((d) => {
+      const n = (save.codex.relics && save.codex.relics[d.id]) || 0;
+      return { id: d.id, def: d, kind: 'relic', known: n > 0, count: n, label: n > 0 ? t(d.name) : t('ui.common.unknown'), icon: n > 0 ? d.icon : 'ui_sceau' };
     });
     case 'achievements': return achievementList().map((a) => ({ id: a.id, def: a, kind: 'achievement', known: a.unlocked, label: a.name, icon: a.unlocked ? 'ui_sceau' : null }));
     default: return [];
@@ -88,6 +93,13 @@ export function renderDetail(ui, tab, item, r, time) {
     text(ui, t('ui.codex.stat', { stat: has(sk) ? t(sk) : d.stat, value: d.perLevel }), cx, r.y + 90, { size: 9, align: 'center', color: C.encreClaire });
     pips(ui, cx - d.maxLevel * 2.5, r.y + 102, d.maxLevel, d.maxLevel);
     paragraph(ui, t(d.desc), r.x + 12, r.y + 114, r.w - 24, { size: 9, color: C.encre, lineHeight: 10, maxLines: 6 });
+    return;
+  }
+  if (tab === 'relics') {
+    icon(ui, item.known ? d.icon : 'ui_sceau', cx - 16, r.y + 30, 1);
+    heading(ui, item.known ? t(d.name) : t('ui.common.unknown'), cx, r.y + 70, 14);
+    text(ui, item.known ? t('ui.codex.relic_taken', { count: item.count }) : t('ui.codex.locked'), cx, r.y + 90, { size: 9, align: 'center', color: item.known ? C.bronze : C.encreClaire });
+    paragraph(ui, item.known ? t(d.desc) : t('ui.codex.relic_hidden'), r.x + 12, r.y + 110, r.w - 24, { size: 9, color: C.encre, lineHeight: 10, maxLines: 6 });
     return;
   }
   if (tab === 'achievements') {

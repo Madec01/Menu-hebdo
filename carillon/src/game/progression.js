@@ -4,6 +4,7 @@
 // attente sont émises une à une après chaque `level:choice` (applyCard). finishRun construit
 // RunStats, calcule le Bronze, met à jour la sauvegarde (stats, codex, fusions, Feuillets, hauts-faits)
 // et commit(). Les compteurs rythmiques (parfait/raté) viennent de `rhythm:input`.
+// Relique et cloche (§ 11 bis) : run.relicId / run.bellAnswers → RunStats et save.stats.bellAnswers.
 // Timbres de départ : un Timbre porté à son niveau max pendant la run (ou composant d'une fusion
 // découverte) est débloqué immédiatement dans save.unlocked.weapons (commit → l'UI affiche le toast
 // par différence sur `save:changed`) et listé dans RunStats.startWeapons pour le bilan.
@@ -43,6 +44,7 @@ function listen() {
     if (e.grade === 'parfait') current.perfects++; else if (e.grade === 'rate') current.misses++;
   });
   bus.on('player:hit', () => { if (current && !current.finished) current.hitsTaken++; });
+  bus.on('bell:answered', () => { if (current && !current.finished) current.bellAnswers++; });
   bus.on('weapon:fusion', (e) => {
     if (!current || current.finished) return;
     if (current.fusions.indexOf(e.fusionId) < 0) current.fusions.push(e.fusionId);
@@ -78,7 +80,7 @@ export function initRun({ parishId, characterId, seed, assist = 'none' }) {
     pendingLevels: 0, awaiting: false, choices: [], rerolls: 0,
     echoes: 0, perfects: 0, misses: 0, inputs: 0, hitsTaken: 0, fusions: [],
     resonanceSum: 0, resonanceSamples: 0, bossKilled: null, world: null, player: null, finished: false, stats: null,
-    startWeapons: [],
+    startWeapons: [], relicId: null, relicOffer: null, relicPicked: false, bellAnswers: 0,
   };
   current = run;
   return run;
@@ -118,6 +120,13 @@ function emitLevelUp(run) {
   playSfx('level_up');
   emitParticles('bell', run.player.x, run.player.y);
   bus.emit('level:up', levelPayload);
+}
+
+/** Carte offerte (réponse à la cloche, minutes 4 et 8) : une montée de niveau sans XP ni niveau. */
+export function grantBonusLevel(run) {
+  if (run.finished) return;
+  run.pendingLevels++;
+  if (!run.awaiting) emitLevelUp(run);
 }
 
 /** Retire les 3 cartes (si des rerolls restent). Renvoie les nouvelles cartes ou null. */
@@ -173,6 +182,7 @@ export function finishRun(run, victory) {
     save.stats.winsByCharacter[run.characterId] = (save.stats.winsByCharacter[run.characterId] || 0) + 1;
   }
   if (run.timeSec > save.stats.bestTime) save.stats.bestTime = Math.round(run.timeSec);
+  save.stats.bellAnswers = (save.stats.bellAnswers || 0) + run.bellAnswers;
   if (resonanceAvg > save.stats.bestResonance) save.stats.bestResonance = Math.round(resonanceAvg * 100) / 100;
   if (world) for (const k in world.killsByKind) save.codex.enemies[k] = (save.codex.enemies[k] || 0) + world.killsByKind[k];
   if (run.bossKilled) save.codex.bosses[run.bossKilled] = (save.codex.bosses[run.bossKilled] || 0) + 1;
@@ -189,6 +199,7 @@ export function finishRun(run, victory) {
     parishId: run.parishId, characterId: run.characterId, timeSec: run.timeSec, victory, bossKilled: run.bossKilled,
     fusions: run.fusions, maxTierTime: maxTierTime(), echoes: run.echoes, perfects: run.perfects, misses: run.misses,
     assist: run.assist, inputs: run.inputs, weaponCount: p ? p.weapons.length : 0, passiveCount: p ? p.passives.length : 0,
+    bellAnswers: run.bellAnswers, relicId: run.relicId,
   };
   evaluateUnlocks(facts, save, unlockOut);
   commit();
@@ -203,6 +214,7 @@ export function finishRun(run, victory) {
     },
     leaves: unlockOut.leaves.slice(), achievements: unlockOut.achievements.slice(), startWeapons: run.startWeapons.slice(),
     echoes: run.echoes, perfects: run.perfects, misses: run.misses, inputs: run.inputs, hitsTaken: run.hitsTaken,
+    relicId: run.relicId, bellAnswers: run.bellAnswers,
   };
   run.stats = stats;
   resetResonance();

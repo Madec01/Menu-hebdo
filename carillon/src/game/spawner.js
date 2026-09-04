@@ -30,6 +30,9 @@ export function offscreenPos(world, p, out) {
 }
 const pos = { x: 0, y: 0 };
 
+/** Instant d'un événement ; les Fêlures peuvent être avancées par une Relique (world.fissureEarlySec). */
+function eventAt(world, ev) { return ev.type === 'fissure' ? ev.at - (world.fissureEarlySec || 0) : ev.at; }
+
 export function updateSpawner(world, dt, p) {
   const sp = world.spawner, def = sp.def, S = balance().spawn;
   const t = world.time;
@@ -50,7 +53,7 @@ export function updateSpawner(world, dt, p) {
     sp.nextMinute++;
   }
   // Événements (Fêlures, boss).
-  while (sp.eventIdx < def.events.length && t >= def.events[sp.eventIdx].at) {
+  while (sp.eventIdx < def.events.length && t >= eventAt(world, def.events[sp.eventIdx])) {
     const ev = def.events[sp.eventIdx++];
     if (ev.type === 'fissure') startFissure(world, ev.boss, p);
     else if (ev.type === 'boss') { startBoss(world, ev.boss, p); sp.bossStarted = true; }

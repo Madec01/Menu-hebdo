@@ -4,6 +4,8 @@
 // main.js : await loadGameData() ; startGame({...}) ; à chaque tick updateGame(dt) ; à chaque
 // frame beginFrame(alpha) → renderGame(ctx, alpha) → endFrame(). La pause = loop.setTimeScale(0)
 // (rien à faire ici) ; pendant l'écran de cartes, main ne tick plus updateGame.
+// § 11 bis : Reliques (relics.js : run.relicOffer, pickRelic) et Cloche horaire (bell-hour.js :
+// gameState().bell pour le HUD).
 
 import { bus } from '../core/events.js';
 import { makeRng } from '../core/rng.js';
@@ -21,11 +23,18 @@ import { createWorld, updateWorld, renderWorld, entityCount } from './world.js';
 import { addWeapon, removeWeapon, updateWeapons } from './weapons.js';
 import { initResonance, update as updateResonance } from './resonance.js';
 import { initRun, updateRun, addXp, applyCard, finishRun, rerollCards } from './progression.js';
+import { initRelics, disposeRelics, offerRelics, pickRelic as pickRelicRun, updateRelics, renderRelics } from './relics.js';
+import { initBellHour, disposeBellHour, updateBellHour, bellState } from './bell-hour.js';
 
 /** Relance des cartes (bouton de l'écran de cartes, E) : renvoie les nouvelles cartes ou null. */
 export function rerollLevelUp() { return st.run && st.player ? rerollCards(st.run, st.player) : null; }
 
-const st = { run: null, player: null, world: null, endT: -1, unsubs: [], active: false };
+/** Reliques (§ 11 bis) : choix de l'écran relic-pick (E) ; null = aucune. Renvoie true si enregistré. */
+export function pickRelic(relicId) { return st.run ? pickRelicRun(st.run, relicId) : false; }
+/** Les deux Reliques proposées pour cette nuit (ou null). */
+export function relicOffer() { return st.run ? st.run.relicOffer : null; }
+
+const st = { run: null, player: null, world: null, bell: null, endT: -1, unsubs: [], active: false };
 const END_DELAY_DEATH = 2.2;   // ralenti de mort (0,4×) puis bilan
 const END_DELAY_VICTORY = 3.0;
 
@@ -59,12 +68,15 @@ export function startGame({ parishId, characterId, seed, assist = null, upgrades
   const chosen = weaponId && weaponDef(weaponId) ? weaponId : null;
   if (cDef.startWeaponFixed) { addWeapon(player, cDef.startWeapon); if (chosen && chosen !== cDef.startWeapon) addWeapon(player, chosen); }
   else addWeapon(player, chosen || cDef.startWeapon);
+  initRelics(run, player, world);
+  offerRelics(run);
+  initBellHour(run, player, world);
   snap(player.x, player.y);
   setHaloPos(player.x, player.y);
   // Nuit de la paroisse, relevée par la « lune grise » (lisibilité hors du halo).
   setAmbient(floorAmbient(pDef.ambient || '#16130f'));
   prepareTints();
-  st.run = run; st.player = player; st.world = world; st.endT = -1; st.active = true;
+  st.run = run; st.player = player; st.world = world; st.bell = bellState(); st.endT = -1; st.active = true;
   st.unsubs.push(bus.on('pickup:xp', (e) => { if (st.run) addXp(st.run, e.amount); }));
   st.unsubs.push(bus.on('level:choice', (e) => { if (st.run && st.player) applyCard(st.run, st.player, e.card); }));
   st.unsubs.push(bus.on('player:death', () => { if (st.endT < 0) st.endT = END_DELAY_DEATH; }));
@@ -85,6 +97,8 @@ export function updateGame(dt) {
   updateWorld(world, dt, player);
   updateWeapons(player, dt, world);
   updateResonance(dt);
+  updateRelics(dt);
+  updateBellHour(dt);
   updateRun(run, dt, player, world);
   follow(player.x, player.y, dt);
   setListener(player.x, player.y);
@@ -106,6 +120,7 @@ export function renderGame(ctx, alpha) {
   const bi = getSave().options.beatIndicator;
   setBeatPulse(bi === 'audio' || bi === 'none' ? 0 : 1 - phase());
   renderWorld(ctx, st.world, alpha);
+  renderRelics(alpha);
   renderParticles(ctx, alpha);
   renderFx(ctx, alpha);
 }
@@ -138,7 +153,8 @@ export function endGame() {
   for (let i = 0; i < st.unsubs.length; i++) st.unsubs[i]();
   st.unsubs.length = 0;
   if (st.player) for (let i = 0; i < st.player.weapons.length; i++) if (st.player.weapons[i].unschedule) st.player.weapons[i].unschedule();
-  st.run = null; st.player = null; st.world = null; st.active = false; st.endT = -1;
+  disposeRelics(); disposeBellHour();
+  st.run = null; st.player = null; st.world = null; st.bell = null; st.active = false; st.endT = -1;
 }
 
 export function gameState() { return st; }

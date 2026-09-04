@@ -178,7 +178,9 @@
       "perfects": "Perfect hits: {perfects} · misses: {misses}",
       "killer": "You fell to: {name}",
       "build": "Your bronze tonight",
-      "start_weapon": "Starting Timbre unlocked: {name}"
+      "start_weapon": "Starting Timbre unlocked: {name}",
+      "relic": "Relic of the night: {name}",
+      "bell": "Bell: {count} {count|answer|answers}"
     },
     "codex": {
       "title": "Codex",
@@ -213,7 +215,10 @@
       "stat_crit": "Critical",
       "stat_bounce": "Bounces",
       "start_unlocked": "Starting Timbre: unlocked",
-      "start_locked": "Starting Timbre: level {level} in a run or {cost} bronze"
+      "start_locked": "Starting Timbre: level {level} in a run or {cost} bronze",
+      "tab_relics": "Relics",
+      "relic_taken": "Carried {count} {count|night|nights}",
+      "relic_hidden": "Never carried. It is offered at the start of a night."
     },
     "options": {
       "title": "Options",
@@ -341,6 +346,23 @@
     },
     "confirm": {
       "title": "Sure?"
+    },
+    "relic": {
+      "title": "Parish Relic",
+      "subtitle": "One rule for the whole night, and its cost",
+      "kind": "Relic",
+      "none": "No relic",
+      "hint": "◄► choose · Enter take · Esc refuse",
+      "hint_pad": "Stick choose · A take · B refuse",
+      "hud": "Relic of the night"
+    },
+    "bell": {
+      "ring": "The bell rings",
+      "answered": "Answered!",
+      "bonus_heal": "Heal",
+      "bonus_resonance": "Resonance +1",
+      "bonus_card": "Free card",
+      "bonus_bronze": "Bronze"
     }
   }
 }

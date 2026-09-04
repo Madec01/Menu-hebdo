@@ -20,6 +20,7 @@ const st = {
   gain: 1,           // multiplicateur de gain (stat resonanceGain du sonneur)
   maxTimeSec: 0,     // temps cumulé passé au cran maximal (Feuillet f19)
   perfectStreak: 0,
+  decayMult: 1,      // Relique « Oreille du Maître » : décroissance ×2
   cfg: null,
 };
 
@@ -34,7 +35,7 @@ export function initResonance({ assist = 'none', gain = 1 } = {}) {
   st.cfg = balance().resonance;
   st.assist = assist;
   st.gain = gain;
-  st.sinceInput = 0; st.blockT = 0; st.maxTimeSec = 0; st.perfectStreak = 0;
+  st.sinceInput = 0; st.blockT = 0; st.maxTimeSec = 0; st.perfectStreak = 0; st.decayMult = 1;
   st.raw = assist === 'norhythm' ? cfg().norhythmTier * cfg().stepsPerTier : 0;
   st.tier = Math.min(cfg().mults.length - 1, Math.floor(st.raw / cfg().stepsPerTier));
   emitChange(1);
@@ -83,6 +84,16 @@ export function onRhythmInput(grade, charge = true) {
   setRaw(st.raw + g, 1);
 }
 
+/** Multiplicateur de la décroissance (Relique). */
+export function setDecayMult(m) { st.decayMult = m > 0 ? m : 1; }
+
+/** Ajoute `tiers` crans entiers (réponse à la cloche) ; sans effet en 'norhythm'. */
+export function bump(tiers = 1) {
+  if (st.assist === 'norhythm') return;
+  st.sinceInput = 0;
+  setRaw(st.raw + cfg().stepsPerTier * tiers, 1);
+}
+
 /** Cran courant 0..3. */
 export function tier() { return st.tier; }
 /** Multiplicateur de dégâts du cran courant. */
@@ -114,7 +125,7 @@ export function update(dt) {
   if (st.sinceInput > c.decayAfterBeats * beat && st.raw > 0) {
     // Décroissance continue mais émission limitée : au changement de cran ou 4 fois par seconde.
     const before = st.tier;
-    st.raw = Math.max(0, st.raw - c.decayPerBeat * dt / beat);
+    st.raw = Math.max(0, st.raw - c.decayPerBeat * st.decayMult * dt / beat);
     const t = Math.min(c.mults.length - 1, Math.floor(st.raw / c.stepsPerTier));
     st.emitAcc = (st.emitAcc || 0) + dt;
     if (t !== before) { st.emitAcc = 0; setRaw(st.raw, -1); }

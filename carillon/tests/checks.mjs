@@ -55,7 +55,8 @@ const REG = {
   bosses: ['bourdon_fele', 'veuve_suie', 'maitre'],
   parishes: ['cendrelune', 'tourbes', 'val_des_cordes', 'nef_noyee', 'beffroi_mere'],
   upgrades: ['coeur_de_bronze', 'semelles_de_cuir', 'ferrure_du_beffroi', 'oreille_fine', 'battant_lourd', 'aimant_d_echos', 'reliquaire', 'cire_de_veillee', 'main_sure', 'bourse_de_cuivre', 'second_souffle', 'contrepoids_de_fonte', 'corde_neuve', 'troisieme_carte'],
-  achievements: ['premiere_aube', 'sonneur_confirme', 'cent_echos', 'mille_silences', 'plein_timbre', 'plein_accord', 'premiere_fusion', 'quatre_fusions', 'resonance_parfaite', 'sans_faute', 'fele_vaincu', 'veuve_vaincue', 'maitre_vaincu', 'toutes_paroisses', 'tous_sonneurs', 'feuillets_complets', 'sans_rythme_victoire', 'muet_victoire'],
+  achievements: ['premiere_aube', 'sonneur_confirme', 'cent_echos', 'mille_silences', 'plein_timbre', 'plein_accord', 'premiere_fusion', 'quatre_fusions', 'resonance_parfaite', 'sans_faute', 'fele_vaincu', 'veuve_vaincue', 'maitre_vaincu', 'toutes_paroisses', 'tous_sonneurs', 'feuillets_complets', 'sans_rythme_victoire', 'muet_victoire', 'tous_timbres', 'repondre_a_la_cloche'],
+  relics: ['chapelet_de_cire', 'clef_du_beffroi', 'langue_de_cloche', 'suif_de_veillee', 'bronze_fele', 'oreille_du_maitre', 'bourse_percee', 'corde_usee', 'cierge_noir', 'voile_de_brume'],
   sfx: ['hit_light', 'hit_heavy', 'hit_crit', 'enemy_die', 'enemy_die_big', 'boss_hit', 'boss_roar', 'player_step', 'player_hurt', 'player_death', 'dash', 'parry_ok', 'parry_miss', 'resonance_1', 'resonance_2', 'resonance_3', 'resonance_4', 'resonance_drop', 'level_up', 'card_flip', 'card_pick', 'xp_pickup', 'xp_pickup_big', 'bell_minute', 'bell_tier', 'silence_cry', 'silence_burst', 'ui_move', 'ui_confirm', 'ui_cancel', 'weapon_battant', 'weapon_clarine', 'weapon_bourdon', 'weapon_grelots', 'weapon_tocsin', 'weapon_cor', 'weapon_crecelle', 'weapon_chaine', 'weapon_diapason', 'fusion', 'achievement', 'lore_unlock', 'victory_bell'],
   tracks: ['menu', 'hub', 'cendrelune', 'tourbes', 'val_des_cordes', 'nef_noyee', 'beffroi_mere', 'boss', 'victory', 'death'],
 };
@@ -77,6 +78,8 @@ checkIds('boss', REG.bosses, ids(D('enemies')));
 checkIds('paroisses', REG.parishes, ids(D('parishes')));
 checkIds('améliorations du Beffroi', REG.upgrades, ids(D('upgrades')));
 checkIds('hauts-faits', REG.achievements, ids(D('achievements')));
+checkIds('Reliques (§ 11 bis)', REG.relics, ids(D('relics')));
+check('relics.json : ≥ 10 Reliques avec effets et revers', (D('relics') || []).length >= 10 && (D('relics') || []).every((r) => r.effects && r.drawbacks && r.icon), '');
 checkIds('Feuillets', Array.from({ length: 24 }, (_, i) => 'f' + String(i + 1).padStart(2, '0')), ids(D('lore')));
 checkIds('bruitages (§ 8)', REG.sfx, new Set(Object.keys(audioManifest.sfx || {})));
 checkIds('pistes (§ 8)', REG.tracks, new Set(Object.keys(audioManifest.tracks || {})));
@@ -117,7 +120,7 @@ function collectKeys(o) {
     else if (v && typeof v === 'object') collectKeys(v);
   }
 }
-for (const name of ['weapons', 'passives', 'fusions', 'enemies', 'parishes', 'characters', 'upgrades', 'achievements', 'lore']) collectKeys(D(name));
+for (const name of ['weapons', 'passives', 'fusions', 'enemies', 'parishes', 'characters', 'upgrades', 'achievements', 'lore', 'relics']) collectKeys(D(name));
 // Clés dérivées par le code : parish.<id>.desc, char.<id>.trait, boss.<id>.name/lore.
 for (const p of D('parishes') || []) refKeys.add('parish.' + p.id + '.desc');
 const missFr = [...refKeys].filter((k) => !(k in fr)), missEn = [...refKeys].filter((k) => !(k in en));
@@ -146,7 +149,7 @@ for (const w of [...(D('weapons') || []), ...(D('fusions') || [])]) {
   if (!iconMap.has(w.icon)) badIcon.push(w.id + '→' + w.icon);
   if (!sfxIds.has(w.sfx)) badSfx.push(w.id + '→' + w.sfx);
 }
-for (const p of D('passives') || []) if (!iconMap.has(p.icon)) badIcon.push(p.id + '→' + p.icon);
+for (const p of [...(D('passives') || []), ...(D('relics') || [])]) if (!iconMap.has(p.icon)) badIcon.push(p.id + '→' + p.icon);
 for (const p of D('parishes') || []) {
   if (!tiles.has(p.tileset)) badTile.push(p.id + '→' + p.tileset);
   if (!trackIds.has(p.track)) badTrack.push(p.id + '→' + p.track);

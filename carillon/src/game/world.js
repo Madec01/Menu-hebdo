@@ -36,6 +36,8 @@ export function createWorld({ parishDef, rng, waveDef }) {
     kills: 0, killsByKind: {}, spawned: 0, echoes: 0, bronzePicked: 0, auraDepth: 0, auraWasIn: false,
     fissure: null, fissureId: 0, boss: null, bossId: 0, bossKind: '', bossKilled: null, victory: false, ended: false,
     player: null, allParishes: Array.from(allParishes().values()),
+    // Règles modifiées par une Relique (game/relics.js) : lues par spawner, collision et le rendu.
+    fissureEarlySec: 0, knockbackMult: 1, parryTwice: false, hideRadius: 0,
   };
   return world;
 }
@@ -89,10 +91,12 @@ export function renderWorld(ctx, world, alpha) {
   let n = 0;
   const enemies = world.enemies.items;
   ensureCapacity(enemies.length + world.ground.propList.length + 1);
+  const hideR2 = world.hideRadius > 0 && player ? world.hideRadius * world.hideRadius : 0;   // Voile de brume
   for (let i = 0; i < enemies.length; i++) {
     const e = enemies[i];
     const y = e.py + (e.y - e.py) * alpha;
     if (!isVisible(e.px + (e.x - e.px) * alpha, y, e.r * 3)) continue;
+    if (hideR2 > 0) { const dx = e.x - player.x, dy = (e.y - player.y) * 1.6; if (dx * dx + dy * dy > hideR2) continue; }
     listObj[n] = e; listY[n] = y; listType[n] = 0; n++;
   }
   const props = world.ground.propList;

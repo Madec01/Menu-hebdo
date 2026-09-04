@@ -168,5 +168,14 @@
    "type": "weapons_unlocked",
    "count": 9
   }
+ },
+ {
+  "id": "repondre_a_la_cloche",
+  "name": "achievement.repondre_a_la_cloche.name",
+  "desc": "achievement.repondre_a_la_cloche.desc",
+  "condition": {
+   "type": "bell_answers",
+   "count": 10
+  }
  }
 ]

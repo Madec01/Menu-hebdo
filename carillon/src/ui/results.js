@@ -1,6 +1,7 @@
 // ui/results.js — bilan de la nuit : temps, tués, niveau, DPS par Timbre,
 // Résonance moyenne, Bronze gagné avec compteur animé, Feuillet, hauts-faits et
-// Timbres de départ débloqués, seed copiable, Rejouer / Retour au Beffroi.
+// Timbres de départ débloqués, Relique de la nuit, réponses à la cloche, seed copiable,
+// Rejouer / Retour au Beffroi.
 // enter({ victory, stats: RunStats, params }) — le Bronze est déjà crédité (D).
 
 import * as renderer from '../render/renderer.js';
@@ -67,6 +68,9 @@ export function createResults() {
     if (s.leafUnlocked) { text(ui, t('ui.results.leaf', { title: t('lore.' + s.leafUnlocked + '.title') }), lx, y, { size: 9, color: C.braise, maxWidth: 180 }); y += 11; }
     if (s.achievements) for (const id of s.achievements.slice(0, 2)) { text(ui, t('ui.results.achievement', { name: t('achievement.' + id + '.name') }), lx, y, { size: 9, color: C.braise, maxWidth: 180 }); y += 11; }
     if (s.startWeapons) for (const id of s.startWeapons.slice(0, 2)) { text(ui, t('ui.results.start_weapon', { name: t('weapon.' + id + '.name') }), lx, y, { size: 9, color: C.bronze, maxWidth: 180 }); y += 11; }
+    // Relique de la nuit et réponses à la cloche (§ 11 bis), tant qu'il reste de la place au-dessus de la seed.
+    if (s.relicId && y < PY + PH - 56) { const d = dataDef('relics', s.relicId); icon(ui, d && d.icon ? d.icon : 'ui_sceau', lx, y - 3, 0.4); text(ui, t('ui.results.relic', { name: t('relic.' + s.relicId + '.name') }), lx + 16, y, { size: 9, color: C.encre, maxWidth: 170 }); y += 11; }
+    if (s.bellAnswers > 0 && y < PY + PH - 56) { text(ui, t('ui.results.bell', { count: s.bellAnswers }), lx, y, { size: 9, color: C.encreClaire, maxWidth: 180 }); y += 11; }
     text(ui, t('ui.results.seed', { seed: seedLabel() }), lx, PY + PH - 44, { size: 8, color: C.encreClaire, maxWidth: 200 });
   }
 

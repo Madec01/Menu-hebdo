@@ -4,7 +4,7 @@
 // seulement lue et indexée par id. `start-weapons` est un objet (règles des
 // Timbres de départ), les autres fichiers sont des listes.
 
-const FILES = ['characters', 'parishes', 'upgrades', 'lore', 'achievements', 'weapons', 'passives', 'fusions', 'enemies', 'start-weapons'];
+const FILES = ['characters', 'parishes', 'upgrades', 'lore', 'achievements', 'weapons', 'passives', 'fusions', 'enemies', 'start-weapons', 'relics'];
 const OBJECT_FILES = { 'start-weapons': true };
 const data = { loaded: false };
 for (const f of FILES) data[f] = OBJECT_FILES[f] ? {} : [];
@@ -42,4 +42,5 @@ export const weapons = () => data.weapons;
 export const passives = () => data.passives;
 export const fusions = () => data.fusions;
 export const enemies = () => data.enemies;
+export const relics = () => data.relics;
 export const startWeaponRules = () => data['start-weapons'];

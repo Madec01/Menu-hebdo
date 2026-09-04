@@ -4,12 +4,13 @@
 // Aucun nombre d'équilibrage n'est codé en dur : tout vient de src/data/*.json
 // (le bloc `balance` de waves.json regroupe les constantes globales de gameplay).
 
-const FILES = ['weapons', 'passives', 'fusions', 'enemies', 'waves', 'parishes', 'characters', 'upgrades', 'achievements', 'lore'];
+const FILES = ['weapons', 'passives', 'fusions', 'enemies', 'waves', 'parishes', 'characters', 'upgrades', 'achievements', 'lore', 'relics'];
+const OPTIONAL = { lore: true, relics: true };   // fichiers facultatifs (absents → vides)
 
 const data = {
   weapons: new Map(), passives: new Map(), fusions: new Map(), enemies: new Map(),
   parishes: new Map(), characters: new Map(), upgrades: new Map(),
-  achievements: [], lore: [], waves: {}, balance: null, loaded: false,
+  achievements: [], lore: [], relics: new Map(), waves: {}, balance: null, loaded: false,
 };
 
 let baseUrl = 'src/data/';
@@ -37,7 +38,7 @@ export async function loadGameData(override = null) {
   const raw = {};
   for (let i = 0; i < FILES.length; i++) {
     const name = FILES[i];
-    raw[name] = override && override[name] ? override[name] : await fetchJson(name, name === 'lore');
+    raw[name] = override && override[name] ? override[name] : await fetchJson(name, !!OPTIONAL[name]);
   }
   toMap(data.weapons, raw.weapons);
   toMap(data.passives, raw.passives);
@@ -48,6 +49,7 @@ export async function loadGameData(override = null) {
   toMap(data.upgrades, raw.upgrades);
   data.achievements = raw.achievements || [];
   data.lore = raw.lore || [];
+  toMap(data.relics, raw.relics);
   data.waves = raw.waves || {};
   data.balance = data.waves.balance;
   if (!data.balance) throw new Error('waves.json : bloc balance manquant');
@@ -74,6 +76,8 @@ export function allCharacters() { return data.characters; }
 export function allUpgrades() { return data.upgrades; }
 export function achievementDefs() { return data.achievements; }
 export function loreDefs() { return data.lore; }
+export function relicDef(id) { return data.relics.get(id); }
+export function allRelics() { return data.relics; }
 
 /** Fusion dont l'arme et l'accord correspondent (ou undefined). */
 export function fusionFor(weaponId, passiveId) {

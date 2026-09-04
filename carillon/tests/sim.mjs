@@ -4,7 +4,8 @@
 // tests/stubs/* via un hook de résolution ; tout src/game/** et core/{events,pool,grid,rng,save} est réel.
 // Un « joueur robot » pilote le sonneur : il fuit vers la zone la moins dense, se tourne vers l'ennemi le
 // plus proche au tick où une arme directionnelle tire, presse Volée/Contre-battement sur les temps avec un
-// taux de réussite paramétrable (profil), et choisit les cartes selon une stratégie.
+// taux de réussite paramétrable (profil), répond à la cloche horaire sur le 4ᵉ coup, prend la première
+// Relique proposée (--relic) et choisit les cartes selon une stratégie.
 //
 //   node tests/sim.mjs                                  # une run : Wren, parfait, seed 1, Cendrelune
 //   node tests/sim.mjs --char le_muet --profile moyen --seed 3 --parish tourbes
@@ -12,6 +13,7 @@
 //   node tests/sim.mjs --matrix --chars wren,osric,maren,le_muet --profiles parfait,moyen,norhythm,passif
 //   node tests/sim.mjs --data /chemin/vers/data          # autre jeu de JSON (comparaison avant/après)
 //   node tests/sim.mjs --json                           # sortie JSON brute (une ligne)
+//   node tests/sim.mjs --relic none|first|<id>          # Relique de paroisse (défaut : la première proposée)
 // Options : --seeds N, --cards honnete|premiere|fusion, --upgrades coeur_de_bronze:3,battant_lourd:2,
 //           --secondWeapon <id> (variante : arme supplémentaire au départ), --minutes 13, --jobs 4.
 
@@ -43,7 +45,7 @@ const PASSIVE_PREF = ['ferrure', 'contrepoids', 'cire_d_abeille', 'corde_de_chan
 
 function parseArgs(argv) {
   const o = { seed: 1, seeds: 5, char: 'wren', profile: 'parfait', parish: 'cendrelune', cards: null, data: null, upgrades: '', secondWeapon: null, trace: null,
-    minutes: 14.5, json: false, matrix: false, chars: 'wren,le_muet', profiles: 'parfait,moyen,norhythm', jobs: 4, quiet: false, weapons: 4 };
+    minutes: 14.5, json: false, matrix: false, chars: 'wren,le_muet', profiles: 'parfait,moyen,norhythm', jobs: 4, quiet: false, weapons: 4, relic: 'first' };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (!a.startsWith('--')) continue;
@@ -216,7 +218,10 @@ function makeRobot(profile, opts, mods, rng) {
       if (beat !== R.lastBeat) {
         R.lastBeat = beat;
         const beatT = conductor.beatTime(beat);
-        if (profile.inputEvery > 0 && beat % profile.inputEvery === 0 && beat > 0) {
+        const bell = g.bell;
+        // Cloche horaire (§ 11 bis) : Contre-battement sur le 4ᵉ coup, avec le grade du profil.
+        if (bell && bell.ringing && beat === bell.fourthBeat && profile.inputEvery > 0 && p.parryT <= 0) press('parry', beatT);
+        else if (profile.inputEvery > 0 && beat % profile.inputEvery === 0 && beat > 0) {
           if (profile.dashAlways && p.dashT <= 0) { press('dash', beatT); dashNow = true; R.dashDir = len > 0 ? 1 : 0; }
           else if ((flee || nearTouch) && p.dashT <= 0 && fleeLen > 0) { press('dash', beatT); dashNow = true; }
           else if (p.parryT <= 0) press('parry', beatT);
@@ -300,6 +305,7 @@ export async function runOne(o) {
     samples: [], xpTotal: 0, outcome: 'timeout', endSec: 0, kills: 0, level: 1, levelUps: 0, hitsTaken: 0, dmgTaken: {}, dmgTakenTotal: 0,
     boss: { startSec: null, endSec: null, hpAtStart: null, fightSec: null }, fissures: [], dps: {}, resonanceAvg: 0, bronze: 0,
     grades: null, dashes: 0, parries: 0, maxEnemies: 0, build: null, achievements: [], leaves: [], firstDeathRisk: null, minHp: 1e9, minHpSec: 0,
+    relic: null, relicOffer: null, bellRings: 0, bellAnswers: 0,
   };
   const offs = [];
   offs.push(bus.on('level:up', (e) => {
@@ -308,6 +314,8 @@ export async function runOne(o) {
     bus.emit('level:choice', { card });
   }));
   offs.push(bus.on('pickup:xp', (e) => { out.xpTotal += e.amount; }));
+  offs.push(bus.on('bell:ring', () => { out.bellRings++; }));
+  offs.push(bus.on('bell:answered', () => { out.bellAnswers++; }));
   offs.push(bus.on('player:hit', (e) => { out.hitsTaken++; out.dmgTaken[e.from] = (out.dmgTaken[e.from] || 0) + e.damage; out.dmgTakenTotal += e.damage; }));
   offs.push(bus.on('run:boss', (e) => {
     if (e.phase === 'start') { out.boss.startSec = g.run.timeSec; out.boss.hpAtStart = g.player.hp; }
@@ -328,6 +336,11 @@ export async function runOne(o) {
   }));
 
   const g = game.startGame({ parishId: o.parish, characterId: o.char, seed: o.seed, assist: profile.assist, upgrades });
+  // Relique de paroisse (§ 11 bis) : le robot prend la première proposée (--relic none|first|<id>).
+  out.relicOffer = (g.run.relicOffer || []).slice();
+  const relicChoice = o.relic === 'first' ? out.relicOffer[0] || null : o.relic === 'none' ? null : o.relic;
+  if (!game.pickRelic(relicChoice) && relicChoice) throw new Error('Relique inconnue ' + relicChoice);
+  out.relic = g.run.relicId;
   if (o.secondWeapon) weapons.addWeapon(g.player, o.secondWeapon);
   const p = g.player, world = g.world;
   const maxTicks = Math.round(o.minutes * 60 * 60);
@@ -375,6 +388,7 @@ function fmtRun(r) {
   lines.push('  DPS par arme : ' + Object.entries(r.dps).map(([k, v]) => k + ' ' + v).join(', '));
   lines.push('  frappes : ' + JSON.stringify(r.grades) + ` (${r.dashes} volées, ${r.parries} parades) ; coups reçus ${r.hitsTaken} (${r.dmgTakenTotal} PV) : ` + Object.entries(r.dmgTaken).map(([k, v]) => k + ' ' + v).join(', '));
   lines.push(`  PV mini ${r.minHp} à ${r.minHpSec} s ; ennemis max ${r.maxEnemies} ; Fêlures ${r.fissures.join(' ')}`);
+  lines.push(`  Relique : ${r.relic || 'aucune'} (proposées : ${(r.relicOffer || []).join(', ')}) ; cloche : ${r.bellAnswers}/${r.bellRings} réponses`);
   if (r.boss.startSec !== null) lines.push(`  boss : début ${Math.round(r.boss.startSec)} s avec ${r.boss.hpAtStart} PV, durée ${r.boss.fightSec === null ? 'non vaincu (' + r.boss.hpLeft + ' PV restants)' : r.boss.fightSec + ' s'}`);
   if (r.build) lines.push('  build : ' + r.build.weapons.map((w) => w.id + ':' + w.level).join(' ') + ' | ' + r.build.passives.map((w) => w.id + ':' + w.level).join(' '));
   return lines.join('\n');
@@ -428,7 +442,7 @@ function runChild(args) {
 export async function runMatrix(o) {
   const jobs = [];
   for (const c of o.chars.split(',')) for (const pr of o.profiles.split(',')) for (let s = 1; s <= o.seeds; s++) {
-    const args = ['--char', c, '--profile', pr, '--seed', String(s), '--parish', o.parish, '--minutes', String(o.minutes), '--weapons', String(o.weapons)];
+    const args = ['--char', c, '--profile', pr, '--seed', String(s), '--parish', o.parish, '--minutes', String(o.minutes), '--weapons', String(o.weapons), '--relic', o.relic];
     if (o.data) args.push('--data', o.data);
     if (o.cards) args.push('--cards', o.cards);
     if (o.upgrades) args.push('--upgrades', o.upgrades);

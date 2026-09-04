@@ -60,7 +60,7 @@ export function damageEnemy(world, enemy, amount, opts = HIT) {
   dmg = Math.max(1, Math.round(dmg));
   enemy.hp -= dmg;
   enemy.flashT = C.flashSec;
-  const m = 1 / Math.max(0.2, enemy.mass);
+  const m = (world.knockbackMult || 1) / Math.max(0.2, enemy.mass);   // Relique « Corde usée » : recul réduit
   enemy.kx += opts.knockX * m; enemy.ky += opts.knockY * m;
   enemy.killedBy = opts.source;
   recordDamage(opts.source, dmg - bonusPart);
@@ -72,7 +72,7 @@ export function damageEnemy(world, enemy, amount, opts = HIT) {
   damageNumber(enemy.x, enemy.y - enemy.r * 2, dmg, numOpts);
   const big = dmg >= C.bigHitThreshold;
   if (enemy.boss) playSfx('boss_hit', { x: enemy.x, y: enemy.y });
-  else playSfx(opts.crit ? 'hit_crit' : big ? 'hit_heavy' : 'hit_light', { x: enemy.x, y: enemy.y });
+  else playSfx(opts.crit ? 'hit_crit' : big ? 'hit_heavy' : 'hit_light', { x: enemy.x, y: enemy.y, source: opts.source });   // plafond par temps ET par Timbre (sfx.js)
   emitParticles(big ? 'hit_big' : 'hit', enemy.x, enemy.y - 8);
   if (big || opts.crit) { hitStop(C.hitStopMs); shake(big ? 2.5 : 1.5, 0.12); }
   // Requiem : les marqués meurent instantanément sous le seuil (jamais les boss).
@@ -108,7 +108,7 @@ function projHit(e) {
     if (o.bounces > 0 && retarget(curWorld, o, 220)) { o.bounces--; o.t = 0; o.fromX = e.x; o.fromY = e.y; } else o.dead = true;
     return;
   }
-  if (o.parried) { o.dead = true; return; }
+  if (o.parried) { if (o.pierce > 1) o.pierce--; else o.dead = true; return; }
   o.pierce--;
   if (o.pierce <= 0) {
     if (o.bounce > 0 && retarget(curWorld, o, 200)) { o.bounce--; o.pierce = 1; }
@@ -131,6 +131,7 @@ export function collideProjectiles(world, p) {
     if (dx * dx + dy * dy > rr * rr || p.dead) continue;
     if (p.parryT > 0) {
       o.owner = 'player'; o.parried = true; o.damage *= 2; o.tint = '#c9973f'; o.weaponId = 'parry'; o.t = 0; o.life = 3; o.speed *= 1.5;
+      o.pierce = world.parryTwice ? 2 : 1;   // Relique « Langue de cloche » : renvoi qui traverse deux fois
       if (!retarget(world, o, 400)) { o.vx = -o.vx * 1.5; o.vy = -o.vy * 1.5; }
       notifyParry(p);
       emitParticles('parry', o.x, o.y);
