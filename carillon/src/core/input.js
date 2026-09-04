@@ -42,7 +42,10 @@ const down = {}, pending = {}, just = {}, at = {}, keyCount = {};
 for (const a of ACTIONS) { down[a] = false; pending[a] = false; just[a] = false; at[a] = 0; keyCount[a] = 0; }
 
 const axisOut = { x: 0, y: 0 };
-const pointerState = { x: 0, y: 0, down: false, worldX: 0, worldY: 0, inside: false };
+// clicks = nombre de clics gauches (mousedown dans le canvas) survenus depuis le tick précédent :
+// un clic bref entre deux ticks n'est jamais perdu. clickX/Y = position du dernier clic.
+const pointerState = { x: 0, y: 0, down: false, worldX: 0, worldY: 0, inside: false, clicks: 0, clickX: 0, clickY: 0 };
+let pendingClicks = 0, pendingClickX = 0, pendingClickY = 0;
 const tmpWorld = { x: 0, y: 0 };
 let deps = { canvas: null, getAudioTime: () => 0, screenToWorld: null, logicalSize: null };
 let capture = null;              // { action, onDone } pendant un remappage
@@ -124,7 +127,10 @@ function updatePointer(e) {
 
 function onMouseDown(e) {
   updatePointer(e);
-  if (e.button === 0) pointerState.down = true;
+  if (e.button === 0) {
+    pointerState.down = true;
+    if (pointerState.inside) { pendingClicks++; pendingClickX = pointerState.x; pendingClickY = pointerState.y; }
+  }
   const code = 'Mouse' + e.button;
   if (capture) { finishCapture(code, null); return; }
   const list = keyToActions.get(code);
@@ -204,6 +210,8 @@ export function tickInput() {
     const a = ACTIONS[i];
     just[a] = pending[a]; pending[a] = false;
   }
+  pointerState.clicks = pendingClicks; pendingClicks = 0;
+  if (pointerState.clicks) { pointerState.clickX = pendingClickX; pointerState.clickY = pendingClickY; }
   if (deps.screenToWorld) {
     const w = deps.screenToWorld(pointerState.x, pointerState.y, tmpWorld);
     pointerState.worldX = w.x; pointerState.worldY = w.y;
@@ -225,8 +233,25 @@ export function axis() {
   return axisOut;
 }
 
-/** Pointeur en pixels logiques + coordonnées monde (objet réutilisé). */
+/** Pointeur en pixels logiques + coordonnées monde + clics latchés (objet réutilisé). */
 export function pointer() { return pointerState; }
+
+/**
+ * Vibration légère de la manette (cran 4 de Résonance, boss…) si l'API le permet ;
+ * silencieux sinon. strength 0..1, durée en ms.
+ */
+export function rumble(strength = 0.3, ms = 120) {
+  if (gamepadIndex < 0) return;
+  let pad = null;
+  try { const pads = navigator.getGamepads ? navigator.getGamepads() : null; pad = pads ? pads[gamepadIndex] : null; } catch (e) { pad = null; }
+  if (!pad) return;
+  try {
+    const act = pad.vibrationActuator;
+    if (act && act.playEffect) { act.playEffect('dual-rumble', { startDelay: 0, duration: ms, weakMagnitude: strength, strongMagnitude: strength * 0.5 }).catch(() => {}); return; }
+    const h = pad.hapticActuators && pad.hapticActuators[0];
+    if (h && h.pulse) h.pulse(strength, ms).catch(() => {});
+  } catch (e) { /* manette sans retour haptique */ }
+}
 
 export function setBinding(action, { keys, buttons } = {}) {
   if (!bindings[action]) return;

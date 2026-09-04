@@ -11,13 +11,14 @@ import { getSave } from '../core/save.js';
 import { conductorTick, phase } from '../audio/conductor.js';
 import { setListener } from '../audio/sfx.js';
 import { follow, snap } from '../render/camera.js';
-import { setBeatPulse } from '../render/lighting.js';
+import { setBeatPulse, setHaloPos, setAmbient, floorAmbient } from '../render/lighting.js';
 import { renderParticles } from '../render/particles.js';
 import { renderFx } from '../render/fx.js';
-import { balance, parishDef, characterDef, waveDef } from './data.js';
+import { prepareTint } from '../render/atlas.js';
+import { balance, parishDef, characterDef, waveDef, allEnemies, weaponDef, fusionDef } from './data.js';
 import { createPlayer, updatePlayer } from './player.js';
 import { createWorld, updateWorld, renderWorld, entityCount } from './world.js';
-import { addWeapon, updateWeapons } from './weapons.js';
+import { addWeapon, removeWeapon, updateWeapons } from './weapons.js';
 import { initResonance, update as updateResonance } from './resonance.js';
 import { initRun, updateRun, addXp, applyCard, finishRun, rerollCards } from './progression.js';
 
@@ -53,11 +54,20 @@ export function startGame({ parishId, characterId, seed, assist = null, upgrades
   const world = createWorld({ parishDef: pDef, rng: makeRng(run.rng.seed ^ 0x5bd1e995), waveDef: wDef });
   addWeapon(player, cDef.startWeapon);
   snap(player.x, player.y);
+  setHaloPos(player.x, player.y);
+  // Nuit de la paroisse, relevée par la « lune grise » (lisibilité hors du halo).
+  setAmbient(floorAmbient(pDef.ambient || '#16130f'));
+  prepareTints();
   st.run = run; st.player = player; st.world = world; st.endT = -1; st.active = true;
   st.unsubs.push(bus.on('pickup:xp', (e) => { if (st.run) addXp(st.run, e.amount); }));
   st.unsubs.push(bus.on('level:choice', (e) => { if (st.run && st.player) applyCard(st.run, st.player, e.card); }));
   st.unsubs.push(bus.on('player:death', () => { if (st.endT < 0) st.endT = END_DELAY_DEATH; }));
   return st;
+}
+
+/** Pré-génère les feuilles teintées (flash blanc, marque, élite) pour ne pas les créer au premier coup. */
+function prepareTints() {
+  for (const def of allEnemies().values()) { prepareTint(def.sprite, '#ffffff'); prepareTint(def.sprite, '#c9973f'); }
 }
 
 /** Tick logique complet. */
@@ -79,13 +89,39 @@ export function updateGame(dt) {
   }
 }
 
-/** Rendu complet du monde (ctx = calque principal déjà transformé). */
+/** Rendu complet du monde (ctx = calque principal déjà transformé). Le halo de la Mesure
+ *  (lighting.drawBeatHalo) est dessiné par world.renderWorld juste après le sol. */
 export function renderGame(ctx, alpha) {
   if (!st.world) return;
+  const p = st.player;
+  if (p) setHaloPos(p.px + (p.x - p.px) * alpha, p.py + (p.y - p.py) * alpha);
   setBeatPulse(1 - phase());
   renderWorld(ctx, st.world, alpha);
   renderParticles(ctx, alpha);
   renderFx(ctx, alpha);
+}
+
+/**
+ * Abandon (menu pause → « Abandonner ») : termine proprement la run avec victory = false
+ * (RunStats, Bronze de défaite, sauvegarde, `run:end`), puis libère la run. Sans effet si aucune
+ * run active ou déjà terminée. Renvoie les RunStats ou null.
+ */
+export function abandonGame() {
+  if (!st.run) return null;
+  const stats = st.run.finished ? st.run.stats : finishRun(st.run, false);
+  st.active = false; st.endT = -1;
+  return stats;
+}
+
+/**
+ * Débogage / tests : donne (ou monte d'un niveau) un Timbre ou une fusion au joueur courant ;
+ * only = true retire d'abord les autres armes (capture d'une arme seule). Renvoie l'arme ou null.
+ * Ex. window.carillon.deps.game.debugGiveWeapon('tocsin', true).
+ */
+export function debugGiveWeapon(id, only = false) {
+  if (!st.player || !(weaponDef(id) || fusionDef(id))) return null;
+  if (only) for (let i = st.player.weapons.length - 1; i >= 0; i--) if (st.player.weapons[i].id !== id) removeWeapon(st.player, st.player.weapons[i].id);
+  return addWeapon(st.player, id);
 }
 
 /** Libère la run courante (désabonnements). */

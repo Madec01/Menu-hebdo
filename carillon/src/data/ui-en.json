@@ -43,7 +43,8 @@
       "options": "Options",
       "credits": "Credits",
       "runs": "{runs} nights · {wins} dawns",
-      "version": "The Deaf Marches"
+      "version": "The Deaf Marches",
+      "last_night": "Last night: {parish} · {character}"
     },
     "hub": {
       "title": "The Mother Belfry",
@@ -111,7 +112,13 @@
       "perfect": "Perfect",
       "good": "Good",
       "miss": "Miss",
-      "beat": "Measure"
+      "beat": "Measure",
+      "controls_pad": "Stick: walk · A: Volley on the beat · B: Counter-beat · Start: pause",
+      "ctrl_move": "walk",
+      "ctrl_dash": "Volley, on the beat",
+      "ctrl_parry": "Counter-beat",
+      "ctrl_pause": "pause",
+      "death_title": "The Clapper falls silent"
     },
     "levelup": {
       "title": "Level {level}",
@@ -121,7 +128,8 @@
       "passive": "Chord",
       "fusion": "Fusion",
       "bonus": "Gift",
-      "hint": "◄► choose · Enter take"
+      "hint": "◄► choose · Enter take",
+      "hint_pad": "Stick choose · A take"
     },
     "card": {
       "bonus_heal": "Warm wax",
@@ -161,7 +169,8 @@
       "retry": "Play again",
       "hub": "Back to the Belfry",
       "perfects": "Perfect hits: {perfects} · misses: {misses}",
-      "killer": "You fell to: {name}"
+      "killer": "You fell to: {name}",
+      "build": "Your bronze tonight"
     },
     "codex": {
       "title": "Codex",
@@ -306,7 +315,11 @@
       "beats": "{done} / {total} on the beat",
       "press_dash": "Space",
       "done_title": "The Clapper falls silent",
-      "skipped": "Tutorial skipped"
+      "skipped": "Tutorial skipped",
+      "next": "Enter: continue",
+      "you": "This is you",
+      "stick": "Left stick",
+      "pad_dash": "A"
     },
     "toast": {
       "achievement": "Achievement",
@@ -318,5 +331,23 @@
     "confirm": {
       "title": "Sure?"
     }
+  },
+  "weapon": {
+    "clarine": {
+      "desc": "{count} {count|cowbell circles|cowbells circle} around you and {count|strikes|strike} whatever {count|it crosses|they cross}: {damage} damage."
+    },
+    "grelots": {
+      "desc": "Throws {count} {count|bell|bells} in a fan on every eighth note: {damage} damage each."
+    },
+    "crecelle": {
+      "desc": "Crackles {count} {count|splinter|splinters} toward the nearest enemy on every eighth note: {damage} damage."
+    },
+    "chaine_d_angelus": {
+      "desc": "On the beat, the angelus leaps from enemy to enemy, {count} {count|time|times}: {damage} damage."
+    },
+    "diapason": {
+      "desc": "Marks {count} {count|enemy|enemies} per bar; the mark bursts on the next beat: +{bonus}% damage on the marked."
+    },
+    "_note": "Surcharges E2 (pluriel {count|un|des}, Diapason +{bonus} %) : à reporter dans fr.json/en.json (agent F) puis supprimer ici."
   }
 }

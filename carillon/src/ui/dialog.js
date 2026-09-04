@@ -40,7 +40,7 @@ export function createConfirm() {
       return false;
     },
     render(ui) {
-      dimmer(ui, W, H, 0.55);
+      dimmer(ui, W, H, 0.55, states.rampOf('confirm'));
       panel(ui, PX, PY, PW, PH, 'parchment');
       heading(ui, t('ui.confirm.title'), W / 2, PY + 6, 16);
       paragraph(ui, params.text || '', PX + 14, PY + 30, PW - 28, { size: 10, color: C.encre, lineHeight: 11, maxLines: 3 });

@@ -3,11 +3,13 @@
 // écrans empilables (pause, cartes, options, codex, crédits, tutoriel) sont
 // posés par push() au-dessus de n'importe quel état. Les actions abstraites
 // (menuUp/Down/Left/Right, confirm, cancel, pause) sont distribuées à l'écran du
-// sommet ; la souris est suivie ici (clic = front descendant du pointeur).
+// sommet ; la souris est suivie ici (clics latchés par core/input.js, consommés une fois).
 //
 // Un écran : { enter(params), exit(), update(dt, realDt), render(ctx, alpha),
-//   handleAction(action) → bool, renderWorld?(ctx, alpha), freezes?: bool, cursor?: string }.
+//   handleAction(action) → bool, renderWorld?(ctx, alpha), freezes?: bool, opaque?: bool, cursor?: string }.
 // freezes = true fige la logique de jeu (main.js met la boucle à timeScale 0).
+// opaque = true : l'écran couvre tout (fond backdrop) ; ceux du dessous ne sont plus dessinés.
+// Chaque entrée de pile mémorise son âge (topAge) pour le fondu d'apparition des voiles.
 
 import { bus } from '../core/events.js';
 import { justPressed, pointer } from '../core/input.js';
@@ -15,10 +17,12 @@ import * as renderer from '../render/renderer.js';
 import { playUi } from '../audio/sfx.js';
 
 const FADE_SEC = 0.3;
+/** Durée du fondu d'apparition d'un écran empilé (voile). */
+export const PUSH_FADE_SEC = 0.18;
 const ACTIONS = ['menuUp', 'menuDown', 'menuLeft', 'menuRight', 'confirm', 'cancel', 'pause'];
 
 let screens = {};
-const stack = [];             // [{ name, screen }]
+const stack = [];             // [{ name, screen, age }]
 const fade = { phase: null, t: 0, next: null, params: null, sound: null };
 let generation = 0;           // incrémenté à chaque changement de pile (coupe la distribution d'actions)
 
@@ -35,6 +39,13 @@ export function baseName() { return stack.length ? stack[0].name : null; }
 export function depth() { return stack.length; }
 export function has(name) { for (let i = 0; i < stack.length; i++) if (stack[i].name === name) return true; return false; }
 export function isTransitioning() { return fade.phase !== null; }
+/** Âge (s) de l'écran du sommet, pour les fondus d'apparition. */
+export function topAge() { const s = top(); return s ? s.age : 0; }
+/** Rampe 0..1 du fondu d'apparition de l'écran `name` (1 s'il n'est pas dans la pile). */
+export function rampOf(name) {
+  for (let i = stack.length - 1; i >= 0; i--) if (stack[i].name === name) return Math.min(1, stack[i].age / PUSH_FADE_SEC);
+  return 1;
+}
 
 /** Vrai si un écran de la pile fige la logique de jeu. */
 export function isFrozen() {
@@ -46,7 +57,7 @@ export function isFrozen() {
 export function push(name, params = null) {
   const screen = screens[name];
   if (!screen) { console.warn('[states] écran inconnu', name); return; }
-  stack.push({ name, screen });
+  stack.push({ name, screen, age: 0 });
   generation++;
   screen.enter(params || {});
   bus.emit('ui:open', { screen: name });
@@ -79,7 +90,7 @@ export function replace(name, params = null, { fade: withFade = true, sound = 'u
 function swap(name, params) {
   const from = baseName();
   while (stack.length) { const e = stack.pop(); e.screen.exit(); }
-  stack.push({ name, screen: screens[name] });
+  stack.push({ name, screen: screens[name], age: 0 });
   generation++;
   screens[name].enter(params || {});
   bus.emit('state:change', { from, to: name });
@@ -90,7 +101,10 @@ function updateMouse() {
   mouse.moved = p.x !== mouse.lastX || p.y !== mouse.lastY;
   mouse.lastX = p.x; mouse.lastY = p.y;
   mouse.x = p.x; mouse.y = p.y; mouse.inside = p.inside;
-  mouse.clicked = p.down && !mouse.wasDown && p.inside;
+  // Clic = latché par core/input.js dans le gestionnaire DOM (compteur par tick) : un clic bref
+  // entre deux ticks n'est jamais perdu. La position retenue est celle du clic lui-même.
+  mouse.clicked = p.clicks > 0;
+  if (mouse.clicked) { mouse.x = p.clickX; mouse.y = p.clickY; }
   mouse.wasDown = p.down;
   mouse.down = p.down;
 }
@@ -120,7 +134,10 @@ export function update(dt, realDt) {
   } else mouse.clicked = false;
   for (let i = 0; i < stack.length; i++) {
     const e = stack[i];
+    const gen = generation;
+    e.age += realDt;
     if (e.screen.update) e.screen.update(dt, realDt);
+    if (generation !== gen) mouse.clicked = false; // la pile a changé : le clic ne sert qu'une fois
     if (!stack.includes(e)) break; // l'écran s'est retiré pendant son update
   }
 }
@@ -131,7 +148,11 @@ export function render(alpha) {
   const ui = renderer.getUiCtx();
   const size = renderer.logicalSize();
   if (stack.length && stack[0].screen.renderWorld) stack[0].screen.renderWorld(ctx, alpha);
-  for (let i = 0; i < stack.length; i++) {
+  // Un écran opaque (une fois son fondu d'apparition fini) couvre tout ce qui est dessous :
+  // on ne dessine qu'à partir du dernier.
+  let first = 0;
+  for (let i = stack.length - 1; i > 0; i--) if (stack[i].screen.opaque && stack[i].age >= PUSH_FADE_SEC) { first = i; break; }
+  for (let i = first; i < stack.length; i++) {
     ui.globalAlpha = 1;
     stack[i].screen.render(ui, alpha);
   }

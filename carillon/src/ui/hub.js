@@ -162,7 +162,7 @@ export function createHub(deps) {
       let label = t('ui.hub.' + b.id);
       if (b.id === 'seed') label = s.seedManual ? t('ui.hub.seed_manual', { seed: s.seedManual }) : t('ui.hub.seed_random');
       if (b.id === 'altar' && unreadCount() > 0) label += ' •';
-      button(ui, { x: b.x, y: BTN_Y, w: b.w, h: BTN_H, label, focused: row === 2 && btn === i, size: b.id === 'start' ? 13 : 10, disabled: b.id === 'start' && !canStart() });
+      button(ui, { x: b.x, y: BTN_Y, w: b.w, h: BTN_H, label, focused: row === 2 && btn === i, size: b.id === 'start' ? 13 : 10, disabled: b.id === 'start' && !canStart(), icon: b.id === 'start' ? 'battant' : null });
     }
     const hint = !s.tutorialDone ? t('ui.hub.tutorial_first') : t('ui.hub.seed_hint');
     text(ui, hint, W / 2, H - 20, { size: 9, align: 'center', color: C.gris });

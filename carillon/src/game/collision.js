@@ -8,9 +8,10 @@ import { bus } from '../core/events.js';
 import { play as playSfx } from '../audio/sfx.js';
 import { phase, beatDuration, windowMs } from '../audio/conductor.js';
 import { damageNumber, hitStop } from '../render/fx.js';
+import { shake } from '../render/camera.js';
 import { emit as emitParticles } from '../render/particles.js';
 import { balance } from './data.js';
-import { hasHit, recordHit, retarget } from './projectiles.js';
+import { hasHit, recordHit, retarget, spawnBolt } from './projectiles.js';
 import { hitPlayer, notifyParry } from './player.js';
 import { killEnemy } from './enemies.js';
 import { recordDamage, findWeapon } from './weapons.js';
@@ -20,6 +21,7 @@ import { burstCloud } from './enemy-behaviors.js';
 const hitPayload = { id: 0, kind: '', damage: 0, crit: false, x: 0, y: 0, onBeat: false };
 const numOpts = { crit: false, onBeat: false };
 const HIT = { crit: false, onBeat: false, knockX: 0, knockY: 0, source: '' };
+const chainBurst = { count: 0.6 };
 
 /** Vide et remplit la grille avec les ennemis vivants. */
 export function buildGrid(world) {
@@ -71,7 +73,7 @@ export function damageEnemy(world, enemy, amount, opts = HIT) {
   if (enemy.boss) playSfx('boss_hit', { x: enemy.x, y: enemy.y });
   else playSfx(opts.crit ? 'hit_crit' : big ? 'hit_heavy' : 'hit_light', { x: enemy.x, y: enemy.y });
   emitParticles(big ? 'hit_big' : 'hit', enemy.x, enemy.y - 8);
-  if (big || opts.crit) hitStop(C.hitStopMs);
+  if (big || opts.crit) { hitStop(C.hitStopMs); shake(big ? 2.5 : 1.5, 0.12); }
   // Requiem : les marqués meurent instantanément sous le seuil (jamais les boss).
   if (enemy.hp > 0 && enemy.executeBelow > 0 && enemy.markedT > 0 && !enemy.boss && enemy.hp / enemy.maxHp < enemy.executeBelow) {
     recordDamage(enemy.markBy, enemy.hp); enemy.hp = 0; emitParticles('bell', enemy.x, enemy.y);
@@ -100,7 +102,9 @@ function projHit(e) {
   const w = findWeapon(curPlayer, o.weaponId);
   if (o.kind === 'orbit') { if (w && w.def.behavior === 'orbit_bounce') orbitBounceHit(curWorld, w, curPlayer, o, e); return; }
   if (o.kind === 'chain') {
-    if (o.bounces > 0 && retarget(curWorld, o, 220)) { o.bounces--; o.t = 0; } else o.dead = true;
+    emitParticles('slash', e.x, e.y - 8, chainBurst);
+    spawnBolt(curWorld, o.fromX, o.fromY, e.x, e.y);
+    if (o.bounces > 0 && retarget(curWorld, o, 220)) { o.bounces--; o.t = 0; o.fromX = e.x; o.fromY = e.y; } else o.dead = true;
     return;
   }
   if (o.parried) { o.dead = true; return; }

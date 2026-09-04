@@ -6,7 +6,7 @@ import { playUi } from '../audio/sfx.js';
 import { t } from './i18n.js';
 import * as states from './states.js';
 import { leafIds, isUnlocked, isRead, renderLeafGrid } from './lore.js';
-import { panel, text, paragraph, hit, dimmer, heading, C } from './widgets.js';
+import { panel, text, paragraph, hit, backdrop, heading, C } from './widgets.js';
 
 const W = 480, H = 270;
 const COLS = 8, CELL_W = 56, CELL_H = 44, GX = 18, GY = 30;
@@ -31,6 +31,7 @@ export function createAltar() {
 
   return {
     freezes: true,
+    opaque: true,
     enter() { time = 0; },
     exit() {},
     update(_, realDt) {
@@ -52,7 +53,7 @@ export function createAltar() {
       return true;
     },
     render(ui) {
-      dimmer(ui, W, H, 0.7);
+      backdrop(ui, W, H, states.rampOf('altar'));
       panel(ui, 6, 6, W - 12, H - 12, 'parchment');
       heading(ui, t('ui.altar.title'), W / 2, 8, 16);
       const ids = leafIds();

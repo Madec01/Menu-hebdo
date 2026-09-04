@@ -29,9 +29,36 @@ export function panel(ctx, x, y, w, h, style = 'parchment') {
   drawNineSlice(ctx, FRAME[style] || style, x, y, w, h);
 }
 
-/** Voile sombre plein écran (pause, cartes). */
-export function dimmer(ctx, w, h, alpha = 0.6) {
-  ctx.globalAlpha = alpha; ctx.fillStyle = C.suie; ctx.fillRect(0, 0, w, h); ctx.globalAlpha = 1;
+/** Voile sombre plein écran (pause, cartes) ; `ramp` 0..1 = fondu d'apparition (states.topAge). */
+export function dimmer(ctx, w, h, alpha = 0.6, ramp = 1) {
+  ctx.globalAlpha = alpha * ramp; ctx.fillStyle = C.suie; ctx.fillRect(0, 0, w, h); ctx.globalAlpha = 1;
+}
+
+/**
+ * Fond opaque des écrans empilés plein écran (arbre, autel, codex, options, crédits) : suie
+ * pleine et légère vignette de tourbe, pour que rien de l'écran du dessous ne transparaisse
+ * (les bords des cadres 9-slice sont partiellement transparents).
+ */
+export function backdrop(ctx, w, h, ramp = 1) {
+  ctx.globalAlpha = ramp;
+  ctx.fillStyle = C.suie; ctx.fillRect(0, 0, w, h);
+  const g = ctx.createRadialGradient(w / 2, h / 2, h * 0.2, w / 2, h / 2, h * 0.9);
+  g.addColorStop(0, 'rgba(42,36,28,0.55)'); g.addColorStop(1, 'rgba(22,19,15,0)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+  ctx.globalAlpha = 1;
+}
+
+/** Touche dessinée (capuchon) : « Espace », « A »… opts : size, minWidth, align, hot, dark. Renvoie la largeur. */
+export function keycap(ctx, label, x, y, opts = EMPTY) {
+  const size = opts.size || 8;
+  ctx.font = fontOf('ui', size);
+  const w = Math.max(opts.minWidth || 14, Math.ceil(ctx.measureText(label).width) + 8), h = size + 6;
+  const px = opts.align === 'center' ? Math.round(x - w / 2) : opts.align === 'right' ? Math.round(x - w) : Math.round(x);
+  const dark = !!opts.dark;   // capuchon sombre sur fond parchemin
+  ctx.fillStyle = opts.hot ? C.bronze : dark ? C.encre : C.os; ctx.fillRect(px, y, w, h);
+  ctx.fillStyle = opts.hot ? '#7a5620' : dark ? C.suie : C.encreClaire; ctx.fillRect(px + 1, y + h - 2, w - 2, 2);
+  text(ctx, label, px + w / 2, y + h / 2 - 1, { size, align: 'center', baseline: 'middle', color: dark && !opts.hot ? C.os : C.suie });
+  return w;
 }
 
 /**
@@ -104,10 +131,16 @@ export function button(ctx, b) {
   if (b.focused && !b.disabled) drawNineSlice(ctx, 'frame_bronze', b.x - 2, b.y - 2, b.w + 4, b.h + 4);
   const size = b.size || 12;
   let tx = b.x + b.w / 2, align = 'center';
-  if (b.icon) { icon(ctx, b.icon, b.x + 4, b.y + (b.h - 16) / 2, 0.5); tx = b.x + 24; align = 'left'; }
+  if (b.icon && b.align !== 'left') {
+    // Groupe icône + libellé centré dans le bouton.
+    ctx.font = fontOf('ui', size);
+    const tw = Math.min(ctx.measureText(b.label).width, b.w - 28);
+    const start = Math.round(b.x + (b.w - (20 + tw)) / 2);
+    icon(ctx, b.icon, start, b.y + (b.h - 16) / 2, 0.5); tx = start + 20; align = 'left';
+  } else if (b.icon) { icon(ctx, b.icon, b.x + 4, b.y + (b.h - 16) / 2, 0.5); tx = b.x + 24; align = 'left'; }
   if (b.align === 'left') { tx = b.x + (b.icon ? 24 : 8); align = 'left'; }
   text(ctx, b.label, tx, b.y + b.h / 2 + (pressed ? 1 : 0), {
-    size, align, baseline: 'middle', color: b.disabled ? C.gris : b.focused ? C.clair : C.os, shadow: !b.disabled,
+    size, align, baseline: 'middle', color: b.disabled ? C.gris : b.focused ? C.clair : C.os, shadow: !b.disabled, maxWidth: b.w - (b.icon ? 28 : 8),
   });
 }
 
@@ -140,7 +173,7 @@ export function card(ctx, x, y, c) {
   if (c.kind) text(ctx, c.kind, lx + w / 2, 6, { size: 9, align: 'center', color: C.encreClaire });
   text(ctx, c.title, lx + w / 2, 50, { kind: 'display', size: 14, align: 'center', color: C.encre, maxWidth: w - 12 });
   if (c.level) text(ctx, c.level, lx + w / 2, 66, { size: 9, align: 'center', color: c.isNew ? C.braise : C.bronze });
-  if (c.desc) paragraph(ctx, c.desc, lx + 8, 77, w - 16, { size: 8, color: C.encre, lineHeight: 8, maxLines: 5 });
+  if (c.desc) paragraph(ctx, c.desc, lx + 8, 75, w - 16, { size: 8, color: C.encre, lineHeight: 8, maxLines: 5 });
   ctx.restore();
 }
 

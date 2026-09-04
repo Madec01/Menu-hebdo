@@ -8,7 +8,7 @@ import { t } from './i18n.js';
 import * as states from './states.js';
 import { TABS, pageItems, pageProgress, renderDetail } from './codex-pages.js';
 import { leafIds, isUnlocked, renderLeafGrid } from './lore.js';
-import { panel, text, paragraph, icon, hit, dimmer, heading, C } from './widgets.js';
+import { panel, text, paragraph, icon, hit, backdrop, heading, C } from './widgets.js';
 
 const W = 480, H = 270;
 const TAB_Y = 24, TAB_H = 16;
@@ -70,6 +70,7 @@ export function createCodex() {
 
   return {
     freezes: true,
+    opaque: true,
     enter(p) { tab = p && p.tab ? Math.max(0, TABS.indexOf(p.tab)) : 0; sel = 0; time = 0; refresh(); },
     exit() {},
     update(_, realDt) {
@@ -97,12 +98,12 @@ export function createCodex() {
       return false;
     },
     render(ui) {
-      dimmer(ui, W, H, 0.85);
+      backdrop(ui, W, H, states.rampOf('codex'));
       panel(ui, 4, 4, W - 8, H - 8, 'parchment');
-      heading(ui, t('ui.codex.title'), 60, 6, 16);
+      heading(ui, t('ui.codex.title'), 56, 7, 16);
       const pr = tabId() === 'leaves' ? { done: leafIds().filter(isUnlocked).length, total: leafIds().length } : pageProgress(tabId());
-      text(ui, t('ui.codex.progress', pr), W - 14, 10, { size: 9, align: 'right', color: C.encreClaire });
-      paragraph(ui, t('codex.intro'), 118, 7, W - 200, { size: 7, color: C.encreClaire, lineHeight: 8, maxLines: 2 });
+      text(ui, t('ui.codex.progress', pr), W - 16, 11, { size: 9, align: 'right', color: C.encreClaire });
+      paragraph(ui, t('codex.intro'), 108, 9, W - 108 - 60, { size: 7, color: C.encreClaire, lineHeight: 8, maxLines: 2 });
       renderTabs(ui);
       if (tabId() === 'leaves') {
         renderLeafGrid(ui, LEAF_GRID.x, LEAF_GRID.y, LEAF_GRID.cols, LEAF_GRID.cellW, LEAF_GRID.cellH, sel, time, leafRects);

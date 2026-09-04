@@ -30,7 +30,7 @@ import * as camera from '../camera.js';
 import * as lighting from '../lighting.js';
 import * as particles from '../particles.js';
 import * as fx from '../fx.js';
-import * as ground from '../ground.js';
+import { createGround, renderGround, drawProp } from '../../game/ground.js';
 import { loadFonts, font } from '../fonts.js';
 
 const BASE = '../../../assets/';
@@ -48,7 +48,7 @@ await Promise.all([atlas.loadAtlas(manifest, { baseUrl: BASE, tints: { feutre: [
 renderer.initRenderer({ canvas, width: 480, height: 270 });
 lighting.initLighting({ w: 480, h: 270, ambient: '#16130f' });
 particles.initParticles(4000);
-ground.initGround({ tilesetId: 'cendrelune', seed: 2026, groups: ['ash', 'dirt', 'grass_dead', 'patch'], propDensity: 0.06, spriteDensity: 4 });
+const groundState = createGround({ tileset: 'cendrelune', groundGroups: ['ash', 'dirt', 'grass_dead', 'patch'], props: Object.keys(manifest.sprites).filter((id) => manifest.sprites[id].kind === 'prop' && manifest.sprites[id].parish === 'cendrelune' && !manifest.sprites[id].light), lights: ['prop_cendrelune_campfire'] }, 2026);
 renderer.setVignette(0.45); renderer.setGrain(0.3);
 
 // --- Monde de test ---------------------------------------------------------
@@ -66,7 +66,6 @@ const projectiles = [];
 for (let i = 0; i < N_PROJ; i++) projectiles.push({ kind: rng.pick(PROJ_KINDS), a: rng.range(0, 6.28), d: rng.range(20, 260), w: rng.range(0.6, 2.2), t: rng.next() * 3, x: 0, y: 0 });
 const torches = [];
 for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; torches.push({ x: Math.cos(a) * 170, y: Math.sin(a) * 120, t: rng.next() }); }
-const propList = [];
 const drawList = []; // entités triées par y (réutilisé)
 let time = 0, beatPhase = 0, beats = 0, neighbours = 0, autoWalk = true;
 input.initInput({ canvas, getAudioTime: () => performance.now() / 1000, screenToWorld: camera.screenToWorld, logicalSize: renderer.logicalSize });
@@ -120,11 +119,11 @@ function update(dt) {
 function render(alpha) {
   renderer.beginFrame(alpha);
   const ctx = renderer.getCtx();
-  ground.renderGround(ctx, camera);
+  renderGround(ctx, groundState, time);
   lighting.drawBeatHalo(ctx);
   // Liste triée par y : props, sonneurs, ennemis, joueur, torches.
   drawList.length = 0;
-  ground.visibleProps(camera, propList);
+  const propList = groundState.propList;
   for (let i = 0; i < propList.length; i++) drawList.push(propList[i]);
   for (let i = 0; i < sonneurs.length; i++) drawList.push(sonneurs[i]);
   const items = enemyPool.items;
@@ -139,7 +138,7 @@ function render(alpha) {
     if (e === player) { atlas.draw(ctx, 'wren', player.anim, atlas.frameAt('wren', player.anim, player.t), player.x, player.y); }
     else if (e.kind) { const anim = atlas.dirAnim(e.kind, e.anim, e.flip ? -1 : 1, 0); atlas.draw(ctx, e.kind, anim, atlas.frameAt(e.kind, anim, e.t), e.x, e.y, e.flipOpts || (e.flipOpts = { flipX: false })); e.flipOpts.flipX = !atlas.isDirectional(e.kind) && e.flip; }
     else if (e.sonneur) atlas.draw(ctx, e.sonneur, 'idle_down', atlas.frameAt(e.sonneur, 'idle_down', time + e.t), e.x, e.y);
-    else if (e.sprite) ground.drawProp(ctx, e, time);
+    else if (e.sprite) drawProp(ctx, e, time);
     else if (e.t !== undefined && e.x !== undefined && !e.anim) { atlas.draw(ctx, 'torch', 'idle', atlas.frameAt('torch', 'idle', time + e.t), e.x, e.y); lighting.addLight(e.x, e.y - 12, 70, '#e0a050', 0.9, 0.25); lighting.addGlow(e.x, e.y - 14, 10, '#e0603a', 0.5); }
     if (e.light) lighting.addLight(e.x, e.y - 6, 60, '#e0a050', 0.8, 0.3);
   }
@@ -163,7 +162,7 @@ function render(alpha) {
 const loop = createLoop({ update, render });
 fx.initFx({ loop, getOptions: () => ({ reduceFlash: false }) });
 loop.start();
-window.__bench = { loop, particles, enemyPool, renderer, camera, fx, atlas, ground, input, bus };
+window.__bench = { loop, particles, enemyPool, renderer, camera, fx, atlas, ground: groundState, input, bus };
 info.textContent = `${N_ENEMIES} ennemis · 4 sonneurs · ${N_PROJ} projectiles · ~${TARGET_PARTICLES} particules · 6 torches + halo · brume, cendres, vignette, grain.\nTouches : ZQSD/flèches déplacer · Espace = hit-stop 40 ms + shake + flash + traînée · Shift/clic droit = parade + nombre · Échap = ronde auto on/off.`;
 </script>
 </body>

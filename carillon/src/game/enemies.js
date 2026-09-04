@@ -147,6 +147,9 @@ export function countKind(world, kind) {
 }
 
 const drawOpts = { flipX: false, alpha: 1, tint: null, scale: 1 };
+// Lueur froide portée par chaque ennemi vivant (gris-bleu désaturé) : la silhouette se détache
+// de la nuit en approche ; addLight fait le culling hors écran.
+const COLD_LIGHT = '#6a6e7c';
 
 /** Dessine un ennemi (appelé par world.js dans l'ordre trié par y). */
 export function drawEnemy(ctx, e, alpha) {
@@ -160,6 +163,7 @@ export function drawEnemy(ctx, e, alpha) {
   drawOpts.flipX = !isDirectional(sprite) && e.dirX < 0;
   draw(ctx, sprite, e.anim, frameAt(sprite, e.anim, e.animT), x, y, drawOpts);
   if (e.def.special && e.def.special.lightRadius) addLight(x, y - 10, e.def.special.lightRadius, '#e0603a', 0.7, 0.2);
+  else if (!dying) addLight(x, y - 8, 22 + e.r * 1.4 * e.scale, COLD_LIGHT, e.boss ? 0.8 : 0.5, 0, true);
   if (e.markedT > 0) addGlow(x, y - 12, 18, '#c9973f', 0.5);
   if (e.boss) addLight(x, y - 20, 120, '#8f8d93', 0.5, 0.05);
 }

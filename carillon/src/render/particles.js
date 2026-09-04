@@ -26,13 +26,21 @@ const PRESETS = {
   silence:    { count: 10, speed: [20, 60],   life: [0.5, 0.9],  size: [2, 3], gravity: -20,  drag: 3, colors: [GRIS, SUIE, TOURBE], shrink: true },
   dash_trail: { count: 3,  speed: [4, 16],    life: [0.25, 0.4], size: [1, 2], gravity: 0,    drag: 4, colors: [BRONZE, OS], shrink: true },
   xp:         { count: 5,  speed: [40, 90],   life: [0.4, 0.6],  size: [1, 1], gravity: 120,  drag: 2, colors: [BRONZE], kind: KIND_ECHO },
-  bell:       { count: 12, speed: [120, 170], life: [0.4, 0.6],  size: [1, 1], gravity: 0,    drag: 3, colors: [BRONZE, CLAIR], kind: KIND_ECLAT, ring: true, glow: true },
+  // Sonnerie (niveau, ramassage, exécution) : anneau d'éclats de bronze en carrés (le sprite
+  // eclat_bronze est un lingot, trop lourd pour une gerbe : réservé au preset `lingot`).
+  bell:       { count: 12, speed: [120, 170], life: [0.4, 0.6],  size: [2, 3], gravity: 0,    drag: 3, colors: [BRONZE, CLAIR], ring: true, glow: true, shrink: true },
+  lingot:     { count: 3,  speed: [40, 90],   life: [0.5, 0.8],  size: [1, 1], gravity: 160,  drag: 1, colors: [BRONZE], kind: KIND_ECLAT, glow: true },
   parry:      { count: 14, speed: [90, 140],  life: [0.25, 0.4], size: [1, 2], gravity: 0,    drag: 4, colors: [OS, BRONZE, CLAIR], ring: true, shrink: true },
+  // Coup de Battant : gerbe courte dans la direction du coup (opts.angle / spread).
+  slash:      { count: 7,  speed: [70, 160],  life: [0.15, 0.3], size: [1, 2], gravity: 0,    drag: 5, colors: [BRONZE, CLAIR, OS], shrink: true, glow: true },
+  // Traînée d'un Écho aimanté : un grain de bronze qui s'éteint sur place.
+  echo_trail: { count: 1,  speed: [0, 6],     life: [0.2, 0.35], size: [1, 1], gravity: 0,    drag: 1, colors: [BRONZE, CLAIR], shrink: true },
 };
 
 let max = 0, count = 0, density = 1, seed = 12345;
 let px, py, vx, vy, life, maxLife, size, gravity, drag, color, kind, flags;
 const FLAG_SHRINK = 1, FLAG_GLOW = 2;
+const MAX_GLOWS = 160;
 const spriteOpts = { alpha: 1 };
 
 // Aléatoire interne rapide (LCG) : les particules n'ont pas besoin de déterminisme.
@@ -135,11 +143,13 @@ export function renderParticles(ctx, alpha) {
     }
   }
   if (hasGlow) {
-    for (let i = 0; i < count; i++) {
+    let budget = MAX_GLOWS; // les lueurs sont additives : au-delà, elles saturent en blanc et coûtent cher
+    for (let i = 0; i < count && budget > 0; i++) {
       if (!(flags[i] & FLAG_GLOW)) continue;
       const x = px[i], y = py[i];
       if (x < x0 || x > x1 || y < y0 || y > y1) continue;
-      addGlow(x, y, 2 + size[i], PALETTE[color[i]], 0.3 * (life[i] / maxLife[i]));
+      addGlow(x, y, 2 + size[i], PALETTE[color[i]], 0.22 * (life[i] / maxLife[i]));
+      budget--;
     }
   }
 }

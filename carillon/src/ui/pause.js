@@ -2,7 +2,7 @@
 // courant (Timbres, Accords, dégâts par arme), abandonner avec dialogue de
 // confirmation. Échap / pause reprend.
 
-import { getSave } from '../core/save.js';
+import { hasGamepad } from '../core/input.js';
 import { playUi } from '../audio/sfx.js';
 import { t, fmtTime } from './i18n.js';
 import * as states from './states.js';
@@ -15,12 +15,12 @@ export function createPause(deps) {
   const PX = 20, PY = 24, PW = 150, PH = 222;
   const rect = (i) => ({ x: PX + 15, y: PY + 46 + i * 26, w: PW - 30, h: 20 });
   const items = [
-    { label: () => t('ui.pause.resume'), rect: rect(0), action: resume },
-    { label: () => t('ui.pause.build'), rect: rect(1), action: () => { showBuild = !showBuild; playUi('ui_confirm'); } },
-    { label: () => t('ui.pause.options'), rect: rect(2), action: () => { playUi('ui_confirm'); states.push('options'); } },
-    { label: () => t('ui.pause.abandon'), rect: rect(3), action: abandon },
+    { label: () => t('ui.pause.resume'), rect: rect(0), action: resume, icon: 'ui_coeur' },
+    { label: () => t('ui.pause.build'), rect: rect(1), action: () => { showBuild = !showBuild; playUi('ui_confirm'); }, icon: 'ui_sceau' },
+    { label: () => t('ui.pause.options'), rect: rect(2), action: () => { playUi('ui_confirm'); states.push('options'); }, icon: 'ui_options' },
+    { label: () => t('ui.pause.abandon'), rect: rect(3), action: abandon, icon: 'ui_mort' },
   ];
-  const menu = createMenu(items, { size: 11 });
+  const menu = createMenu(items, { size: 10 });
 
   function resume() { playUi('ui_cancel'); states.pop(); }
 
@@ -31,7 +31,8 @@ export function createPause(deps) {
       onYes() {
         const g = deps.game ? deps.game.gameState() : null;
         states.pop(); // retire la pause ; run:end enchaînera sur le bilan
-        if (g && g.run && deps.gameExtra) deps.gameExtra.finishRun(g.run, false);
+        if (deps.game && deps.game.abandonGame) deps.game.abandonGame();
+        else if (g && g.run && deps.gameExtra) deps.gameExtra.finishRun(g.run, false);
       },
     });
   }
@@ -81,17 +82,17 @@ export function createPause(deps) {
       return false;
     },
     render(ui) {
-      dimmer(ui, W, H, 0.55);
+      dimmer(ui, W, H, 0.6, states.rampOf('pause'));
       panel(ui, PX, PY, PW, PH, 'parchment');
       heading(ui, t('ui.pause.title'), PX + PW / 2, PY + 8, 18);
       menu.render(ui);
       const g = deps.game ? deps.game.gameState() : null;
       if (g && g.run) {
-        text(ui, t('ui.pause.time', { time: fmtTime(g.run.timeSec) }), PX + PW / 2, PY + PH - 34, { size: 9, align: 'center', color: C.encreClaire });
-        text(ui, t('ui.pause.parish', { parish: t('parish.' + g.run.parishId + '.name'), character: t('char.' + g.run.characterId + '.name') }), PX + PW / 2, PY + PH - 22, { size: 8, align: 'center', color: C.encreClaire });
+        text(ui, t('ui.pause.time', { time: fmtTime(g.run.timeSec) }), PX + PW / 2, PY + PH - 56, { size: 9, align: 'center', color: C.encreClaire });
+        text(ui, t('ui.pause.parish', { parish: t('parish.' + g.run.parishId + '.name'), character: t('char.' + g.run.characterId + '.name') }), PX + PW / 2, PY + PH - 44, { size: 8, align: 'center', color: C.encreClaire });
       }
       if (showBuild) renderBuild(ui);
-      text(ui, t(getSave().options.assist === 'none' ? 'ui.common.nav_hint' : 'ui.hud.assist_' + getSave().options.assist), W / 2, H - 12, { size: 8, align: 'center', color: C.gris });
+      text(ui, t(hasGamepad() ? 'ui.common.nav_hint_pad' : 'ui.common.nav_hint'), PX + PW / 2, PY + PH - 24, { size: 7, align: 'center', color: C.encreClaire });
     },
   };
 }

@@ -1,32 +1,62 @@
 // ui/hud.js — HUD de la nuit : vie, XP, timer, tués, jauge de Résonance à 4
 // crans qui pulse sur le temps, icônes de Timbres/Accords avec niveau,
 // sonnerie visuelle à chaque minute, bannière de Fêlure/Bourdon avec barre de
-// vie, indicateur de rythme visuel (option beatIndicator), retour Parfait/Bon/
-// Raté. Lit gameState() (run, player, world) et les événements du bus.
+// vie, indicateur de rythme visuel (option beatIndicator : balancier avec la
+// fenêtre de frappe), retour Parfait/Bon/Raté sous le joueur, rappel des
+// commandes pendant les 30 premières secondes des premières nuits, vibration
+// légère de la manette au cran 4. Lit gameState() et les événements du bus.
 
 import { bus } from '../core/events.js';
 import { getSave } from '../core/save.js';
 import * as conductor from '../audio/conductor.js';
+import { getBindings, hasGamepad, rumble } from '../core/input.js';
 import { t, fmtTime } from './i18n.js';
-import { panel, text, gauge, icon, C } from './widgets.js';
+import { keyName } from './options-items.js';
+import { panel, text, gauge, icon, keycap, C } from './widgets.js';
 import { drawNineSlice } from '../render/atlas.js';
 
 const W = 480, H = 270;
 const RES_X = W / 2 - 74, RES_Y = H - 24, SEG_W = 34, SEG_H = 8, SEG_GAP = 4;
+const HINT_SEC = 30;        // durée du rappel des commandes
+const HINT_RUNS = 3;        // … affiché tant que le joueur a fini moins de 3 nuits
 
 export function createHud() {
   const res = { tier: 0, mult: 1, value: 0 };
-  const st = { minuteT: 0, minute: 0, bannerT: 0, bannerKind: '', bannerName: '', judgeT: 0, judge: '', beatFlash: 0, blockedT: 0, lastBeat: -1 };
+  const st = { minuteT: 0, minute: 0, bannerT: 0, bannerKind: '', bannerName: '', judgeT: 0, judge: '', beatFlash: 0, blockedT: 0, lastBeat: -1, hintT: 0 };
   const unsubs = [];
 
   function listen() {
-    unsubs.push(bus.on('resonance:change', (e) => { res.tier = e.tier; res.mult = e.mult; res.value = e.value; }));
+    unsubs.push(bus.on('resonance:change', (e) => {
+      if (e.tier >= 3 && res.tier < 3 && e.direction > 0) rumble(0.4, 160);   // cran 4 atteint
+      res.tier = e.tier; res.mult = e.mult; res.value = e.value;
+    }));
     unsubs.push(bus.on('run:minute', (e) => { st.minute = e.minute; st.minuteT = 2.5; }));
     unsubs.push(bus.on('run:fissure', (e) => { if (e.phase === 'start') { st.bannerKind = 'fissure'; st.bannerName = t('enemy.' + e.bossId + '.name'); st.bannerT = 3; } }));
     unsubs.push(bus.on('run:boss', (e) => { if (e.phase === 'intro') { st.bannerKind = 'boss'; st.bannerName = t('boss.' + e.bossId + '.name'); st.bannerT = 4; } }));
     unsubs.push(bus.on('rhythm:input', (e) => { st.judge = e.grade; st.judgeT = 0.6; }));
     unsubs.push(bus.on('resonance:blocked', (e) => { st.blockedT = e.durationSec; }));
-    unsubs.push(bus.on('beat', () => { st.beatFlash = 1; }));
+    unsubs.push(bus.on('beat', () => { st.beatFlash = 1; if (res.tier >= 3) rumble(0.12, 40); }));
+  }
+
+  /** Rappel discret des commandes (premières nuits, 30 s) sous la barre de vie. */
+  function renderControls(ui) {
+    if (st.hintT <= 0) return;
+    const a = Math.min(1, st.hintT / 0.8);
+    ui.globalAlpha = a;
+    const y = 31;
+    if (hasGamepad()) { text(ui, t('ui.hud.controls_pad'), 6, y + 2, { size: 8, color: C.os, shadow: true }); ui.globalAlpha = 1; return; }
+    const b = getBindings();
+    const first = (act) => (b[act] && b[act].keys.length ? keyName(b[act].keys[0]) : '?');
+    let x = 6;
+    for (const act of ['up', 'left', 'down', 'right']) x += keycap(ui, first(act), x, y, { size: 7, minWidth: 12 }) + 1;
+    x += 3 + text(ui, t('ui.hud.ctrl_move'), x, y + 2, { size: 8, color: C.os, shadow: true }) + 8;
+    x += keycap(ui, first('dash'), x, y, { size: 7 }) + 4;
+    x += text(ui, t('ui.hud.ctrl_dash'), x, y + 2, { size: 8, color: C.bronze, shadow: true }) + 8;
+    x += keycap(ui, first('parry'), x, y, { size: 7 }) + 4;
+    x += text(ui, t('ui.hud.ctrl_parry'), x, y + 2, { size: 8, color: C.os, shadow: true }) + 8;
+    x += keycap(ui, first('pause'), x, y, { size: 7 }) + 4;
+    text(ui, t('ui.hud.ctrl_pause'), x, y + 2, { size: 8, color: C.os, shadow: true });
+    ui.globalAlpha = 1;
   }
 
   function renderTop(ui, g) {
@@ -89,20 +119,33 @@ export function createHud() {
     }
     const mx = RES_X + 4 * (SEG_W + SEG_GAP) + 4;
     text(ui, t('ui.hud.mult', { mult: res.mult }), mx, RES_Y - 4, { kind: 'display', size: 13 + Math.round(pulse * 2), color: hot ? C.braise : C.bronze, shadow: true });
-    // Indicateur visuel : balancier sur 4 temps sous la jauge.
+    // Indicateur visuel : balancier sur 4 temps sous la jauge, avec la fenêtre de frappe
+    // (bande bronze autour de chaque temps) et le curseur qui s'éclaire sur le temps.
     const opt = getSave().options.beatIndicator;
     if (opt === 'visual' || opt === 'both') {
-      const bx = RES_X, bw = 4 * (SEG_W + SEG_GAP) - SEG_GAP, by = RES_Y + SEG_H + 5;
-      ui.fillStyle = C.tourbe; ui.fillRect(bx, by, bw, 3);
-      for (let i = 0; i < 4; i++) { ui.fillStyle = i === 0 ? C.bronze : C.gris; ui.fillRect(bx + Math.round(i * bw / 4), by - 1, 2, 5); }
+      const bx = RES_X, bw = 4 * (SEG_W + SEG_GAP) - SEG_GAP, by = RES_Y + SEG_H + 6;
+      const beatPx = bw / 4;
+      const winPx = conductor.isRunning() ? Math.min(beatPx / 2, (conductor.windowMs() / 1000) / conductor.beatDuration() * beatPx) : 4;
+      text(ui, t('ui.hud.beat'), bx - 6, by - 3, { size: 8, align: 'right', color: C.gris, shadow: true });
+      ui.fillStyle = C.tourbe; ui.fillRect(bx, by - 1, bw, 4);
+      ui.globalAlpha = 0.45; ui.fillStyle = C.bronze;
+      for (let i = 0; i <= 4; i++) {
+        const cx = bx + Math.round(i * beatPx);
+        const x0 = Math.max(bx, Math.round(cx - winPx)), x1 = Math.min(bx + bw, Math.round(cx + winPx));
+        ui.fillRect(x0, by - 1, x1 - x0, 4);
+      }
+      ui.globalAlpha = 1;
+      for (let i = 0; i < 4; i++) { ui.fillStyle = i === 0 ? C.bronze : C.os; ui.fillRect(bx + Math.round(i * beatPx), by - 2, 2, 6); }
       const pos = conductor.isRunning() ? (conductor.beatInBar() + phase) / 4 : 0;
-      ui.fillStyle = st.beatFlash > 0.5 ? C.clair : C.bronze;
-      ui.fillRect(bx + Math.round(pos * bw) - 2, by - 3, 4, 9);
+      const on = st.beatFlash > 0.5;
+      ui.fillStyle = on ? C.clair : C.bronze;
+      ui.fillRect(bx + Math.round(pos * bw) - 2, by - (on ? 5 : 4), 4, on ? 12 : 10);
     }
+    // Jugement rythmique, flottant sous le joueur (au centre de l'écran).
     if (st.judgeT > 0) {
       const key = st.judge === 'parfait' ? 'ui.hud.perfect' : st.judge === 'bon' ? 'ui.hud.good' : 'ui.hud.miss';
       const col = st.judge === 'parfait' ? C.bronze : st.judge === 'bon' ? C.os : C.gris;
-      text(ui, t(key), W / 2, RES_Y - 18 - (0.6 - st.judgeT) * 10, { kind: 'display', size: 13, align: 'center', color: col, shadow: true, alpha: Math.min(1, st.judgeT * 3) });
+      text(ui, t(key), W / 2, H / 2 + 14 - (0.6 - st.judgeT) * 14, { kind: 'display', size: 13, align: 'center', color: col, shadow: true, alpha: Math.min(1, st.judgeT * 3) });
     }
   }
 
@@ -123,7 +166,11 @@ export function createHud() {
   }
 
   return {
-    reset() { res.tier = 0; res.mult = 1; res.value = 0; st.minuteT = 0; st.bannerT = 0; st.judgeT = 0; st.blockedT = 0; if (!unsubs.length) listen(); },
+    reset() {
+      res.tier = 0; res.mult = 1; res.value = 0; st.minuteT = 0; st.bannerT = 0; st.judgeT = 0; st.blockedT = 0;
+      st.hintT = getSave().stats.runs < HINT_RUNS ? HINT_SEC : 0;
+      if (!unsubs.length) listen();
+    },
     dispose() { for (const u of unsubs) u(); unsubs.length = 0; },
     update(realDt) {
       if (st.minuteT > 0) st.minuteT -= realDt;
@@ -131,10 +178,12 @@ export function createHud() {
       if (st.judgeT > 0) st.judgeT -= realDt;
       if (st.blockedT > 0) st.blockedT -= realDt;
       if (st.beatFlash > 0) st.beatFlash -= realDt * 6;
+      if (st.hintT > 0) st.hintT -= realDt;
     },
     render(ui, g) {
       if (!g || !g.player || !g.run || !g.world) return;
       renderTop(ui, g);
+      renderControls(ui);
       renderMinute(ui);
       renderBanner(ui, g);
       renderResonance(ui);

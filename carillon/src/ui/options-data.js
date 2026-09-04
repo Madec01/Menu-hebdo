@@ -10,7 +10,7 @@ import { t } from './i18n.js';
 import * as states from './states.js';
 import { showTextarea, hideDom, domValue, copyText } from './dom.js';
 import { toast } from './toasts.js';
-import { panel, text, button, hit, dimmer, heading, C } from './widgets.js';
+import { panel, text, button, hit, backdrop, heading, C } from './widgets.js';
 
 const W = 480, H = 270;
 const AREA = { x: 40, y: 30, w: 400, h: 210 };
@@ -73,12 +73,13 @@ export function createSaveText() {
       return;
     }
     const res = importSave(domValue());
-    if (res.ok) { announceAll(); toast({ title: t('ui.options.import'), body: t('ui.options.import_ok'), icon: 'ui_sceau' }); close(); }
+    if (res.ok) { announceAll(); playUi('ui_confirm'); toast({ title: t('ui.options.import'), body: t('ui.options.import_ok'), icon: 'ui_sceau' }); hideDom(); states.pop(); }
     else { playUi('ui_cancel'); toast({ title: t('ui.options.import'), body: t('ui.options.import_error_' + res.error), icon: 'ui_mort' }); }
   }
 
   return {
     freezes: true,
+    opaque: true,
     enter(p) {
       mode = p.mode || 'export';
       showTextarea({
@@ -99,7 +100,7 @@ export function createSaveText() {
       return false;
     },
     render(ui) {
-      dimmer(ui, W, H, 0.7);
+      backdrop(ui, W, H, states.rampOf('savetext'));
       panel(ui, AREA.x, AREA.y, AREA.w, AREA.h, 'parchment');
       heading(ui, t(mode === 'export' ? 'ui.options.export' : 'ui.options.import'), W / 2, AREA.y + 6, 15);
       text(ui, t(mode === 'export' ? 'ui.options.textarea_export_hint' : 'ui.options.textarea_import_hint'), W / 2, AREA.y + 24, { size: 8, align: 'center', color: C.encreClaire });

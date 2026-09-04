@@ -44,7 +44,8 @@ export function pageProgress(tab) {
 }
 
 function weaponParams(def) {
-  return { damage: def.base ? def.base.damage : 0, count: def.base ? def.base.count : 1, area: def.base ? Math.round(def.base.area * 100) : 100 };
+  const b = def.base || {};
+  return { damage: b.damage || 0, count: b.count || 1, area: Math.round((b.area || 1) * 100), bonus: Math.round((b.markBonus || 0) * 100) };
 }
 
 /** Détail d'une entrée dans le rectangle donné (parchemin déjà dessiné). */

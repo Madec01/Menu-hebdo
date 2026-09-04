@@ -4,9 +4,9 @@
   "name": "upgrade.coeur_de_bronze.name",
   "desc": "upgrade.coeur_de_bronze.desc",
   "cost": [
-   50,
-   120,
-   250
+   30,
+   70,
+   150
   ],
   "stat": "maxHp",
   "perLevel": 10,
@@ -17,9 +17,9 @@
   "name": "upgrade.semelles_de_cuir.name",
   "desc": "upgrade.semelles_de_cuir.desc",
   "cost": [
-   60,
-   140,
-   280
+   40,
+   80,
+   170
   ],
   "stat": "speed",
   "perLevel": 5,
@@ -30,9 +30,9 @@
   "name": "upgrade.ferrure_du_beffroi.name",
   "desc": "upgrade.ferrure_du_beffroi.desc",
   "cost": [
-   80,
-   180,
-   350
+   50,
+   110,
+   210
   ],
   "stat": "armor",
   "perLevel": 1,
@@ -45,9 +45,9 @@
   "name": "upgrade.oreille_fine.name",
   "desc": "upgrade.oreille_fine.desc",
   "cost": [
-   70,
-   160,
-   300
+   40,
+   100,
+   180
   ],
   "stat": "windowMult",
   "perLevel": 0.1,
@@ -58,9 +58,9 @@
   "name": "upgrade.battant_lourd.name",
   "desc": "upgrade.battant_lourd.desc",
   "cost": [
-   90,
-   200,
-   400
+   50,
+   120,
+   240
   ],
   "stat": "damageMult",
   "perLevel": 0.05,
@@ -71,9 +71,9 @@
   "name": "upgrade.aimant_d_echos.name",
   "desc": "upgrade.aimant_d_echos.desc",
   "cost": [
-   50,
-   110,
-   220
+   30,
+   70,
+   130
   ],
   "stat": "magnet",
   "perLevel": 0.25,
@@ -84,9 +84,9 @@
   "name": "upgrade.reliquaire.name",
   "desc": "upgrade.reliquaire.desc",
   "cost": [
-   80,
-   170,
-   320
+   50,
+   100,
+   190
   ],
   "stat": "xpGain",
   "perLevel": 0.08,
@@ -99,9 +99,9 @@
   "name": "upgrade.cire_de_veillee.name",
   "desc": "upgrade.cire_de_veillee.desc",
   "cost": [
-   70,
-   150,
-   300
+   40,
+   90,
+   180
   ],
   "stat": "regen",
   "perLevel": 0.3,
@@ -114,9 +114,9 @@
   "name": "upgrade.main_sure.name",
   "desc": "upgrade.main_sure.desc",
   "cost": [
-   90,
-   190,
-   380
+   50,
+   110,
+   230
   ],
   "stat": "crit",
   "perLevel": 0.03,
@@ -129,9 +129,9 @@
   "name": "upgrade.bourse_de_cuivre.name",
   "desc": "upgrade.bourse_de_cuivre.desc",
   "cost": [
-   100,
-   220,
-   450
+   60,
+   130,
+   270
   ],
   "stat": "bronzeGain",
   "perLevel": 0.1,
@@ -142,7 +142,7 @@
   "name": "upgrade.second_souffle.name",
   "desc": "upgrade.second_souffle.desc",
   "cost": [
-   400
+   240
   ],
   "stat": "revive",
   "perLevel": 1,
@@ -155,9 +155,9 @@
   "name": "upgrade.contrepoids_de_fonte.name",
   "desc": "upgrade.contrepoids_de_fonte.desc",
   "cost": [
-   90,
-   200,
-   400
+   50,
+   120,
+   240
   ],
   "stat": "area",
   "perLevel": 0.08,
@@ -168,8 +168,8 @@
   "name": "upgrade.corde_neuve.name",
   "desc": "upgrade.corde_neuve.desc",
   "cost": [
-   300,
-   600
+   180,
+   360
   ],
   "stat": "cadence",
   "perLevel": 1,
@@ -182,8 +182,8 @@
   "name": "upgrade.troisieme_carte.name",
   "desc": "upgrade.troisieme_carte.desc",
   "cost": [
-   150,
-   350
+   90,
+   210
   ],
   "stat": "rerolls",
   "perLevel": 1,

@@ -20,7 +20,9 @@ const TRAIL_TINT = '#c9973f';
 const NUM_STR = []; // cache des chaînes d'entiers (aucune allocation par frame)
 
 let loop = null, getOptions = null;
-let stopUntil = 0, slowUntil = 0, slowScale = 1, baseScale = 1;
+let stopUntil = 0, slowUntil = 0, slowScale = 1, baseScale = 1, lastStopEnd = 0;
+const HITSTOP_COOLDOWN_MS = 140;   // un gel ne peut pas en suivre un autre de trop près (Tocsin sur 200 ennemis)
+const NUMBER_SHADOW_MAX = 48;      // au-delà, les nombres perdent leur ombre (coût de fillText)
 let fontNormal = '10px monospace', fontCrit = '13px monospace';
 
 // Nombres flottants (SoA).
@@ -51,9 +53,13 @@ function opt(key, def) { const o = getOptions ? getOptions() : null; return o &&
 /** Gèle la logique ms millisecondes (timeScale 0), le rendu continue. */
 export function hitStop(ms) {
   if (!loop) return;
-  const until = performance.now() + ms;
+  const now = performance.now();
+  const until = now + ms;
   if (until <= stopUntil) return;
-  if (stopUntil === 0) baseScale = loop.getTimeScale();
+  if (stopUntil === 0) {
+    if (now < lastStopEnd + HITSTOP_COOLDOWN_MS) return; // gel trop rapproché du précédent : ignoré
+    baseScale = loop.getTimeScale();
+  }
   stopUntil = until;
   loop.setTimeScale(0);
 }
@@ -92,7 +98,7 @@ export function dashTrail(spriteId, animName, frame, x, y, flipX = false) {
 export function updateFx(dt) {
   if (loop) {
     const now = performance.now();
-    if (stopUntil > 0 && now >= stopUntil) { stopUntil = 0; loop.setTimeScale(slowUntil > now ? slowScale : baseScale); }
+    if (stopUntil > 0 && now >= stopUntil) { stopUntil = 0; lastStopEnd = now; loop.setTimeScale(slowUntil > now ? slowScale : baseScale); }
     if (slowUntil > 0 && now >= slowUntil) { slowUntil = 0; if (stopUntil === 0) loop.setTimeScale(baseScale); }
   }
   for (let i = numCount - 1; i >= 0; i--) {
@@ -116,15 +122,18 @@ export function renderFx(ctx, alpha) {
   if (numCount === 0) return;
   ctx = renderer.getOverlayCtx() || ctx;
   ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+  const shadow = numCount <= NUMBER_SHADOW_MAX;
   let curKind = -1;
   for (let i = 0; i < numCount; i++) {
     if (!camera.isVisible(nx[i], ny[i], 16)) continue;
     const k = nkind[i];
-    if (k !== curKind) { curKind = k; ctx.font = k === 1 ? fontCrit : fontNormal; }
     const x = Math.round(nx[i]), y = Math.round(ny[i]);
     ctx.globalAlpha = nlife[i] < 0.2 ? nlife[i] * 5 : 1;
-    ctx.fillStyle = COLOR_SHADOW; ctx.fillText(ntext[i], x + 1, y + 1);
-    ctx.fillStyle = k === 1 ? COLOR_CRIT : k === 2 ? COLOR_BEAT : COLOR_NORMAL;
+    if (shadow) {
+      if (k !== curKind) { curKind = k; ctx.font = k === 1 ? fontCrit : fontNormal; }
+      ctx.fillStyle = COLOR_SHADOW; ctx.fillText(ntext[i], x + 1, y + 1);
+      ctx.fillStyle = k === 1 ? COLOR_CRIT : k === 2 ? COLOR_BEAT : COLOR_NORMAL;
+    } else if (k !== curKind) { curKind = k; ctx.font = k === 1 ? fontCrit : fontNormal; ctx.fillStyle = k === 1 ? COLOR_CRIT : k === 2 ? COLOR_BEAT : COLOR_NORMAL; }
     ctx.fillText(ntext[i], x, y);
   }
   ctx.globalAlpha = 1;

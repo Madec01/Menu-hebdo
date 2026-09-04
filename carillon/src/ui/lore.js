@@ -75,7 +75,7 @@ export function createLeafReader() {
       return false;
     },
     render(ui) {
-      dimmer(ui, W, H, 0.6);
+      dimmer(ui, W, H, 0.85, states.rampOf('leaf'));
       panel(ui, PX, PY, PW, PH, 'parchment');
       const n = leafIds().indexOf(id) + 1;
       text(ui, t('ui.altar.leaf_number', { n }), TX, PY + 8, { size: 9, color: C.encreClaire });

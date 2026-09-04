@@ -1,12 +1,12 @@
 // game/world.js — le monde d'une nuit (ARCHITECTURE.md § 11) : pools (ennemis, projectiles,
 // ramassables, zones), grille, temps, palier, suivi de la Mesure (beat/bar/contretemps), et rendu
-// dans l'ordre du § 3 : sol → décor bas → zones → ramassables → ombres+entités triées par y →
-// projectiles. Le tri par y est un tri par comptage dans des tableaux préalloués (aucune allocation).
+// dans l'ordre du § 3 : sol → halo de la Mesure → zones → ramassables → ombres+entités triées
+// par y → projectiles. Le tri par y est un tri par comptage dans des tableaux préalloués (aucune allocation).
 
 import { createGrid } from '../core/grid.js';
 import { beatIndex, beatsPerBar, phase } from '../audio/conductor.js';
-import { isVisible } from '../render/camera.js';
-import { viewRect } from '../render/camera.js';
+import { isVisible, viewRect } from '../render/camera.js';
+import { drawBeatHalo } from '../render/lighting.js';
 import { balance, allParishes } from './data.js';
 import { createEnemyPool, updateEnemies, drawEnemy } from './enemies.js';
 import { createProjectilePool, updateProjectiles } from './projectiles.js';
@@ -81,6 +81,7 @@ export function renderWorld(ctx, world, alpha) {
   const player = world.player;
   const v = viewRect();
   renderGround(ctx, world.ground, world.time);
+  drawBeatHalo(ctx); // halo de bronze de la Mesure : au sol, sous les zones et les entités
   renderHazards(ctx, world);
   renderPickups(ctx, world, alpha);
 

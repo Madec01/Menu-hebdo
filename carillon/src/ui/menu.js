@@ -83,13 +83,22 @@ export function createTitle() {
   const rect = (i) => ({ x: X, y: Y0 + i * STEP, w: BW, h: BH });
   const hasRuns = () => getSave().stats.runs > 0;
   const items = [
-    { label: () => t(hasRuns() ? 'ui.title.continue' : 'ui.title.play'), rect: rect(0), action: () => states.replace('hub') },
-    { label: () => t('ui.title.tutorial'), rect: rect(1), action: () => startTutorial() },
-    { label: () => t('ui.title.codex'), rect: rect(2), action: () => states.push('codex') },
-    { label: () => t('ui.title.options'), rect: rect(3), action: () => states.push('options') },
-    { label: () => t('ui.title.credits'), rect: rect(4), action: () => states.push('credits') },
+    { label: () => t(hasRuns() ? 'ui.title.continue' : 'ui.title.play'), rect: rect(0), action: () => states.replace('hub'), icon: 'ui_coeur' },
+    { label: () => t('ui.title.tutorial'), rect: rect(1), action: () => startTutorial(), icon: 'ui_lanterne' },
+    { label: () => t('ui.title.codex'), rect: rect(2), action: () => states.push('codex'), icon: 'ui_sceau' },
+    { label: () => t('ui.title.options'), rect: rect(3), action: () => states.push('options'), icon: 'ui_options' },
+    { label: () => t('ui.title.credits'), rect: rect(4), action: () => states.push('credits'), icon: 'ui_musique' },
   ];
-  const menu = createMenu(items);
+  const menu = createMenu(items, { size: 11 });
+
+  /** « Dernière nuit : Cendrelune · Wren » à droite du bouton Continuer. */
+  function renderContinueHint(ui) {
+    const s = getSave();
+    if (!hasRuns()) return;
+    const parish = s.lastParish || 'cendrelune', ch = s.lastCharacter || 'wren';
+    const r = rect(0);
+    text(ui, t('ui.title.last_night', { parish: t('parish.' + parish + '.name'), character: t('char.' + ch + '.name') }), r.x + r.w + 8, r.y + 6, { size: 8, color: C.gris, shadow: true });
+  }
 
   function startTutorial() {
     const save = getSave();
@@ -119,6 +128,7 @@ export function createTitle() {
     render(ui) {
       renderLogo(ui, 14);
       menu.render(ui);
+      renderContinueHint(ui);
       const s = getSave().stats;
       text(ui, t('ui.title.runs', { runs: s.runs, wins: s.wins }), 6, H - 12, { size: 9, color: C.gris });
       text(ui, t('ui.title.version'), W / 2, H - 12, { size: 9, align: 'center', color: C.gris });

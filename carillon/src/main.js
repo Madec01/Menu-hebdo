@@ -27,6 +27,7 @@ import { initAchievements } from './ui/achievements.js';
 import { loadUiData } from './ui/gamedata.js';
 import { initMetronome } from './ui/metronome.js';
 import { createScreens } from './ui/screens.js';
+import { initKeyNames } from './ui/options-items.js';
 
 const W = 480, H = 270;
 const canvas = document.getElementById('game');
@@ -93,7 +94,7 @@ function render(alpha) {
   states.render(alpha);
   const ui = renderer.getUiCtx();
   renderToasts(ui, W);
-  if (getSave().options.showFps) text(ui, t('ui.common.fps', { fps: loop.stats.fps }), W - 4, H - 12, { size: 9, align: 'right', color: C.gris });
+  if (getSave().options.showFps) text(ui, t('ui.common.fps', { fps: loop.stats.fps }), W - 4, 32, { size: 8, align: 'right', color: C.gris, shadow: true });
   if (states.mouse.inside) drawCursor(ui, states.mouse.x, states.mouse.y, states.cursorKind());
   renderer.endFrame();
 }
@@ -138,6 +139,7 @@ async function boot() {
   lighting.initLighting({ w: W, h: H, ambient: '#16130f' });
   particles.initParticles(4000);
   input.initInput({ canvas, getAudioTime: audio.now, screenToWorld: camera.screenToWorld, logicalSize: renderer.logicalSize });
+  initKeyNames();
   applyAllOptions();
   const bootTimer = setInterval(() => renderBoot(t('ui.boot.loading', { percent: Math.round(100 * bootProgress.done / bootProgress.total) })), 100);
 

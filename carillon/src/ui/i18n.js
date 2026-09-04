@@ -49,23 +49,31 @@ export function lang() { return code; }
 export function has(key) { return table.has(key); }
 
 // Découpe « Frappe {damage} dégâts » en ['Frappe ', 'damage', ' dégâts'] (indices impairs = paramètres).
+// Pluriel : « {count} {count|ennemi|ennemis} » → l'indice impair est alors { name, forms:[singulier, pluriel] }
+// et la forme est choisie d'après la valeur numérique du paramètre (|v| ≤ 1 → singulier).
 function compile(str) {
   const parts = [];
   let last = 0;
-  const re = /\{([a-zA-Z0-9_]+)\}/g;
+  const re = /\{([a-zA-Z0-9_]+)((?:\|[^{}|]*)+)?\}/g;
   let m;
   while ((m = re.exec(str)) !== null) {
     parts.push(str.slice(last, m.index));
-    parts.push(m[1]);
+    parts.push(m[2] ? { name: m[1], forms: m[2].slice(1).split('|') } : m[1]);
     last = m.index + m[0].length;
   }
   parts.push(str.slice(last));
   return parts;
 }
 
+function fmtValue(v) {
+  if (typeof v === 'number' && !Number.isInteger(v)) return String(Math.round(v * 100) / 100);
+  return String(v);
+}
+
 /**
- * Texte traduit. params : { nom: valeur } substitués dans les {nom}.
- * Une valeur numérique non entière est arrondie à 2 décimales.
+ * Texte traduit. params : { nom: valeur } substitués dans les {nom} ; {nom|un|des} choisit
+ * la forme singulier/pluriel selon la valeur de nom. Une valeur numérique non entière est
+ * arrondie à 2 décimales.
  */
 export function t(key, params = null) {
   const raw = table.get(key);
@@ -74,16 +82,21 @@ export function t(key, params = null) {
     return key;
   }
   if (typeof raw !== 'string') return String(raw);
-  if (!params || raw.indexOf('{') < 0) return raw;
+  if (raw.indexOf('{') < 0) return raw;
   let parts = cache.get(key);
   if (!parts) { parts = compile(raw); cache.set(key, parts); }
   let out = '';
   for (let i = 0; i < parts.length; i++) {
-    if ((i & 1) === 0) { out += parts[i]; continue; }
-    const v = params[parts[i]];
-    if (v === undefined || v === null) out += '{' + parts[i] + '}';
-    else if (typeof v === 'number' && !Number.isInteger(v)) out += String(Math.round(v * 100) / 100);
-    else out += String(v);
+    const p = parts[i];
+    if ((i & 1) === 0) { out += p; continue; }
+    if (typeof p !== 'string') {
+      const v = params ? params[p.name] : undefined;
+      const n = typeof v === 'number' ? Math.abs(v) : parseFloat(v);
+      out += p.forms[(!Number.isNaN(n) && n > 1) ? Math.min(1, p.forms.length - 1) : 0];
+      continue;
+    }
+    const v = params ? params[p] : undefined;
+    out += (v === undefined || v === null) ? '{' + p + '}' : fmtValue(v);
   }
   return out;
 }

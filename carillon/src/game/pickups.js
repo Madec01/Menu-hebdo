@@ -109,6 +109,8 @@ export function updatePickups(world, dt, p) {
       const d = Math.sqrt(d2) || 1;
       const sp = P.magnetSpeed * (1 + o.t * 0.5);
       o.vx = dx / d * sp; o.vy = dy / d * sp;
+      o.bob += dt;
+      if (o.bob >= 0.05) { o.bob = 0; emitParticles('echo_trail', o.x, o.y); } // traînée de bronze
       if (d < P.collectRadius) { collect(world, o, p); world.pickups.release(o); continue; }
     } else {
       // Petit rebond d'apparition puis immobile.
@@ -128,6 +130,7 @@ export function renderPickups(ctx, world, alpha) {
     if (!isVisible(x, y, 16)) continue;
     drawOpts.scale = o.kind === 'xp' ? 0.75 : 1;
     draw(ctx, o.sprite, o.anim, frameAt(o.sprite, o.anim, o.t), x, y, drawOpts);
-    if (o.kind !== 'xp' || o.anim !== 'small') addGlow(x, y, 12, o.kind === 'xp' ? '#c9973f' : '#e0603a', 0.5);
+    if (o.kind !== 'xp') addGlow(x, y, 12, '#e0603a', 0.45);
+    else if (o.anim !== 'small') addGlow(x, y, 10, '#c9973f', 0.25); // lueurs additives : discrètes, les Échos s'empilent
   }
 }

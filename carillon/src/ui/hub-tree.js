@@ -9,7 +9,7 @@ import { t } from './i18n.js';
 import { upgrades } from './gamedata.js';
 import * as states from './states.js';
 import { toast } from './toasts.js';
-import { panel, text, paragraph, button, icon, pips, hit, dimmer, heading, C } from './widgets.js';
+import { panel, text, paragraph, button, icon, pips, hit, backdrop, heading, C } from './widgets.js';
 import { drawNineSlice } from '../render/atlas.js';
 
 const W = 480, H = 270;
@@ -87,6 +87,7 @@ export function createTree() {
 
   return {
     freezes: true,
+    opaque: true,
     enter() { layout(); time = 0; },
     exit() {},
     update(_, realDt) {
@@ -107,7 +108,7 @@ export function createTree() {
       return true;
     },
     render(ui) {
-      dimmer(ui, W, H, 0.7);
+      backdrop(ui, W, H, states.rampOf('tree'));
       panel(ui, 4, 4, W - 8, 188, 'parchment');
       heading(ui, t('ui.tree.title'), W / 2, 6, 16);
       icon(ui, 'ui_bronze', W - 96, 8, 0.5);
@@ -123,7 +124,7 @@ export function createTree() {
         const n = nodes[i], r = n.rect, lvl = upgradeLevel(n.def.id), ok = prereqOk(n.def), full = lvl >= maxLevel(n.def);
         drawNineSlice(ui, i === sel ? 'gauge_fill' : 'gauge_bg', r.x, r.y, r.w, r.h);
         text(ui, t(n.def.name), r.x + 6, r.y + 4, { size: 9, color: i === sel ? C.suie : !ok ? C.gris : full ? C.bronze : C.os, maxWidth: r.w - 44 });
-        pips(ui, r.x + r.w - 8 - maxLevel(n.def) * 5, r.y + 7, lvl, maxLevel(n.def), i === sel ? C.suie : C.bronze);
+        pips(ui, r.x + r.w - (ok ? 8 : 20) - maxLevel(n.def) * 5, r.y + 7, lvl, maxLevel(n.def), i === sel ? C.suie : C.bronze);
         if (!ok) icon(ui, 'ui_sceau', r.x + r.w - 16, r.y + 2, 0.4);
       }
       // Description et achat.

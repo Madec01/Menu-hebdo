@@ -19,13 +19,13 @@ const W = 480, H = 270;
 const COUNT_SEC = 1.6;
 
 export function createResults() {
-  let victory = false, stats = null, params = null, time = 0, shown = 0, lastTick = 0;
+  let victory = false, stats = null, params = null, time = 0, shown = 0, lastTick = 0, killer = '';
   const PX = 16, PY = 12, PW = W - 32, PH = H - 24;
   const btn = (i) => ({ x: PX + 20 + i * 150, y: PY + PH - 30, w: 136, h: 20 });
   const items = [
-    { label: () => t('ui.results.retry'), rect: btn(0), action: () => states.replace('run', params, { sound: 'bell_tier' }) },
-    { label: () => t('ui.results.copy_seed'), rect: btn(1), action: copySeed },
-    { label: () => t('ui.results.hub'), rect: btn(2), action: () => states.replace('hub') },
+    { label: () => t('ui.results.retry'), rect: btn(0), action: () => states.replace('run', params, { sound: 'bell_tier' }), icon: 'ui_coeur' },
+    { label: () => t('ui.results.copy_seed'), rect: btn(1), action: copySeed, icon: 'ui_sceau' },
+    { label: () => t('ui.results.hub'), rect: btn(2), action: () => states.replace('hub'), icon: 'ui_lanterne' },
   ];
   const menu = createMenu(items, { size: 10 });
 
@@ -63,6 +63,7 @@ export function createResults() {
     text(ui, t('ui.results.bronze'), lx + 24, y, { size: 10, color: C.encreClaire });
     text(ui, String(shown), vx, y - 4, { kind: 'display', size: 18, align: 'right', color: C.bronze });
     y += 20;
+    if (!victory && killer) { text(ui, t('ui.results.killer', { name: t('enemy.' + killer + '.name') }), lx, y, { size: 9, color: C.encreClaire, maxWidth: 190 }); y += 11; }
     if (s.leafUnlocked) { text(ui, t('ui.results.leaf', { title: t('lore.' + s.leafUnlocked + '.title') }), lx, y, { size: 9, color: C.braise, maxWidth: 180 }); y += 11; }
     if (s.achievements) for (const id of s.achievements.slice(0, 2)) { text(ui, t('ui.results.achievement', { name: t('achievement.' + id + '.name') }), lx, y, { size: 9, color: C.braise, maxWidth: 180 }); y += 11; }
     text(ui, t('ui.results.seed', { seed: seedLabel() }), lx, PY + PH - 44, { size: 8, color: C.encreClaire, maxWidth: 200 });
@@ -89,6 +90,7 @@ export function createResults() {
     const b = s.build || { weapons: [], passives: [] };
     let x = bx;
     const by = PY + PH - 62;
+    text(ui, t('ui.results.build'), bx, by - 11, { size: 8, color: C.encreClaire });
     for (const w of b.weapons) { icon(ui, dataDef('fusions', w.id) ? 'fusion_' + w.id : w.id, x, by, 0.5); text(ui, String(w.level), x + 16, by + 8, { size: 8, color: C.bronze }); x += 22; }
     x = bx;
     for (const p of b.passives) { icon(ui, p.id, x, by + 16, 0.5); text(ui, String(p.level), x + 16, by + 24, { size: 8, color: C.bronze }); x += 22; }
@@ -96,7 +98,7 @@ export function createResults() {
 
   return {
     enter(p) {
-      victory = !!p.victory; stats = p.stats || {}; params = p.params; time = 0; shown = 0; lastTick = 0; menu.index = 2;
+      victory = !!p.victory; stats = p.stats || {}; params = p.params; killer = p.killer || ''; time = 0; shown = 0; lastTick = 0; menu.index = 2;
       const track = victory ? 'victory' : 'death';
       if (music.current() !== track) music.loadTrack(track).then(() => music.play(track, { layers: 2, fadeSec: 1 })).catch(() => {});
     },

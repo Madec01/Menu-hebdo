@@ -9,12 +9,21 @@ import { ACTIONS, getBindings, hasGamepad } from '../core/input.js';
 import { t, has } from './i18n.js';
 
 const pct = (v) => t('ui.options.percent', { value: Math.round(v * 100) });
+let layoutMap = null;   // KeyboardLayoutMap (Chromium) : KeyW → « z » sur un clavier AZERTY
+
+/** Charge la disposition du clavier si le navigateur l'expose (sinon les codes physiques suffisent). */
+export function initKeyNames() {
+  try {
+    if (navigator.keyboard && navigator.keyboard.getLayoutMap) navigator.keyboard.getLayoutMap().then((m) => { layoutMap = m; }).catch(() => {});
+  } catch (e) { /* API absente */ }
+}
 
 /** Libellé lisible d'un KeyboardEvent.code ou 'MouseN'. */
 export function keyName(code) {
   if (!code) return t('ui.options.key_none');
   const k = 'ui.options.key_' + code;
   if (has(k)) return t(k);
+  if (layoutMap && layoutMap.has(code)) { const v = layoutMap.get(code); if (v && v.length === 1) return v.toUpperCase(); }
   if (code.startsWith('Key')) return code.slice(3);
   if (code.startsWith('Digit')) return code.slice(5);
   if (code.startsWith('Numpad')) return 'Num ' + code.slice(6);
@@ -39,14 +48,21 @@ export function setOption(key, value) {
 
 export function getOption(key) { return getSave().options[key]; }
 
+/** Échelles de pixel proposées : auto + celles qui tiennent dans la fenêtre (au moins ×2). */
+function scaleValues() {
+  const max = Math.max(2, Math.floor(Math.min(window.innerWidth / 480, window.innerHeight / 270)));
+  return [0, 2, 3, 4].filter((v) => v === 0 || v <= max);
+}
+
 /** Construit la liste des lignes (fonctions de libellé pour suivre la langue). */
 export function buildItems(handlers) {
   const items = [];
   const section = (id) => items.push({ type: 'section', label: () => t('ui.options.section_' + id) });
   const slider = (key, labelKey, fmt = pct, step = 0.05) => items.push({ type: 'slider', key, label: () => t('ui.options.' + labelKey), value: () => fmt(getOption(key)), step,
     adjust(d) { const v = Math.round(Math.max(0, Math.min(1, getOption(key) + d * step)) * 100) / 100; setOption(key, v); } });
+  // values : tableau ou fonction renvoyant le tableau (échelles qui tiennent dans la fenêtre).
   const choice = (key, labelKey, values, labelOf, note = null) => items.push({ type: 'choice', key, label: () => t('ui.options.' + labelKey), value: () => labelOf(getOption(key)), note,
-    adjust(d) { const i = Math.max(0, values.indexOf(getOption(key))); setOption(key, values[(i + d + values.length) % values.length]); } });
+    adjust(d) { const vs = typeof values === 'function' ? values() : values; const i = Math.max(0, vs.indexOf(getOption(key))); setOption(key, vs[(i + d + vs.length) % vs.length]); } });
   const toggle = (key, labelKey, onChange = null) => items.push({ type: 'toggle', key, label: () => t('ui.options.' + labelKey), value: () => t(getOption(key) ? 'ui.common.on' : 'ui.common.off'),
     adjust() { setOption(key, !getOption(key)); if (onChange) onChange(getOption(key)); } });
   const action = (labelKey, fn, valueFn = null) => items.push({ type: 'action', label: () => t('ui.options.' + labelKey), value: valueFn || (() => ''), adjust: fn });
@@ -55,7 +71,7 @@ export function buildItems(handlers) {
   slider('volMaster', 'vol_master'); slider('volMusic', 'vol_music'); slider('volSfx', 'vol_sfx');
   section('display');
   choice('lang', 'lang', ['fr', 'en'], (v) => t('ui.options.lang_' + v));
-  choice('scale', 'scale', [0, 2, 3, 4], (v) => (v ? t('ui.options.scale_n', { n: v }) : t('ui.options.scale_auto')));
+  choice('scale', 'scale', scaleValues, (v) => (v ? t('ui.options.scale_n', { n: v }) : t('ui.options.scale_auto')));
   toggle('fullscreen', 'fullscreen');
   slider('shake', 'shake'); slider('particles', 'particles');
   toggle('reduceFlash', 'reduce_flash');

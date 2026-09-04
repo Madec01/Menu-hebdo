@@ -8,7 +8,7 @@
 import { emit as emitParticles } from '../render/particles.js';
 import { shake } from '../render/camera.js';
 import { beatDuration } from '../audio/conductor.js';
-import { SPEC, resetSpec, spawnProjectile, nearestEnemy, hasHit, recordHit, clearHits } from './projectiles.js';
+import { SPEC, resetSpec, spawnProjectile, spawnRing, nearestEnemy, hasHit, recordHit, clearHits } from './projectiles.js';
 import { damageEnemy, markEnemy } from './collision.js';
 import { playerAttack } from './player.js';
 import { mult as resonanceMult } from './resonance.js';
@@ -56,9 +56,9 @@ function instantArea(w, p, world, x, y, range, dirX, dirY, cosHalf, inner, damag
 }
 
 /** Projectile visuel (onde, cône, marque…). */
-function fxSprite(world, sprite, x, y, life, scale, growTo, followPlayer, vx, vy) {
+function fxSprite(world, sprite, x, y, life, scale, growTo, followPlayer, vx, vy, alpha = 1) {
   resetSpec();
-  SPEC.kind = 'fx'; SPEC.collides = false; SPEC.sprite = sprite; SPEC.x = x; SPEC.y = y; SPEC.life = life;
+  SPEC.kind = 'fx'; SPEC.collides = false; SPEC.sprite = sprite; SPEC.x = x; SPEC.y = y; SPEC.life = life; SPEC.alpha = alpha;
   SPEC.scale = scale; SPEC.growTo = growTo; SPEC.fadeOut = true; SPEC.followPlayer = followPlayer; SPEC.vx = vx; SPEC.vy = vy;
   return spawnProjectile(world);
 }
@@ -81,6 +81,17 @@ const ARC_OFFSETS = [0, Math.PI, -Math.PI / 2, Math.PI / 2];
 
 // ---- Les 9 Timbres --------------------------------------------------------------------------
 
+const ARC_HALF = 1.22;          // demi-ouverture de l'arc (rad) : le secteur frappé et dessiné
+const slashOpts = { angle: 0, spread: 1.4 };
+
+/** Arc VFX du Battant (projectile 'fx' de forme 1, suit le sonneur, ~1/4 de temps). */
+function arcFx(world, p, angle, range, life) {
+  resetSpec();
+  SPEC.kind = 'fx'; SPEC.collides = false; SPEC.shape = 1; SPEC.sprite = 'proj_cloche';
+  SPEC.x = p.x; SPEC.y = p.y; SPEC.r = range; SPEC.angle = angle; SPEC.spread = ARC_HALF; SPEC.life = life; SPEC.followPlayer = true;
+  spawnProjectile(world);
+}
+
 /** Battant : arc de mêlée devant le sonneur ; count > 1 ajoute des arcs derrière / sur les côtés. */
 function arc(w, p, world) {
   const f = facing(p);
@@ -88,13 +99,19 @@ function arc(w, p, world) {
   const dmg = baseDamage(w, p);
   playerAttack(p);
   const base = Math.atan2(f.y, f.x);
+  const life = Math.min(w.stats.duration, beatDuration() * 0.45);
   for (let k = 0; k < w.stats.count; k++) {
     const a = base + ARC_OFFSETS[k % 4]; // devant, derrière, gauche, droite
-    instantArea(w, p, world, p.x, p.y, range, Math.cos(a), Math.sin(a), Math.cos(1.22), 0, dmg, w.stats.knockback, false);
-    emitParticles('bell', p.x + Math.cos(a) * range * 0.6, p.y + Math.sin(a) * range * 0.6);
+    const hits = instantArea(w, p, world, p.x, p.y, range, Math.cos(a), Math.sin(a), Math.cos(ARC_HALF), 0, dmg, w.stats.knockback, false);
+    arcFx(world, p, a, range, life);
+    slashOpts.angle = a;
+    emitParticles('slash', p.x + Math.cos(a) * range * 0.55, p.y - 4 + Math.sin(a) * range * 0.4, slashOpts);
+    if (hits > 0) emitParticles('bell', p.x + Math.cos(a) * range * 0.7, p.y - 4 + Math.sin(a) * range * 0.5, halfBell);
   }
   return false;
 }
+const halfBell = { count: 0.5 };
+const dustRing = { count: 3 };
 
 /** Clarine : cloches orbitales ; chaque temps réarme les cloches (une touche par ennemi par temps). */
 function orbit(w, p, world) {
@@ -130,8 +147,10 @@ function shockwave(w, p, world) {
   for (let k = 0; k < w.stats.count; k++) {
     const range = w.stats.range * w.stats.area * (1 + 0.35 * k);
     instantArea(w, p, world, p.x, p.y, range, 0, 0, -2, 0, dmg, w.stats.knockback, chain);
-    fxSprite(world, w.def.projectileSprite, p.x, p.y, w.stats.duration * (1 + 0.4 * k), 0.3, (range * 2) / 72, true, 0, 0);
+    spawnRing(world, p.x, p.y + 2, range, w.stats.duration * (1 + 0.4 * k)); // onde au sol (VFX)
   }
+  fxSprite(world, w.def.projectileSprite, p.x, p.y - 30, 0.35, 0.6, 1, true, 0, -30); // glyphe sonore au-dessus du sonneur
+  emitParticles('dust', p.x, p.y, dustRing);
   shake(chain ? 5 : 3, 0.2);
   return true;
 }
@@ -162,8 +181,8 @@ function aura(w, p, world) {
   const range = w.stats.range * (screen ? 1 : w.stats.area);
   const dmg = baseDamage(w, p);
   const n = instantArea(w, p, world, p.x, p.y, range, 0, 0, -2, 0, dmg, w.stats.knockback, false);
-  if (screen) { shake(6, 0.3); fxSprite(world, w.def.projectileSprite, p.x, p.y, 0.5, 1, (range * 2) / 64, true, 0, 0); }
-  else fxSprite(world, w.def.projectileSprite, p.x, p.y, 0.3, (range * 2) / 64, (range * 2.3) / 64, true, 0, 0);
+  if (screen) { shake(6, 0.3); fxSprite(world, w.def.projectileSprite, p.x, p.y, 0.5, 1, (range * 2) / 64, true, 0, 0, 0.7); }
+  else fxSprite(world, w.def.projectileSprite, p.x, p.y, 0.3, (range * 2) / 64, (range * 2.3) / 64, true, 0, 0, 0.65);
   return screen || n >= 6;
 }
 
@@ -176,8 +195,15 @@ function cone(w, p, world) {
   for (let k = 0; k < w.stats.count; k++) {
     const a = base + (k === 0 ? 0 : (k % 2 ? 1 : -1) * 0.35 * Math.ceil(k / 2));
     instantArea(w, p, world, p.x, p.y, range, Math.cos(a), Math.sin(a), Math.cos(0.52), 0, dmg, w.stats.knockback, false);
-    fxSprite(world, w.def.projectileSprite, p.x, p.y, w.stats.duration, 0.8, range / 14, false, Math.cos(a) * range / w.stats.duration, Math.sin(a) * range / w.stats.duration);
+    // Cône VFX (forme 2) qui s'étend devant le sonneur, sprite de brume à la pointe.
+    resetSpec();
+    SPEC.kind = 'fx'; SPEC.collides = false; SPEC.shape = 2; SPEC.sprite = w.def.projectileSprite;
+    SPEC.x = p.x; SPEC.y = p.y; SPEC.r = range; SPEC.angle = a; SPEC.spread = 0.52; SPEC.life = w.stats.duration; SPEC.followPlayer = true;
+    spawnProjectile(world);
+    slashOpts.angle = a;
+    emitParticles('dust', p.x + Math.cos(a) * 24, p.y - 6 + Math.sin(a) * 16, slashOpts);
   }
+  playerAttack(p);
   return true;
 }
 

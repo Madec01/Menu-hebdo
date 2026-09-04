@@ -13,7 +13,7 @@ import { play as playSfx } from '../audio/sfx.js';
 import { draw, drawShadow, frameAt, animDone } from '../render/atlas.js';
 import { addLight } from '../render/lighting.js';
 import { emit as emitParticles } from '../render/particles.js';
-import { flash, slowMo } from '../render/fx.js';
+import { flash, slowMo, dashTrail } from '../render/fx.js';
 import { shake } from '../render/camera.js';
 import { balance, upgradeDef } from './data.js';
 import { onRhythmInput, assistWindowMult, tier as resonanceTier } from './resonance.js';
@@ -50,7 +50,7 @@ export function createPlayer(characterDef, upgradesApplied = {}) {
     facing: { x: 0, y: 1 }, state: 'idle', anim: 'idle_down', animT: 0, moving: false,
     dashT: 0, dashDirX: 0, dashDirY: 0, iframesT: 0, parryT: 0, parryHits: 0, hitInvulnT: 0,
     silencedT: 0, auraDepth: 0, attackT: 0, slowMult: 1, slowT: 0, regenAcc: 0,
-    revives: 0, dead: false, killer: '', markedT: 0,
+    revives: 0, dead: false, killer: '', markedT: 0, trailTick: 0,
     def: characterDef, sprite: characterDef.sprite, unique: characterDef.unique || null,
     stepAcc: 0,
   };
@@ -138,6 +138,9 @@ export function updatePlayer(p, dt, world) {
     p.dashT -= dt;
     p.vx = p.dashDirX * B.dashSpeed; p.vy = p.dashDirY * B.dashSpeed;
     emitParticles('dash_trail', p.x, p.y);
+    // Traînée de Volée : un fantôme bronze de la frame courante un tick sur deux.
+    p.trailTick ^= 1;
+    if (p.trailTick) dashTrail(p.sprite, p.anim, frameAt(p.sprite, p.anim, p.animT), p.x, p.y, false);
   } else {
     p.vx = a.x * speed; p.vy = a.y * speed;
   }
@@ -232,8 +235,12 @@ export function renderPlayer(ctx, p, alpha) {
   drawOpts.alpha = blink ? 0.4 : (p.dashT > 0 ? 0.75 : 1);
   drawOpts.tint = p.parryT > 0 ? '#c9973f' : null;
   draw(ctx, p.sprite, p.anim, frame, x, y, drawOpts);
+  // Halo du Battant : cœur bronze net + large halo doux (lisibilité autour du sonneur),
+  // tous deux élargis par le cran de Résonance. Rayon de base : balance.player.lightRadius.
   const t = resonanceTier();
-  addLight(x, y - 12, B.lightRadius + t * 15, '#c9973f', 0.85 + t * 0.05, 0.08);
+  const r = B.lightRadius + t * 15;
+  addLight(x, y - 12, r, '#c9973f', 0.8 + t * 0.05, 0.08);
+  addLight(x, y - 12, r * 2.4, '#c9973f', 0.55, 0.04, true);
 }
 const drawOpts = { flipX: false, alpha: 1, tint: null, scale: 1 };
 

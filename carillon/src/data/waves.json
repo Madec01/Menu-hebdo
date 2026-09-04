@@ -1,18 +1,18 @@
 {
  "balance": {
   "xp": {
-   "base": 20,
-   "perLevel": 6,
-   "growth": 1.02,
+   "base": 22,
+   "perLevel": 4,
+   "growth": 1.06,
    "startLevel": 1
   },
   "enemyHp": {
    "perTier": 1.35,
-   "damagePerTier": 1.12,
+   "damagePerTier": 1.16,
    "speedPerTier": 1.03
   },
   "spawn": {
-   "densityPerTier": 0.25,
+   "densityPerTier": 0.3,
    "globalCap": 400,
    "minDist": 290,
    "maxDist": 360,
@@ -74,8 +74,8 @@
   "bronze": {
    "win": 1.0,
    "perMinute": 5,
-   "perKill": 0.05,
-   "perResonance": 40,
+   "perKill": 0.03,
+   "perResonance": 30,
    "lossMult": 0.5
   },
   "cards": {

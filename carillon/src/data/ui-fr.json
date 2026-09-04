@@ -43,7 +43,8 @@
       "options": "Options",
       "credits": "Crédits",
       "runs": "{runs} nuits · {wins} aubes",
-      "version": "Les Marches Sourdes"
+      "version": "Les Marches Sourdes",
+      "last_night": "Dernière nuit : {parish} · {character}"
     },
     "hub": {
       "title": "Le Beffroi Mère",
@@ -111,7 +112,13 @@
       "perfect": "Parfait",
       "good": "Bon",
       "miss": "Raté",
-      "beat": "Mesure"
+      "beat": "Mesure",
+      "controls_pad": "Stick : marcher · A : Volée sur le temps · B : Contre-battement · Start : pause",
+      "ctrl_move": "marcher",
+      "ctrl_dash": "Volée, sur le temps",
+      "ctrl_parry": "Contre-battement",
+      "ctrl_pause": "pause",
+      "death_title": "Le Battant se tait"
     },
     "levelup": {
       "title": "Niveau {level}",
@@ -121,7 +128,8 @@
       "passive": "Accord",
       "fusion": "Fusion",
       "bonus": "Don",
-      "hint": "◄► choisir · Entrée prendre"
+      "hint": "◄► choisir · Entrée prendre",
+      "hint_pad": "Stick choisir · A prendre"
     },
     "card": {
       "bonus_heal": "Cire chaude",
@@ -161,7 +169,8 @@
       "retry": "Rejouer",
       "hub": "Retour au Beffroi",
       "perfects": "Coups parfaits : {perfects} · ratés : {misses}",
-      "killer": "Tu es tombé face à : {name}"
+      "killer": "Tu es tombé face à : {name}",
+      "build": "Ton bronze cette nuit"
     },
     "codex": {
       "title": "Codex",
@@ -306,7 +315,11 @@
       "beats": "{done} / {total} sur le temps",
       "press_dash": "Espace",
       "done_title": "Le Battant se tait",
-      "skipped": "Tutoriel passé"
+      "skipped": "Tutoriel passé",
+      "next": "Entrée : continuer",
+      "you": "C'est toi",
+      "stick": "Stick gauche",
+      "pad_dash": "A"
     },
     "toast": {
       "achievement": "Haut-fait",
@@ -318,5 +331,23 @@
     "confirm": {
       "title": "Sûr ?"
     }
+  },
+  "weapon": {
+    "clarine": {
+      "desc": "{count} {count|clarine tourne|clarines tournent} autour de toi et {count|frappe|frappent} ce {count|qu'elle croise|qu'elles croisent} : {damage} dégâts."
+    },
+    "grelots": {
+      "desc": "Lance {count} {count|grelot|grelots} en éventail à chaque croche : {damage} dégâts chacun."
+    },
+    "crecelle": {
+      "desc": "Crépite {count} {count|éclat|éclats} vers l'ennemi le plus proche à chaque croche : {damage} dégâts."
+    },
+    "chaine_d_angelus": {
+      "desc": "Sur le temps, l'angélus saute d'ennemi en ennemi, {count} fois : {damage} dégâts."
+    },
+    "diapason": {
+      "desc": "Marque {count} {count|ennemi|ennemis} par mesure ; la marque éclate sur le temps suivant : +{bonus} % de dégâts sur les marqués."
+    },
+    "_note": "Surcharges E2 (pluriel {count|un|des}, Diapason +{bonus} %) : à reporter dans fr.json/en.json (agent F) puis supprimer ici."
   }
 }

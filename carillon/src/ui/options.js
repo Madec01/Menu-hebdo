@@ -9,7 +9,7 @@ import { t } from './i18n.js';
 import * as states from './states.js';
 import { buildItems } from './options-items.js';
 import { capture, beginCapture, resetBindings, confirmReset } from './options-data.js';
-import { panel, text, hit, dimmer, heading, C } from './widgets.js';
+import { panel, text, hit, backdrop, heading, C } from './widgets.js';
 
 const W = 480, H = 270;
 const LIST = { x: 20, y: 28, w: 440, h: 206, rowH: 13 };
@@ -56,7 +56,8 @@ export function createOptions() {
 
   return {
     freezes: true,
-    enter() { playUi('ui_confirm'); },
+    opaque: true,
+    enter() { sel = firstSelectable(0, 1); scroll = 0; playUi('ui_confirm'); },
     exit() {},
     update() {
       if (capture.action) return;
@@ -85,7 +86,7 @@ export function createOptions() {
       return true;
     },
     render(ui) {
-      dimmer(ui, W, H, 0.7);
+      backdrop(ui, W, H, states.rampOf('options'));
       panel(ui, 6, 4, W - 12, H - 8, 'parchment');
       heading(ui, t('ui.options.title'), W / 2, 6, 16);
       panel(ui, LIST.x, LIST.y, LIST.w, LIST.h, 'dark');

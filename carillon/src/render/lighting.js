@@ -5,6 +5,11 @@
 // le calque 'screen' du renderer. Le halo de la Mesure (setBeatPulse) est un
 // anneau de bronze au sol autour du joueur (setHaloPos), dessiné par
 // drawBeatHalo(ctx) après le sol, plus une lueur bronze automatique.
+//
+// Lisibilité : floorAmbient(color) plafonne par en bas l'ambiance d'une paroisse
+// (parishes.json) avec une « lune grise » (AMBIENT_FLOOR, par canal) pour que les
+// silhouettes hors du halo restent devinables ; game.js l'applique à chaque run,
+// les écrans (menu, hub, bilan) gardent leur setAmbient exact.
 
 import * as renderer from './renderer.js';
 import * as camera from './camera.js';
@@ -15,6 +20,25 @@ let haloX = 0, haloY = 0, pulse = 0, haloRadius = 26;
 let flickerT = 0;
 let ambientColor = '#16130f';
 let haloColor = '#c9973f';
+// Plancher « lune grise » (gris-bleu désaturé, ~22 % de luminance) appliqué canal par canal.
+const AMBIENT_FLOOR = [0x38, 0x3a, 0x42];
+const rgbTmp = [0, 0, 0];
+
+/** '#rrggbb' → [r, g, b] (objet réutilisé). */
+function parseHex(color) {
+  const v = parseInt(color.slice(1, 7), 16) || 0;
+  rgbTmp[0] = (v >> 16) & 255; rgbTmp[1] = (v >> 8) & 255; rgbTmp[2] = v & 255;
+  return rgbTmp;
+}
+
+function hex2(n) { return (n < 16 ? '0' : '') + n.toString(16); }
+
+/** Couleur d'ambiance de jeu : chaque canal ne descend pas sous le plancher lunaire. */
+export function floorAmbient(color) {
+  const c = parseHex(color);
+  const r = Math.max(c[0], AMBIENT_FLOOR[0]), g = Math.max(c[1], AMBIENT_FLOOR[1]), b = Math.max(c[2], AMBIENT_FLOOR[2]);
+  return '#' + hex2(r) + hex2(g) + hex2(b);
+}
 
 /** ambient : couleur d'obscurité (parishes.json). */
 export function initLighting({ w, h, ambient = '#16130f', halo = '#c9973f' } = {}) {
@@ -29,24 +53,29 @@ export function initLighting({ w, h, ambient = '#16130f', halo = '#c9973f' } = {
 export function setAmbient(color) { ambientColor = color; renderer.setAmbient(color); }
 export function ambient() { return ambientColor; }
 
-/** Pré-génère (une fois) le sprite radial d'une couleur : à appeler au chargement. */
-export function prepareLight(color) {
-  let c = sprites.get(color);
+/**
+ * Pré-génère (une fois) le sprite radial d'une couleur : à appeler au chargement.
+ * soft = true : variante sans cœur plein, décroissance quadratique (halo du Battant, lune).
+ */
+export function prepareLight(color, soft = false) {
+  const key = soft ? color + 's' : color;
+  let c = sprites.get(key);
   if (c) return c;
   c = document.createElement('canvas'); c.width = SPRITE_SIZE; c.height = SPRITE_SIZE;
   const g = c.getContext('2d');
   const r = SPRITE_SIZE / 2;
   const grad = g.createRadialGradient(r, r, 0, r, r, r);
   grad.addColorStop(0, color);
-  grad.addColorStop(0.35, color);
+  grad.addColorStop(soft ? 0.1 : 0.35, color);
   grad.addColorStop(1, 'rgba(0,0,0,0)');
   g.fillStyle = grad; g.fillRect(0, 0, SPRITE_SIZE, SPRITE_SIZE);
   // Le gradient linéaire en alpha donne un halo trop dur : deuxième passe adoucie.
   g.globalCompositeOperation = 'destination-in';
-  const soft = g.createRadialGradient(r, r, 0, r, r, r);
-  soft.addColorStop(0, 'rgba(0,0,0,1)'); soft.addColorStop(0.5, 'rgba(0,0,0,0.75)'); soft.addColorStop(1, 'rgba(0,0,0,0)');
-  g.fillStyle = soft; g.fillRect(0, 0, SPRITE_SIZE, SPRITE_SIZE);
-  sprites.set(color, c);
+  const mask = g.createRadialGradient(r, r, 0, r, r, r);
+  if (soft) { mask.addColorStop(0, 'rgba(0,0,0,1)'); mask.addColorStop(0.3, 'rgba(0,0,0,0.7)'); mask.addColorStop(0.65, 'rgba(0,0,0,0.25)'); mask.addColorStop(1, 'rgba(0,0,0,0)'); }
+  else { mask.addColorStop(0, 'rgba(0,0,0,1)'); mask.addColorStop(0.5, 'rgba(0,0,0,0.75)'); mask.addColorStop(1, 'rgba(0,0,0,0)'); }
+  g.fillStyle = mask; g.fillRect(0, 0, SPRITE_SIZE, SPRITE_SIZE);
+  sprites.set(key, c);
   return c;
 }
 
@@ -57,10 +86,10 @@ function flickerValue(x, y, f) {
   return 1 + f * (0.55 * Math.sin(t * 11 + x * 0.13) + 0.3 * Math.sin(t * 23 + y * 0.07) + 0.15 * Math.sin(t * 41 + x * 0.31));
 }
 
-/** Source de lumière (calque multiply). intensity 0..1+, flicker 0..1. */
-export function addLight(x, y, radius, color, intensity = 1, flicker = 0) {
+/** Source de lumière (calque multiply). intensity 0..1+, flicker 0..1, soft = halo doux. */
+export function addLight(x, y, radius, color, intensity = 1, flicker = 0, soft = false) {
   if (!camera.isVisible(x, y, radius)) return;
-  const spr = sprites.get(color) || prepareLight(color);
+  const spr = soft ? (sprites.get(color + 's') || prepareLight(color, true)) : (sprites.get(color) || prepareLight(color));
   const ctx = renderer.getLightCtx();
   const a = intensity * flickerValue(x, y, flicker);
   ctx.globalAlpha = a > 1 ? 1 : a < 0 ? 0 : a;

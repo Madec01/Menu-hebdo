@@ -7,7 +7,7 @@ import { playUi } from '../audio/sfx.js';
 import { isDown } from '../core/input.js';
 import { t } from './i18n.js';
 import * as states from './states.js';
-import { text, wrap, dimmer, C } from './widgets.js';
+import { text, wrap, backdrop, C } from './widgets.js';
 
 const W = 480, H = 270;
 const SPEED = 18, FAST = 90, LINE = 11, COL_W = 400, COL_X = 40;
@@ -54,21 +54,22 @@ export function createCredits(deps) {
 
   return {
     freezes: true,
-    enter() { lines = []; y = H; total = 0; },
+    opaque: true,
+    enter() { lines = []; y = H - 70; total = 0; },
     exit() {},
     update(_, realDt) {
       const fast = isDown('menuDown') || isDown('down') || states.mouse.down;
       y -= (fast ? FAST : SPEED) * realDt;
-      if (total > 0 && y < -total) y = H;
+      if (total > 0 && y < -total) y = H - 70;
       if (states.mouse.clicked && states.mouse.y < 20) { playUi('ui_cancel'); states.pop(); }
     },
     handleAction(a) {
       if (a === 'cancel' || a === 'pause' || a === 'confirm') { playUi('ui_cancel'); states.pop(); return true; }
-      if (a === 'menuUp') { y = Math.min(H, y + 40); return true; }
+      if (a === 'menuUp') { y = Math.min(H - 70, y + 40); return true; }
       return false;
     },
     render(ui) {
-      dimmer(ui, W, H, 0.85);
+      backdrop(ui, W, H, states.rampOf('credits'));
       if (!lines.length) { lines = build(ui); total = 0; for (const l of lines) total += l.style.size ? Math.max(LINE, l.style.size + 3) : LINE; }
       let cy = y;
       for (const l of lines) {

@@ -18,7 +18,7 @@ import * as camera from '../camera.js';
 import * as lighting from '../lighting.js';
 import * as particles from '../particles.js';
 import * as fx from '../fx.js';
-import * as ground from '../ground.js';
+import { createGround, renderGround, drawProp } from '../../game/ground.js';
 import { loadFonts, font } from '../fonts.js';
 
 const BASE = '../../../assets/';
@@ -31,7 +31,8 @@ renderer.initRenderer({ canvas, width: 480, height: 270 });
 renderer.resize(+(params.get('scale') || 0));
 lighting.initLighting({ w: 480, h: 270, ambient: params.get('ambient') || '#16130f' });
 particles.initParticles(4000);
-ground.initGround({ tilesetId: params.get('tileset') || 'cendrelune', seed: 11, groups: (params.get('groups') || 'ash,dirt,grass_dead,patch').split(','), propDensity: 0.05, spriteDensity: 3 });
+const tilesetId = params.get('tileset') || 'cendrelune';
+const groundState = createGround({ tileset: tilesetId, groundGroups: params.get('groups') ? params.get('groups').split(',') : null, props: Object.keys(manifest.sprites).filter((id) => manifest.sprites[id].kind === 'prop' && manifest.sprites[id].parish === tilesetId && !manifest.sprites[id].light), lights: Object.keys(manifest.sprites).filter((id) => manifest.sprites[id].kind === 'prop' && manifest.sprites[id].parish === tilesetId && manifest.sprites[id].light) }, 11);
 renderer.setVignette(+(params.get('vignette') ?? 0.4)); renderer.setGrain(+(params.get('grain') ?? 0.25)); renderer.setFog(+(params.get('fog') ?? 1));
 input.initInput({ canvas, getAudioTime: () => performance.now() / 1000, screenToWorld: camera.screenToWorld, logicalSize: renderer.logicalSize });
 
@@ -56,10 +57,10 @@ function update(dt) {
 function render(alpha) {
   renderer.beginFrame(alpha);
   const ctx = renderer.getCtx();
-  ground.renderGround(ctx, camera);
+  renderGround(ctx, groundState, time);
   lighting.drawBeatHalo(ctx);
-  list.length = 0; ground.visibleProps(camera, props);
-  for (const p of props) list.push(p);
+  list.length = 0;
+  for (const p of groundState.propList) list.push(p);
   for (const e of enemies) list.push(e);
   for (const t of torches) list.push(t);
   list.push(player);
@@ -68,7 +69,7 @@ function render(alpha) {
   for (const e of list) {
     if (e === player) atlas.draw(ctx, 'wren', player.anim, atlas.frameAt('wren', player.anim, player.t), e.x, e.y);
     else if (e.kind) { const anim = atlas.dirAnim(e.kind, 'walk', e.flip ? -1 : 1, 0); atlas.draw(ctx, e.kind, anim, atlas.frameAt(e.kind, anim, e.t), e.x, e.y, { flipX: !atlas.isDirectional(e.kind) && e.flip, tint: e.kind === 'feutre' && phase < 0.15 ? '#ffffff' : null }); }
-    else if (e.sprite) { ground.drawProp(ctx, e, time); if (e.light) lighting.addLight(e.x, e.y - 6, 60, '#e0a050', 0.8, 0.3); }
+    else if (e.sprite) drawProp(ctx, e, time);
     else { atlas.draw(ctx, 'torch', 'idle', atlas.frameAt('torch', 'idle', time), e.x, e.y); lighting.addLight(e.x, e.y - 12, 80, '#e0a050', 0.9, 0.25); lighting.addGlow(e.x, e.y - 14, 10, '#e0603a', 0.5); }
   }
   // Projectiles et pickups (cellules `col`).
@@ -92,7 +93,7 @@ function render(alpha) {
 const loop = createLoop({ update, render });
 fx.initFx({ loop, getOptions: () => ({ reduceFlash: params.get('reduceFlash') === '1' }) });
 loop.start();
-window.__bench = { loop, particles, renderer, camera, fx, atlas, ground, input, lighting };
+window.__bench = { loop, particles, renderer, camera, fx, atlas, ground: groundState, input, lighting };
 </script>
 </body>
 </html>
