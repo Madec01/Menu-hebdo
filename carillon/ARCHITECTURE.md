@@ -39,7 +39,7 @@ carillon/
     ui/      hud.js menu.js levelup.js options.js codex.js tutorial.js hub.js
              results.js i18n.js pause.js credits.js achievements.js widgets.js
     data/    weapons.json passives.json enemies.json waves.json parishes.json
-             characters.json lore.json fr.json en.json upgrades.json
+             characters.json lore.json fr.json en.json ui-fr.json ui-en.json upgrades.json
              achievements.json fusions.json music/<trackId>.json
   assets/
     manifest.json       # sprites, tiles, ui, fonts + crédits visuels (agent A)
@@ -390,6 +390,27 @@ Une piste est soit un fichier bouclé (`file`, `loop` = points de boucle vérifi
 // fr.json / en.json — clés imbriquées, mêmes clés dans les deux fichiers (test automatique dans tests/)
 ```
 
+## 10 bis. Registre des identifiants et des clés i18n (partagé, figé)
+
+Tout identifiant de données est en `snake_case` et doit figurer ici avant d'être utilisé.
+
+- **Sonneurs** : `wren`, `osric`, `maren`, `le_muet`.
+- **Timbres** : `battant`, `clarine`, `bourdon`, `grelots`, `tocsin`, `cor_de_brume`, `crecelle`, `chaine_d_angelus`, `diapason`.
+- **Accords** : `ferrure`, `souffle`, `contrepoids`, `corde_de_chanvre`, `cire_d_abeille`, `metronome`, `etain`, `echo`.
+- **Fusions** : `glas` (tocsin + contrepoids), `carillon` (clarine + echo), `tonnerre` (bourdon + etain), `requiem` (diapason + metronome).
+- **Ennemis** : `feutre`, `baillon`, `ouateux`, `fossoyeur`, `choeur_muet`, `rampe_suie`, `veuve_grise`, `cierge`. Élites de Fêlure : `<ennemi>_elite`.
+- **Boss** : `bourdon_fele` (Cendrelune, Les Tourbes), `veuve_suie` (Val-des-Cordes, La Nef Noyée), `maitre` (Le Beffroi Mère).
+- **Paroisses** : `cendrelune`, `tourbes`, `val_des_cordes`, `nef_noyee`, `beffroi_mere`.
+- **Améliorations du Beffroi** (`upgrades.json`, ≥ 12) : `coeur_de_bronze` (maxHp), `semelles_de_cuir` (speed), `ferrure_du_beffroi` (armor), `oreille_fine` (window), `battant_lourd` (damageMult), `aimant_d_echos` (magnet), `reliquaire` (xpGain), `cire_de_veillee` (regen), `main_sure` (crit), `bourse_de_cuivre` (bronzeGain), `second_souffle` (revive), `contrepoids_de_fonte` (area), `corde_neuve` (cadence), `troisieme_carte` (rerolls).
+- **Hauts-faits** (`achievements.json`, ≥ 15) : `premiere_aube`, `sonneur_confirme`, `cent_echos`, `mille_silences`, `plein_timbre`, `plein_accord`, `premiere_fusion`, `quatre_fusions`, `resonance_parfaite`, `sans_faute`, `fele_vaincu`, `veuve_vaincue`, `maitre_vaincu`, `toutes_paroisses`, `tous_sonneurs`, `feuillets_complets`, `sans_rythme_victoire`, `muet_victoire`.
+- **Feuillets** : `f01` … `f24`.
+- **Bruitages et pistes** : § 8.
+
+Clés i18n (`t('...')`), deux fichiers par langue fusionnés par `i18n.loadLang` :
+- `src/data/<lang>.json` — **contenu** (agent F) : `weapon.<id>.name|desc`, `passive.<id>.name|desc`, `fusion.<id>.name|desc`, `enemy.<id>.name|lore`, `boss.<id>.name|lore`, `parish.<id>.name|desc`, `char.<id>.name|desc|trait`, `upgrade.<id>.name|desc`, `achievement.<id>.name|desc`, `lore.<fNN>.title|text`, `tutorial.<step>` (`move`, `wave`, `beat1`, `beat2`, `beat3`, `levelup`, `goal`, `done`), `codex.intro`, `hub.intro`, `title.tagline`.
+- `src/data/ui-<lang>.json` — **interface** (agent E) : `ui.*` (menus, HUD, options, pause, bilan, codex, hub, notifications, remappage). E crée les deux fichiers `ui-fr.json` et `ui-en.json` avec exactement les mêmes clés.
+- Les descriptions d'armes contiennent des paramètres nommés `{damage}`, `{count}`, `{area}` remplis par `t(key, params)`.
+
 ## 11. Contrats `game/` et `ui/`
 
 ```js
@@ -423,6 +444,7 @@ export function finishRun(run, victory) → RunStats  // bronze = f(temps, kills
 
 // ui/i18n.js
 export async function loadLang(code) ; export function t(key, params = {}) → string ; export function lang() ; export function has(key)
+  // charge et fusionne src/data/<code>.json (contenu, agent F) et src/data/ui-<code>.json (interface, agent E) ; clé absente → renvoie la clé et loggue un avertissement une seule fois
 
 // ui/widgets.js — primitives UI dessinées sur canvas via 9-slice et polices locales
 export function panel(ctx, x, y, w, h, style='parchment') ; button(...) ; gauge(...) ; card(...) ; text(ctx, str, x, y, style)
@@ -439,9 +461,9 @@ export function panel(ctx, x, y, w, h, style='parchment') ; button(...) ; gauge(
 | A — Assets visuels | `assets/sprites/**`, `assets/tiles/**`, `assets/ui/**`, `assets/fonts/**`, `assets/manifest.json`, `assets/preview.html`, `assets/CREDITS-visual.md` |
 | B — Audio | `assets/audio/**`, `src/audio/**`, `src/data/music/**` |
 | C — Moteur & rendu | `src/core/**`, `src/render/**` |
-| D — Gameplay | `src/game/**` |
-| E — UI/UX & méta | `src/ui/**`, `index.html`, `src/main.js`, CSS |
-| F — Lore & contenu | `src/data/lore.json`, `src/data/fr.json`, `src/data/en.json` (+ noms/descriptions dans les autres JSON sur demande du lead) |
+| D — Gameplay | `src/game/**` + création initiale de `src/data/{weapons,passives,fusions,enemies,waves,parishes,characters,upgrades,achievements}.json` (G ne retouche ensuite que les valeurs, jamais en parallèle de D) |
+| E — UI/UX & méta | `src/ui/**`, `index.html`, `src/main.js`, `src/data/ui-fr.json`, `src/data/ui-en.json`, CSS |
+| F — Lore & contenu | `src/data/lore.json`, `src/data/fr.json`, `src/data/en.json` (contenu : noms, descriptions, Feuillets, tutoriel) |
 | G — Équilibrage & QA | `src/data/*.json` (valeurs numériques), `tests/**` ; rapporte, ne modifie pas le JS des autres |
 | Lead | `CREDITS.md`, `README.md`, `ARCHITECTURE.md`, `PROMPT.md`, `SOURCING.md`, arbitrages, intégration |
 

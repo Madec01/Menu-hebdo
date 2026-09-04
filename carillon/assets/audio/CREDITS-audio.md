@@ -25,7 +25,7 @@ Fichiers livrés : 406 références, 34 instruments, 43 bruitages, 5 ambiances, 
 - Modifications : idem : découpe, normalisation, boucles crossfadées, OGG Vorbis ; ré-étiquetage des hauteurs (convention VSCO « C3 = do médian » → notation scientifique, vérifié par mesure)
 
 ### Sonatina Symphonic Orchestra (chœur mixte)
-- Fichiers (14) : `assets/audio/samples/choir/A#2.ogg`, `assets/audio/samples/choir/A#3.ogg`, `assets/audio/samples/choir/A#4.ogg`, `assets/audio/samples/choir/A#5.ogg`, `assets/audio/samples/choir/C#3.ogg`, `assets/audio/samples/choir/C#4.ogg`, `assets/audio/samples/choir/C#5.ogg`, `assets/audio/samples/choir/E3.ogg`, `assets/audio/samples/choir/E4.ogg`, `assets/audio/samples/choir/E5.ogg`, `assets/audio/samples/choir/G2.ogg`, `assets/audio/samples/choir/G3.ogg` … (+2 autres, voir manifest.json, crédit `sso`)
+- Fichiers (14) : `assets/audio/samples/choir/As2.ogg`, `assets/audio/samples/choir/As3.ogg`, `assets/audio/samples/choir/As4.ogg`, `assets/audio/samples/choir/As5.ogg`, `assets/audio/samples/choir/Cs3.ogg`, `assets/audio/samples/choir/Cs4.ogg`, `assets/audio/samples/choir/Cs5.ogg`, `assets/audio/samples/choir/E3.ogg`, `assets/audio/samples/choir/E4.ogg`, `assets/audio/samples/choir/E5.ogg`, `assets/audio/samples/choir/G2.ogg`, `assets/audio/samples/choir/G3.ogg` … (+2 autres, voir manifest.json, crédit `sso`)
 - Auteur(s) : Mattias Westlund, Peter Eastman (dépôt), Signal Experiments (boucles)
 - Licence : CC Sampling Plus 1.0
 - Source d'origine : https://github.com/peastman/sso

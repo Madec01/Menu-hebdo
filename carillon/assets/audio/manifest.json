@@ -491,21 +491,21 @@
     "C4": "audio/samples/hand_chimes/C4.ogg",
     "D4": "audio/samples/hand_chimes/D4.ogg",
     "E4": "audio/samples/hand_chimes/E4.ogg",
-    "F#4": "audio/samples/hand_chimes/F#4.ogg",
-    "G#4": "audio/samples/hand_chimes/G#4.ogg",
-    "A#4": "audio/samples/hand_chimes/A#4.ogg",
+    "F#4": "audio/samples/hand_chimes/Fs4.ogg",
+    "G#4": "audio/samples/hand_chimes/Gs4.ogg",
+    "A#4": "audio/samples/hand_chimes/As4.ogg",
     "C5": "audio/samples/hand_chimes/C5.ogg",
     "D5": "audio/samples/hand_chimes/D5.ogg",
     "E5": "audio/samples/hand_chimes/E5.ogg",
-    "F#5": "audio/samples/hand_chimes/F#5.ogg",
-    "G#5": "audio/samples/hand_chimes/G#5.ogg",
+    "F#5": "audio/samples/hand_chimes/Fs5.ogg",
+    "G#5": "audio/samples/hand_chimes/Gs5.ogg",
     "A5": "audio/samples/hand_chimes/A5.ogg",
     "C6": "audio/samples/hand_chimes/C6.ogg",
     "D6": "audio/samples/hand_chimes/D6.ogg",
     "E6": "audio/samples/hand_chimes/E6.ogg",
-    "F#6": "audio/samples/hand_chimes/F#6.ogg",
-    "G#6": "audio/samples/hand_chimes/G#6.ogg",
-    "A#6": "audio/samples/hand_chimes/A#6.ogg"
+    "F#6": "audio/samples/hand_chimes/Fs6.ogg",
+    "G#6": "audio/samples/hand_chimes/Gs6.ogg",
+    "A#6": "audio/samples/hand_chimes/As6.ogg"
    },
    "credit": "vcsl",
    "note": "Hand Chimes ; étiquettes VCSL +12 (mesuré)."
@@ -513,62 +513,62 @@
   "psaltery_bow": {
    "kind": "pitched",
    "files": {
-    "A#4": "audio/samples/psaltery_bow/A#4.ogg",
+    "A#4": "audio/samples/psaltery_bow/As4.ogg",
     "C5": "audio/samples/psaltery_bow/C5.ogg",
     "D5": "audio/samples/psaltery_bow/D5.ogg",
     "E5": "audio/samples/psaltery_bow/E5.ogg",
-    "F#5": "audio/samples/psaltery_bow/F#5.ogg",
-    "G#5": "audio/samples/psaltery_bow/G#5.ogg",
-    "A#5": "audio/samples/psaltery_bow/A#5.ogg",
+    "F#5": "audio/samples/psaltery_bow/Fs5.ogg",
+    "G#5": "audio/samples/psaltery_bow/Gs5.ogg",
+    "A#5": "audio/samples/psaltery_bow/As5.ogg",
     "C6": "audio/samples/psaltery_bow/C6.ogg",
     "D6": "audio/samples/psaltery_bow/D6.ogg",
     "E6": "audio/samples/psaltery_bow/E6.ogg",
-    "F#6": "audio/samples/psaltery_bow/F#6.ogg"
+    "F#6": "audio/samples/psaltery_bow/Fs6.ogg"
    },
    "loop": {
     "A#4": [
-     1.1179,
-     1.7693
+     1.1179138,
+     1.7692744
     ],
     "C5": [
-     0.5001,
-     2.4852
+     0.500068,
+     2.4852381
     ],
     "D5": [
-     0.7643,
-     1.6965
+     0.7643084,
+     1.6964626
     ],
     "E5": [
-     1.332,
-     2.5985
+     1.3319728,
+     2.5985034
     ],
     "F#5": [
-     1.7119,
-     2.1211
+     1.7119048,
+     2.1210884
     ],
     "G#5": [
-     0.8608,
-     2.3161
+     0.860839,
+     2.3161224
     ],
     "A#5": [
-     0.4186,
-     1.8505
+     0.4185714,
+     1.8504989
     ],
     "C6": [
-     0.5089,
-     1.9984
+     0.5089116,
+     1.9984354
     ],
     "D6": [
-     0.7463,
-     1.3513
+     0.7463492,
+     1.3513379
     ],
     "E6": [
-     0.5313,
-     1.6392
+     0.5313379,
+     1.639161
     ],
     "F#6": [
-     0.4874,
-     1.2738
+     0.487415,
+     1.2737642
     ]
    },
    "credit": "vcsl",
@@ -577,17 +577,17 @@
   "psaltery_pluck": {
    "kind": "pitched",
    "files": {
-    "A#4": "audio/samples/psaltery_pluck/A#4.ogg",
+    "A#4": "audio/samples/psaltery_pluck/As4.ogg",
     "C5": "audio/samples/psaltery_pluck/C5.ogg",
     "D5": "audio/samples/psaltery_pluck/D5.ogg",
     "E5": "audio/samples/psaltery_pluck/E5.ogg",
-    "F#5": "audio/samples/psaltery_pluck/F#5.ogg",
-    "G#5": "audio/samples/psaltery_pluck/G#5.ogg",
-    "A#5": "audio/samples/psaltery_pluck/A#5.ogg",
+    "F#5": "audio/samples/psaltery_pluck/Fs5.ogg",
+    "G#5": "audio/samples/psaltery_pluck/Gs5.ogg",
+    "A#5": "audio/samples/psaltery_pluck/As5.ogg",
     "C6": "audio/samples/psaltery_pluck/C6.ogg",
     "D6": "audio/samples/psaltery_pluck/D6.ogg",
     "E6": "audio/samples/psaltery_pluck/E6.ogg",
-    "F#6": "audio/samples/psaltery_pluck/F#6.ogg"
+    "F#6": "audio/samples/psaltery_pluck/Fs6.ogg"
    },
    "credit": "vcsl",
    "note": "Psaltérion pincé ; étiquettes +12."
@@ -598,129 +598,129 @@
     "C2": "audio/samples/organ/C2.ogg",
     "D2": "audio/samples/organ/D2.ogg",
     "E2": "audio/samples/organ/E2.ogg",
-    "F#2": "audio/samples/organ/F#2.ogg",
-    "G#2": "audio/samples/organ/G#2.ogg",
-    "A#2": "audio/samples/organ/A#2.ogg",
+    "F#2": "audio/samples/organ/Fs2.ogg",
+    "G#2": "audio/samples/organ/Gs2.ogg",
+    "A#2": "audio/samples/organ/As2.ogg",
     "C3": "audio/samples/organ/C3.ogg",
     "D3": "audio/samples/organ/D3.ogg",
     "E3": "audio/samples/organ/E3.ogg",
-    "F#3": "audio/samples/organ/F#3.ogg",
-    "G#3": "audio/samples/organ/G#3.ogg",
-    "A#3": "audio/samples/organ/A#3.ogg",
+    "F#3": "audio/samples/organ/Fs3.ogg",
+    "G#3": "audio/samples/organ/Gs3.ogg",
+    "A#3": "audio/samples/organ/As3.ogg",
     "C4": "audio/samples/organ/C4.ogg",
     "D4": "audio/samples/organ/D4.ogg",
     "E4": "audio/samples/organ/E4.ogg",
-    "F#4": "audio/samples/organ/F#4.ogg",
-    "G#4": "audio/samples/organ/G#4.ogg",
-    "A#4": "audio/samples/organ/A#4.ogg",
+    "F#4": "audio/samples/organ/Fs4.ogg",
+    "G#4": "audio/samples/organ/Gs4.ogg",
+    "A#4": "audio/samples/organ/As4.ogg",
     "C5": "audio/samples/organ/C5.ogg",
     "D5": "audio/samples/organ/D5.ogg",
     "E5": "audio/samples/organ/E5.ogg",
-    "F#5": "audio/samples/organ/F#5.ogg",
-    "G#5": "audio/samples/organ/G#5.ogg",
-    "A#5": "audio/samples/organ/A#5.ogg",
+    "F#5": "audio/samples/organ/Fs5.ogg",
+    "G#5": "audio/samples/organ/Gs5.ogg",
+    "A#5": "audio/samples/organ/As5.ogg",
     "C6": "audio/samples/organ/C6.ogg"
    },
    "loop": {
     "C2": [
-     0.3511,
-     4.6591
+     0.3511111,
+     4.6590703
     ],
     "D2": [
-     0.3849,
-     4.5308
+     0.3848526,
+     4.530839
     ],
     "E2": [
-     0.2735,
-     4.4146
+     0.2734694,
+     4.4146032
     ],
     "F#2": [
-     0.2554,
-     4.8437
+     0.2553968,
+     4.8436735
     ],
     "G#2": [
-     0.2406,
-     4.3859
+     0.2406349,
+     4.3858503
     ],
     "A#2": [
-     0.2608,
-     4.3656
+     0.2608163,
+     4.3656236
     ],
     "C3": [
-     0.2526,
-     4.811
+     0.2526304,
+     4.8109751
     ],
     "D3": [
-     0.2216,
-     4.7924
+     0.22161,
+     4.7924036
     ],
     "E3": [
-     0.2197,
-     4.6867
+     0.2197279,
+     4.6866667
     ],
     "F#3": [
-     0.1941,
-     4.3522
+     0.194059,
+     4.3521769
     ],
     "G#3": [
-     0.1873,
-     4.7635
+     0.1872562,
+     4.7634694
     ],
     "A#3": [
-     0.1528,
-     4.4695
+     0.1527664,
+     4.4695465
     ],
     "C4": [
-     0.1845,
-     4.7642
+     0.1845125,
+     4.764195
     ],
     "D4": [
-     0.169,
-     4.3683
+     0.1690476,
+     4.3683447
     ],
     "E4": [
-     0.1815,
-     4.4428
+     0.1814739,
+     4.4427664
     ],
     "F#4": [
-     0.1821,
-     4.4427
+     0.1820635,
+     4.4426531
     ],
     "G#4": [
-     0.1612,
-     4.5899
+     0.1611565,
+     4.589932
     ],
     "A#4": [
-     0.1562,
-     4.919
+     0.1562132,
+     4.9189569
     ],
     "C5": [
-     0.1601,
-     4.4774
+     0.1601361,
+     4.477415
     ],
     "D5": [
-     0.1692,
-     4.4247
+     0.169229,
+     4.4247392
     ],
     "E5": [
-     0.1592,
-     4.5571
+     0.1591837,
+     4.5570522
     ],
     "F#5": [
-     0.1601,
-     4.5758
+     0.1601361,
+     4.5757596
     ],
     "G#5": [
-     0.1553,
-     4.7692
+     0.1552834,
+     4.7692063
     ],
     "A#5": [
-     0.1579,
-     4.7718
+     0.1579138,
+     4.7717687
     ],
     "C6": [
-     0.163,
-     4.5313
+     0.1629705,
+     4.5312698
     ]
    },
    "credit": "vcsl",
@@ -732,69 +732,69 @@
     "C4": "audio/samples/recorder/C4.ogg",
     "D4": "audio/samples/recorder/D4.ogg",
     "E4": "audio/samples/recorder/E4.ogg",
-    "F#4": "audio/samples/recorder/F#4.ogg",
-    "G#4": "audio/samples/recorder/G#4.ogg",
-    "A#4": "audio/samples/recorder/A#4.ogg",
+    "F#4": "audio/samples/recorder/Fs4.ogg",
+    "G#4": "audio/samples/recorder/Gs4.ogg",
+    "A#4": "audio/samples/recorder/As4.ogg",
     "C5": "audio/samples/recorder/C5.ogg",
     "D5": "audio/samples/recorder/D5.ogg",
     "E5": "audio/samples/recorder/E5.ogg",
-    "F#5": "audio/samples/recorder/F#5.ogg",
-    "G#5": "audio/samples/recorder/G#5.ogg",
+    "F#5": "audio/samples/recorder/Fs5.ogg",
+    "G#5": "audio/samples/recorder/Gs5.ogg",
     "A5": "audio/samples/recorder/A5.ogg",
     "C6": "audio/samples/recorder/C6.ogg"
    },
    "loop": {
     "C4": [
-     0.4135,
-     3.9078
+     0.4135374,
+     3.9078458
     ],
     "D4": [
-     0.3538,
-     3.8907
+     0.3538095,
+     3.8906803
     ],
     "E4": [
-     0.35,
-     3.9312
+     0.3499773,
+     3.9311791
     ],
     "F#4": [
-     0.185,
-     3.969
+     0.185034,
+     3.9690476
     ],
     "G#4": [
-     0.1929,
-     4.023
+     0.1929025,
+     4.0230385
     ],
     "A#4": [
-     0.1794,
-     3.9749
+     0.1793878,
+     3.974898
     ],
     "C5": [
-     0.5001,
-     3.3024
+     0.5000907,
+     3.3024263
     ],
     "D5": [
-     0.1735,
-     3.907
+     0.1734921,
+     3.9069615
     ],
     "E5": [
-     0.1975,
-     4.3695
+     0.1974603,
+     4.3695238
     ],
     "F#5": [
-     0.1763,
-     3.8613
+     0.1762585,
+     3.8613379
     ],
     "G#5": [
-     0.1996,
-     3.9695
+     0.1995692,
+     3.9694558
     ],
     "A5": [
-     0.2173,
-     3.9491
+     0.2173243,
+     3.949093
     ],
     "C6": [
-     0.2021,
-     3.8748
+     0.2021088,
+     3.8747846
     ]
    },
    "credit": "vcsl",
@@ -803,27 +803,27 @@
   "wine_glasses": {
    "kind": "pitched",
    "files": {
-    "D#5": "audio/samples/wine_glasses/D#5.ogg",
-    "F#5": "audio/samples/wine_glasses/F#5.ogg",
-    "A#5": "audio/samples/wine_glasses/A#5.ogg",
+    "D#5": "audio/samples/wine_glasses/Ds5.ogg",
+    "F#5": "audio/samples/wine_glasses/Fs5.ogg",
+    "A#5": "audio/samples/wine_glasses/As5.ogg",
     "D6": "audio/samples/wine_glasses/D6.ogg"
    },
    "loop": {
     "D#5": [
-     0.6692,
-     5.877
+     0.6692063,
+     5.8770295
     ],
     "F#5": [
-     0.2563,
-     4.9358
+     0.2562812,
+     4.9357596
     ],
     "A#5": [
-     0.2501,
-     5.5746
+     0.2500907,
+     5.5745805
     ],
     "D6": [
-     0.2559,
-     5.4076
+     0.2559184,
+     5.407619
     ]
    },
    "credit": "vcsl",
@@ -834,27 +834,27 @@
    "files": {
     "D2": "audio/samples/folk_harp/D2.ogg",
     "E2": "audio/samples/folk_harp/E2.ogg",
-    "F#2": "audio/samples/folk_harp/F#2.ogg",
-    "G#2": "audio/samples/folk_harp/G#2.ogg",
-    "A#2": "audio/samples/folk_harp/A#2.ogg",
+    "F#2": "audio/samples/folk_harp/Fs2.ogg",
+    "G#2": "audio/samples/folk_harp/Gs2.ogg",
+    "A#2": "audio/samples/folk_harp/As2.ogg",
     "C3": "audio/samples/folk_harp/C3.ogg",
     "D3": "audio/samples/folk_harp/D3.ogg",
     "E3": "audio/samples/folk_harp/E3.ogg",
-    "F#3": "audio/samples/folk_harp/F#3.ogg",
-    "G#3": "audio/samples/folk_harp/G#3.ogg",
-    "A#3": "audio/samples/folk_harp/A#3.ogg",
+    "F#3": "audio/samples/folk_harp/Fs3.ogg",
+    "G#3": "audio/samples/folk_harp/Gs3.ogg",
+    "A#3": "audio/samples/folk_harp/As3.ogg",
     "C4": "audio/samples/folk_harp/C4.ogg",
     "D4": "audio/samples/folk_harp/D4.ogg",
     "E4": "audio/samples/folk_harp/E4.ogg",
-    "F#4": "audio/samples/folk_harp/F#4.ogg",
-    "G#4": "audio/samples/folk_harp/G#4.ogg",
-    "A#4": "audio/samples/folk_harp/A#4.ogg",
+    "F#4": "audio/samples/folk_harp/Fs4.ogg",
+    "G#4": "audio/samples/folk_harp/Gs4.ogg",
+    "A#4": "audio/samples/folk_harp/As4.ogg",
     "C5": "audio/samples/folk_harp/C5.ogg",
     "D5": "audio/samples/folk_harp/D5.ogg",
     "E5": "audio/samples/folk_harp/E5.ogg",
-    "F#5": "audio/samples/folk_harp/F#5.ogg",
-    "G#5": "audio/samples/folk_harp/G#5.ogg",
-    "A#5": "audio/samples/folk_harp/A#5.ogg",
+    "F#5": "audio/samples/folk_harp/Fs5.ogg",
+    "G#5": "audio/samples/folk_harp/Gs5.ogg",
+    "A#5": "audio/samples/folk_harp/As5.ogg",
     "C6": "audio/samples/folk_harp/C6.ogg"
    },
    "credit": "vcsl",
@@ -877,12 +877,12 @@
    },
    "loop": {
     "drone_1": [
-     0.2,
-     5.3255
+     0.2000227,
+     5.3254649
     ],
     "drone_2": [
-     0.2001,
-     3.7025
+     0.2000907,
+     3.702517
     ]
    },
    "credit": "vcsl",
@@ -1166,76 +1166,76 @@
    "kind": "pitched",
    "files": {
     "E1": "audio/samples/contrabass/E1.ogg",
-    "F#1": "audio/samples/contrabass/F#1.ogg",
+    "F#1": "audio/samples/contrabass/Fs1.ogg",
     "G1": "audio/samples/contrabass/G1.ogg",
-    "A#1": "audio/samples/contrabass/A#1.ogg",
+    "A#1": "audio/samples/contrabass/As1.ogg",
     "C2": "audio/samples/contrabass/C2.ogg",
     "D2": "audio/samples/contrabass/D2.ogg",
     "E2": "audio/samples/contrabass/E2.ogg",
-    "F#2": "audio/samples/contrabass/F#2.ogg",
-    "G#2": "audio/samples/contrabass/G#2.ogg",
+    "F#2": "audio/samples/contrabass/Fs2.ogg",
+    "G#2": "audio/samples/contrabass/Gs2.ogg",
     "A2": "audio/samples/contrabass/A2.ogg",
-    "C#3": "audio/samples/contrabass/C#3.ogg",
+    "C#3": "audio/samples/contrabass/Cs3.ogg",
     "E3": "audio/samples/contrabass/E3.ogg",
-    "G#3": "audio/samples/contrabass/G#3.ogg",
+    "G#3": "audio/samples/contrabass/Gs3.ogg",
     "B3": "audio/samples/contrabass/B3.ogg"
    },
    "loop": {
     "E1": [
-     0.3094,
-     5.2688
+     0.3094331,
+     5.2688209
     ],
     "F#1": [
-     0.3001,
-     5.2817
+     0.4515646,
+     5.2817234
     ],
     "G1": [
-     0.2121,
-     5.3834
+     0.2121315,
+     5.383356
     ],
     "A#1": [
-     0.3421,
-     5.078
+     0.3421315,
+     5.0779819
     ],
     "C2": [
-     0.3695,
-     5.4229
+     0.3695011,
+     5.4229025
     ],
     "D2": [
-     0.2968,
-     5.3937
+     0.2968254,
+     5.3936508
     ],
     "E2": [
-     0.2006,
-     5.3916
+     0.2006349,
+     5.39161
     ],
     "F#2": [
-     0.3803,
-     5.3366
+     0.3803401,
+     5.3365533
     ],
     "G#2": [
-     0.4061,
-     5.4236
+     0.4060544,
+     5.4236281
     ],
     "A2": [
-     0.3945,
-     5.3257
+     0.3945125,
+     5.325737
     ],
     "C#3": [
-     0.3567,
-     4.9293
+     0.3567347,
+     4.9293424
     ],
     "E3": [
-     0.2131,
-     5.22
+     0.2131066,
+     5.2199773
     ],
     "G#3": [
-     0.2191,
-     5.4087
+     0.2190703,
+     5.4087075
     ],
     "B3": [
-     0.5243,
-     5.2544
+     0.5243084,
+     5.2543991
     ]
    },
    "credit": "vsco2",
@@ -1260,56 +1260,56 @@
    },
    "loop": {
     "C2": [
-     0.5004,
-     5.3464
+     0.5003628,
+     5.3463946
     ],
     "E2": [
-     0.5004,
-     5.1393
+     0.5003855,
+     5.1392517
     ],
     "G2": [
-     0.2112,
-     4.9498
+     0.2111791,
+     4.9497506
     ],
     "B2": [
-     0.2532,
-     5.3998
+     0.2531973,
+     5.3998413
     ],
     "D3": [
-     0.3001,
-     5.3
+     0.3001134,
+     5.2999773
     ],
     "F3": [
-     0.2966,
-     5.3875
+     0.2965533,
+     5.3875057
     ],
     "A3": [
-     0.2168,
-     5.1907
+     0.2168481,
+     5.1906803
     ],
     "C4": [
-     0.2002,
-     5.1477
+     0.2001814,
+     5.1476871
     ],
     "E4": [
-     0.3007,
-     5.0861
+     0.3006803,
+     5.0861224
     ],
     "G4": [
-     0.203,
-     5.3024
+     0.2029705,
+     5.302381
     ],
     "B4": [
-     0.5001,
-     5.3535
+     0.5001134,
+     5.3535374
     ],
     "D5": [
-     0.2486,
-     5.2125
+     0.2485941,
+     5.2124943
     ],
     "F5": [
-     0.5,
-     5.2552
+     0.5000227,
+     5.2552154
     ]
    },
    "credit": "vsco2",
@@ -1334,56 +1334,56 @@
    },
    "loop": {
     "C3": [
-     0.3589,
-     4.883
+     0.3588662,
+     4.8830385
     ],
     "D3": [
-     0.262,
-     5.3404
+     0.2620408,
+     5.3403855
     ],
     "E3": [
-     0.2343,
-     4.9493
+     0.2342857,
+     4.9492971
     ],
     "G3": [
-     0.2323,
-     5.0894
+     0.2322676,
+     5.0893878
     ],
     "B3": [
-     0.3003,
-     5.3995
+     0.3003401,
+     5.3994558
     ],
     "D4": [
-     0.3141,
-     5.3412
+     0.3140816,
+     5.3411565
     ],
     "F4": [
-     0.2229,
-     4.935
+     0.2228798,
+     4.9349887
     ],
     "A4": [
-     0.3046,
-     5.1217
+     0.3046259,
+     5.1216553
     ],
     "C5": [
-     0.2338,
-     4.9175
+     0.2337868,
+     4.9174603
     ],
     "E5": [
-     0.3,
-     5.3778
+     0.3000227,
+     5.3777778
     ],
     "G5": [
-     0.2295,
-     5.0426
+     0.2294785,
+     5.0426077
     ],
     "B5": [
-     0.5,
-     4.9075
+     0.5000227,
+     4.9074603
     ],
     "D6": [
-     0.4242,
-     4.9201
+     0.4242404,
+     4.9201134
     ]
    },
    "credit": "vsco2",
@@ -1407,52 +1407,52 @@
    },
    "loop": {
     "G3": [
-     0.2003,
-     5.1147
+     0.2002721,
+     5.1146712
     ],
     "A3": [
-     0.5,
-     4.9607
+     0.5000227,
+     4.9606576
     ],
     "C4": [
-     0.2003,
-     5.2817
+     0.2002721,
+     5.2817234
     ],
     "E4": [
-     0.5,
-     5.3345
+     0.5000227,
+     5.3345351
     ],
     "G4": [
-     0.2257,
-     5.2624
+     0.225737,
+     5.262449
     ],
     "A4": [
-     0.3,
-     5.2529
+     0.3000227,
+     5.2528571
     ],
     "C5": [
-     0.2274,
-     4.8555
+     0.2274376,
+     4.8554875
     ],
     "E5": [
-     0.5003,
-     4.9232
+     0.5002948,
+     4.9231973
     ],
     "G5": [
-     0.2335,
-     5.1562
+     0.2334921,
+     5.1561678
     ],
     "A5": [
-     0.2003,
-     5.1946
+     0.2003175,
+     5.1945578
     ],
     "C6": [
-     0.2149,
-     5.1573
+     0.2149433,
+     5.1572562
     ],
     "E6": [
-     0.3141,
-     5.2058
+     0.314059,
+     5.2058277
     ]
    },
    "credit": "vsco2",
@@ -1462,9 +1462,9 @@
    "kind": "pitched",
    "files": {
     "C2": "audio/samples/horn/C2.ogg",
-    "D#2": "audio/samples/horn/D#2.ogg",
+    "D#2": "audio/samples/horn/Ds2.ogg",
     "G2": "audio/samples/horn/G2.ogg",
-    "A#2": "audio/samples/horn/A#2.ogg",
+    "A#2": "audio/samples/horn/As2.ogg",
     "D3": "audio/samples/horn/D3.ogg",
     "F3": "audio/samples/horn/F3.ogg",
     "A3": "audio/samples/horn/A3.ogg",
@@ -1472,36 +1472,36 @@
    },
    "loop": {
     "C2": [
-     0.2614,
-     3.1641
+     0.2614059,
+     3.164059
     ],
     "D#2": [
-     0.2197,
-     3.4451
+     0.2196599,
+     3.4451474
     ],
     "G2": [
-     0.5005,
-     4.4773
+     0.5004535,
+     4.4773243
     ],
     "A#2": [
-     0.2389,
-     4.3657
+     0.2389342,
+     4.365737
     ],
     "D3": [
-     0.2473,
-     4.882
+     0.2473469,
+     4.8819728
     ],
     "F3": [
-     0.3185,
-     4.4587
+     0.3185034,
+     4.4586621
     ],
     "A3": [
-     0.2012,
-     4.7649
+     0.2011791,
+     4.7649206
     ],
     "C4": [
-     0.2176,
-     4.604
+     0.2176417,
+     4.6040363
     ]
    },
    "credit": "vsco2",
@@ -1511,76 +1511,76 @@
    "kind": "pitched",
    "files": {
     "G2": "audio/samples/choir/G2.ogg",
-    "A#2": "audio/samples/choir/A#2.ogg",
-    "C#3": "audio/samples/choir/C#3.ogg",
+    "A#2": "audio/samples/choir/As2.ogg",
+    "C#3": "audio/samples/choir/Cs3.ogg",
     "E3": "audio/samples/choir/E3.ogg",
     "G3": "audio/samples/choir/G3.ogg",
-    "A#3": "audio/samples/choir/A#3.ogg",
-    "C#4": "audio/samples/choir/C#4.ogg",
+    "A#3": "audio/samples/choir/As3.ogg",
+    "C#4": "audio/samples/choir/Cs4.ogg",
     "E4": "audio/samples/choir/E4.ogg",
     "G4": "audio/samples/choir/G4.ogg",
-    "A#4": "audio/samples/choir/A#4.ogg",
-    "C#5": "audio/samples/choir/C#5.ogg",
+    "A#4": "audio/samples/choir/As4.ogg",
+    "C#5": "audio/samples/choir/Cs5.ogg",
     "E5": "audio/samples/choir/E5.ogg",
     "G5": "audio/samples/choir/G5.ogg",
-    "A#5": "audio/samples/choir/A#5.ogg"
+    "A#5": "audio/samples/choir/As5.ogg"
    },
    "loop": {
     "G2": [
-     4.2744,
-     7.3372
+     4.2744444,
+     7.3371882
     ],
     "A#2": [
-     4.1931,
-     7.1122
+     4.1931293,
+     7.1122449
     ],
     "C#3": [
-     3.9986,
-     7.0872
+     3.9985941,
+     7.0872109
     ],
     "E3": [
-     4.2878,
-     7.6495
+     4.2877551,
+     7.6495011
     ],
     "G3": [
-     4.2717,
-     7.7905
+     4.271746,
+     7.7904762
     ],
     "A#3": [
-     4.2181,
-     7.0256
+     4.2180726,
+     7.0256009
     ],
     "C#4": [
-     4.3052,
-     7.7991
+     4.3052154,
+     7.7991383
     ],
     "E4": [
-     4.2654,
-     7.6375
+     4.2653741,
+     7.6375283
     ],
     "G4": [
-     4.2838,
-     7.4863
+     4.2837642,
+     7.4862585
     ],
     "A#4": [
-     4.2705,
-     7.8593
+     4.2704535,
+     7.8593424
     ],
     "C#5": [
-     4.2889,
-     7.3666
+     4.2889342,
+     7.3666213
     ],
     "E5": [
-     4.1513,
-     6.894
+     4.1513152,
+     6.8940363
     ],
     "G5": [
-     4.273,
-     7.6888
+     4.2729932,
+     7.6887982
     ],
     "A#5": [
-     4.2613,
-     7.4116
+     4.2613379,
+     7.4115646
     ]
    },
    "credit": "sso",
@@ -1598,28 +1598,28 @@
    },
    "loop": {
     "F4": [
-     0.149,
-     3.3728
+     0.1489569,
+     3.3727664
     ],
     "G4": [
-     0.15,
-     2.9397
+     0.1500227,
+     2.9397052
     ],
     "A4": [
-     0.3001,
-     3.3982
+     0.3001134,
+     3.3982086
     ],
     "C5": [
-     0.1501,
-     3.4291
+     0.1500907,
+     3.429093
     ],
     "D5": [
-     0.1498,
-     3.0473
+     0.1497959,
+     3.0472562
     ],
     "E5": [
-     0.1501,
-     3.2135
+     0.150068,
+     3.2134694
     ]
    },
    "credit": "cowsynth",
@@ -1633,12 +1633,12 @@
    },
    "loop": {
     "G2": [
-     0.3005,
-     5.9078
+     0.3004535,
+     5.9078005
     ],
     "A2": [
-     0.2505,
-     5.9434
+     0.2504762,
+     5.9434014
     ]
    },
    "credit": "cowsynth",
