@@ -101,8 +101,9 @@ function noiseTexture(ground) {
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
     // Bruit périodique (les coordonnées sont repliées sur N pour que la texture se raccorde).
     const n = 0.6 * pnoise(s, x, y, 32, N) + 0.4 * pnoise(s + 1, x, y, 8, N);
-    const v = Math.round(255 - 60 * n);           // 195..255 : n'assombrit que légèrement
-    const i = (y * N + x) * 4; d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = 255;
+    const v = Math.round(255 - 44 * n);           // 211..255 : n'assombrit que légèrement
+    // Teinte tiède : le bleu s'assombrit un peu plus que le rouge (multiply → sol brun, jamais gris).
+    const i = (y * N + x) * 4; d[i] = v; d[i + 1] = Math.round(v - 3 * n); d[i + 2] = Math.round(v - 9 * n); d[i + 3] = 255;
   }
   g.putImageData(img, 0, 0);
   ground.noiseCanvas = c;
@@ -126,7 +127,7 @@ function zoneNoise(ground, k, tx, ty) {
   return 0.68 * noise(seed + k * 7919, tx, ty, 9 + k) + 0.32 * noise(seed + k * 7919 + 17, tx, ty, 4);
 }
 
-/** Ombrage doux du sol (multiply) : taches sombres larges qui cassent la grille des carreaux.
+/** Ombrage doux du sol (multiply) : taches brunes larges qui cassent la grille des carreaux.
  *  Les taches des 8 chunks voisins sont aussi peintes (décalées) pour qu'aucune couture n'apparaisse. */
 function shadeChunk(g, ground, cx, cy) {
   g.save();
@@ -139,8 +140,9 @@ function shadeChunk(g, ground, cx, cy) {
       const r = 70 + hash3f(ground.seed + 330 + i, ncx, ncy) * 130;
       if (x + r < 0 || x - r > CHUNK || y + r < 0 || y - r > CHUNK) continue;
       const grad = g.createRadialGradient(x, y, 0, x, y, r);
-      const k = 0.22 + hash3f(ground.seed + 340 + i, ncx, ncy) * 0.16;
-      grad.addColorStop(0, `rgba(22, 19, 15, ${k})`); grad.addColorStop(1, 'rgba(22, 19, 15, 0)');
+      const k = 0.2 + hash3f(ground.seed + 340 + i, ncx, ncy) * 0.14;
+      // Ombre brune (tourbe chaude), jamais noir pur : les taches restent des taches de terre.
+      grad.addColorStop(0, `rgba(58, 40, 26, ${k})`); grad.addColorStop(1, 'rgba(58, 40, 26, 0)');
       g.fillStyle = grad; g.fillRect(x - r, y - r, r * 2, r * 2);
     }
   }
@@ -222,7 +224,8 @@ export function renderGround(ctx, ground, time) {
 /** Dessine un prop (appelé par world.js dans l'ordre trié par y) ; les props lumineux éclairent. */
 export function drawProp(ctx, pr, time) {
   draw(ctx, pr.sprite, 'idle', frameAt(pr.sprite, 'idle', time), pr.x, pr.y);
-  if (pr.light) { addLight(pr.x, pr.y - 10, 80, '#e0603a', 0.85, 0.25); addGlow(pr.x, pr.y - 12, 10, '#e0603a', 0.4); }
+  // Feu de suif : large, ambré, qui vacille franchement ; braise additive plus présente.
+  if (pr.light) { addLight(pr.x, pr.y - 10, 104, '#e8874a', 0.95, 0.32); addGlow(pr.x, pr.y - 12, 14, '#e0603a', 0.55); }
 }
 
 export function chunkCount(ground) { return ground.chunks.size; }

@@ -8,7 +8,9 @@
   "os": "#d8cdb4",
   "bronze": "#c9973f",
   "braise": "#e0603a",
-  "gris_silence": "#8f8d93"
+  "gris_silence": "#8f8d93",
+  "suif": "#d9a54c",
+  "nuit_de_suif": "#3a2e22"
  },
  "sprites": {
   "wren": {

@@ -33,6 +33,8 @@ const PRESETS = {
   parry:      { count: 14, speed: [90, 140],  life: [0.25, 0.4], size: [1, 2], gravity: 0,    drag: 4, colors: [OS, BRONZE, CLAIR], ring: true, shrink: true },
   // Coup de Battant : gerbe courte dans la direction du coup (opts.angle / spread).
   slash:      { count: 7,  speed: [70, 160],  life: [0.15, 0.3], size: [1, 2], gravity: 0,    drag: 5, colors: [BRONZE, CLAIR, OS], shrink: true, glow: true },
+  // Étincelle chaude à la collecte d'un Écho : deux grains clairs/braise qui montent et luisent.
+  echo_spark: { count: 2,  speed: [10, 30],    life: [0.25, 0.45], size: [1, 1], gravity: -24,  drag: 1, colors: [CLAIR, BRAISE], glow: true, up: true, shrink: true },
   // Traînée d'un Écho aimanté : un grain de bronze qui s'éteint sur place.
   echo_trail: { count: 1,  speed: [0, 6],     life: [0.2, 0.35], size: [1, 1], gravity: 0,    drag: 1, colors: [BRONZE, CLAIR], shrink: true },
 };

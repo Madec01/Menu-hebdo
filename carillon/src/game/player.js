@@ -260,8 +260,8 @@ export function renderPlayer(ctx, p, alpha) {
   // tous deux élargis par le cran de Résonance. Rayon de base : balance.player.lightRadius.
   const t = resonanceTier();
   const r = B.lightRadius + t * 15;
-  addLight(x, y - 12, r, '#c9973f', 0.8 + t * 0.05, 0.08);
-  addLight(x, y - 12, r * 2.4, '#c9973f', 0.55, 0.04, true);
+  addLight(x, y - 12, r * 1.12, '#d9a54c', 0.85 + t * 0.05, 0.08);
+  addLight(x, y - 12, r * 2.7, '#d9a54c', 0.58, 0.04, true);
 }
 const drawOpts = { flipX: false, alpha: 1, tint: null, scale: 1 };
 

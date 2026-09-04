@@ -7,9 +7,11 @@
 // drawBeatHalo(ctx) après le sol, plus une lueur bronze automatique.
 //
 // Lisibilité : floorAmbient(color) plafonne par en bas l'ambiance d'une paroisse
-// (parishes.json) avec une « lune grise » (AMBIENT_FLOOR, par canal) pour que les
-// silhouettes hors du halo restent devinables ; game.js l'applique à chaque run,
-// les écrans (menu, hub, bilan) gardent leur setAmbient exact.
+// (parishes.json) : si la nuit est trop sombre (luminance < AMBIENT_FLOOR_LUMA), la
+// couleur est remontée EN GARDANT SA TEINTE (une nuit ambrée reste ambrée, la Nef
+// reste bleu-vert), et une nuit quasi noire est tirée vers la « lune de suif »
+// (AMBIENT_FLOOR, brun chaud) plutôt que vers un gris-bleu ; game.js l'applique à
+// chaque run, les écrans (menu, hub, bilan) gardent leur setAmbient exact.
 
 import * as renderer from './renderer.js';
 import * as camera from './camera.js';
@@ -19,9 +21,11 @@ const sprites = new Map();              // couleur → canvas radial
 let haloX = 0, haloY = 0, pulse = 0, haloRadius = 26;
 let flickerT = 0;
 let ambientColor = '#16130f';
-let haloColor = '#c9973f';
-// Plancher « lune grise » (gris-bleu désaturé, ~22 % de luminance) appliqué canal par canal.
-const AMBIENT_FLOOR = [0x38, 0x3a, 0x42];
+let haloColor = '#d9a54c';
+// Plancher « lune de suif » : luminance minimale de la nuit (~17 %) et couleur de
+// secours brun-ambre (jamais de gris-bleu : la scène doit rester chaude).
+const AMBIENT_FLOOR_LUMA = 44;
+const AMBIENT_FLOOR = [0x3a, 0x2e, 0x22];
 const rgbTmp = [0, 0, 0];
 
 /** '#rrggbb' → [r, g, b] (objet réutilisé). */
@@ -33,15 +37,23 @@ function parseHex(color) {
 
 function hex2(n) { return (n < 16 ? '0' : '') + n.toString(16); }
 
-/** Couleur d'ambiance de jeu : chaque canal ne descend pas sous le plancher lunaire. */
+/**
+ * Couleur d'ambiance de jeu : la luminance ne descend pas sous le plancher. Une nuit
+ * trop sombre est éclaircie à teinte constante ; si elle est trop noire pour porter une
+ * teinte (luminance < 8), elle est mêlée à la lune de suif (brun chaud).
+ */
 export function floorAmbient(color) {
   const c = parseHex(color);
-  const r = Math.max(c[0], AMBIENT_FLOOR[0]), g = Math.max(c[1], AMBIENT_FLOOR[1]), b = Math.max(c[2], AMBIENT_FLOOR[2]);
+  let r = c[0], g = c[1], b = c[2];
+  const luma = 0.3 * r + 0.59 * g + 0.11 * b;
+  if (luma >= AMBIENT_FLOOR_LUMA) return color;
+  if (luma < 8) { r = AMBIENT_FLOOR[0]; g = AMBIENT_FLOOR[1]; b = AMBIENT_FLOOR[2]; }
+  else { const k = AMBIENT_FLOOR_LUMA / luma; r = Math.min(255, Math.round(r * k)); g = Math.min(255, Math.round(g * k)); b = Math.min(255, Math.round(b * k)); }
   return '#' + hex2(r) + hex2(g) + hex2(b);
 }
 
 /** ambient : couleur d'obscurité (parishes.json). */
-export function initLighting({ w, h, ambient = '#16130f', halo = '#c9973f' } = {}) {
+export function initLighting({ w, h, ambient = '#16130f', halo = '#d9a54c' } = {}) {
   ambientColor = ambient; haloColor = halo;
   renderer.setAmbient(ambient);
   renderer.addFrameHook(updateLighting);
@@ -141,5 +153,5 @@ export function drawBeatHalo(ctx) {
  */
 export function updateLighting(dt) {
   flickerT += dt;
-  if (pulse > 0.01) addGlow(haloX, haloY, haloRadius * 2.2, haloColor, pulse * 0.35);
+  if (pulse > 0.01) addGlow(haloX, haloY, haloRadius * 2.4, haloColor, pulse * 0.4);
 }

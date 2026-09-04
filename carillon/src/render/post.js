@@ -14,6 +14,8 @@ const ashX = new Float32Array(ASH_COUNT), ashY = new Float32Array(ASH_COUNT);
 const ashVx = new Float32Array(ASH_COUNT), ashVy = new Float32Array(ASH_COUNT);
 const ashSize = new Uint8Array(ASH_COUNT), ashAlpha = new Float32Array(ASH_COUNT), ashPhase = new Float32Array(ASH_COUNT);
 let lastCamX = 0, lastCamY = 0, ashW = 480, ashH = 270;
+const EMBER_EVERY = 7;                   // une cendre sur 7 est une braise (monte, orange)
+const ASH_COLOR = '#d8cdb4', EMBER_COLOR = '#e8874a';
 let grainSeed = 1;
 
 // Bruit de valeur lissé (interpolation cosinus) sur une grille périodique.
@@ -34,8 +36,8 @@ function valueNoise(rng, size, cell) {
   return out;
 }
 
-/** Génère brume, grain, vignette. `fogColor` = [r,g,b] (gris-silence par défaut). */
-export function initPost(ctx, w, h, seed = 7, fogColor = [143, 141, 147]) {
+/** Génère brume, grain, vignette. `fogColor` = [r,g,b] (os ambré par défaut : brume de suif, pas gris neutre). */
+export function initPost(ctx, w, h, seed = 7, fogColor = [178, 158, 124]) {
   const rng = makeRng(seed);
   // Brume : 3 octaves de bruit doux, alpha seul (couleur constante).
   const fog = document.createElement('canvas'); fog.width = FOG_SIZE; fog.height = FOG_SIZE;
@@ -65,11 +67,13 @@ export function initPost(ctx, w, h, seed = 7, fogColor = [143, 141, 147]) {
   gg.putImageData(gi, 0, 0);
   grainPattern = ctx.createPattern(gr, 'repeat');
 
-  // Vignette : transparent au centre, suie aux bords.
+  // Vignette : transparent au centre, suie brune aux bords. Départ plus loin du centre et
+  // bords moins bouchés : hors Sourdine la scène respire, la Sourdine la referme ensuite
+  // (run-screen monte l'amount par palier).
   vignetteCanvas = document.createElement('canvas'); vignetteCanvas.width = w; vignetteCanvas.height = h;
   const vg = vignetteCanvas.getContext('2d');
-  const grad = vg.createRadialGradient(w / 2, h / 2, h * 0.35, w / 2, h / 2, h * 0.95);
-  grad.addColorStop(0, 'rgba(22,19,15,0)'); grad.addColorStop(0.6, 'rgba(22,19,15,0.55)'); grad.addColorStop(1, 'rgba(22,19,15,1)');
+  const grad = vg.createRadialGradient(w / 2, h / 2, h * 0.45, w / 2, h / 2, h * 1.02);
+  grad.addColorStop(0, 'rgba(26,19,12,0)'); grad.addColorStop(0.6, 'rgba(26,19,12,0.42)'); grad.addColorStop(1, 'rgba(26,19,12,0.92)');
   vg.fillStyle = grad; vg.fillRect(0, 0, w, h);
 
   // Cendres.
@@ -79,6 +83,7 @@ export function initPost(ctx, w, h, seed = 7, fogColor = [143, 141, 147]) {
     ashSize[i] = rng.chance(0.25) ? 2 : 1;
     ashVx[i] = rng.range(-6, 4); ashVy[i] = rng.range(8, 22) * (ashSize[i] === 2 ? 1.4 : 1);
     ashAlpha[i] = rng.range(0.25, 0.6); ashPhase[i] = rng.range(0, 6.28);
+    if (i % EMBER_EVERY === 0) { ashVy[i] = -rng.range(5, 12); ashAlpha[i] = rng.range(0.45, 0.8); } // braise : monte doucement
   }
 }
 
@@ -107,15 +112,18 @@ export function drawAshes(ctx, camX, camY, dt, density) {
   const dx = (camX - lastCamX) * 0.6, dy = (camY - lastCamY) * 0.6;
   lastCamX = camX; lastCamY = camY;
   const n = Math.min(ASH_COUNT, Math.round(ASH_COUNT * density));
-  ctx.fillStyle = '#d8cdb4';
+  ctx.fillStyle = ASH_COLOR;
+  let ember = false;
   for (let i = 0; i < n; i++) {
+    const isEmber = i % EMBER_EVERY === 0;
+    if (isEmber !== ember) { ember = isEmber; ctx.fillStyle = ember ? EMBER_COLOR : ASH_COLOR; }
     ashPhase[i] += dt * 1.3;
     ashX[i] += (ashVx[i] + Math.sin(ashPhase[i]) * 9) * dt - dx;
     ashY[i] += ashVy[i] * dt - dy;
     if (ashY[i] > ashH + 2) { ashY[i] = -2; ashX[i] = (ashX[i] * 7 + i * 31) % ashW; }
     else if (ashY[i] < -4) ashY[i] = ashH + 2;
     if (ashX[i] < -2) ashX[i] += ashW + 4; else if (ashX[i] > ashW + 2) ashX[i] -= ashW + 4;
-    ctx.globalAlpha = ashAlpha[i] * (0.7 + 0.3 * Math.sin(ashPhase[i] * 0.5));
+    ctx.globalAlpha = ashAlpha[i] * (ember ? 0.5 + 0.5 * Math.abs(Math.sin(ashPhase[i] * 1.7)) : 0.7 + 0.3 * Math.sin(ashPhase[i] * 0.5));
     ctx.fillRect(ashX[i] | 0, ashY[i] | 0, ashSize[i], ashSize[i]);
   }
   ctx.globalAlpha = 1;

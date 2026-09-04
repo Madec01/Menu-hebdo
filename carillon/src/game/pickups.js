@@ -67,6 +67,7 @@ function collect(world, o, p) {
       world.echoes++;
       playSfx(o.anim === 'large' ? 'xp_pickup_big' : 'xp_pickup', { volume: o.anim === 'small' ? 0.5 : 0.9 });
       emitParticles('xp', o.x, o.y);
+      emitParticles('echo_spark', o.x, o.y - 4); // petite étincelle chaude
       return;
     case 'heal': healPlayer(p, Math.ceil(p.maxHp * P.healPct)); break;
     case 'chime': chime(world, p); break;
@@ -131,6 +132,6 @@ export function renderPickups(ctx, world, alpha) {
     drawOpts.scale = o.kind === 'xp' ? 0.75 : 1;
     draw(ctx, o.sprite, o.anim, frameAt(o.sprite, o.anim, o.t), x, y, drawOpts);
     if (o.kind !== 'xp') addGlow(x, y, 12, '#e0603a', 0.45);
-    else if (o.anim !== 'small') addGlow(x, y, 10, '#c9973f', 0.25); // lueurs additives : discrètes, les Échos s'empilent
+    else if (o.anim !== 'small') addGlow(x, y, 11, '#dcae52', 0.34); // lueurs additives : discrètes, les Échos s'empilent
   }
 }

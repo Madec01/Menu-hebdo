@@ -161,6 +161,7 @@ Attribution résumée exigée par le README : « Sprites by: Benjamin K. Smith (
 - Téléchargé depuis : https://github.com/ElizaWy/LPC
 - Preuve : `README.md` (« All of our assets are licensed under CC-BY 3.0 or OGA-BY 3.0 »), `Credits.txt` racine et `Credits.txt` de chaque dossier (sections citées ci-dessous)
 - Modifications : découpe de tuiles 32×32 et de zones, ré-empaquetage par paroisse (8 colonnes), gradient-map partiel vers la palette de chaque paroisse
+- Modifications : recolorisation chaude (agent V, Pillow) — `assets/tiles/*.png` et `assets/sprites/props/prop_*.png` : balance vers le rouge/vert et +5 % de saturation (Cendrelune brun-ocre, Les Tourbes mousse et boue, Val-des-Cordes cuivre, Beffroi Mère bois et pierre chauds ; Nef Noyée tirée vers un bleu-vert profond)
 
 | Fichier source | Section du Credits.txt du dossier | Artistes | Licence | Sources citées |
 |---|---|---|---|---|

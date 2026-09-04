@@ -6,10 +6,10 @@
   "tileset": "cendrelune",
   "track": "cendrelune",
   "boss": "bourdon_fele",
-  "ambient": "#16130f",
+  "ambient": "#3e3022",
   "fog": [
-   "#2a241c",
-   "#8f8d93"
+   "#3a2e22",
+   "#b29e7c"
   ],
   "unlock": null,
   "bronzeReward": 100,
@@ -37,10 +37,10 @@
   "tileset": "tourbes",
   "track": "tourbes",
   "boss": "bourdon_fele",
-  "ambient": "#14160f",
+  "ambient": "#343221",
   "fog": [
-   "#2a241c",
-   "#4a5540"
+   "#343221",
+   "#5a5f3e"
   ],
   "unlock": {
    "type": "win",
@@ -71,10 +71,10 @@
   "tileset": "val_des_cordes",
   "track": "val_des_cordes",
   "boss": "veuve_suie",
-  "ambient": "#1a1410",
+  "ambient": "#42291a",
   "fog": [
-   "#2a241c",
-   "#8f8d93"
+   "#42291a",
+   "#b29e7c"
   ],
   "unlock": {
    "type": "win",
@@ -109,10 +109,10 @@
   "tileset": "nef_noyee",
   "track": "nef_noyee",
   "boss": "veuve_suie",
-  "ambient": "#101318",
+  "ambient": "#1e3336",
   "fog": [
-   "#2a241c",
-   "#8f8d93"
+   "#1e3336",
+   "#7f8a88"
   ],
   "unlock": {
    "type": "win",
@@ -145,9 +145,9 @@
   "tileset": "beffroi",
   "track": "beffroi_mere",
   "boss": "maitre",
-  "ambient": "#16130f",
+  "ambient": "#3a2c1e",
   "fog": [
-   "#2a241c",
+   "#3a2c1e",
    "#c9973f"
   ],
   "unlock": {
