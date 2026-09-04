@@ -1,7 +1,8 @@
 // game/weapons.js — Timbres du sonneur (ARCHITECTURE.md § 11).
 // Chaque arme s'abonne à conductor.schedule(rhythm, fn) : le tir est planifié SUR la grille
 // (jamais de cooldown en secondes). Le callback audio arrive ~lookahead avant le point de grille :
-// il joue le bruitage à l'instant exact et empile le tir dans une file (anneau préalloué) ;
+// il fait CHANTER le Timbre à l'instant exact (audio/timbres.js : note de l'accord courant, motif par
+// mesure ; repli sur le bruitage `sfx` si la voix manque) et empile le tir dans une file (anneau préalloué) ;
 // updateWeapons() déclenche le comportement au tick logique où le temps audio atteint ce point.
 // Stats d'arme = base + deltas de niveaux (7 niveaux) + Accords (cadence → tirs supplémentaires
 // / grille plus fine, area, bounce). Dégâts × Résonance × damageMult dans weapon-behaviors.js.
@@ -11,6 +12,8 @@ import { schedule, isRunning, beatDuration } from '../audio/conductor.js';
 import { now } from '../audio/audio.js';
 import { duck } from '../audio/audio.js';
 import { play as playSfx } from '../audio/sfx.js';
+import { playTimbre, loadTimbres } from '../audio/timbres.js';
+import { tier as resonanceTier } from './resonance.js';
 import { weaponDef, fusionDef, balance } from './data.js';
 import { BEHAVIORS, INSTANT } from './weapon-behaviors.js';
 import { renderProjectiles } from './projectiles.js';
@@ -53,7 +56,10 @@ function subscribe(w, p) {
     const n = (w.queueTail + 1) % QUEUE;
     if (n === w.queueHead) return; // file pleine : le tir est perdu (jamais deux tirs empilés)
     w.queueAt[w.queueTail] = at; w.queueTail = n;
-    playSfx(w.def.sfx, { at, x: p.x, y: p.y, volume: w.fusion ? 1 : 0.8 });
+    // la voix du Timbre (note de la musique) ; bruitage de repli si les voix ne sont pas chargées
+    if (!playTimbre(w.id, { at, x: p.x, y: p.y, rhythm: w.rhythm, tier: resonanceTier(), level: w.level, fusion: w.fusion })) {
+      playSfx(w.def.sfx, { at, x: p.x, y: p.y, volume: w.fusion ? 1 : 0.8 });
+    }
   });
 }
 
@@ -64,6 +70,7 @@ export function addWeapon(p, weaponId) {
   const def = weaponDef(weaponId) || fusionDef(weaponId);
   if (!def) return null;
   const w = makeWeapon(def, !weaponDef(weaponId));
+  loadTimbres().catch(() => {});   // idempotent : voix déjà chargées au déblocage audio en jeu réel
   p.weapons.push(w);
   report[w.id] = report[w.id] || 0;
   subscribe(w, p);

@@ -7,6 +7,24 @@
  "bars": 16,
  "key": "A",
  "mode": "éolien",
+ "chords": [
+  "Am",
+  "Am",
+  "Am",
+  "Am",
+  "Am",
+  "Am",
+  "Am",
+  "Am",
+  "G",
+  "G",
+  "Am",
+  "Am",
+  "F",
+  "F",
+  "E",
+  "Am"
+ ],
  "layers": [
   {
    "tier": 0,

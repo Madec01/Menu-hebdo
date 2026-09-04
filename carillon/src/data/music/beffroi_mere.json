@@ -7,6 +7,24 @@
  "bars": 16,
  "key": "D",
  "mode": "dorien",
+ "chords": [
+  "Dm",
+  "Dm",
+  "Dm",
+  "Dm",
+  "C",
+  "C",
+  "Dm",
+  "Dm",
+  "Dm",
+  "Dm",
+  "F",
+  "F",
+  "Am",
+  "Am",
+  "Dm",
+  "Dm"
+ ],
  "layers": [
   {
    "tier": 0,

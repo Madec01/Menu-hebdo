@@ -6,10 +6,11 @@ import { bus } from '../core/events.js';
 import { busNode, ctx, now, assetUrl, setLowpass } from './audio.js';
 import * as conductor from './conductor.js';
 import { createInstrument } from './sampler.js';
+import { chordsOf, DEFAULT_CHORD } from './harmony.js';
 
 const STEP = 0.25;                       // résolution de la grille : double-croche
 const XFADE_SEC = 0.2;                   // fondu par couche (contrat)
-const tracks = new Map();                // trackId → { score, instruments, buckets, loopBeats }
+const tracks = new Map();                // trackId → { score, instruments, buckets, loopBeats, chords }
 let manifestPromise = null;
 let manifestBase = 'audio/manifest.json';
 let active = null;                       // { id, gains[], startBeat, unschedule, layersOn }
@@ -24,6 +25,8 @@ function getManifest() {
 
 /** Permet de fournir le manifeste déjà chargé (évite un second fetch). */
 export function setManifest(manifest) { manifestPromise = Promise.resolve(manifest); }
+/** Manifeste audio (promesse) : partagé avec timbres.js pour créer les instruments des voix. */
+export function manifest() { return getManifest(); }
 
 /** Aplatit une partition : pour chaque double-croche de la boucle, la liste des notes à jouer. */
 function bucketize(score) {
@@ -59,7 +62,7 @@ export async function loadTrack(trackId) {
     if (!instruments[layer.instrument]) instruments[layer.instrument] = createInstrument(manifest.samples[layer.instrument]);
   }
   await Promise.all(Object.values(instruments).map((i) => i.load()));
-  tracks.set(trackId, { score, instruments, ...bucketize(score) });
+  tracks.set(trackId, { score, instruments, chords: chordsOf(score), ...bucketize(score) });
 }
 
 function layerTarget(layer, n) {
@@ -154,6 +157,28 @@ export function setLayers(n) {
 }
 
 export function current() { return active ? active.id : null; }
+
+/**
+ * Accord de la partition active à l'instant audio `at` (harmony.js) : { name, root, quality, third,
+ * fifth, tones, scale, bar (mesure absolue de la Mesure), loopBar (mesure dans la boucle) }.
+ * Sans piste (ou avant son départ) : accord par défaut, ré mineur dorien. Les Timbres appellent
+ * chordAtTime(at) avec le temps de grille du tir, qui peut être la mesure suivante.
+ */
+export function chordAtTime(at) {
+  const bpb = conductor.beatsPerBar();
+  const bd = conductor.beatDuration() || 0.625;
+  const beatPos = conductor.isRunning() ? (at - conductor.startAt()) / bd : 0;
+  const bar = Math.max(0, Math.floor(beatPos / bpb + 1e-6));
+  const track = active ? tracks.get(active.id) : null;
+  if (!track) return { ...DEFAULT_CHORD, bar, loopBar: 0 };
+  const rel = beatPos - active.startBeat;
+  const loopBeats = track.loopBeats;
+  const inLoop = rel < 0 ? 0 : ((rel % loopBeats) + loopBeats) % loopBeats;
+  const loopBar = Math.min(track.score.bars - 1, Math.floor(inLoop / bpb + 1e-6));
+  return { ...track.chords[loopBar], bar, loopBar };
+}
+/** Accord de la mesure en cours (chordAtTime(now())). */
+export function currentChord() { return chordAtTime(now()); }
 export function layers() { return layersWanted; }
 /** Gains des couches de la piste active (tests / HUD de debug). `layerGains()` lit AudioParam.value,
  *  que Chromium ne met à jour que pour les nœuds qui reçoivent du signal (couches clairsemées : valeur

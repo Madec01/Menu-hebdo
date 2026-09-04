@@ -2,12 +2,12 @@
 
 Tout l'audio du jeu est échantillonné : aucun oscillateur, aucun son de synthèse. Chaque fichier ci-dessous a été téléchargé par un canal autorisé (SOURCING.md § 1–2), ouvert et vérifié (`soundfile.info`), et sa licence est prouvée par un fichier présent dans le dépôt téléchargé. Les hauteurs sont en notation scientifique (A4 = 440 Hz) et ont été **mesurées** (YIN + HPS) : VSCO 2 CE et la plupart des dossiers VCSL étiquettent leurs fichiers en convention « C3 = do médian », soit un octave sous la notation scientifique.
 
-Fichiers livrés : 406 références, 34 instruments, 43 bruitages, 5 ambiances, 10 pistes.
+Fichiers livrés : 412 références, 35 instruments, 43 bruitages, 5 ambiances, 10 pistes.
 
 ## Sources
 
 ### Versilian Community Sample Library (VCSL) 1.2
-- Fichiers (284) : `assets/audio/samples/anvil/hit_1.ogg`, `assets/audio/samples/anvil/hit_2.ogg`, `assets/audio/samples/anvil/hit_3.ogg`, `assets/audio/samples/anvil/soft_1.ogg`, `assets/audio/samples/anvil/soft_2.ogg`, `assets/audio/samples/bass_drum/hit_1.ogg`, `assets/audio/samples/bass_drum/hit_2.ogg`, `assets/audio/samples/bass_drum/hit_3.ogg`, `assets/audio/samples/bass_drum/soft_1.ogg`, `assets/audio/samples/bass_drum/soft_2.ogg`, `assets/audio/samples/bell_tree/hit_1.ogg`, `assets/audio/samples/bell_tree/hit_2.ogg` … (+272 autres, voir manifest.json, crédit `vcsl`)
+- Fichiers (290) : `assets/audio/samples/anvil/hit_1.ogg`, `assets/audio/samples/anvil/hit_2.ogg`, `assets/audio/samples/anvil/hit_3.ogg`, `assets/audio/samples/anvil/soft_1.ogg`, `assets/audio/samples/anvil/soft_2.ogg`, `assets/audio/samples/bass_drum/hit_1.ogg`, `assets/audio/samples/bass_drum/hit_2.ogg`, `assets/audio/samples/bass_drum/hit_3.ogg`, `assets/audio/samples/bass_drum/soft_1.ogg`, `assets/audio/samples/bass_drum/soft_2.ogg`, `assets/audio/samples/bell_tree/hit_1.ogg`, `assets/audio/samples/bell_tree/hit_2.ogg` … (+278 autres, voir manifest.json, crédit `vcsl`)
 - Auteur(s) : Versilian Studios LLC (Samuel Gossner), Simon Dalzell (Ivy Audio) pour l'orgue
 - Licence : CC0 1.0
 - Source d'origine : https://github.com/sgossner/VCSL
@@ -181,6 +181,7 @@ Fichiers livrés : 406 références, 34 instruments, 43 bruitages, 5 ambiances, 
 | instrument | type | fichiers | source | notes |
 |---|---|---|---|---|
 | `tubular_bells` | pitched | 11 · C4–F5 | vcsl | Tubular Bells 2, vélocité forte ; notation scientifique vérifiée. |
+| `glockenspiel` | pitched | 6 · G5–C8 | vcsl | Glockenspiel, frappes medium ; étiquettes VCSL +12 (mesuré sur les partiels : G4 → 786 Hz = G5). Découpe, −3 dBFS, queue ≤ 4 s. Voix des Timbres (Clarine, Grelots, Carillon). |
 | `hand_chimes` | pitched | 18 · C4–A#6 | vcsl | Hand Chimes ; étiquettes VCSL +12 (mesuré). |
 | `psaltery_bow` | pitched (boucles) | 11 · A#4–F#6 | vcsl | Psaltérion à archet (≈ vielle) ; étiquettes +12 ; boucles crossfadées. |
 | `psaltery_pluck` | pitched | 11 · A#4–F#6 | vcsl | Psaltérion pincé ; étiquettes +12. |

@@ -1655,6 +1655,19 @@
    },
    "credit": "cowsynth",
    "note": "Pépiements de cornemuse (ornements)."
+  },
+  "glockenspiel": {
+   "kind": "pitched",
+   "files": {
+    "G5": "audio/samples/glockenspiel/G5.ogg",
+    "C6": "audio/samples/glockenspiel/C6.ogg",
+    "G6": "audio/samples/glockenspiel/G6.ogg",
+    "C7": "audio/samples/glockenspiel/C7.ogg",
+    "G7": "audio/samples/glockenspiel/G7.ogg",
+    "C8": "audio/samples/glockenspiel/C8.ogg"
+   },
+   "credit": "vcsl",
+   "note": "Glockenspiel (frappes medium) ; étiquettes VCSL +12 (mesuré sur les partiels : G4 → 786 Hz = G5). Voix des Timbres (timbres.js)."
   }
  },
  "tracks": {

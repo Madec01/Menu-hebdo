@@ -7,6 +7,24 @@
  "bars": 16,
  "key": "D",
  "mode": "mixolydien",
+ "chords": [
+  "D",
+  "D",
+  "D",
+  "D",
+  "G",
+  "G",
+  "D",
+  "D",
+  "D",
+  "D",
+  "C",
+  "C",
+  "G",
+  "G",
+  "D",
+  "D"
+ ],
  "layers": [
   {
    "tier": 0,

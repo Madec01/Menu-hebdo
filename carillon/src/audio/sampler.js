@@ -61,8 +61,9 @@ export function createInstrument(def) {
 
   /** Joue une note (nom) ou une variante (clé) à `at` (temps audio).
    *  duration (s) : null = jusqu'à la fin du fichier ; sinon la note est tenue (bouclée si possible)
-   *  puis relâchée. `dest` (facultatif) remplace le bus : nœud de destination (couche de music.js). */
-  function play(noteOrKey, at, { gain = 1, pitchSemis = 0, duration = null, bus = 'music', pan = 0, dest = null } = {}) {
+   *  puis relâchée. `dest` (facultatif) remplace le bus : nœud de destination (couche de music.js).
+   *  `release` (s, facultatif) : durée du relâchement (≥ 30 ms) — les Timbres laissent sonner les cloches. */
+  function play(noteOrKey, at, { gain = 1, pitchSemis = 0, duration = null, bus = 'music', pan = 0, dest = null, release = null } = {}) {
     const s = pick(noteOrKey);
     const buf = s && getBuffer(s.url);
     const ac = ctx();
@@ -76,6 +77,7 @@ export function createInstrument(def) {
     const env = ac.createGain();
     env.gain.setValueAtTime(0, at);
     env.gain.linearRampToValueAtTime(gain, at + ATTACK);
+    src.connect(env);                    // (sans ce lien, aucune note du sampler n'est audible)
     let tail = env;
     if (pan) {
       const p = ac.createStereoPanner();
@@ -86,7 +88,7 @@ export function createInstrument(def) {
     tail.connect(dest || busNode(bus));
     src.start(at);
     src.onended = () => { releaseVoice(); src.disconnect(); env.disconnect(); if (tail !== env) tail.disconnect(); };
-    const release = looped ? RELEASE_LOOP : RELEASE_ONE_SHOT;
+    const rel = release !== null ? Math.max(RELEASE_ONE_SHOT, release) : looped ? RELEASE_LOOP : RELEASE_ONE_SHOT;
     let stopped = false;
     function stop(when = ac.currentTime) {
       if (stopped) return;
@@ -94,8 +96,8 @@ export function createInstrument(def) {
       const t = Math.max(when, ac.currentTime, at + ATTACK);
       env.gain.cancelScheduledValues(t);
       env.gain.setValueAtTime(gain, t);
-      env.gain.linearRampToValueAtTime(0, t + release);
-      src.stop(t + release + 0.005);
+      env.gain.linearRampToValueAtTime(0, t + rel);
+      src.stop(t + rel + 0.005);
     }
     if (duration !== null) stop(at + duration);
     else if (!looped) src.stop(at + buf.duration / rate + 0.01);

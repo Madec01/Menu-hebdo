@@ -1,9 +1,14 @@
 // audio/sfx.js — bruitages. Variantes sans répétition immédiate, hauteur ±pitchVar, atténuation
 // et panoramique par distance au joueur, limite de 6 voix par identifiant et par 100 ms (§ 13),
 // `at` facultatif pour caler un son sur la grille de la Mesure. Bus 'ui' pour l'interface.
+// Impacts RARES : les Timbres chantent (timbres.js), les coups ne sont plus le premier plan sonore —
+// au plus 1 hit_light/heavy/crit audible par temps (et par `source` = arme, si fournie), 2 morts par temps.
 import { ctx, now, busNode, loadBuffer, getBuffer, assetUrl, acquireVoice, releaseVoice } from './audio.js';
+import { isRunning, beatIndex, beatDuration } from './conductor.js';
 
 const MAX_SAME_PER_100MS = 6;
+const RARE_PER_BEAT = { hit_light: 1, hit_heavy: 1, hit_crit: 1, enemy_die: 2, enemy_die_big: 2 };
+const rareSeen = new Map();  // id[:source] → { beat, n }
 const HEAR_FULL = 64;        // px : pleine puissance en deçà
 const HEAR_MAX = 520;        // px : silence au-delà
 const PAN_RANGE = 260;       // px : pan complet à cette distance latérale
@@ -41,11 +46,31 @@ function allowed(id) {
   return true;
 }
 
-/** Joue un bruitage. x,y (pixels monde) : atténuation et pan par rapport au joueur. */
-export function play(id, { volume = 1, pitchVar = null, x = null, y = null, bus = 'sfx', at = null } = {}) {
+/** Temps courant de la Mesure (ou tranches de la durée d'un temps quand elle ne tourne pas). */
+function currentBeat() {
+  return isRunning() ? beatIndex() : Math.floor(performance.now() / ((beatDuration() || 0.625) * 1000));
+}
+
+/** Plafond par temps des bruitages « rares » (impacts, morts) : le premier passe, les suivants se taisent. */
+function rareAllowed(id, source) {
+  const max = RARE_PER_BEAT[id];
+  if (!max) return true;
+  const key = source ? id + ':' + source : id;
+  const beat = currentBeat();
+  let r = rareSeen.get(key);
+  if (!r) { r = { beat, n: 0 }; rareSeen.set(key, r); }
+  if (r.beat !== beat) { r.beat = beat; r.n = 0; }
+  if (r.n >= max) return false;
+  r.n++;
+  return true;
+}
+
+/** Joue un bruitage. x,y (pixels monde) : atténuation et pan par rapport au joueur.
+ *  `source` (facultatif) : identifiant de l'arme à l'origine d'un impact (plafond par temps ET par arme). */
+export function play(id, { volume = 1, pitchVar = null, x = null, y = null, bus = 'sfx', at = null, source = null } = {}) {
   const def = defs[id];
   const ac = ctx();
-  if (!def || !ac || !allowed(id)) return;
+  if (!def || !ac || !rareAllowed(id, source) || !allowed(id)) return;
   let gain = volume * (def.gain ?? 1);
   let pan = 0;
   if (x !== null && y !== null) {

@@ -1,0 +1,129 @@
+{
+  "_doc": "Voix des Timbres (src/audio/timbres.js). instrument = entrée `samples` du manifeste audio ; octave = registre de la fondamentale ; patterns = motifs de degrés sur l'accord courant (1 fondamentale, 3 tierce, 5 quinte, 8 octave, 0 = sensible en dessous), un motif par mesure choisi sans répétition (hash de la mesure), une entrée par point de grille de l'arme dans la mesure (rythme 1 → 4 entrées, 0.5 → 8, 2 → 2, 4 → 1) ; chord = degrés joués ensemble (fusions) ; layer = percussion non tonale superposée ; duration en temps (null = laisser sonner l'échantillon) ; priority = ordre de parole quand plus de maxVoicesPerBeat Timbres chantent ; percussive = ne compte pas dans le plafond tonal.",
+  "maxVoicesPerBeat": 3,
+  "accents": {"beat": [1.0, 0.62, 0.8, 0.62], "off": 0.5},
+  "ornaments": {"graceGain": 0.45, "addedGain": 0.55, "extraBars": 2, "overflowGain": 0.6},
+  "voices": {
+    "battant": {
+      "instrument": "hand_chimes",
+      "octave": 5,
+      "gain": 0.36,
+      "priority": 5,
+      "layer": {"instrument": "hand_bells", "key": "hit", "gain": 0.12, "onlyAccents": true},
+      "patterns": [[1, 5, 3, 5], [1, 3, 5, 3], [5, 1, 3, 1], [1, 5, 8, 5], [3, 1, 5, 1], [8, 5, 3, 5]],
+      "duration": 1.5
+    },
+    "clarine": {
+      "instrument": "glockenspiel",
+      "octave": 6,
+      "gain": 0.26,
+      "priority": 4,
+      "patterns": [[8, 5, 3, 5], [3, 5, 8, 5], [5, 8, 10, 8], [8, 10, 5, 3], [10, 8, 5, 8], [3, 8, 5, 10]],
+      "duration": 1.2
+    },
+    "bourdon": {
+      "instrument": "tubular_bells",
+      "octave": 3,
+      "gain": 0.5,
+      "priority": 7,
+      "patterns": [[1, 5], [1, 1], [5, 1], [1, 3], [1, 0], [8, 5]],
+      "duration": 3
+    },
+    "grelots": {
+      "instrument": "glockenspiel",
+      "octave": 6,
+      "gain": 0.2,
+      "priority": 3,
+      "layer": {"instrument": "sleigh_bells", "key": "hit", "gain": 0.14},
+      "patterns": [[5, 3, 8, 3], [3, 5, 3, 8], [8, 3, 5, 3], [5, 8, 5, 10], [10, 8, 5, 8], [3, 8, 10, 5]],
+      "duration": 0.9
+    },
+    "tocsin": {
+      "instrument": "tubular_bells",
+      "octave": 4,
+      "gain": 0.34,
+      "priority": 6,
+      "patterns": [[1, 1, 5, 1], [1, 5, 1, 5], [5, 1, 1, 1], [1, 1, 3, 1], [8, 1, 5, 1], [1, 8, 1, 5]],
+      "duration": 2
+    },
+    "cor_de_brume": {
+      "instrument": "horn",
+      "octave": 3,
+      "gain": 0.4,
+      "priority": 6,
+      "duration": 1.6,
+      "patterns": [[1, 5], [5, 1], [1, 3], [3, 1], [1, 8], [5, 3]]
+    },
+    "crecelle": {
+      "instrument": "woodblock",
+      "key": "hit",
+      "tuned": 88,
+      "octave": 6,
+      "gain": 0.3,
+      "priority": 2,
+      "percussive": true,
+      "layer": {"instrument": "ratchet", "key": "crank", "gain": 0.16, "onlyBar": true},
+      "patterns": [[1, 5, 1, 5, 3, 5, 1, 5], [1, 1, 5, 1, 1, 1, 5, 3], [5, 1, 5, 1, 3, 1, 5, 1], [1, 3, 5, 3, 1, 3, 5, 8], [8, 5, 3, 5, 8, 5, 3, 1]]
+    },
+    "chaine_d_angelus": {
+      "instrument": "psaltery_pluck",
+      "octave": 5,
+      "gain": 0.38,
+      "priority": 4,
+      "patterns": [[1, 3, 5, 8], [8, 5, 3, 1], [1, 5, 3, 8], [3, 1, 8, 5], [5, 8, 3, 1], [1, 8, 5, 3]],
+      "duration": 1.5
+    },
+    "diapason": {
+      "instrument": "wine_glasses",
+      "octave": 5,
+      "gain": 0.3,
+      "priority": 4,
+      "duration": 0.95,
+      "patterns": [[1, 5, 3, 5], [5, 3, 1, 3], [3, 5, 8, 5], [1, 3, 5, 3], [8, 5, 3, 1], [5, 1, 3, 1]]
+    },
+    "glas": {
+      "instrument": "tubular_bells",
+      "octave": 3,
+      "gain": 0.42,
+      "priority": 10,
+      "chord": [1, 5, 8],
+      "strum": 0.05,
+      "layer": {"instrument": "gong", "key": "soft", "gain": 0.3},
+      "patterns": [[1], [5], [1], [3], [8], [1]],
+      "duration": 4
+    },
+    "carillon": {
+      "instrument": "glockenspiel",
+      "octave": 6,
+      "gain": 0.24,
+      "priority": 10,
+      "chord": [1, 3, 5],
+      "strum": 0.035,
+      "layer": {"instrument": "hand_chimes", "octave": 5, "gain": 0.2},
+      "patterns": [[1, 5, 3, 8], [8, 3, 5, 1], [3, 8, 1, 5], [5, 1, 8, 3], [1, 8, 5, 3], [8, 5, 1, 3]],
+      "duration": 1.2
+    },
+    "tonnerre": {
+      "instrument": "tubular_bells",
+      "octave": 3,
+      "gain": 0.46,
+      "priority": 10,
+      "chord": [1, 5],
+      "strum": 0.02,
+      "layer": {"instrument": "horn", "octave": 2, "gain": 0.3, "duration": 1.5},
+      "patterns": [[1, 5], [1, 1], [5, 1], [1, 3], [8, 1], [1, 0]],
+      "duration": 3
+    },
+    "requiem": {
+      "instrument": "choir",
+      "octave": 4,
+      "gain": 0.3,
+      "priority": 10,
+      "chord": [1, 3, 5],
+      "duration": 0.95,
+      "strum": 0.0,
+      "layer": {"instrument": "wine_glasses", "octave": 5, "gain": 0.16, "duration": 0.9},
+      "patterns": [[1, 5, 3, 5], [5, 3, 1, 3], [3, 1, 5, 8], [1, 3, 5, 3], [8, 5, 3, 1], [5, 1, 3, 1]]
+    }
+  }
+}

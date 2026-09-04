@@ -7,6 +7,24 @@
  "bars": 16,
  "key": "E",
  "mode": "dorien",
+ "chords": [
+  "Em",
+  "Em",
+  "Em",
+  "Em",
+  "D",
+  "D",
+  "Em",
+  "Em",
+  "Em",
+  "Em",
+  "G",
+  "G",
+  "D",
+  "D",
+  "Em",
+  "Em"
+ ],
  "layers": [
   {
    "tier": 0,
