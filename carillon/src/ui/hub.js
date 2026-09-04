@@ -6,7 +6,7 @@
 // Navigation : ↑↓ change de rangée (paroisses / sonneur / boutons), ◄► choisit.
 
 import { getSave, commit } from '../core/save.js';
-import { hashSeed } from '../core/rng.js';
+import { mix32, hashSeed } from '../core/rng.js';
 import * as atlas from '../render/atlas.js';
 import * as renderer from '../render/renderer.js';
 import * as camera from '../render/camera.js';
@@ -76,7 +76,7 @@ export function createHub(deps) {
     if (!canStart()) { playUi('ui_cancel'); return; }
     const s = save();
     const seedText = s.seedManual;
-    const seed = seedText ? hashSeed(seedText) : (Math.random() * 4294967296) >>> 0;
+    const seed = seedText ? hashSeed(seedText) : freshSeed();
     s.lastParish = curParish().id; s.lastCharacter = curChar().id; commit();
     states.replace('run', { parishId: curParish().id, characterId: curChar().id, seed, seedText, tutorial: !s.tutorialDone }, { sound: 'bell_tier' });
   }
@@ -209,3 +209,6 @@ export function createHub(deps) {
     render(ui) { renderMap(ui); renderChar(ui); renderButtons(ui); },
   };
 }
+
+/** Seed « au hasard » : dérivée de l'horloge (aucun tirage non seedé, conformément aux règles du projet). */
+function freshSeed() { return mix32((Date.now() ^ Math.floor(performance.now() * 1000)) >>> 0) >>> 0; }

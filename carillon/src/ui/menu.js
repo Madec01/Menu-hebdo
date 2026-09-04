@@ -4,6 +4,7 @@
 // CarillonDisplay avec relief et ombre, la brume roule (renderer.setFog).
 // Boutons : Jouer/Continuer, Tutoriel, Codex, Options, Crédits.
 
+import { makeRng, mix32 } from '../core/rng.js';
 import { getSave } from '../core/save.js';
 import * as renderer from '../render/renderer.js';
 import * as atlas from '../render/atlas.js';
@@ -46,7 +47,7 @@ function renderScene(ctx, alpha, dt) {
   lighting.setHaloPos(BELL.x, BELL.y + 70);
   lighting.setBeatPulse(0.5 + 0.5 * Math.sin(time * 2.4));
   lighting.drawBeatHalo(ctx);
-  if (particles.activeCount() < 120) { particles.emit('ember', BEFFROI.x + (Math.random() - 0.5) * 60, BEFFROI.y + 100); particles.emit('ash', (Math.random() - 0.5) * W, -H / 2); }
+  if (particles.activeCount() < 120) { particles.emit('ember', BEFFROI.x + (titleRng.next() - 0.5) * 60, BEFFROI.y + 100); particles.emit('ash', (titleRng.next() - 0.5) * W, -H / 2); }
   particles.renderParticles(ctx, alpha);
 }
 
@@ -102,7 +103,7 @@ export function createTitle() {
 
   function startTutorial() {
     const save = getSave();
-    states.replace('run', { parishId: 'cendrelune', characterId: 'wren', seed: (Math.random() * 4294967296) >>> 0, tutorial: true, seedText: null, forceTutorial: true }, { sound: 'bell_tier' });
+    states.replace('run', { parishId: 'cendrelune', characterId: 'wren', seed: freshSeed(), tutorial: true, seedText: null, forceTutorial: true }, { sound: 'bell_tier' });
     save.lastParish = 'cendrelune';
   }
 
@@ -136,3 +137,7 @@ export function createTitle() {
     },
   };
 }
+
+/** Aléa cosmétique de l'écran-titre (cendres, braises) : rng seedé uniquement. */
+const titleRng = makeRng((Date.now() >>> 0));
+function freshSeed() { return mix32((Date.now() ^ Math.floor(performance.now() * 1000)) >>> 0) >>> 0; }

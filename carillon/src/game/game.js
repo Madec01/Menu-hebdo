@@ -90,12 +90,15 @@ export function updateGame(dt) {
 }
 
 /** Rendu complet du monde (ctx = calque principal déjà transformé). Le halo de la Mesure
- *  (lighting.drawBeatHalo) est dessiné par world.renderWorld juste après le sol. */
+ *  (lighting.drawBeatHalo) est dessiné par world.renderWorld juste après le sol ; drawBeatHalo et
+ *  la lueur automatique de lighting sont inertes quand la pulsation vaut 0 (option beatIndicator). */
 export function renderGame(ctx, alpha) {
   if (!st.world) return;
   const p = st.player;
   if (p) setHaloPos(p.px + (p.x - p.px) * alpha, p.py + (p.y - p.py) * alpha);
-  setBeatPulse(1 - phase());
+  // Option beatIndicator ('visual' | 'audio' | 'both') : le halo (et sa lueur) n'existe qu'en visuel.
+  const bi = getSave().options.beatIndicator;
+  setBeatPulse(bi === 'audio' || bi === 'none' ? 0 : 1 - phase());
   renderWorld(ctx, st.world, alpha);
   renderParticles(ctx, alpha);
   renderFx(ctx, alpha);
