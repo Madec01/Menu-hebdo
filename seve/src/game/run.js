@@ -37,7 +37,7 @@ export class Run {
     this.score.setBiome(this.biome);
     this.director = new EventDirector(this);
 
-    this.availableSeeds = (config.seeds || ['I', 'II']).filter((s) => SPECIES_ORDER.includes(s));
+    this.availableSeeds = (config.seeds || ['I', 'II', 'III']).filter((s) => SPECIES_ORDER.includes(s));
     if (this.challenge && this.challenge.config.seedLimit) {
       this.availableSeeds = this.availableSeeds.slice(0, this.challenge.config.seedLimit);
     }

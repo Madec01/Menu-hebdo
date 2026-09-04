@@ -63,7 +63,7 @@ export function emptySave(slot) {
     act: 1,
     biome: 'clairiere',
     unlockedBiomes: ['clairiere'],
-    unlockedSeeds: ['I', 'II'],
+    unlockedSeeds: ['I', 'II', 'III'],
     upgrades: {},
     achievements: {},
     echoes: [],

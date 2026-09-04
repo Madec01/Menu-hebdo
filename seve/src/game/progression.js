@@ -49,10 +49,11 @@ export const UPGRADES = {
 
 export const UPGRADE_ORDER = ['paume', 'racines', 'seve', 'souffle', 'ecorce', 'oreille', 'memoire', 'besace'];
 
+// I, II et III sont dans la besace dès le départ : c'est le minimum pour
+// former une Tierce, donc pour que la mécanique d'accord existe.
 export const SEED_UNLOCKS = [
-  { key: 'III', cost: 300, name: SPECIES.III.name },
-  { key: 'V', cost: 900, name: SPECIES.V.name },
-  { key: 'VI', cost: 2200, name: SPECIES.VI.name },
+  { key: 'V', cost: 700, name: SPECIES.V.name },
+  { key: 'VI', cost: 1900, name: SPECIES.VI.name },
 ];
 
 export function upgradeLevel(save, id) { return (save.upgrades && save.upgrades[id]) || 0; }

@@ -1,3 +1,14 @@
+# Menu-hebdo — deux jeux en HTML/JS
+
+Deux jeux indépendants, sans dépendance ni compilation.
+
+| Jeu | Genre | Où |
+|---|---|---|
+| **[SÈVE — *Le Chant des Racines*](seve/)** | arcade de culture et de résonance musicale | `seve/` — voir [seve/README.md](seve/README.md) |
+| **Crypte Infinie** | roguelite d'action | `index.html` à la racine |
+
+---
+
 # Crypte Infinie
 
 Un roguelite d'action en HTML/JS, dans un seul fichier, jouable sur PC et sur téléphone.

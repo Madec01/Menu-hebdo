@@ -53,16 +53,16 @@ export const CHORDS = [
     flavour: 'Le temps hésite.',
   },
   {
-    id: 'tierce', name: 'Tierce', need: ['I', 'III'],
-    minSize: 2, mult: 1.5, color: '#a8e6cf',
-    effect: 'onde', radius: 1.4,
-    flavour: 'Deux voix se trouvent.',
-  },
-  {
     id: 'quinte', name: 'Quinte ouverte', need: ['I', 'V'],
     minSize: 2, mult: 1.6, color: '#c3ccff',
     effect: 'onde', radius: 1.6,
     flavour: 'Large, creux, ancien.',
+  },
+  {
+    id: 'tierce', name: 'Tierce', need: ['I', 'III'],
+    minSize: 2, mult: 1.5, color: '#a8e6cf',
+    effect: 'onde', radius: 1.4,
+    flavour: 'Deux voix se trouvent.',
   },
 ];
 

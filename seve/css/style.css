@@ -393,6 +393,7 @@ body.portrait .orientation-notice { display: flex; }
   padding: 10px 12px; margin-bottom: 8px;
   display: flex; flex-direction: column; gap: 5px;
 }
+.shop-card > .btn { align-self: flex-end; min-width: 96px; }
 .shop-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .shop-head strong { font-size: 14px; }
 .shop-card p { margin: 0; font-size: 12px; color: #ab9f88; line-height: 1.35; }
