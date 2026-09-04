@@ -17,7 +17,10 @@
     "levelup": "The Echoes rise to your heart. Choose a Timbre or a Chord; I will get used to it.",
     "goal": "Hold until dawn. Twelve minutes. At the end there will be a Bourdon, and it will have to be silenced.",
     "done": "That is all I know. The rest is learned by ringing.",
-    "bell": "The bell rings four strokes. A Counter-beat on the fourth, and it answers you."
+    "bell": "The bell rings four strokes. A Counter-beat on the fourth, and it answers you.",
+    "move_touch": "Walk. Rest your thumb on the left of the screen and slide: the ground remembers your steps; so do I, it's my job.",
+    "beat1_touch": "Listen. One, two, three, four. That's me beating in your chest. Tap the big Peal button as the ring closes.",
+    "bell_touch": "The bell rings four strokes. Tap Parry on the fourth, and it answers you."
   },
   "weapon": {
     "battant": {

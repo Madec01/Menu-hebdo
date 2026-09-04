@@ -351,7 +351,9 @@
       "next": "Enter: continue",
       "you": "This is you",
       "stick": "Left stick",
-      "pad_dash": "A"
+      "pad_dash": "A",
+      "touch_stick": "left thumb: slide",
+      "touch_dash": "Peal"
     },
     "toast": {
       "achievement": "Achievement",

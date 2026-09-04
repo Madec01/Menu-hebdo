@@ -13,6 +13,8 @@ import * as conductor from '../audio/conductor.js';
 import * as camera from '../render/camera.js';
 import { playUi } from '../audio/sfx.js';
 import { getBindings, hasGamepad } from '../core/input.js';
+import { isActive as touchActive } from './touch.js';
+import { has as hasKey } from './i18n.js';
 import { t } from './i18n.js';
 import { keyName } from './options-items.js';
 import * as states from './states.js';
@@ -108,7 +110,8 @@ export function createTutorial(deps) {
       icon(ui, 'ui_lanterne', BOX.x + 8, BOX.y + 6, 0.5);
       text(ui, t('ui.tutorial.title'), BOX.x + 28, BOX.y + 7, { size: 9, color: C.encreClaire });
       text(ui, t('ui.tutorial.step', { step: step + 1, total: STEPS.length }), BOX.x + BOX.w - 12, BOX.y + 7, { size: 9, align: 'right', color: C.encreClaire });
-      const full = t('tutorial.' + s);
+      // En mode tactile, la variante « _touch » du texte est utilisée quand elle existe (pas de ZQSD/Espace).
+      const full = (touchActive() && hasKey('tutorial.' + s + '_touch')) ? t('tutorial.' + s + '_touch') : t('tutorial.' + s);
       const shown = typed >= full.length ? full : full.slice(0, Math.floor(typed));
       paragraph(ui, shown, BOX.x + 12, BOX.y + 20, textW, { size: 9, color: C.encre, lineHeight: 10, maxLines: 3 });
       const canSkipStep = stepT >= MIN_SEC[s] && !goal && s !== 'levelup';
@@ -128,6 +131,7 @@ export function createTutorial(deps) {
     text(ui, t('ui.tutorial.you'), ax, ay - 20, { kind: 'display', size: 12, align: 'center', color: C.bronze, shadow: true });
     // Croix des touches de déplacement (ou stick) dans la boîte, à droite du texte.
     const kx = BOX.x + BOX.w - 44, ky = BOX.y + 22;
+    if (touchActive()) { text(ui, t('ui.tutorial.touch_stick'), kx, ky + 10, { size: 8, align: 'center', color: C.encreClaire, maxWidth: 60 }); return; }
     if (hasGamepad()) { text(ui, t('ui.tutorial.stick'), kx, ky + 10, { size: 8, align: 'center', color: C.encreClaire }); return; }
     keycap(ui, firstKey('up'), kx, ky, { size: 7, align: 'center', minWidth: 13, dark: true });
     keycap(ui, firstKey('left'), kx - 15, ky + 15, { size: 7, align: 'center', minWidth: 13, dark: true });
@@ -145,7 +149,7 @@ export function createTutorial(deps) {
     ui.beginPath(); ui.ellipse(cx, cy, 16 + 26 * (1 - pulse), 8 + 13 * (1 - pulse), 0, 0, Math.PI * 2); ui.stroke();
     ui.globalAlpha = 1;
     // Touche à côté du joueur : chaude quand le temps tombe.
-    const label = hasGamepad() ? t('ui.tutorial.pad_dash') : firstKey('dash');
+    const label = touchActive() ? t('ui.tutorial.touch_dash') : (hasGamepad() ? t('ui.tutorial.pad_dash') : firstKey('dash'));
     keycap(ui, label, cx + 48, cy - 12, { size: 8, align: 'left', hot: pulse > 0.7 });
     // Compteur dans la boîte.
     const kx = BOX.x + BOX.w - 44;

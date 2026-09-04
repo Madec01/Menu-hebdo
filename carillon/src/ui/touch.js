@@ -103,7 +103,7 @@ export function currentLayout() { return inGame() && !veilShown() ? layout() : n
 export function veilShown() { return st.active && isPortrait() && !st.portraitHidden; }
 
 /** Vrai quand les commandes de jeu sont affichées (run au sommet, non figée). */
-function inGame() { return st.active && states.topName() === 'run' && !states.isFrozen() && deps.isRunActive(); }
+function inGame() { const top = states.topName(); return st.active && (top === 'run' || top === 'tutorial') && !states.isFrozen() && deps.isRunActive(); }
 
 // ---- Cycle -------------------------------------------------------------------------------------
 

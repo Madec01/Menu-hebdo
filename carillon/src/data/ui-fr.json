@@ -351,7 +351,9 @@
       "next": "Entrée : continuer",
       "you": "C'est toi",
       "stick": "Stick gauche",
-      "pad_dash": "A"
+      "pad_dash": "A",
+      "touch_stick": "pouce gauche : glisser",
+      "touch_dash": "Volée"
     },
     "toast": {
       "achievement": "Haut-fait",

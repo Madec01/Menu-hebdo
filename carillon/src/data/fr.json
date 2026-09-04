@@ -17,7 +17,10 @@
     "levelup": "Les Échos te montent au cœur. Choisis un Timbre ou un Accord ; je m'y ferai.",
     "goal": "Tiens jusqu'à l'aube. Douze minutes. À la fin il y aura un Bourdon, et il faudra le faire taire.",
     "done": "C'est tout ce que je sais. Le reste, on l'apprend en sonnant.",
-    "bell": "La cloche sonne quatre coups. Un Contre-battement sur le quatrième, et elle te répond."
+    "bell": "La cloche sonne quatre coups. Un Contre-battement sur le quatrième, et elle te répond.",
+    "move_touch": "Marche. Pose ton pouce à gauche de l'écran et glisse : le sol se souvient de tes pas ; moi aussi, c'est mon travail.",
+    "beat1_touch": "Écoute. Un, deux, trois, quatre. C'est moi qui bats dans ta poitrine. Touche le grand bouton de Volée quand l'anneau se referme.",
+    "bell_touch": "La cloche sonne quatre coups. Touche Parade sur le quatrième, et elle te répond."
   },
   "weapon": {
     "battant": {

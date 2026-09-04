@@ -17,7 +17,7 @@ import { getSave } from '../core/save.js';
 import * as conductor from '../audio/conductor.js';
 import { getBindings, hasGamepad, rumble } from '../core/input.js';
 import * as camera from '../render/camera.js';
-import { t, fmtTime } from './i18n.js';
+import { t, fmtTime, has as hasKey } from './i18n.js';
 import { def as dataDef } from './gamedata.js';
 import { keyName } from './options-items.js';
 import { mouse } from './states.js';
@@ -108,7 +108,7 @@ export function createHud() {
       ui.globalAlpha = a;
       panel(ui, W / 2 - 140, y, 280, 34, 'parchment');
       icon(ui, 'ui_lanterne', W / 2 - 132, y + 9, 0.5);
-      paragraph(ui, t('tutorial.bell'), W / 2 - 112, y + 9, 244, { size: 8, color: C.encre, lineHeight: 9, maxLines: 2 });
+      paragraph(ui, t(touchActive() && hasKey('tutorial.bell_touch') ? 'tutorial.bell_touch' : 'tutorial.bell'), W / 2 - 112, y + 9, 244, { size: 8, color: C.encre, lineHeight: 9, maxLines: 2 });
       ui.globalAlpha = 1;
     }
   }
