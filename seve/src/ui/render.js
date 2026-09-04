@@ -4,7 +4,8 @@
 import { TILE } from '../game/constants.js';
 import { TERRAIN } from '../game/field.js';
 import { DEGREE_INFO } from '../game/scales.js';
-import { clamp, easeOut, easeBack } from '../core/loop.js';
+import { clamp, easeOut } from '../core/loop.js';
+import { drawFlora } from './flora.js';
 
 export class Renderer {
   constructor(canvas) {
@@ -28,13 +29,14 @@ export class Renderer {
   fit(field) {
     const w = this.canvas.width, h = this.canvas.height;
     const fw = field.cols * TILE, fh = field.rows * TILE;
-    // Sur un écran bas (téléphone en paysage) on rend les marges au champ.
-    const padX = w * 0.06;
-    const padY = h * (h < 900 * (this.dpr || 1) ? 0.155 : 0.19);
-    const scale = Math.min((w - padX * 2) / fw, (h - padY * 2) / fh);
+    // Bandes réservées à l'interface : en haut le HUD, en bas la barre de graines.
+    const top = h * 0.115, bottom = h * 0.175;
+    const padX = w * 0.05;
+    const avail = h - top - bottom;
+    const scale = Math.min((w - padX * 2) / fw, avail / fh);
     this.cam.scale = scale;
     this.cam.x = (w - fw * scale) / 2;
-    this.cam.y = (h - fh * scale) / 2 + h * 0.03;
+    this.cam.y = top + (avail - fh * scale) / 2;
   }
 
   worldToScreen(x, y) {
@@ -201,6 +203,7 @@ export class Renderer {
       ctx.restore();
     }
 
+    this.drawTileDecor(t, x, y, palette);
     if (t.fissure) this.drawFissure(t, x, y);
     if (t.echo && !t.echo.found) this.drawEchoHint(x, y);
     if (t.blight > 0.01) this.drawBlight(t, x, y);
@@ -212,6 +215,58 @@ export class Renderer {
       ctx.fill();
       ctx.globalAlpha = 1;
     }
+  }
+
+
+  // Sillons, herbe et cailloux : la texture du sol, déterministe par case.
+  drawTileDecor(t, x, y, palette) {
+    const { ctx } = this;
+    const seed = (t.c * 73 + t.r * 151) % 997;
+    ctx.save();
+    if (t.terrain === TERRAIN.SOIL) {
+      ctx.strokeStyle = 'rgba(30,18,8,0.28)';
+      ctx.lineWidth = 1.4;
+      for (let i = 0; i < 3; i++) {
+        const yy = y + TILE * (0.3 + i * 0.2) + ((seed * (i + 1)) % 5) - 2;
+        ctx.beginPath();
+        ctx.moveTo(x + 12, yy);
+        ctx.quadraticCurveTo(x + TILE * 0.5, yy + ((seed >> i) % 2 ? 2 : -2), x + TILE - 12, yy);
+        ctx.stroke();
+      }
+      ctx.fillStyle = 'rgba(255,235,200,0.10)';
+      for (let i = 0; i < 4; i++) {
+        ctx.beginPath();
+        ctx.arc(x + 10 + ((seed * (i + 7)) % (TILE - 20)), y + 10 + ((seed * (i + 3)) % (TILE - 20)), 1.3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (t.terrain === TERRAIN.GRASS) {
+      ctx.lineWidth = 1.1;
+      ctx.lineCap = 'round';
+      for (let i = 0; i < 5; i++) {
+        const gx = x + 12 + ((seed * (i + 5)) % (TILE - 24));
+        const gy = y + 16 + ((seed * (i + 11)) % (TILE - 26));
+        const sway = Math.sin(this.t * 1.8 + gx * 0.08 + i) * 1.8;
+        ctx.strokeStyle = i % 2 ? this.shade(palette.groundAlt, 0.42) : this.shade(palette.accent, -0.25);
+        for (const d of [-2.5, 0.5, 3]) {
+          ctx.beginPath();
+          ctx.moveTo(gx + d * 0.4, gy + 5);
+          ctx.quadraticCurveTo(gx + d * 0.8, gy - 1, gx + d * 1.6 + sway, gy - 7 - Math.abs(d));
+          ctx.stroke();
+        }
+      }
+    } else if (t.terrain === TERRAIN.STONE) {
+      ctx.fillStyle = 'rgba(255,255,255,0.10)';
+      ctx.strokeStyle = 'rgba(0,0,0,0.30)';
+      for (let i = 0; i < 3; i++) {
+        const px = x + 14 + ((seed * (i + 2)) % (TILE - 28));
+        const py = y + 14 + ((seed * (i + 9)) % (TILE - 28));
+        ctx.beginPath();
+        ctx.ellipse(px, py, 4 + (i % 2) * 2, 3, seed % 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
   }
 
   drawBlight(t, x, y) {
@@ -292,150 +347,15 @@ export class Renderer {
 
   drawPlant(tile, plant) {
     const { ctx } = this;
-    const info = DEGREE_INFO[plant.degree];
-    const x = tile.c * TILE + TILE / 2;
-    const y = tile.r * TILE + TILE * 0.82;
-    const grow = plant.ripe ? 1 : 0.25 + plant.growth * 0.75;
-    const pop = plant.pop > 0 ? 1 + easeBack(1 - plant.pop) * 0.0 + plant.pop * 0.22 : 1;
-    const sway = Math.sin(this.t * 1.6 + plant.phase) * (0.05 + grow * 0.05);
-    const h = TILE * 0.62 * grow * plant.scale * pop;
-
     ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(plant.lean * 0.35 + sway);
-
-    if (plant.wilted) { ctx.globalAlpha = 0.45; ctx.rotate(0.6); }
-
-    // Halo de maturité.
-    if (plant.ripe && !plant.wilted) {
-      const pulse = 0.5 + Math.sin(this.t * 3 + plant.phase) * 0.5;
-      ctx.globalAlpha = 0.16 + pulse * 0.12;
-      ctx.fillStyle = info.glow;
-      ctx.beginPath();
-      ctx.arc(0, -h * 0.55, h * 0.72, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalAlpha = plant.wilted ? 0.45 : 1;
-    }
-
-    const stem = plant.wilted ? '#7a6f5f' : this.shade(info.color, -0.45);
-    ctx.strokeStyle = stem;
-    ctx.lineWidth = 3.2 * Math.min(1.4, grow + 0.4);
-    ctx.lineCap = 'round';
+    ctx.translate(tile.c * TILE + TILE / 2, tile.r * TILE + TILE * 0.84);
+    // Trou de plantation : la terre est remuée sous chaque plante.
+    ctx.fillStyle = 'rgba(40,26,14,0.45)';
     ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.quadraticCurveTo(h * 0.12, -h * 0.5, plant.lean * h * 0.2, -h);
-    ctx.stroke();
-
-    const color = plant.wilted ? '#8a7d6a' : info.color;
-    const glow = plant.wilted ? '#a2947f' : info.glow;
-    const tipX = plant.lean * h * 0.2, tipY = -h;
-
-    switch (plant.sp.shape) {
-      case 'bulbe': this.shapeBulbe(tipX, tipY, h, grow, color, glow, plant); break;
-      case 'tige': this.shapeTige(tipX, tipY, h, grow, color, glow, plant); break;
-      case 'ombelle': this.shapeOmbelle(tipX, tipY, h, grow, color, glow, plant); break;
-      case 'fougere': this.shapeFougere(tipX, tipY, h, grow, color, glow, plant); break;
-      default: this.shapeClochette(tipX, tipY, h, grow, color, glow, plant);
-    }
-
-    // Compteur de flétrissure : la plante s'assombrit sur la fin.
-    if (plant.ripe && !plant.wilted) {
-      const left = 1 - clamp(plant.ripeAge / plant.sp.wilt, 0, 1);
-      if (left < 0.35) {
-        ctx.globalAlpha = (0.35 - left) * 1.6;
-        ctx.fillStyle = '#6f6a63';
-        ctx.beginPath();
-        ctx.arc(tipX, tipY, h * 0.3, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
+    ctx.ellipse(0, 0, TILE * 0.26, TILE * 0.09, 0, 0, Math.PI * 2);
+    ctx.fill();
+    drawFlora(ctx, plant, this.t, TILE * 0.78);
     ctx.restore();
-  }
-
-  shapeBulbe(x, y, h, grow, color, glow) {
-    const { ctx } = this;
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.ellipse(x, y, h * 0.28, h * 0.34, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = glow;
-    ctx.beginPath();
-    ctx.ellipse(x - h * 0.08, y - h * 0.1, h * 0.1, h * 0.13, -0.4, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  shapeTige(x, y, h, grow, color, glow, plant) {
-    const { ctx } = this;
-    ctx.fillStyle = color;
-    for (let i = 0; i < plant.leaves; i++) {
-      const a = -Math.PI / 2 + (i - plant.leaves / 2) * 0.5;
-      ctx.beginPath();
-      ctx.ellipse(x + Math.cos(a) * h * 0.16, y + Math.sin(a) * h * 0.16,
-        h * 0.2, h * 0.075, a, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.fillStyle = glow;
-    ctx.beginPath();
-    ctx.arc(x, y, h * 0.09, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  shapeOmbelle(x, y, h, grow, color, glow, plant) {
-    const { ctx } = this;
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 1.8;
-    const n = 6;
-    for (let i = 0; i < n; i++) {
-      const a = -Math.PI + (i / (n - 1)) * Math.PI;
-      const ex = x + Math.cos(a) * h * 0.3;
-      const ey = y + Math.sin(a) * h * 0.22;
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.lineTo(ex, ey);
-      ctx.stroke();
-      ctx.fillStyle = glow;
-      ctx.beginPath();
-      ctx.arc(ex, ey, h * 0.065, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-
-  shapeFougere(x, y, h, grow, color, glow, plant) {
-    const { ctx } = this;
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 2.4;
-    ctx.lineCap = 'round';
-    for (let s = -1; s <= 1; s += 2) {
-      ctx.beginPath();
-      ctx.moveTo(x, y + h * 0.1);
-      for (let i = 0; i <= 8; i++) {
-        const k = i / 8;
-        ctx.lineTo(x + s * Math.sin(k * 2.2) * h * 0.34, y + h * 0.1 - k * h * 0.4);
-      }
-      ctx.stroke();
-    }
-    ctx.fillStyle = glow;
-    ctx.beginPath();
-    ctx.arc(x, y - h * 0.28, h * 0.08, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  shapeClochette(x, y, h, grow, color, glow, plant) {
-    const { ctx } = this;
-    ctx.fillStyle = color;
-    for (let i = 0; i < 3; i++) {
-      const ox = (i - 1) * h * 0.2;
-      const oy = y + Math.abs(i - 1) * h * 0.1;
-      ctx.beginPath();
-      ctx.moveTo(x + ox, oy - h * 0.1);
-      ctx.quadraticCurveTo(x + ox - h * 0.15, oy + h * 0.18, x + ox, oy + h * 0.24);
-      ctx.quadraticCurveTo(x + ox + h * 0.15, oy + h * 0.18, x + ox, oy - h * 0.1);
-      ctx.fill();
-    }
-    ctx.fillStyle = glow;
-    ctx.beginPath();
-    ctx.arc(x, y - h * 0.12, h * 0.07, 0, Math.PI * 2);
-    ctx.fill();
   }
 
   // --- Utilitaires -------------------------------------------------------------

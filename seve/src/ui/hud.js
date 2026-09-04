@@ -6,6 +6,7 @@ import { SPECIES } from '../game/plants.js';
 import { BLIGHT } from '../game/constants.js';
 import { Input } from '../core/input.js';
 import { pulse, formatSap } from './text.js';
+import { drawFloraIcon } from './flora.js';
 
 const TOUCH_BUTTONS = [
   { action: 'act', label: 'Agir', key: 'Espace' },
@@ -108,9 +109,12 @@ export class Hud {
       el.style.setProperty('--seed-color', info.color);
       el.innerHTML = `
         <span class="seed-key">${i + 1}</span>
-        <span class="seed-dot"></span>
-        <span class="seed-name">${sp.name}</span>
-        <span class="seed-deg">${key} · ${info.name}</span>`;
+        <canvas class="seed-icon" width="56" height="56" aria-hidden="true"></canvas>
+        <span class="seed-text"><span class="seed-name">${sp.name}</span>
+        <span class="seed-deg">${key} · ${info.name}</span></span>`;
+      const ic = el.querySelector('.seed-icon').getContext('2d');
+      ic.translate(28, 50);
+      drawFloraIcon(ic, key, 48);
       el.title = sp.desc;
       el.addEventListener('click', () => { run.seedIndex = i; });
       el.addEventListener('touchstart', (e) => { e.preventDefault(); run.seedIndex = i; }, { passive: false });

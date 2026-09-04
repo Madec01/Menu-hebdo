@@ -14,6 +14,7 @@ import { ACT_TITLES, actForSave } from '../game/lore.js';
 import { wood, pluck, earth } from '../audio/synth.js';
 import { degreeFreq } from '../game/scales.js';
 import { SEASON } from '../game/constants.js';
+import { drawFloraIcon } from './flora.js';
 
 export class Hub {
   constructor(root, app) {
@@ -103,8 +104,12 @@ export class Hub {
       const card = el('div', 'shop-card seed-card' + (owned ? ' owned' : ''));
       card.style.setProperty('--seed-color', info.color);
       card.innerHTML = `
+        <canvas class="shop-icon" width="72" height="72" aria-hidden="true"></canvas>
         <div class="shop-head"><strong>${sp.name}</strong><span class="deg">${entry.key} · ${info.name}</span></div>
         <p>${sp.desc}</p>`;
+      const ic = card.querySelector('.shop-icon').getContext('2d');
+      ic.translate(36, 66);
+      drawFloraIcon(ic, entry.key, 62);
       if (owned) card.appendChild(el('div', 'shop-max', 'Dans ta besace'));
       else {
         card.appendChild(button(`${formatSap(entry.cost)} ❍`, () => {

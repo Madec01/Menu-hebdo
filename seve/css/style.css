@@ -240,7 +240,7 @@ html, body {
 .event-banner span { font-size: 12px; color: #cfc4ab; font-style: italic; }
 
 .context-hint {
-  position: absolute; bottom: calc(98px + var(--safe)); left: 50%; transform: translateX(-50%);
+  position: absolute; bottom: calc(66px + var(--safe)); left: 50%; transform: translateX(-50%);
   text-align: center; pointer-events: none;
   display: flex; flex-direction: column; gap: 1px;
   background: rgba(18,14,10,.62); border-radius: 999px; padding: 4px 16px;
@@ -250,8 +250,8 @@ html, body {
 .ctx-chord { font-size: 12px; font-style: italic; }
 
 .seed-bar {
-  position: absolute; bottom: calc(12px + var(--safe)); left: 50%; transform: translateX(-50%);
-  display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; max-width: 92vw;
+  position: absolute; bottom: calc(10px + var(--safe)); left: 50%; transform: translateX(-50%);
+  display: flex; gap: 6px; flex-wrap: nowrap; justify-content: center; max-width: 96vw;
 }
 .seed {
   position: relative;
@@ -264,7 +264,9 @@ html, body {
   transition: transform .15s cubic-bezier(.34,1.56,.64,1), border-color .15s, box-shadow .15s;
 }
 .seed .seed-key { position: absolute; top: 3px; right: 6px; font-size: 10px; opacity: .5; }
-.seed .seed-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--seed-color); box-shadow: 0 0 10px var(--seed-color); }
+.seed { flex-direction: row; align-items: center; gap: 6px; padding: 3px 10px 3px 4px; }
+.seed .seed-icon { width: 36px; height: 36px; flex: 0 0 auto; filter: drop-shadow(0 0 6px var(--seed-color)); }
+.seed .seed-text { display: flex; flex-direction: column; }
 .seed .seed-name { font-size: 13px; font-weight: 700; }
 .seed .seed-deg { font-size: 10px; color: #a89c86; }
 .seed.active { border-color: var(--seed-color); transform: translateY(-5px) scale(1.05); box-shadow: 0 0 20px color-mix(in srgb, var(--seed-color) 45%, transparent); }
@@ -401,7 +403,8 @@ body.portrait .orientation-notice { display: flex; }
 .deg { font-size: 11px; color: #9d917c; }
 .shop-max { font-size: 11px; color: var(--moss); }
 .shop-card.maxed, .shop-card.owned { border-color: rgba(143,206,106,.35); }
-.seed-card { border-left: 3px solid var(--seed-color, var(--sap)); }
+.seed-card { border-left: 3px solid var(--seed-color, var(--sap)); position: relative; padding-right: 84px; }
+.seed-card .shop-icon { position: absolute; right: 10px; top: 8px; width: 64px; height: 64px; filter: drop-shadow(0 0 8px var(--seed-color)); }
 .biome-card { border-left: 3px solid var(--biome-color, var(--moss)); }
 
 .hub-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
@@ -543,6 +546,7 @@ body.portrait .orientation-notice { display: flex; }
 
 @media (max-height: 480px) {
   .seed .seed-name { display: none; }
+  .seed .seed-icon { width: 30px; height: 30px; }
   .seed { padding: 5px 9px; }
   .dialogue .portrait { width: 78px; height: 78px; }
   .dline { font-size: 14px; min-height: 38px; }
