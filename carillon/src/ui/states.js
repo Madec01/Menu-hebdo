@@ -100,7 +100,11 @@ export function update(dt, realDt) {
   updateMouse();
   if (fade.phase === 'out') {
     fade.t += realDt;
-    if (fade.t >= FADE_SEC) { swap(fade.next, fade.params); fade.phase = 'in'; fade.t = 0; }
+    if (fade.t >= FADE_SEC) {
+      const next = fade.next, params = fade.params;
+      fade.phase = 'in'; fade.t = 0;   // avant swap : un replace() déclenché par enter() peut relancer un fondu
+      swap(next, params);
+    }
   } else if (fade.phase === 'in') {
     fade.t += realDt;
     if (fade.t >= FADE_SEC) fade.phase = null;

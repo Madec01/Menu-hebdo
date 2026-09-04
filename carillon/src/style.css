@@ -1,0 +1,16 @@
+/* CARILLON — feuille de style minimale : plein écran, fond suie, canvas centré et
+   pixelisé, curseur système caché (remplacé par le sprite dessiné dans le canvas). */
+html, body { margin: 0; padding: 0; height: 100%; background: #16130f; overflow: hidden; }
+body { font-family: monospace; color: #d8cdb4; }
+#stage { position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+#game { display: block; image-rendering: pixelated; image-rendering: crisp-edges; cursor: none; outline: none; }
+#stage:fullscreen { background: #16130f; }
+
+/* Champs DOM de saisie (seed, export/import) : posés par-dessus le canvas, dans la DA. */
+#dom { position: absolute; left: 0; top: 0; }
+#dom input, #dom textarea {
+  position: absolute; box-sizing: border-box; margin: 0;
+  background: #d8cdb4; color: #2a241c; border: 2px solid #c9973f;
+  font-family: monospace; outline: none; resize: none;
+}
+#dom input:focus, #dom textarea:focus { border-color: #e0603a; }

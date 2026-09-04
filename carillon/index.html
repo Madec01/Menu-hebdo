@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CARILLON</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="src/style.css">
+</head>
+<body>
+<!-- Le jeu entier se dessine dans ce canvas (résolution logique 480×270, échelle entière). -->
+<main id="stage">
+  <canvas id="game" width="480" height="270"></canvas>
+  <!-- Zone DOM discrète pour la saisie (seed, export/import de sauvegarde) : positionnée par src/ui. -->
+  <div id="dom" hidden></div>
+</main>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

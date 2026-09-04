@@ -140,7 +140,7 @@ export function card(ctx, x, y, c) {
   if (c.kind) text(ctx, c.kind, lx + w / 2, 6, { size: 9, align: 'center', color: C.encreClaire });
   text(ctx, c.title, lx + w / 2, 50, { kind: 'display', size: 14, align: 'center', color: C.encre, maxWidth: w - 12 });
   if (c.level) text(ctx, c.level, lx + w / 2, 66, { size: 9, align: 'center', color: c.isNew ? C.braise : C.bronze });
-  if (c.desc) paragraph(ctx, c.desc, lx + 8, 78, w - 16, { size: 9, color: C.encre, lineHeight: 9, maxLines: 5 });
+  if (c.desc) paragraph(ctx, c.desc, lx + 8, 77, w - 16, { size: 8, color: C.encre, lineHeight: 8, maxLines: 5 });
   ctx.restore();
 }
 

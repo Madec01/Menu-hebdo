@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:,">
+<title>CARILLON — contrôle des widgets UI (agent E)</title>
+<style> html, body { margin: 0; background: #0a0908; } canvas { display: block; margin: 8px auto; image-rendering: pixelated; } </style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<script type="module">
+// Planche de contrôle : panneaux, boutons, jauges, cartes (retournement), texte, toasts, curseur.
+// Ouvrir via http://localhost:8080/carillon/src/ui/_test/widgets.html ; window.__ui expose les modules.
+import { createLoop } from '../../core/loop.js';
+import * as input from '../../core/input.js';
+import * as renderer from '../../render/renderer.js';
+import * as atlas from '../../render/atlas.js';
+import * as camera from '../../render/camera.js';
+import * as lighting from '../../render/lighting.js';
+import { loadFonts } from '../../render/fonts.js';
+import { loadLang, t } from '../i18n.js';
+import { setDataBase } from '../i18n.js';
+import * as W from '../widgets.js';
+import { toast, updateToasts, renderToasts } from '../toasts.js';
+
+const BASE = '../../../assets/';
+const canvas = document.getElementById('game');
+const manifest = await (await fetch(BASE + 'manifest.json')).json();
+setDataBase('../../data/');
+await Promise.all([atlas.loadAtlas(manifest, { baseUrl: BASE }), loadFonts(manifest, BASE), loadLang('fr')]);
+renderer.initRenderer({ canvas, width: 480, height: 270 });
+lighting.initLighting({ w: 480, h: 270 });
+input.initInput({ canvas, getAudioTime: () => performance.now() / 1000, screenToWorld: camera.screenToWorld, logicalSize: renderer.logicalSize });
+let time = 0;
+const menu = W.createMenu([
+  { label: () => t('ui.title.play'), rect: { x: 20, y: 40, w: 110, h: 20 }, action() {} },
+  { label: () => t('ui.title.options'), rect: { x: 20, y: 66, w: 110, h: 20 }, action() {} },
+  { label: () => t('ui.title.credits'), rect: { x: 20, y: 92, w: 110, h: 20 }, action() {}, disabled: () => true },
+]);
+toast({ title: t('ui.toast.achievement'), body: t('achievement.premiere_aube.name'), icon: 'ui_sceau' });
+
+function update(dt) {
+  input.tickInput(); time += dt;
+  if (input.justPressed('menuDown')) menu.move(1);
+  if (input.justPressed('menuUp')) menu.move(-1);
+  const p = input.pointer(); menu.hover(p.x, p.y);
+  updateToasts(dt);
+}
+function render(alpha) {
+  renderer.beginFrame(alpha);
+  const ui = renderer.getUiCtx();
+  W.heading(ui, 'CARILLON', 240, 4, 26);
+  W.panel(ui, 10, 30, 130, 100, 'parchment'); menu.render(ui);
+  W.panel(ui, 150, 30, 120, 60, 'dark'); W.text(ui, t('ui.hud.resonance'), 160, 40, { size: 10 });
+  W.gauge(ui, 160, 56, 100, 10, 0.5 + 0.5 * Math.sin(time), { label: '50 %' });
+  W.gauge(ui, 160, 72, 100, 8, 0.3, { hot: true });
+  W.panel(ui, 150, 100, 120, 40, 'bronze'); W.paragraph(ui, t('codex.intro'), 158, 106, 104, { size: 7, color: W.C.os, lineHeight: 8, maxLines: 3 });
+  W.card(ui, 290, 30, { flip: (Math.sin(time * 0.8) + 1) / 2, focused: true, icon: 'battant', kind: t('ui.levelup.weapon'), title: t('weapon.battant.name'), level: t('ui.common.new'), isNew: true, desc: t('weapon.battant.desc', { damage: 12 }) });
+  W.card(ui, 390, 30, { flip: 1, icon: 'ferrure', kind: t('ui.levelup.passive'), title: t('passive.ferrure.name'), level: t('ui.common.level_short', { level: 2 }), desc: t('passive.ferrure.desc') });
+  W.pips(ui, 20, 150, 3, 5); W.icon(ui, 'ui_bronze', 40, 145, 0.5);
+  renderToasts(ui, 480);
+  const p = input.pointer(); if (p.inside) W.drawCursor(ui, p.x, p.y, 'pointer');
+  renderer.endFrame();
+}
+const loop = createLoop({ update, render }); loop.start();
+window.__ui = { loop, W, toast, t };
+</script>
+</body>
+</html>
