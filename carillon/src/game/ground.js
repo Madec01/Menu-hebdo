@@ -57,25 +57,73 @@ function smooth(v, a, b) { const t = Math.max(0, Math.min(1, (v - a) / (b - a)))
 function paintCell(g, ground, tx, ty, px, py) {
   const groups = ground.groups, seed = ground.seed;
   const base = groups[0];
-  drawTile(g, ground.tileset, base[0], px, py);
+  drawCellTile(g, ground, base[0], tx, ty, px, py);
   // Variantes du groupe de base : nappes larges (cellule 6), fondu doux, jamais plus de 70 %.
   if (base.length > 1) {
     const n = noise(seed + 101, tx, ty, 6);
     const a = smooth(n, 0.52, 0.8) * 0.7;
     if (a > 0.02) {
       const vi = 1 + Math.floor(noise(seed + 103, tx, ty, 9) * (base.length - 1)) % base.length;
-      g.globalAlpha = a; drawTile(g, ground.tileset, base[Math.min(vi, base.length - 1)], px, py); g.globalAlpha = 1;
+      g.globalAlpha = a; drawCellTile(g, ground, base[Math.min(vi, base.length - 1)], tx, ty, px, py); g.globalAlpha = 1;
     }
   }
-  // Nappes des autres groupes (cellule 9 + k) : grandes taches rares, bords fondus.
+  // Nappes des autres groupes : bruit fractal (2 octaves, façon Perlin) → zones organiques
+  // qui s'estompent progressivement vers la base ; la densité des petits props suit ce bruit.
   for (let k = 1; k < groups.length; k++) {
-    const n = noise(seed + k * 7919, tx, ty, 9 + k);
+    const n = zoneNoise(ground, k, tx, ty);
     const a = smooth(n, 0.58 + 0.03 * k, 0.8 + 0.03 * k);
     if (a <= 0.02) continue;
     const tiles = groups[k];
     const ti = Math.floor(noise(seed + 200 + k, tx, ty, 7) * tiles.length) % tiles.length;
-    g.globalAlpha = a; drawTile(g, ground.tileset, tiles[ti], px, py); g.globalAlpha = 1;
+    g.globalAlpha = a; drawCellTile(g, ground, tiles[ti], tx, ty, px, py); g.globalAlpha = 1;
   }
+}
+
+/** Dessine une tuile avec un miroir horizontal/vertical déterministe par case : quatre
+ *  orientations de la même tuile suffisent à casser la répétition du motif tous les 32 px. */
+function drawCellTile(g, ground, idx, tx, ty, px, py) {
+  const h = hash3f(ground.seed + 500, tx, ty);
+  const fx = h < 0.5, fy = (h * 4) % 1 < 0.5;
+  if (!fx && !fy) { drawTile(g, ground.tileset, idx, px, py); return; }
+  g.save();
+  g.translate(px + (fx ? TILE : 0), py + (fy ? TILE : 0));
+  g.scale(fx ? -1 : 1, fy ? -1 : 1);
+  drawTile(g, ground.tileset, idx, 0, 0);
+  g.restore();
+}
+
+/** Texture de bruit fin (256×256, 2 octaves, assombrissement seul) générée une fois par sol :
+ *  posée en multiply dans le repère monde, elle casse la régularité de la grille de tuiles. */
+function noiseTexture(ground) {
+  if (ground.noiseCanvas) return ground.noiseCanvas;
+  const N = 256, c = document.createElement('canvas'); c.width = N; c.height = N;
+  const g = c.getContext('2d'), img = g.createImageData(N, N), d = img.data, s = ground.seed + 900;
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    // Bruit périodique (les coordonnées sont repliées sur N pour que la texture se raccorde).
+    const n = 0.6 * pnoise(s, x, y, 32, N) + 0.4 * pnoise(s + 1, x, y, 8, N);
+    const v = Math.round(255 - 60 * n);           // 195..255 : n'assombrit que légèrement
+    const i = (y * N + x) * 4; d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = 255;
+  }
+  g.putImageData(img, 0, 0);
+  ground.noiseCanvas = c;
+  return c;
+}
+
+/** Bruit de valeur périodique (période N) pour la texture. */
+function pnoise(s, x, y, cell, N) {
+  const per = N / cell;
+  const gx = Math.floor(x / cell), gy = Math.floor(y / cell);
+  const fx = x / cell - gx, fy = y / cell - gy;
+  const tx = fx * fx * (3 - 2 * fx), ty = fy * fy * (3 - 2 * fy);
+  const a = hash3f(s, gx % per, gy % per), b = hash3f(s, (gx + 1) % per, gy % per);
+  const c = hash3f(s, gx % per, (gy + 1) % per), d = hash3f(s, (gx + 1) % per, (gy + 1) % per);
+  return (a * (1 - tx) + b * tx) * (1 - ty) + (c * (1 - tx) + d * tx) * ty;
+}
+
+/** Bruit de zone fractal (2 octaves) du groupe k, dans [0, 1]. */
+function zoneNoise(ground, k, tx, ty) {
+  const seed = ground.seed;
+  return 0.68 * noise(seed + k * 7919, tx, ty, 9 + k) + 0.32 * noise(seed + k * 7919 + 17, tx, ty, 4);
 }
 
 /** Ombrage doux du sol (multiply) : taches sombres larges qui cassent la grille des carreaux.
@@ -112,10 +160,16 @@ function buildChunk(ground, cx, cy) {
       const wx = cx * n + tx, wy = cy * n + ty;
       paintCell(g, ground, wx, wy, tx * TILE, ty * TILE);
       // Petits props au sol (rochers, os, touffes) : rares.
-      if (propTiles.length && hash3f(ground.seed + 7, wx, wy) < 0.04) {
+      const veg = ground.groups.length > 1 ? smooth(zoneNoise(ground, ground.groups.length - 1, wx, wy), 0.45, 0.85) : 0;
+      if (propTiles.length && hash3f(ground.seed + 7, wx, wy) < 0.01 + 0.11 * veg) {
         drawTile(g, ground.tileset, propTiles[Math.floor(hash3f(ground.seed + 8, wx, wy) * propTiles.length)], tx * TILE, ty * TILE);
       }
     }
+    // Bruit fin en multiply, aligné sur le repère monde (texture périodique : aucune couture).
+    g.save(); g.globalCompositeOperation = 'multiply'; g.globalAlpha = 0.55;
+    const tex = noiseTexture(ground);
+    for (let y = 0; y < CHUNK; y += 256) for (let x = 0; x < CHUNK; x += 256) g.drawImage(tex, x, y);
+    g.restore();
     shadeChunk(g, ground, cx, cy);
   }
   // Props hauts (2 à 4 par chunk) et lumières (0 à 2), positions déterministes.
