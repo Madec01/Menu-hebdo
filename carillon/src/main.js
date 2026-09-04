@@ -201,19 +201,34 @@ async function boot() {
 // ---- Déblocage audio : dans le geste utilisateur -----------------------------------------------
 
 let unlocked = false;
+const GESTURE_EVENTS = ['pointerup', 'touchend', 'click', 'keydown'];   // événements « activants » sur tous les navigateurs (pas pointerdown tactile)
 function onFirstGesture(e) {
   if (unlocked || !booted) return;
   if (e.type === 'keydown' && (e.key === 'Escape' || e.key === 'Tab')) return;
   unlocked = true;
-  window.removeEventListener('pointerdown', onFirstGesture);
-  window.removeEventListener('keydown', onFirstGesture);
-  audio.unlock().then(() => {
+  for (const ev of GESTURE_EVENTS) window.removeEventListener(ev, onFirstGesture);
+  let done = false;
+  const go = () => {
+    if (done) return;
+    done = true;
     music.play('menu', { layers: 2, fadeSec: 1.5 }).catch((err) => console.warn('[music]', err));
     states.replace('title', null, { sound: 'bell_tier' });
-  });
+  };
+  // On ne bloque jamais sur la promesse de reprise audio : sur certains mobiles elle reste en attente
+  // tant qu'un geste « activant » n'a pas eu lieu ; le titre s'affiche et l'audio se débloque après.
+  audio.unlock().then(go).catch(go);
+  setTimeout(go, 700);
+  for (const ev of GESTURE_EVENTS) window.addEventListener(ev, ensureAudioRunning, { passive: true });
 }
-window.addEventListener('pointerdown', onFirstGesture);
-window.addEventListener('keydown', onFirstGesture);
+for (const ev of GESTURE_EVENTS) window.addEventListener(ev, onFirstGesture, { passive: true });
+
+/** Tant que le contexte audio n'est pas actif, chaque geste utilisateur retente la reprise. */
+function ensureAudioRunning() {
+  const ac = audio.ctx();
+  if (!ac || sleeping) return;
+  if (ac.state === 'running') { for (const ev of GESTURE_EVENTS) window.removeEventListener(ev, ensureAudioRunning); return; }
+  ac.resume().then(() => { if (ac.state === 'running') bus.emit('audio:unlocked', {}); }).catch(() => {});
+}
 
 // ---- Erreurs fatales --------------------------------------------------------------------------
 
