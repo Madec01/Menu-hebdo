@@ -23,7 +23,9 @@ let ui = null, uctx = null;            // calque HUD (affichage)
 let W = 480, H = 270, scale = 1, scaleOption = 0;
 let pixelRatio = 1;                    // > 1 en mode tactile : échelle entière en pixels PHYSIQUES (setPixelRatio)
 let ambient = '#16130f';
-let vignette = 0.35, grain = 0.25, fog = 1, ashes = 1;
+let vignette = 0.35, grain = 0.25, fog = 1, ashes = 1, desaturate = 0;
+let fractionalOk = false;              // tactile : échelle non entière autorisée si le letterbox dépasse 15 %
+const LETTERBOX_MAX = 0.15;
 let flashColor = '#ffffff', flashFrames = 0, flashAlpha = 0.85;
 let lastNow = 0, frameDt = 0, elapsed = 0;
 // scale = pixels physiques du canvas par pixel logique ; cssScale = pixels CSS par pixel logique.
@@ -91,23 +93,31 @@ function available() {
 export function resize(opt) {
   scaleOption = opt | 0;
   const avail = available();
-  const fit = Math.max(1, Math.floor(Math.min(avail.w * pixelRatio / W, avail.h * pixelRatio / H)));
+  const exact = Math.min(avail.w * pixelRatio / W, avail.h * pixelRatio / H);
+  let fit = Math.max(1, Math.floor(exact));
+  // Tactile uniquement (accepté par le lead) : si l'échelle entière laisse plus de 15 % de bandes
+  // noires, on prend une échelle au quart près (×2,5), avec imageSmoothingEnabled = false partout.
+  if (fractionalOk && scaleOption === 0 && exact >= 1 && (exact - fit) / exact > LETTERBOX_MAX) fit = Math.floor(exact * 4) / 4;
   scale = scaleOption > 0 ? Math.max(1, Math.min(fit, Math.round(scaleOption * pixelRatio))) : fit;
   const cssScale = scale / pixelRatio;
-  display.width = W * scale; display.height = H * scale;
+  display.width = Math.round(W * scale); display.height = Math.round(H * scale);
   display.style.width = W * cssScale + 'px'; display.style.height = H * cssScale + 'px';
-  ui.width = W * scale; ui.height = H * scale;
+  ui.width = display.width; ui.height = display.height;
   dctx.imageSmoothingEnabled = false; uctx.imageSmoothingEnabled = false;
   size.w = W; size.h = H; size.scale = scale; size.cssScale = cssScale;
 }
 
 /** Densité de pixels prise en compte par resize() (1 = échelle en px CSS, comme sur bureau). */
-export function setPixelRatio(r) {
+export function setPixelRatio(r, allowFractional = false) {
   const v = Math.max(1, +r || 1);
-  if (v === pixelRatio) return;
-  pixelRatio = v;
+  const f = !!allowFractional;
+  if (v === pixelRatio && f === fractionalOk) return;
+  pixelRatio = v; fractionalOk = f;
   if (display) resize(scaleOption);
 }
+
+/** Désaturation globale 0..1 de la scène (coup reçu) ; à poser chaque frame par l'appelant. */
+export function setDesaturate(v) { desaturate = Math.max(0, Math.min(1, +v || 0)); }
 
 export function logicalSize() { return size; }
 
@@ -180,6 +190,12 @@ export function endFrame() {
   mctx.drawImage(over, 0, 0);
   drawFog(mctx, cam.x, cam.y, frameDt, fog);
   drawAshes(mctx, cam.x, cam.y, frameDt, ashes);
+  if (desaturate > 0.01) {   // un seul fillRect en mode de fusion 'saturation' : la scène perd ses couleurs
+    mctx.globalCompositeOperation = 'saturation';
+    mctx.globalAlpha = desaturate; mctx.fillStyle = '#808080';
+    mctx.fillRect(0, 0, W, H); mctx.globalAlpha = 1;
+    mctx.globalCompositeOperation = 'source-over';
+  }
   if (flashFrames > 0) {
     flashFrames--;
     mctx.globalAlpha = flashAlpha; mctx.fillStyle = flashColor;

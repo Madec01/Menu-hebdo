@@ -2,8 +2,8 @@
 // virtuelles (joystick flottant sur une moitié de l'écran, boutons Volée / Parade sur
 // l'autre, pause en haut), rendu sur le calque HUD dans la DA (9-slice bronze/parchemin,
 // semi-transparents) avec retour visuel : anneau qui se referme sur le bouton Volée à
-// chaque temps, halo bronze sur le temps, « Parfait / Bon / Raté » sur rhythm:input,
-// vibration légère sur Parfait. Plein écran (conteneur #stage + verrouillage paysage),
+// chaque temps, halo bronze sur le temps, vibration légère sur Parfait (le jugement Parfait / Bon /
+// Raté est dessiné autour du sonneur par hud-feedback.js, pas sous le pouce). Plein écran (conteneur #stage + verrouillage paysage),
 // aide « Ajouter à l'écran d'accueil » sur iOS, voile « Tourne ton téléphone » en portrait.
 // Le suivi des doigts est dans core/input.js (setTouchLayout / touchState) : un appui
 // tactile suit exactement le chemin du clavier (pressedAt = temps audio de l'événement).
@@ -25,11 +25,9 @@ export const TOUCH_DEFAULTS = Object.freeze({ touch: 'auto', touchSize: 'normal'
 const SIZE = { small: 18, normal: 22, large: 27 };   // rayon du bouton Volée en px logiques
 const MIN_CSS_PX = 48;                               // taille physique minimale d'un bouton (px CSS)
 const STICK_R = 40, STICK_DEADZONE = 0.12, TOP_BAND = 28;
-const JUDGE_KEY = { parfait: 'ui.hud.perfect', bon: 'ui.hud.good', rate: 'ui.hud.miss' };
-const JUDGE_COLOR = { parfait: C.bronze, bon: C.os, rate: C.gris };
 
 let deps = { isRunActive: () => false };
-const st = { active: false, beat: 0, judge: '', judgeT: 0, portraitHidden: false, layout: null, layoutKey: '' };
+const st = { active: false, beat: 0, portraitHidden: false, layout: null, layoutKey: '' };
 
 // ---- Détection et options ----------------------------------------------------------------------
 
@@ -63,7 +61,8 @@ export function isPortrait() { return window.innerHeight > window.innerWidth; }
 function refresh() {
   const on = wanted();
   if (on !== st.active) { st.active = on; st.layoutKey = ''; }
-  renderer.setPixelRatio(on ? (window.devicePixelRatio || 1) : 1);
+  // Tactile : échelle entière en pixels physiques, non entière autorisée si le letterbox dépasse 15 %.
+  renderer.setPixelRatio(on ? (window.devicePixelRatio || 1) : 1, on);
   // Petite échelle CSS (téléphone peu dense) : les polices de l'interface prennent +1 px.
   const css = renderer.logicalSize().cssScale || 1;
   setTextBump(on && css <= 1 ? 1 : 0);
@@ -76,7 +75,7 @@ function buildLayout() {
   const minR = Math.ceil(MIN_CSS_PX / css / 2);
   const rDash = Math.max(SIZE[touchOption('touchSize')] || SIZE.normal, minR);
   const rParry = Math.max(Math.round(rDash * 0.78), minR);
-  const rPause = 11, padPause = Math.max(8, minR - rPause);
+  const rPause = Math.max(13, minR), padPause = 4;   // ≥ 48 px CSS : le bouton pause se touche du pouce
   const right = touchOption('touchHand') !== 'left';
   const dashX = right ? W - rDash - 12 : rDash + 12, dashY = H - rDash - 12;
   const parryX = right ? dashX - rDash - rParry - 8 : dashX + rDash + rParry + 8, parryY = dashY - 14;
@@ -86,7 +85,7 @@ function buildLayout() {
     buttons: [
       { action: 'dash', x: dashX, y: dashY, r: rDash, pad: 6 },
       { action: 'parry', x: parryX, y: parryY, r: rParry, pad: 6 },
-      { action: 'pause', x: W - 18, y: 17, r: rPause, pad: padPause },
+      { action: 'pause', x: W - rPause - 6, y: rPause + 6, r: rPause, pad: padPause },
     ],
   };
 }
@@ -113,7 +112,6 @@ export function initTouch(d) {
   refresh();
   bus.on('beat', () => { st.beat = 1; });
   bus.on('rhythm:input', (e) => {
-    st.judge = e.grade; st.judgeT = 0.55;
     if (e.grade === 'parfait' && st.active && touchOption('vibrate') && navigator.vibrate) { try { navigator.vibrate(12); } catch (err) { /* refusé */ } }
   });
   bus.on('options:change', (e) => { if (e.key in TOUCH_DEFAULTS || e.key === 'scale') refresh(); });
@@ -125,7 +123,6 @@ export function initTouch(d) {
 export function update(realDt) {
   if (!st.active && input.touchState().seen) refresh();
   if (st.beat > 0) st.beat -= realDt * 7;
-  if (st.judgeT > 0) st.judgeT -= realDt;
   if (!st.active) { input.setTouchLayout(null); return; }
   if (isPortrait()) {
     if (!st.portraitHidden && input.pointer().clicks > 0) st.portraitHidden = true;
@@ -181,15 +178,12 @@ function renderButton(ui, b, pressed) {
   drawNineSlice(ui, pressed ? 'button_pressed' : 'button', b.x - r, b.y - r, r * 2, r * 2);
   ui.globalAlpha = 1;
   if (b.action === 'pause') {
-    ui.fillStyle = C.os; ui.fillRect(b.x - 4, b.y - 5, 3, 10); ui.fillRect(b.x + 1, b.y - 5, 3, 10);
+    const bh = Math.round(r * 0.8), bw = Math.max(3, Math.round(r * 0.28));
+    ui.fillStyle = C.os; ui.fillRect(b.x - bw - 1, b.y - bh / 2, bw, bh); ui.fillRect(b.x + 1, b.y - bh / 2, bw, bh);
     return;
   }
   const label = t(b.action === 'dash' ? 'ui.touch.dash' : 'ui.touch.parry');
   text(ui, label, b.x, b.y + (pressed ? 1 : 0), { kind: 'display', size: b.action === 'dash' ? 13 : 10, align: 'center', baseline: 'middle', color: pressed ? C.clair : C.os, shadow: true, maxWidth: r * 2 - 4 });
-  if (b.action === 'dash' && st.judgeT > 0) {
-    const a = Math.min(1, st.judgeT * 3);
-    text(ui, t(JUDGE_KEY[st.judge] || JUDGE_KEY.rate), b.x, b.y - r - 18 - (0.55 - st.judgeT) * 10, { kind: 'display', size: 12, align: 'center', color: JUDGE_COLOR[st.judge] || C.gris, shadow: true, alpha: a });
-  }
 }
 
 function renderPortraitVeil(ui) {

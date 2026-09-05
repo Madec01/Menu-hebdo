@@ -22,6 +22,7 @@ export function createOptions() {
     exportSave: () => { playUi('ui_confirm'); states.push('savetext', { mode: 'export' }); },
     importSave: () => { playUi('ui_confirm'); states.push('savetext', { mode: 'import' }); },
     resetSave: confirmReset,
+    calibrate: () => { playUi('ui_confirm'); states.push('calibration'); },
   });
   let sel = firstSelectable(0, 1), scroll = 0, dragAcc = 0;
   const visibleRows = Math.floor((LIST.h - 10) / LIST.rowH);

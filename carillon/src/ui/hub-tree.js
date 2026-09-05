@@ -5,12 +5,11 @@
 
 import { getSave, commit } from '../core/save.js';
 import { playUi, play as playSfx } from '../audio/sfx.js';
-import { t } from './i18n.js';
+import { t, has } from './i18n.js';
 import { upgrades } from './gamedata.js';
 import * as states from './states.js';
 import { toast } from './toasts.js';
 import { panel, text, paragraph, button, icon, pips, hit, backdrop, heading, C } from './widgets.js';
-import { drawNineSlice } from '../render/atlas.js';
 
 const W = 480, H = 270;
 const COL_X = [22, 178, 334], COL_W = 124, NODE_H = 18, ROW_STEP = 21, TOP = 28;
@@ -30,6 +29,10 @@ function setLevel(id, level) {
   list.push({ id, level });
   s.unlocked.upgrades = list;
 }
+
+/** Stats en pourcentage (valeur par niveau < 1) ; les autres en points. */
+const PERCENT_STATS = { windowMult: true, damageMult: true, magnet: true, xpGain: true, crit: true, bronzeGain: true, area: true };
+function statValue(stat, v) { return PERCENT_STATS[stat] ? '+' + Math.round(v * 100) + ' %' : '+' + Math.round(v * 100) / 100; }
 
 function depthOf(def, all, memo) {
   if (memo.has(def.id)) return memo.get(def.id);
@@ -122,8 +125,11 @@ export function createTree() {
       ui.stroke();
       for (let i = 0; i < nodes.length; i++) {
         const n = nodes[i], r = n.rect, lvl = upgradeLevel(n.def.id), ok = prereqOk(n.def), full = lvl >= maxLevel(n.def);
-        drawNineSlice(ui, i === sel ? 'gauge_fill' : 'gauge_bg', r.x, r.y, r.w, r.h);
-        text(ui, t(n.def.name), r.x + 6, r.y + 4, { size: 9, color: i === sel ? C.suie : !ok ? C.gris : full ? C.bronze : C.os, maxWidth: r.w - 44 });
+        // Nœud : fond plat (acheté = liseré bronze, verrouillé = gris) ; le sélectionné en bronze plein.
+        ui.globalAlpha = i === sel ? 1 : 0.85; ui.fillStyle = i === sel ? C.bronze : C.tourbe; ui.fillRect(r.x, r.y, r.w, r.h); ui.globalAlpha = 1;
+        ui.fillStyle = i === sel ? C.clair : lvl > 0 ? C.bronze : !ok ? C.encreClaire : C.gris;
+        ui.fillRect(r.x, r.y, r.w, 1); ui.fillRect(r.x, r.y + r.h - 1, r.w, 1); ui.fillRect(r.x, r.y, 1, r.h); ui.fillRect(r.x + r.w - 1, r.y, 1, r.h);
+        text(ui, t(n.def.name), r.x + 6, r.y + 4, { size: 9, color: i === sel ? C.suie : !ok ? C.gris : full ? C.bronze : C.os, maxWidth: r.w - 50 });
         pips(ui, r.x + r.w - (ok ? 8 : 20) - maxLevel(n.def) * 5, r.y + 7, lvl, maxLevel(n.def), i === sel ? C.suie : C.bronze);
         if (!ok) icon(ui, 'ui_sceau', r.x + r.w - 16, r.y + 2, 0.4);
       }
@@ -134,7 +140,14 @@ export function createTree() {
         const lvl = upgradeLevel(n.def.id), max = maxLevel(n.def), ok = prereqOk(n.def);
         heading(ui, t(n.def.name), DESC.x + 12, DESC.y + 6, 13, 'left');
         text(ui, t('ui.tree.level', { level: lvl, max }), DESC.x + DESC.w - 12, DESC.y + 10, { size: 9, align: 'right', color: C.encreClaire });
-        paragraph(ui, t(n.def.desc), DESC.x + 12, DESC.y + 26, DESC.w - 170, { size: 9, color: C.encre, lineHeight: 10, maxLines: 3 });
+        const dh = paragraph(ui, t(n.def.desc), DESC.x + 12, DESC.y + 24, DESC.w - 170, { size: 9, color: C.encre, lineHeight: 10, maxLines: 2 });
+        // Valeur chiffrée : « +10 vie max par niveau · actuellement +20 » (upgrades.json stat / perLevel).
+        if (n.def.stat && n.def.perLevel !== undefined) {
+          const sk = 'ui.tree.stat_' + n.def.stat, name = t(has(sk) ? sk : 'ui.tree.stat_generic', { stat: n.def.stat });
+          let line = t('ui.tree.per_level', { value: statValue(n.def.stat, n.def.perLevel), stat: name });
+          if (lvl > 0) line += ' · ' + t('ui.tree.total', { value: statValue(n.def.stat, n.def.perLevel * lvl) });
+          text(ui, line, DESC.x + 12, DESC.y + 24 + dh + 2, { size: 8, color: C.bronze, maxWidth: DESC.w - 170 });
+        }
         let label, disabled = false;
         if (lvl >= max) { label = t('ui.tree.maxed'); disabled = true; }
         else if (!ok) { label = t('ui.tree.requires', { name: t('upgrade.' + missing(n.def) + '.name') }); disabled = true; }

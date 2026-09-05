@@ -33,7 +33,8 @@
       "loading_audio": "Bruitages",
       "loading_data": "Paroisses",
       "loading_lang": "Textes",
-      "loading_music": "Partitions"
+      "loading_music": "Partitions",
+      "tap": "Toucher pour sonner"
     },
     "title": {
       "play": "Jouer",
@@ -90,7 +91,24 @@
       "requires": "Requiert : {name}",
       "level": "Niveau {level} / {max}",
       "bought": "{name} amélioré",
-      "hint": "◄► ↑↓ choisir · Entrée acheter · Échap retour"
+      "hint": "◄► ↑↓ choisir · Entrée acheter · Échap retour",
+      "per_level": "{value} {stat} par niveau",
+      "total": "actuellement {value}",
+      "stat_generic": "{stat}",
+      "stat_maxHp": "vie max",
+      "stat_speed": "vitesse",
+      "stat_armor": "armure",
+      "stat_windowMult": "de fenêtre",
+      "stat_damageMult": "de dégâts",
+      "stat_magnet": "d’aimant",
+      "stat_xpGain": "d’Échos",
+      "stat_regen": "PV/s",
+      "stat_crit": "de critique",
+      "stat_bronzeGain": "de Bronze",
+      "stat_revive": "renaissance",
+      "stat_area": "de zone",
+      "stat_cadence": "cran de cadence",
+      "stat_rerolls": "relance"
     },
     "altar": {
       "title": "Autel des Feuillets",
@@ -125,7 +143,14 @@
       "ctrl_dash": "Volée, sur le temps",
       "ctrl_parry": "Contre-battement",
       "ctrl_pause": "pause",
-      "death_title": "Le Battant se tait"
+      "death_title": "Le Battant se tait",
+      "boss_phase": "Le bronze se fend",
+      "boss_phase_n": "Phase {phase}",
+      "streak": "{count} Parfaits",
+      "early": "{ms} ms en avance",
+      "late": "{ms} ms en retard",
+      "next_moment": "{name} dans {sec} s",
+      "range": "portée {range} pas"
     },
     "levelup": {
       "title": "Niveau {level}",
@@ -151,7 +176,7 @@
       "build": "Build",
       "abandon": "Abandonner la nuit",
       "confirm_abandon": "Abandonner ? La nuit compte comme perdue.",
-      "build_title": "Ton bronze cette nuit",
+      "build_title": "Ton carillon",
       "weapons": "Timbres",
       "passives": "Accords",
       "damage": "Dégâts : {value}",
@@ -177,10 +202,14 @@
       "hub": "Retour au Beffroi",
       "perfects": "Coups parfaits : {perfects} · ratés : {misses}",
       "killer": "Tu es tombé face à : {name}",
-      "build": "Ton bronze cette nuit",
+      "build": "Ton carillon cette nuit",
       "start_weapon": "Timbre de départ débloqué : {name}",
       "relic": "Relique de la nuit : {name}",
-      "bell": "Cloche : {count} {count|réponse|réponses}"
+      "bell": "Cloche : {count} {count|réponse|réponses}",
+      "offset": "Décalage moyen : {ms} ms, {dir}",
+      "offset_early": "en avance",
+      "offset_late": "en retard",
+      "offset_none": "calé sur la Mesure"
     },
     "codex": {
       "title": "Codex",
@@ -199,7 +228,7 @@
       "unlocked": "Obtenu",
       "locked": "À obtenir",
       "progress": "{done} / {total}",
-      "hint": "◄► onglet · ↑↓ choisir · Entrée lire · Échap retour",
+      "hint": "◄► onglet · ↑↓ choisir · Échap retour",
       "rhythm": "Cadence : {rhythm}",
       "rhythm_0.5": "croche",
       "rhythm_1": "noire",
@@ -218,7 +247,34 @@
       "start_locked": "Timbre de départ : niveau {level} en jeu ou {cost} bronze",
       "tab_relics": "Reliques",
       "relic_taken": "Portée {count} {count|nuit|nuits}",
-      "relic_hidden": "Jamais portée. Elle se propose au début d'une nuit."
+      "relic_hidden": "Jamais portée. Elle se propose au début d'une nuit.",
+      "max_level": "Niveau max {max}",
+      "stat_total": "Au maximum : {stat} +{value}",
+      "fusion_with": "Fusion : {fusion}, avec {other}",
+      "no_fusion": "Aucune fusion connue",
+      "recipe_how": "Porte le Timbre et l’Accord assez haut la même nuit : la carte de fusion se glisse alors dans les tirages.",
+      "range": "portée {range} pas",
+      "levels": "Niveaux",
+      "level_line": "Niv. {level} : {effects}",
+      "lvl_damage": "+{v} dégâts",
+      "lvl_area": "+{v} % zone",
+      "lvl_count": "+{v} {v|projectile|projectiles}",
+      "lvl_knockback": "+{v} recul",
+      "lvl_speed": "+{v} % vitesse",
+      "lvl_duration": "+{v} s de durée",
+      "lvl_pierce": "+{v} perce",
+      "lvl_bounces": "+{v} {v|rebond|rebonds}",
+      "lvl_markBonus": "+{v} % de marque",
+      "leaf_read_at": "Ce Feuillet se lit à l’Autel des Feuillets, au Beffroi.",
+      "leaf_missing": "Pas encore retrouvé",
+      "unlock_run_minute": "Tiens {minute} min à {parish}.",
+      "unlock_run_win": "Sonne l’aube à {parish}.",
+      "unlock_boss_kill": "Fais taire {boss}.",
+      "unlock_kills": "Fais taire {count} {enemy}.",
+      "unlock_runs": "Sonne {runs} nuits.",
+      "unlock_character": "Sonne une nuit avec {character}.",
+      "unlock_fusion": "Fusionne {fusion}.",
+      "unlock_resonance_max_time": "Tiens la Résonance au plus haut pendant {sec} s."
     },
     "options": {
       "title": "Options",
@@ -322,7 +378,10 @@
       "vibrate": "Vibration",
       "vibrate_note": "Une pulsation légère sur chaque Parfait, si le téléphone le permet.",
       "fullscreen_note": "Bascule le plein écran (touche Échap pour en sortir).",
-      "fullscreen_unsupported": "Plein écran indisponible ici : ajoute CARILLON à l’écran d’accueil (Partager → Sur l’écran d’accueil)."
+      "fullscreen_unsupported": "Plein écran indisponible ici : ajoute CARILLON à l’écran d’accueil (Partager → Sur l’écran d’accueil).",
+      "latency": "Calibration de latence",
+      "latency_value": "{ms} ms",
+      "latency_note": "Tape huit temps sur le woodblock : le décalage médian est soustrait à tes frappes."
     },
     "credits": {
       "title": "Crédits",
@@ -355,7 +414,10 @@
       "touch_stick": "pouce gauche : glisser",
       "touch_dash": "Volée",
       "next_touch": "Toucher la boîte : continuer",
-      "skip_touch": "Bouton ▮▮ : passer le tutoriel"
+      "skip_touch": "Bouton ▮▮ : passer le tutoriel",
+      "pad_parry": "B",
+      "parry_wait": "à parer…",
+      "parry_done": "Paré !"
     },
     "toast": {
       "achievement": "Haut-fait",
@@ -413,6 +475,20 @@
       "end": "Le moment passe",
       "remaining": "{sec} s",
       "night": "Aube"
+    },
+    "calib": {
+      "title": "Calibration de latence",
+      "intro": "Écoute le woodblock et appuie sur {key} pile sur chaque temps. Huit frappes suffisent ; on garde la médiane.",
+      "intro_touch": "Écoute le woodblock et touche l’écran pile sur chaque temps. Huit frappes suffisent ; on garde la médiane.",
+      "progress": "{done} / {total} frappes",
+      "result": "Décalage médian : {ms} ms",
+      "early": "Tu frappes en avance : tes frappes seront jugées plus tard.",
+      "late": "Tu frappes en retard : tes frappes seront jugées plus tôt.",
+      "on_time": "Tu es calé sur la Mesure.",
+      "current": "Réglage actuel : {ms} ms",
+      "apply": "Appliquer ({ms} ms)",
+      "retry": "Recommencer",
+      "applied": "Latence réglée : {ms} ms"
     }
   }
 }

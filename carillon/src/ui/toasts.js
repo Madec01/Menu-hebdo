@@ -7,6 +7,7 @@ import { panel, text, icon, wrap, C } from './widgets.js';
 
 const SHOW_SEC = 3.6, SLIDE_SEC = 0.25, W = 180, H = 30, GAP = 4, MAX_VISIBLE = 3;
 const queue = [];   // { title, body, icon, t }
+let suspended = 0;  // secondes pendant lesquelles rien ne s'affiche (mort : le silence d'abord)
 
 /** Ajoute une notification : { title, body, icon } (textes déjà traduits). */
 export function toast({ title = '', body = '', icon: ic = null } = {}) {
@@ -14,7 +15,11 @@ export function toast({ title = '', body = '', icon: ic = null } = {}) {
   if (queue.length > 12) queue.shift();
 }
 
+/** Retient les toasts `sec` secondes (ils s'affichent ensuite, un par un). */
+export function suspendToasts(sec) { suspended = Math.max(suspended, sec); }
+
 export function updateToasts(dt) {
+  if (suspended > 0) { suspended -= dt; return; }
   const n = Math.min(MAX_VISIBLE, queue.length);
   for (let i = 0; i < n; i++) queue[i].t += dt;
   while (queue.length && queue[0].t >= SHOW_SEC) queue.shift();
@@ -24,6 +29,7 @@ function easeOut(v) { return 1 - (1 - v) * (1 - v); }
 
 /** Dessine les toasts visibles (coin supérieur droit). */
 export function renderToasts(ctx, w) {
+  if (suspended > 0) return;
   const n = Math.min(MAX_VISIBLE, queue.length);
   let y = 4;
   for (let i = 0; i < n; i++) {

@@ -80,6 +80,7 @@ export function buildItems(handlers) {
   section('game');
   choice('beatIndicator', 'beat_indicator', ['both', 'visual', 'audio', 'none'], (v) => t('ui.options.beat_' + v));
   choice('assist', 'assist', ['none', 'assisted', 'norhythm'], (v) => t('ui.options.assist_' + v), () => t('ui.options.assist_note'));
+  items.push({ type: 'action', label: () => t('ui.options.latency'), value: () => t('ui.options.latency_value', { ms: Math.round(getOption('latencyMs') || 0) }), note: () => t('ui.options.latency_note'), adjust: handlers.calibrate });
   section('touch');
   choice('touch', 'touch', ['auto', 'on', 'off'], (v) => t('ui.options.touch_' + v), () => t('ui.options.touch_note'));
   choice('touchSize', 'touch_size', ['small', 'normal', 'large'], (v) => t('ui.options.touch_size_' + v));

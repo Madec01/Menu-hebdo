@@ -202,21 +202,79 @@ export function drawNineSlice(ctx, uiId, x, y, w, h) {
   if (!img) return;
   const s = u.slice || [0, 0, 0, 0];
   const W = img.width, H = img.height;
-  const t = s[0], r = s[1], b = s[2], l = s[3];
   x = Math.round(x); y = Math.round(y); w = Math.round(w); h = Math.round(h);
-  const cw = W - l - r, ch = H - t - b, iw = w - l - r, ih = h - t - b;
+  // Bords bornés à la moitié de la cible : un cadre de 10 px sur une barre de 7 px ne déborde plus.
+  const hy = Math.floor(h / 2), hx = Math.floor(w / 2);
+  const t = Math.min(s[0], hy), b = Math.min(s[2], hy), r = Math.min(s[1], hx), l = Math.min(s[3], hx);
+  const cw = W - s[3] - s[1], ch = H - s[0] - s[2], iw = w - l - r, ih = h - t - b;
   // coins
   if (t && l) ctx.drawImage(img, 0, 0, l, t, x, y, l, t);
   if (t && r) ctx.drawImage(img, W - r, 0, r, t, x + w - r, y, r, t);
   if (b && l) ctx.drawImage(img, 0, H - b, l, b, x, y + h - b, l, b);
   if (b && r) ctx.drawImage(img, W - r, H - b, r, b, x + w - r, y + h - b, r, b);
   // bords
-  if (iw > 0 && t) ctx.drawImage(img, l, 0, cw, t, x + l, y, iw, t);
-  if (iw > 0 && b) ctx.drawImage(img, l, H - b, cw, b, x + l, y + h - b, iw, b);
-  if (ih > 0 && l) ctx.drawImage(img, 0, t, l, ch, x, y + t, l, ih);
-  if (ih > 0 && r) ctx.drawImage(img, W - r, t, r, ch, x + w - r, y + t, r, ih);
+  if (iw > 0 && t) ctx.drawImage(img, s[3], 0, cw, t, x + l, y, iw, t);
+  if (iw > 0 && b) ctx.drawImage(img, s[3], H - b, cw, b, x + l, y + h - b, iw, b);
+  if (ih > 0 && l) ctx.drawImage(img, 0, s[0], l, ch, x, y + t, l, ih);
+  if (ih > 0 && r) ctx.drawImage(img, W - r, s[0], r, ch, x + w - r, y + t, r, ih);
   // centre
-  if (iw > 0 && ih > 0) ctx.drawImage(img, l, t, cw, ch, x + l, y + t, iw, ih);
+  if (iw > 0 && ih > 0) ctx.drawImage(img, s[3], s[0], cw, ch, x + l, y + t, iw, ih);
+}
+
+/** Vrai si le manifeste marque ce sprite `important` (Échos, projectiles de Silence, Fêlures…). */
+export function isImportant(spriteId) { const sp = manifest && manifest.sprites[spriteId]; return !!(sp && sp.important); }
+
+/** Feuille « silhouette » pleine d'une couleur (pré-générée une fois, jamais par pixel à la frame). */
+function silhouette(spriteId, color) {
+  const key = color + '|o';
+  let byColor = tints.get(spriteId);
+  if (!byColor) { byColor = new Map(); tints.set(spriteId, byColor); }
+  let c = byColor.get(key);
+  if (c) return c;
+  const sp = manifest.sprites[spriteId];
+  const img = sp && bitmaps.get(sp.file);
+  if (!img) return null;
+  c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+  const g = c.getContext('2d');
+  g.drawImage(img, 0, 0);
+  g.globalCompositeOperation = 'source-in';
+  g.fillStyle = color; g.fillRect(0, 0, c.width, c.height);
+  byColor.set(key, c);
+  return c;
+}
+
+const outlineOpts = { flipX: false, alpha: 1, tint: null, scale: 1 };
+/**
+ * Sprite avec un contour de 1 px (4 passes de la silhouette décalée, puis le sprite) : lisibilité
+ * des entités importantes hors du halo. opts comme draw() + { outline: couleur (défaut os clair),
+ * outlineAlpha (défaut 0.85), thickness (1 ou 2 px) }.
+ */
+export function drawOutlined(ctx, spriteId, animName, frameIndex, x, y, opts = NO_OPTS) {
+  const sp = manifest.sprites[spriteId];
+  if (!sp) { warnOnce(spriteId, 'sprite inconnu'); return; }
+  const color = opts.outline || '#f2e6c8';
+  const sil = silhouette(spriteId, color);
+  if (sil) {
+    const a = sp.anims[animName] || sp.anims.idle;
+    const n = (a && a.frames) || 1;
+    let f = frameIndex | 0;
+    if (a && a.loop === false) f = f < 0 ? 0 : f >= n ? n - 1 : f; else f = ((f % n) + n) % n;
+    const fw = sp.frameW, fh = sp.frameH, sx = (((a && a.col) || 0) + f) * fw, sy = ((a && a.row) || 0) * fh;
+    const scale = opts.scale || 1, dw = fw * scale, dh = fh * scale;
+    const dx = Math.round(x - sp.anchor[0] * dw), dy = Math.round(y - sp.anchor[1] * dh);
+    const th = opts.thickness || 1;
+    ctx.globalAlpha = (opts.outlineAlpha === undefined ? 0.85 : opts.outlineAlpha) * (opts.alpha === undefined ? 1 : opts.alpha);
+    if (opts.flipX) ctx.scale(-1, 1);
+    const bx = opts.flipX ? -dx - dw : dx;
+    ctx.drawImage(sil, sx, sy, fw, fh, bx - th, dy, dw, dh);
+    ctx.drawImage(sil, sx, sy, fw, fh, bx + th, dy, dw, dh);
+    ctx.drawImage(sil, sx, sy, fw, fh, bx, dy - th, dw, dh);
+    ctx.drawImage(sil, sx, sy, fw, fh, bx, dy + th, dw, dh);
+    if (opts.flipX) ctx.scale(-1, 1);
+    ctx.globalAlpha = 1;
+  }
+  outlineOpts.flipX = !!opts.flipX; outlineOpts.alpha = opts.alpha === undefined ? 1 : opts.alpha; outlineOpts.tint = opts.tint || null; outlineOpts.scale = opts.scale || 1;
+  draw(ctx, spriteId, animName, frameIndex, x, y, outlineOpts);
 }
 
 /** Icône nommée d'une planche UI à `map` (icons, cursor) ; (x, y) = coin haut-gauche. */

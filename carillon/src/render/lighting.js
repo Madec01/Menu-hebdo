@@ -117,6 +117,27 @@ export function addGlow(x, y, radius, color, intensity = 0.5) {
   ctx.drawImage(spr, x - radius, y - radius, radius * 2, radius * 2);
 }
 
+/**
+ * Lueur FORTE : cœur plein (petit sprite à pleine intensité) + auréole large. Pour les entités qui
+ * doivent se lire hors du halo (Échos, projectiles de Silence, Fêlures) ; `pulse` 0..1 fait
+ * respirer le cœur sur le temps (ex. 1 - conductor.phase()).
+ */
+export function addStrongGlow(x, y, radius, color, intensity = 0.8, pulse = 0) {
+  if (!camera.isVisible(x, y, radius * 2)) return;
+  const spr = sprites.get(color) || prepareLight(color);
+  const ctx = renderer.getGlowCtx();
+  const k = intensity > 1 ? 1 : intensity < 0 ? 0 : intensity;
+  const core = radius * (0.55 + 0.25 * pulse);
+  ctx.globalAlpha = k;
+  ctx.drawImage(spr, x - core, y - core, core * 2, core * 2);
+  ctx.globalAlpha = k * 0.45;
+  ctx.drawImage(spr, x - radius * 2, y - radius * 2, radius * 4, radius * 4);
+}
+
+/** Couleur du halo de la Mesure (change avec le cran de Résonance : bronze → braise). */
+export function setHaloColor(color) { if (color && color !== haloColor) { haloColor = color; prepareLight(color); } }
+export function haloColorValue() { return haloColor; }
+
 /** Position du halo de la Mesure (le joueur). */
 export function setHaloPos(x, y) { haloX = x; haloY = y; }
 

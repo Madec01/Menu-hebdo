@@ -49,13 +49,14 @@ function applyOption(key, value) {
     case 'particles': particles.setDensity(+value); break;
     case 'fullscreen': setFullscreen(!!value); break;
     case 'lang': loadLang(value).catch((e) => console.warn('[i18n]', e)); break;
+    case 'latencyMs': if (typeof conductor.setInputLatencyMs === 'function') conductor.setInputLatencyMs(+value || 0); break;   // § 8 bis
     default: break; // reduceFlash, showFps, beatIndicator, assist, bindings : lus à l'usage
   }
 }
 
 function applyAllOptions() {
   const o = getSave().options;
-  for (const k of ['scale', 'shake', 'particles']) applyOption(k, o[k]);
+  for (const k of ['scale', 'shake', 'particles']) applyOption(k, o[k]);   // latencyMs : après initConductor (boot)
   input.applyBindings(o.bindings);
   if (o.fullscreen && !document.fullscreenElement) o.fullscreen = false; // pas de plein écran sans geste
 }
@@ -177,6 +178,7 @@ async function boot() {
   audio.setAssetsBase('assets/');
   music.setManifest(audioManifest);
   conductor.initConductor({ bpm: 96 });
+  if (save.options.latencyMs) applyOption('latencyMs', save.options.latencyMs);   // le chef d'orchestre existe maintenant
   await Promise.all([
     loadFonts(manifest, 'assets/').then(() => step(t('ui.boot.loading_fonts'))),
     atlas.loadAtlas(manifest, { baseUrl: 'assets/' }).then(() => step(t('ui.boot.loading_atlas'))),

@@ -19,6 +19,7 @@ import { createOptions } from './options.js';
 import { createSaveText } from './options-data.js';
 import { createCredits } from './credits.js';
 import { createConfirm } from './dialog.js';
+import { createCalibration } from './calibration.js';
 
 export function createScreens(deps) {
   return {
@@ -39,5 +40,6 @@ export function createScreens(deps) {
     savetext: createSaveText(deps),
     credits: createCredits(deps),
     confirm: createConfirm(deps),
+    calibration: createCalibration(deps),
   };
 }

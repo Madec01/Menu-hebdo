@@ -74,7 +74,7 @@ export function createUnlock() {
     render(ui) {
       renderLogo(ui, 14);
       const a = 0.6 + 0.4 * Math.sin(time * 3);
-      text(ui, t('ui.boot.click'), W / 2, 196, { kind: 'display', size: 20, align: 'center', color: C.os, shadow: true, alpha: a });
+      text(ui, t(touch.isTouchDevice() ? 'ui.boot.tap' : 'ui.boot.click'), W / 2, 196, { kind: 'display', size: 20, align: 'center', color: C.os, shadow: true, alpha: a });
     },
   };
 }

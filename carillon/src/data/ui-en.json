@@ -33,7 +33,8 @@
       "loading_audio": "Sounds",
       "loading_data": "Parishes",
       "loading_lang": "Texts",
-      "loading_music": "Scores"
+      "loading_music": "Scores",
+      "tap": "Tap to ring"
     },
     "title": {
       "play": "Play",
@@ -90,7 +91,24 @@
       "requires": "Requires: {name}",
       "level": "Level {level} / {max}",
       "bought": "{name} improved",
-      "hint": "◄► ↑↓ choose · Enter buy · Esc back"
+      "hint": "◄► ↑↓ choose · Enter buy · Esc back",
+      "per_level": "{value} {stat} per level",
+      "total": "currently {value}",
+      "stat_generic": "{stat}",
+      "stat_maxHp": "max health",
+      "stat_speed": "speed",
+      "stat_armor": "armor",
+      "stat_windowMult": "window",
+      "stat_damageMult": "damage",
+      "stat_magnet": "magnet",
+      "stat_xpGain": "Echoes",
+      "stat_regen": "HP/s",
+      "stat_crit": "critical",
+      "stat_bronzeGain": "Bronze",
+      "stat_revive": "revive",
+      "stat_area": "area",
+      "stat_cadence": "cadence step",
+      "stat_rerolls": "reroll"
     },
     "altar": {
       "title": "Altar of the Leaves",
@@ -125,7 +143,14 @@
       "ctrl_dash": "Volley, on the beat",
       "ctrl_parry": "Counter-beat",
       "ctrl_pause": "pause",
-      "death_title": "The Clapper falls silent"
+      "death_title": "The Clapper falls silent",
+      "boss_phase": "The bronze cracks",
+      "boss_phase_n": "Phase {phase}",
+      "streak": "{count} Perfects",
+      "early": "{ms} ms early",
+      "late": "{ms} ms late",
+      "next_moment": "{name} in {sec}s",
+      "range": "range {range} paces"
     },
     "levelup": {
       "title": "Level {level}",
@@ -151,7 +176,7 @@
       "build": "Build",
       "abandon": "Abandon the night",
       "confirm_abandon": "Abandon? The night counts as lost.",
-      "build_title": "Your bronze tonight",
+      "build_title": "Your carillon",
       "weapons": "Timbres",
       "passives": "Chords",
       "damage": "Damage: {value}",
@@ -177,10 +202,14 @@
       "hub": "Back to the Belfry",
       "perfects": "Perfect hits: {perfects} · misses: {misses}",
       "killer": "You fell to: {name}",
-      "build": "Your bronze tonight",
+      "build": "Your carillon tonight",
       "start_weapon": "Starting Timbre unlocked: {name}",
       "relic": "Relic of the night: {name}",
-      "bell": "Bell: {count} {count|answer|answers}"
+      "bell": "Bell: {count} {count|answer|answers}",
+      "offset": "Average offset: {ms} ms, {dir}",
+      "offset_early": "early",
+      "offset_late": "late",
+      "offset_none": "on the Measure"
     },
     "codex": {
       "title": "Codex",
@@ -199,7 +228,7 @@
       "unlocked": "Earned",
       "locked": "To earn",
       "progress": "{done} / {total}",
-      "hint": "◄► tab · ↑↓ choose · Enter read · Esc back",
+      "hint": "◄► tab · ↑↓ choose · Esc back",
       "rhythm": "Cadence: {rhythm}",
       "rhythm_0.5": "eighth note",
       "rhythm_1": "quarter note",
@@ -218,7 +247,34 @@
       "start_locked": "Starting Timbre: level {level} in a run or {cost} bronze",
       "tab_relics": "Relics",
       "relic_taken": "Carried {count} {count|night|nights}",
-      "relic_hidden": "Never carried. It is offered at the start of a night."
+      "relic_hidden": "Never carried. It is offered at the start of a night.",
+      "max_level": "Max level {max}",
+      "stat_total": "At max: {stat} +{value}",
+      "fusion_with": "Fusion: {fusion}, with {other}",
+      "no_fusion": "No known fusion",
+      "recipe_how": "Carry the Timbre and the Chord high enough on the same night: the fusion card then slips into the draws.",
+      "range": "range {range} paces",
+      "levels": "Levels",
+      "level_line": "Lv. {level}: {effects}",
+      "lvl_damage": "+{v} damage",
+      "lvl_area": "+{v}% area",
+      "lvl_count": "+{v} {v|projectile|projectiles}",
+      "lvl_knockback": "+{v} knockback",
+      "lvl_speed": "+{v}% speed",
+      "lvl_duration": "+{v}s duration",
+      "lvl_pierce": "+{v} pierce",
+      "lvl_bounces": "+{v} {v|bounce|bounces}",
+      "lvl_markBonus": "+{v}% mark",
+      "leaf_read_at": "This Leaf is read at the Altar of Leaves, in the Belfry.",
+      "leaf_missing": "Not found yet",
+      "unlock_run_minute": "Hold {minute} min in {parish}.",
+      "unlock_run_win": "Ring the dawn in {parish}.",
+      "unlock_boss_kill": "Silence {boss}.",
+      "unlock_kills": "Silence {count} {enemy}.",
+      "unlock_runs": "Ring {runs} nights.",
+      "unlock_character": "Ring a night as {character}.",
+      "unlock_fusion": "Fuse {fusion}.",
+      "unlock_resonance_max_time": "Hold Resonance at its peak for {sec}s."
     },
     "options": {
       "title": "Options",
@@ -322,7 +378,10 @@
       "vibrate": "Vibration",
       "vibrate_note": "A light pulse on every Perfect, if the phone allows it.",
       "fullscreen_note": "Toggles full screen (press Esc to leave).",
-      "fullscreen_unsupported": "Full screen is not available here: add CARILLON to your home screen (Share → Add to Home Screen)."
+      "fullscreen_unsupported": "Full screen is not available here: add CARILLON to your home screen (Share → Add to Home Screen).",
+      "latency": "Latency calibration",
+      "latency_value": "{ms} ms",
+      "latency_note": "Tap eight beats on the woodblock: the median offset is subtracted from your strikes."
     },
     "credits": {
       "title": "Credits",
@@ -355,7 +414,10 @@
       "touch_stick": "left thumb: slide",
       "touch_dash": "Peal",
       "next_touch": "Tap the box: continue",
-      "skip_touch": "▮▮ button: skip the tutorial"
+      "skip_touch": "▮▮ button: skip the tutorial",
+      "pad_parry": "B",
+      "parry_wait": "to parry…",
+      "parry_done": "Parried!"
     },
     "toast": {
       "achievement": "Achievement",
@@ -413,6 +475,20 @@
       "end": "The moment passes",
       "remaining": "{sec} s",
       "night": "Dawn"
+    },
+    "calib": {
+      "title": "Latency calibration",
+      "intro": "Listen to the woodblock and press {key} right on each beat. Eight strikes are enough; we keep the median.",
+      "intro_touch": "Listen to the woodblock and tap the screen right on each beat. Eight strikes are enough; we keep the median.",
+      "progress": "{done} / {total} strikes",
+      "result": "Median offset: {ms} ms",
+      "early": "You strike early: your strikes will be judged later.",
+      "late": "You strike late: your strikes will be judged earlier.",
+      "on_time": "You are on the Measure.",
+      "current": "Current setting: {ms} ms",
+      "apply": "Apply ({ms} ms)",
+      "retry": "Start over",
+      "applied": "Latency set: {ms} ms"
     }
   }
 }

@@ -153,13 +153,49 @@ export function button(ctx, b) {
   });
 }
 
-/** Jauge horizontale ; value 0..1 ; hot = remplissage braise. */
+/**
+ * Jauge horizontale dessinée à plat (les 9-slice à bords de 10 px débordaient sur les barres
+ * fines) : fond suie, liseré 1 px, remplissage bronze (hot = braise, color = couleur imposée),
+ * reflet 1 px, « ghost » (valeur perdue récemment, en os translucide), segments (séparateurs)
+ * et libellé centré. value 0..1. opts : { hot, color, ghost, segments, label, size, alpha, border }.
+ */
 export function gauge(ctx, x, y, w, h, value, opts = EMPTY) {
-  drawNineSlice(ctx, 'gauge_bg', x, y, w, h);
+  x = Math.round(x); y = Math.round(y); w = Math.round(w); h = Math.round(h);
   const v = value < 0 ? 0 : value > 1 ? 1 : value;
-  const inner = Math.round((w - 4) * v);
-  if (inner > 0) drawNineSlice(ctx, opts.hot ? 'gauge_fill_hot' : 'gauge_fill', x + 2, y + 2, Math.max(inner, 4), h - 4);
-  if (opts.label) text(ctx, opts.label, x + w / 2, y + h / 2, { size: opts.size || 9, align: 'center', baseline: 'middle', color: C.clair, shadow: true });
+  const a = opts.alpha === undefined ? 1 : opts.alpha;
+  ctx.globalAlpha = 0.82 * a; ctx.fillStyle = C.suie; ctx.fillRect(x, y, w, h);
+  ctx.globalAlpha = a; ctx.fillStyle = opts.border || C.encreClaire;
+  ctx.fillRect(x, y, w, 1); ctx.fillRect(x, y + h - 1, w, 1); ctx.fillRect(x, y, 1, h); ctx.fillRect(x + w - 1, y, 1, h);
+  const ix = x + 1, iy = y + 1, iw = w - 2, ih = h - 2;
+  if (iw > 0 && ih > 0) {
+    if (opts.ghost !== undefined && opts.ghost > v) {
+      ctx.globalAlpha = 0.35 * a; ctx.fillStyle = C.os; ctx.fillRect(ix, iy, Math.round(iw * Math.min(1, opts.ghost)), ih); ctx.globalAlpha = a;
+    }
+    const fw = v > 0 ? Math.max(1, Math.round(iw * v)) : 0;
+    if (fw > 0) {
+      ctx.fillStyle = opts.color || (opts.hot ? C.braise : C.bronze); ctx.fillRect(ix, iy, fw, ih);
+      if (ih >= 5) { ctx.globalAlpha = 0.28 * a; ctx.fillStyle = C.clair; ctx.fillRect(ix, iy, fw, 1); ctx.globalAlpha = a; }
+    }
+    if (opts.segments > 1) {
+      ctx.fillStyle = C.suie;
+      for (let i = 1; i < opts.segments; i++) ctx.fillRect(ix + Math.round(iw * i / opts.segments), iy, 1, ih);
+    }
+  }
+  ctx.globalAlpha = 1;
+  if (opts.label) text(ctx, opts.label, x + w / 2, y + h / 2, { size: opts.size || 9, align: 'center', baseline: 'middle', color: C.clair, shadow: true, alpha: a });
+}
+
+/** Petit chevron plein (flèche) pointant vers l'angle `ang` (rad), taille s, en (x, y). */
+export function chevron(ctx, x, y, ang, s, color, alpha = 1) {
+  const c = Math.cos(ang), sn = Math.sin(ang);
+  ctx.globalAlpha = alpha; ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(x + c * s, y + sn * s);
+  ctx.lineTo(x - c * s * 0.6 - sn * s * 0.7, y - sn * s * 0.6 + c * s * 0.7);
+  ctx.lineTo(x - c * s * 0.2, y - sn * s * 0.2);
+  ctx.lineTo(x - c * s * 0.6 + sn * s * 0.7, y - sn * s * 0.6 - c * s * 0.7);
+  ctx.closePath(); ctx.fill();
+  ctx.globalAlpha = 1;
 }
 
 /**

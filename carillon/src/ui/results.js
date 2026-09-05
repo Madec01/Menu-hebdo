@@ -20,7 +20,7 @@ const W = 480, H = 270;
 const COUNT_SEC = 1.6;
 
 export function createResults() {
-  let victory = false, stats = null, params = null, time = 0, shown = 0, lastTick = 0, killer = '';
+  let victory = false, stats = null, params = null, time = 0, shown = 0, lastTick = 0, killer = '', offsetAvg = 0;
   const PX = 16, PY = 12, PW = W - 32, PH = H - 24;
   const btn = (i) => ({ x: PX + 20 + i * 150, y: PY + PH - 30, w: 136, h: 20 });
   const items = [
@@ -55,7 +55,11 @@ export function createResults() {
     row(t('ui.results.level'), String(s.level));
     row(t('ui.results.resonance'), t('ui.hud.mult', { mult: s.resonanceAvg }), C.bronze);
     y += 2;
-    text(ui, t('ui.results.perfects', { perfects: s.perfects || 0, misses: s.misses || 0 }), lx, y, { size: 8, color: C.encreClaire }); y += 14;
+    text(ui, t('ui.results.perfects', { perfects: s.perfects || 0, misses: s.misses || 0 }), lx, y, { size: 8, color: C.encreClaire }); y += 10;
+    // Décalage moyen des frappes (HUD) : signé, > 0 = en retard ; le joueur sait quoi corriger (ou calibrer).
+    const off = Math.round(offsetAvg);
+    const dir = t(Math.abs(off) < 8 ? 'ui.results.offset_none' : off > 0 ? 'ui.results.offset_late' : 'ui.results.offset_early');
+    text(ui, t('ui.results.offset', { ms: Math.abs(off), dir }), lx, y, { size: 8, color: C.encreClaire }); y += 12;
     // Bronze : compteur animé.
     const target = s.bronze || 0;
     const k = Math.min(1, time / COUNT_SEC);
@@ -68,9 +72,6 @@ export function createResults() {
     if (s.leafUnlocked) { text(ui, t('ui.results.leaf', { title: t('lore.' + s.leafUnlocked + '.title') }), lx, y, { size: 9, color: C.braise, maxWidth: 180 }); y += 11; }
     if (s.achievements) for (const id of s.achievements.slice(0, 2)) { text(ui, t('ui.results.achievement', { name: t('achievement.' + id + '.name') }), lx, y, { size: 9, color: C.braise, maxWidth: 180 }); y += 11; }
     if (s.startWeapons) for (const id of s.startWeapons.slice(0, 2)) { text(ui, t('ui.results.start_weapon', { name: t('weapon.' + id + '.name') }), lx, y, { size: 9, color: C.bronze, maxWidth: 180 }); y += 11; }
-    // Relique de la nuit et réponses à la cloche (§ 11 bis), tant qu'il reste de la place au-dessus de la seed.
-    if (s.relicId && y < PY + PH - 56) { const d = dataDef('relics', s.relicId); icon(ui, d && d.icon ? d.icon : 'ui_sceau', lx, y - 3, 0.4); text(ui, t('ui.results.relic', { name: t('relic.' + s.relicId + '.name') }), lx + 16, y, { size: 9, color: C.encre, maxWidth: 170 }); y += 11; }
-    if (s.bellAnswers > 0 && y < PY + PH - 56) { text(ui, t('ui.results.bell', { count: s.bellAnswers }), lx, y, { size: 9, color: C.encreClaire, maxWidth: 180 }); y += 11; }
     text(ui, t('ui.results.seed', { seed: seedLabel() }), lx, PY + PH - 44, { size: 8, color: C.encreClaire, maxWidth: 200 });
   }
 
@@ -79,19 +80,20 @@ export function createResults() {
     const bx = PX + 214, bw = PW - 230;
     let y = PY + 40;
     text(ui, t('ui.results.dps'), bx, y, { size: 10, color: C.encreClaire }); y += 14;
-    const entries = Object.entries(s.dpsByWeapon || {}).sort((a, b) => b[1] - a[1]).slice(0, 8);
-    const max = entries.length ? entries[0][1] : 1;
+    const entries = Object.entries(s.dpsByWeapon || {}).sort((a, b) => b[1] - a[1]).slice(0, 6);
+    const max = entries.length ? Math.max(1, entries[0][1]) : 1;
     const dur = Math.max(1, s.timeSec);
+    // Une ligne par Timbre : icône, nom, barre plate proportionnelle au plus fort, DPS lisible à droite.
     for (const [id, dmg] of entries) {
       const fusion = !!dataDef('fusions', id);
       icon(ui, fusion ? 'fusion_' + id : id, bx, y - 3, 0.5);
-      text(ui, t((fusion ? 'fusion.' : 'weapon.') + id + '.name'), bx + 20, y, { size: 9, color: C.encre, maxWidth: 90 });
-      gauge(ui, bx + 112, y + 1, bw - 112, 8, dmg / max);
-      text(ui, t('ui.results.dps_value', { dps: Math.round(dmg / dur) }), bx + bw, y + 10, { size: 7, align: 'right', color: C.encreClaire });
-      y += 17;
+      text(ui, t((fusion ? 'fusion.' : 'weapon.') + id + '.name'), bx + 20, y, { size: 9, color: C.encre, maxWidth: 82 });
+      gauge(ui, bx + 106, y + 1, bw - 156, 7, dmg / max, { border: C.encreClaire });
+      text(ui, t('ui.results.dps_value', { dps: Math.round(dmg / dur) }), bx + bw, y, { size: 9, align: 'right', color: C.encre });
+      y += 14;
     }
     if (!entries.length) text(ui, t('ui.pause.empty'), bx + 20, y, { size: 9, color: C.encre });
-    // Build final.
+    // Build final (Timbres puis Accords), Relique et cloches à côté.
     const b = s.build || { weapons: [], passives: [] };
     let x = bx;
     const by = PY + PH - 62;
@@ -99,11 +101,15 @@ export function createResults() {
     for (const w of b.weapons) { icon(ui, dataDef('fusions', w.id) ? 'fusion_' + w.id : w.id, x, by, 0.5); text(ui, String(w.level), x + 16, by + 8, { size: 8, color: C.bronze }); x += 22; }
     x = bx;
     for (const p of b.passives) { icon(ui, p.id, x, by + 16, 0.5); text(ui, String(p.level), x + 16, by + 24, { size: 8, color: C.bronze }); x += 22; }
+    // Relique de la nuit et réponses à la cloche, à droite du build.
+    const rx = bx + Math.max(120, Math.max(b.weapons.length, b.passives.length) * 22 + 12);
+    if (s.relicId) { const d = dataDef('relics', s.relicId); icon(ui, d && d.icon ? d.icon : 'ui_sceau', rx, by - 2, 0.5); text(ui, t('ui.results.relic', { name: t('relic.' + s.relicId + '.name') }), rx + 20, by + 2, { size: 8, color: C.encre, maxWidth: bx + bw - rx - 20 }); }
+    text(ui, t('ui.results.bell', { count: s.bellAnswers || 0 }), rx + (s.relicId ? 20 : 0), by + 18, { size: 8, color: C.encreClaire, maxWidth: bx + bw - rx - 20 });
   }
 
   return {
     enter(p) {
-      victory = !!p.victory; stats = p.stats || {}; params = p.params; killer = p.killer || ''; time = 0; shown = 0; lastTick = 0; menu.index = 2;
+      victory = !!p.victory; stats = p.stats || {}; params = p.params; killer = p.killer || ''; offsetAvg = p.offsetAvgMs || 0; time = 0; shown = 0; lastTick = 0; menu.index = 2;
       const track = victory ? 'victory' : 'death';
       if (music.current() !== track) music.loadTrack(track).then(() => music.play(track, { layers: 2, fadeSec: 1 })).catch(() => {});
     },

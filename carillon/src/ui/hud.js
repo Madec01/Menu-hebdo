@@ -1,46 +1,44 @@
-// ui/hud.js — HUD de la nuit : vie, XP, timer, tués, jauge de Résonance à 4
-// crans qui pulse sur le temps, icônes de Timbres/Accords avec niveau,
-// sonnerie visuelle à chaque minute, bannière de Fêlure/Bourdon avec barre de
-// vie, indicateur de rythme visuel (option beatIndicator : balancier avec la
-// fenêtre de frappe), retour Parfait/Bon/Raté sous le joueur, rappel des
-// commandes pendant les 30 premières secondes des premières nuits, vibration
-// légère de la manette au cran 4. Lit gameState() et les événements du bus.
-// § 11 bis : icône de la Relique portée (info-bulle au survol), bannière « La cloche sonne »
-// avec 4 points (gameState().bell), anneau qui pulse autour du sonneur pendant la sonnerie,
-// « Répondu ! » sur bell:answered, ligne de tutoriel (tutorial.bell) à la 1re cloche de la 1re nuit.
-// Mode tactile (ui/touch.js) : rien sous les pouces — jauge de Résonance décalée à gauche des
-// boutons, Timbres/Accords en rangée sous la vie, tués décalés à gauche du bouton pause, rappel
-// des commandes tactiles à la place des touches.
-// Rythme de la nuit : barre de progression de la nuit sous le chrono (durée lue dans waves.json,
-// repères des Fêlures), bannière de Moment scripté (run:moment : titre en display + sous-titre, entrée/
-// sortie animées, compte à rebours lu dans world.moments) et voile pâle pendant une accalmie.
+// ui/hud.js — HUD de la nuit : vie (avec « ghost » des PV perdus) et XP sur deux lignes séparées,
+// chrono, barre de nuit (durée réelle de waves.json, repères des Fêlures, losanges des Moments à venir,
+// compte à rebours du prochain Moment et du Moment en cours), tués, jauge de Résonance à 4 segments
+// plats qui pulsent sur le temps, compteur de Parfaits, balancier (option beatIndicator) avec chevron
+// « en avance / en retard », icônes de Timbres/Accords avec niveau (portée du Timbre au survol :
+// hud-markers.js), Relique portée (info-bulle), rappel des commandes (premières nuits, retiré pendant
+// une bannière), statuts Bâillonné/Étouffé au-dessus de la tête.
+// Sous-modules : hud-banners.js (file unique de bannières + barres de vie boss/Fêlure), hud-feedback.js
+// (Parfait/Bon/Raté, cran, coup reçu, cloche), hud-markers.js (hors-écran, portée).
+// Mode tactile (ui/touch.js) : rien sous les pouces — Résonance décalée, Timbres/Accords en rangée sous
+// la vie, tués décalés à gauche du bouton pause.
 
 import { bus } from '../core/events.js';
 import { getSave } from '../core/save.js';
 import * as conductor from '../audio/conductor.js';
 import { getBindings, hasGamepad, rumble } from '../core/input.js';
 import * as camera from '../render/camera.js';
-import { t, fmtTime, has as hasKey } from './i18n.js';
+import { t, fmtTime } from './i18n.js';
 import { def as dataDef } from './gamedata.js';
 import { keyName } from './options-items.js';
 import { mouse } from './states.js';
 import { isActive as touchActive } from './touch.js';
-import { panel, text, paragraph, gauge, icon, keycap, hit, C } from './widgets.js';
-import { drawNineSlice } from '../render/atlas.js';
+import { panel, text, paragraph, gauge, icon, keycap, hit, chevron, C } from './widgets.js';
+import { createBanners } from './hud-banners.js';
+import { createFeedback } from './hud-feedback.js';
+import { renderOffscreen, renderWeaponRange } from './hud-markers.js';
 
 const W = 480, H = 270;
 const HUD_RES_X = W / 2 - 74, RES_X_TOUCH = W / 2 - 110, RES_Y = H - 24, SEG_W = 34, SEG_H = 8, SEG_GAP = 4;
 const HINT_SEC = 30;        // durée du rappel des commandes
 const HINT_RUNS = 3;        // … affiché tant que le joueur a fini moins de 3 nuits
 const RELIC_RECT = { x: 4, y: 46, w: 18, h: 18 }, RELIC_RECT_TOUCH = { x: 4, y: 54, w: 18, h: 18 };
-const BELL_HINT_SEC = 7;
-const MOMENT_IN = 0.35, MOMENT_HOLD = 2.8, MOMENT_OUT = 0.4, MOMENT_END_SEC = 1.4, MOMENT_Y = 64;
+const NIGHT_W = 120, NIGHT_Y = 25;
+const NEXT_MOMENT_SEC = 10;  // le compte à rebours du prochain Moment s'affiche sous ce seuil
+const GHOST_DECAY = 0.35;    // vitesse à laquelle le ghost de vie rattrape la vie
 
 export function createHud() {
   const res = { tier: 0, mult: 1, value: 0 };
-  const st = { minuteT: 0, minute: 0, bannerT: 0, bannerKind: '', bannerName: '', judgeT: 0, judge: '', beatFlash: 0, blockedT: 0, lastBeat: -1, hintT: 0,
-    answerT: 0, answerBonus: '', bellHintT: 0, bellHintShown: false,
-    momentId: '', momentT: 0, momentOut: -1, momentPersist: false, momentEndT: 0 };
+  const st = { beatFlash: 0, blockedT: 0, hintT: 0, ghostHp: 1, hover: null, hoverRect: { x: 0, y: 0 }, quiet: false };
+  const banners = createBanners();
+  const feedback = createFeedback();
   const unsubs = [];
 
   function listen() {
@@ -48,54 +46,40 @@ export function createHud() {
       if (e.tier >= 3 && res.tier < 3 && e.direction > 0) rumble(0.4, 160);   // cran 4 atteint
       res.tier = e.tier; res.mult = e.mult; res.value = e.value;
     }));
-    unsubs.push(bus.on('run:minute', (e) => { st.minute = e.minute; st.minuteT = 2.5; }));
-    unsubs.push(bus.on('run:fissure', (e) => { if (e.phase === 'start') { st.bannerKind = 'fissure'; st.bannerName = t('enemy.' + e.bossId + '.name'); st.bannerT = 3; } }));
-    unsubs.push(bus.on('run:boss', (e) => { if (e.phase === 'intro') { st.bannerKind = 'boss'; st.bannerName = t('boss.' + e.bossId + '.name'); st.bannerT = 4; } }));
-    unsubs.push(bus.on('rhythm:input', (e) => { st.judge = e.grade; st.judgeT = 0.6; }));
     unsubs.push(bus.on('resonance:blocked', (e) => { st.blockedT = e.durationSec; }));
     unsubs.push(bus.on('beat', () => { st.beatFlash = 1; if (res.tier >= 3) rumble(0.12, 40); }));
-    unsubs.push(bus.on('bell:ring', () => { if (!st.bellHintShown && getSave().stats.runs === 0) { st.bellHintShown = true; st.bellHintT = BELL_HINT_SEC; } }));
-    unsubs.push(bus.on('bell:answered', (e) => { st.answerT = 1.6; st.answerBonus = e.bonus || ''; rumble(0.3, 120); }));
-    unsubs.push(bus.on('run:moment', (e) => {
-      if (e.phase === 'start') { st.momentId = e.id; st.momentT = 0; st.momentOut = -1; st.momentPersist = e.id === 'accalmie'; st.momentEndT = 0; }
-      else { if (e.id === st.momentId && st.momentOut < 0) st.momentOut = 0; if (e.id !== 'accalmie') st.momentEndT = MOMENT_END_SEC; }
-    }));
   }
 
-  /** Bannière de Moment : titre (display) + sous-titre, glisse depuis le haut, compte à rebours, voile d'accalmie. */
-  function renderMoment(ui, g) {
-    const mo = g.world.moments, active = mo && mo.active && mo.active.id === st.momentId ? mo.active : null;
-    if (st.momentEndT > 0 && !st.momentId) {
-      text(ui, t('ui.moment.end'), W / 2, MOMENT_Y + 6, { size: 8, align: 'center', color: C.gris, shadow: true, alpha: Math.min(1, st.momentEndT / 0.5) });
-    }
-    if (!st.momentId) return;
-    if (!st.momentPersist && st.momentOut < 0 && st.momentT >= MOMENT_IN + MOMENT_HOLD) st.momentOut = 0;
-    const k = st.momentOut >= 0 ? 1 - st.momentOut / MOMENT_OUT : Math.min(1, st.momentT / MOMENT_IN);
-    const a = k * k, dy = st.momentOut >= 0 ? -(1 - k) * 6 : -(1 - k) * 8;
-    if (st.momentPersist) { ui.globalAlpha = 0.1 * a; ui.fillStyle = C.os; ui.fillRect(0, 0, W, H); ui.globalAlpha = 1; }
-    if (st.bannerT > 0) return;   // la Fêlure / le Bourdon a la priorité, la bannière reprend ensuite
-    const y = MOMENT_Y + dy;
-    text(ui, t('moment.' + st.momentId + '.name'), W / 2, y, { kind: 'display', size: 18, align: 'center', color: st.momentPersist ? C.os : C.bronze, shadow: true, alpha: a });
-    text(ui, t('ui.moment.' + st.momentId), W / 2, y + 20, { size: 8, align: 'center', color: C.os, shadow: true, alpha: a });
-    if (active) {
-      const left = Math.max(0, active.sec - mo.t), w = 120, x = W / 2 - w / 2, by = y + 31;
-      ui.globalAlpha = 0.8 * a;
-      ui.fillStyle = C.tourbe; ui.fillRect(x, by, w, 2);
-      ui.fillStyle = st.momentPersist ? C.os : C.bronze; ui.fillRect(x, by, Math.round(w * left / active.sec), 2);
-      ui.globalAlpha = 1;
-      if (st.momentPersist) text(ui, t('ui.moment.remaining', { sec: Math.ceil(left) }), W / 2 + w / 2 + 4, by - 3, { size: 7, color: C.gris, shadow: true, alpha: a });
-    }
-  }
-
-  /** Progression de la nuit (durée de waves.json) avec les repères des Fêlures et l'aube. */
+  /** Barre de nuit : progression, repères des Fêlures, losanges des Moments à venir, aube ; compte à rebours. */
   function renderNight(ui, g) {
     const def = g.world.waveDef, dur = def && def.duration > 0 ? def.duration : 1;
-    const w = 72, x = W / 2 - w / 2, y = 24;
+    const w = NIGHT_W, x = W / 2 - w / 2, y = NIGHT_Y;
+    const now = g.run.timeSec;
     ui.fillStyle = C.tourbe; ui.fillRect(x, y, w, 3);
-    ui.fillStyle = C.bronze; ui.fillRect(x, y, Math.round(w * Math.min(1, g.run.timeSec / dur)), 3);
+    ui.fillStyle = C.bronze; ui.fillRect(x, y, Math.round(w * Math.min(1, now / dur)), 3);
+    const mo = g.world.moments;
+    if (mo && mo.list) {
+      for (let i = mo.idx || 0; i < mo.list.length; i++) {
+        const m = mo.list[i];
+        if (m.at < now) continue;
+        const mx = x + Math.round(w * Math.min(1, m.at / dur));
+        chevron(ui, mx, y - 3, -Math.PI / 2, 3, m.id === 'accalmie' ? C.os : C.gris, 0.9);
+      }
+    }
     ui.fillStyle = C.braise;
-    for (let i = 0; i < def.events.length; i++) if (def.events[i].type === 'fissure') ui.fillRect(x + Math.round(w * def.events[i].at / dur), y - 1, 1, 5);
+    if (def && def.events) for (let i = 0; i < def.events.length; i++) if (def.events[i].type === 'fissure') ui.fillRect(x + Math.round(w * def.events[i].at / dur), y - 1, 1, 5);
     ui.fillStyle = C.clair; ui.fillRect(x + w - 1, y - 1, 1, 5);
+    // Moment en cours : temps restant ; sinon prochain Moment sous 10 s.
+    if (mo && mo.active) {
+      const left = Math.max(0, mo.active.sec - mo.t);
+      const bw = 40, bx = x + w + 6;   // à droite de la barre de nuit, hors du chrono et des bannières
+      ui.fillStyle = C.tourbe; ui.fillRect(bx, y + 6, bw, 2);
+      ui.fillStyle = mo.active.id === 'accalmie' ? C.os : C.bronze; ui.fillRect(bx, y + 6, Math.round(bw * left / Math.max(0.01, mo.active.sec)), 2);
+      text(ui, t('moment.' + mo.active.id + '.name') + ' · ' + t('ui.moment.remaining', { sec: Math.ceil(left) }), x + w + 6, y - 3, { size: 7, color: C.gris, shadow: true, maxWidth: 110 });
+    } else if (mo && mo.list && mo.idx < mo.list.length) {
+      const next = mo.list[mo.idx], left = next.at - now;
+      if (left > 0 && left <= NEXT_MOMENT_SEC) text(ui, t('ui.hud.next_moment', { name: t('moment.' + next.id + '.name'), sec: Math.ceil(left) }), x + w + 6, y - 3, { size: 7, color: C.gris, shadow: true, maxWidth: 110, alpha: 0.5 + 0.5 * Math.min(1, (NEXT_MOMENT_SEC - left) / 2) });
+    }
   }
 
   /** Icône de la Relique portée, info-bulle (nom + description) au survol. */
@@ -104,7 +88,7 @@ export function createHud() {
     if (!id) return;
     const d = dataDef('relics', id);
     const r = touchActive() ? RELIC_RECT_TOUCH : RELIC_RECT;
-    drawNineSlice(ui, 'gauge_bg', r.x, r.y, r.w, r.h);
+    slot(ui, r.x, r.y, r.w, r.h);
     icon(ui, d && d.icon ? d.icon : 'ui_sceau', r.x + 1, r.y + 1, 0.5);
     if (!mouse.inside || !hit(r, mouse.x, mouse.y)) return;
     const tx = r.x + r.w + 6, tw = 170;
@@ -114,53 +98,9 @@ export function createHud() {
     paragraph(ui, t(d ? d.desc : 'relic.' + id + '.desc'), tx, r.y + 19, tw, { size: 7, color: C.os, lineHeight: 8, maxLines: 2 });
   }
 
-  /** La cloche sonne : bannière à 4 points, anneau autour du sonneur, « Répondu ! », ligne de tutoriel. */
-  function renderBell(ui, g) {
-    const b = g.bell, world = g.world;
-    const busy = (world.boss && world.boss.state === 'alive') || (world.fissure && world.fissure.state === 'alive');
-    let y = busy ? 60 : st.hintT > 0 ? 46 : 32;   // sous la bannière de Fêlure/Bourdon ou le rappel des commandes
-    if (b && b.ringing) {
-      const phase = conductor.isRunning() ? conductor.phase() : 0;
-      const pulse = Math.pow(1 - phase, 3);
-      panel(ui, W / 2 - 76, y, 152, 34, 'dark');
-      text(ui, t('ui.bell.ring') + ' · ' + t('ui.hud.minute', { minute: b.minute }), W / 2, y + 8, { size: 9, align: 'center', color: C.clair, shadow: true });
-      for (let k = 0; k < 4; k++) {
-        const lit = k < b.lit, last = k === 3;
-        const cx = W / 2 - 27 + k * 18, cy = y + 25;
-        const rad = (last ? 3.5 : 2.5) + (lit && k === b.lit - 1 ? pulse * 1.5 : 0);
-        ui.globalAlpha = lit ? 1 : 0.35;
-        ui.fillStyle = lit ? (last ? C.braise : C.bronze) : C.gris;
-        ui.beginPath(); ui.arc(cx, cy, rad, 0, Math.PI * 2); ui.fill();
-      }
-      ui.globalAlpha = 1;
-      // Anneau qui pulse autour du sonneur (plus fort sur le 4ᵉ coup).
-      const p = g.player, ps = camera.worldToScreen(p.x, p.y);
-      const px = Math.round(ps.x), py = Math.round(ps.y);
-      const strong = b.lit >= 3;
-      ui.strokeStyle = strong ? C.braise : C.bronze; ui.lineWidth = strong ? 3 : 2; ui.globalAlpha = 0.25 + 0.65 * pulse;
-      ui.beginPath(); ui.ellipse(px, py, 18 + 30 * (1 - pulse), 9 + 15 * (1 - pulse), 0, 0, Math.PI * 2); ui.stroke();
-      ui.globalAlpha = 1;
-      y += 38;
-    }
-    if (st.answerT > 0) {
-      const a = Math.min(1, st.answerT * 2);
-      const ty = H / 2 - 34 - (1.6 - st.answerT) * 8;
-      text(ui, t('ui.bell.answered'), W / 2, ty, { kind: 'display', size: 16, align: 'center', color: C.braise, shadow: true, alpha: a });
-      if (st.answerBonus) text(ui, t('ui.bell.bonus_' + st.answerBonus), W / 2, ty + 18, { size: 9, align: 'center', color: C.clair, shadow: true, alpha: a });
-    }
-    if (st.bellHintT > 0) {
-      const a = Math.min(1, st.bellHintT / 0.6);
-      ui.globalAlpha = a;
-      panel(ui, W / 2 - 140, y, 280, 34, 'parchment');
-      icon(ui, 'ui_lanterne', W / 2 - 132, y + 9, 0.5);
-      paragraph(ui, t(touchActive() && hasKey('tutorial.bell_touch') ? 'tutorial.bell_touch' : 'tutorial.bell'), W / 2 - 112, y + 9, 244, { size: 8, color: C.encre, lineHeight: 9, maxLines: 2 });
-      ui.globalAlpha = 1;
-    }
-  }
-
-  /** Rappel discret des commandes (premières nuits, 30 s) sous la barre de vie. */
+  /** Rappel discret des commandes (premières nuits, 30 s), retiré tant qu'une bannière est affichée. */
   function renderControls(ui) {
-    if (st.hintT <= 0) return;
+    if (st.hintT <= 0 || banners.current()) return;
     const a = Math.min(1, st.hintT / 0.8);
     ui.globalAlpha = a;
     const y = 31;
@@ -181,52 +121,26 @@ export function createHud() {
   }
 
   function renderTop(ui, g) {
-    const p = g.player, run = g.run, world = g.world;
-    // Vie et XP.
+    const p = g.player, run = g.run;
+    // Vie (ghost des PV perdus) puis XP, sur deux lignes distinctes.
     icon(ui, 'ui_coeur', 4, 4, 0.5);
     const hpRatio = p.maxHp > 0 ? p.hp / p.maxHp : 0;
-    gauge(ui, 22, 6, 110, 11, hpRatio, { hot: hpRatio < 0.3, label: Math.ceil(p.hp) + ' / ' + p.maxHp, size: 9 });
-    gauge(ui, 22, 20, 110, 7, run.nextXp > 0 ? run.xp / run.nextXp : 0);
-    text(ui, t('ui.hud.level', { level: run.level }), 136, 19, { size: 9, color: C.bronze, shadow: true });
-    // Timer et palier.
-    const tt = fmtTime(run.timeSec);
-    text(ui, tt, W / 2, 4, { kind: 'display', size: 18, align: 'center', color: st.minuteT > 0 ? C.clair : C.os, shadow: true });
+    gauge(ui, 22, 6, 110, 11, hpRatio, { hot: hpRatio < 0.3, ghost: st.ghostHp, label: Math.ceil(p.hp) + ' / ' + p.maxHp, size: 9 });
+    gauge(ui, 22, 19, 110, 5, run.nextXp > 0 ? run.xp / run.nextXp : 0, { color: '#a88a4e', border: C.tourbe });
+    text(ui, t('ui.hud.level', { level: run.level }), 136, 17, { size: 9, color: C.bronze, shadow: true });
+    // Chrono et barre de nuit.
+    text(ui, fmtTime(run.timeSec), W / 2, 4, { kind: 'display', size: 18, align: 'center', color: C.os, shadow: true });
     renderNight(ui, g);
-    const busy = (world.boss && world.boss.state === 'alive') || (world.fissure && world.fissure.state === 'alive');   // le cadre de Fêlure/Bourdon prend la place
-    if (world.tier > 1 && !busy) text(ui, t('ui.hud.tier', { tier: world.tier }), W / 2, 29, { size: 9, align: 'center', color: C.gris, shadow: true });
     // Tués et assistance (décalés à gauche du bouton pause tactile).
-    const kx = touchActive() ? W - 38 : W;
+    const kx = touchActive() ? W - 60 : W;
     icon(ui, 'ui_mort', kx - 20, 4, 0.5);
     text(ui, t('ui.hud.kills', { kills: run.kills }), kx - 24, 8, { size: 12, align: 'right', color: C.os, shadow: true });
     const assist = getSave().options.assist;
     if (assist !== 'none') text(ui, t('ui.hud.assist_' + assist), kx - 6, 22, { size: 8, align: 'right', color: C.gris, shadow: true });
-    // Statuts.
-    if (p.silencedT > 0) text(ui, t('ui.hud.silenced'), W / 2, 40, { size: 10, align: 'center', color: C.gris, shadow: true });
-    else if (st.blockedT > 0) text(ui, t('ui.hud.blocked'), W / 2, 40, { size: 10, align: 'center', color: C.gris, shadow: true });
-  }
-
-  function renderMinute(ui, g) {
-    if (st.minuteT <= 0 || (g.bell && g.bell.ringing)) return;
-    const a = Math.min(1, st.minuteT / 0.6);
-    const y = 54 - (2.5 - st.minuteT) * 6;
-    text(ui, t('ui.hud.minute', { minute: st.minute }), W / 2, y, { kind: 'display', size: 20, align: 'center', color: C.bronze, shadow: true, alpha: a });
-  }
-
-  function renderBanner(ui, g) {
-    const world = g.world;
-    const boss = world.boss && world.boss.state === 'alive' ? world.boss : null;
-    const fissure = !boss && world.fissure && world.fissure.state === 'alive' ? world.fissure : null;
-    const e = boss || fissure;
-    if (e) {
-      const name = boss ? t('boss.' + world.bossKind + '.name') : t('enemy.' + e.kind + '.name');
-      panel(ui, W / 2 - 100, 30, 200, 26, 'dark');
-      text(ui, (boss ? t('ui.hud.boss') : t('ui.hud.fissure')) + ' · ' + name, W / 2, 34, { size: 9, align: 'center', color: C.braise });
-      gauge(ui, W / 2 - 92, 45, 184, 8, e.maxHp > 0 ? e.hp / e.maxHp : 0, { hot: true });
-    }
-    if (st.bannerT > 0) {
-      const a = Math.min(1, st.bannerT / 0.5);
-      text(ui, st.bannerName, W / 2, 96, { kind: 'display', size: 26, align: 'center', color: C.braise, shadow: true, alpha: a });
-      text(ui, t(st.bannerKind === 'boss' ? 'ui.hud.boss' : 'ui.hud.fissure'), W / 2, 124, { size: 11, align: 'center', color: C.os, shadow: true, alpha: a });
+    // Statuts au-dessus de la tête du sonneur (jamais dans l'emplacement des bannières).
+    if (p.silencedT > 0 || st.blockedT > 0) {
+      const s = camera.worldToScreen(p.x, p.y);
+      text(ui, t(p.silencedT > 0 ? 'ui.hud.silenced' : 'ui.hud.blocked'), Math.round(s.x), Math.round(s.y) - 78 * camera.get().zoom, { size: 9, align: 'center', color: C.gris, shadow: true });
     }
   }
 
@@ -240,12 +154,15 @@ export function createHud() {
       const x = RES_X + i * (SEG_W + SEG_GAP);
       const fill = i < res.tier ? 1 : i === res.tier ? res.value : 0;
       const grow = i === res.tier ? Math.round(pulse * 2) : 0;
-      gauge(ui, x, RES_Y - grow, SEG_W, SEG_H + grow * 2, fill, { hot });
+      gauge(ui, x, RES_Y - grow, SEG_W, SEG_H + grow * 2, fill, { hot, color: hot ? C.braise : i < res.tier ? C.bronze : '#b08640', border: i < res.tier || (i === res.tier && fill > 0) ? C.bronze : C.encreClaire });
     }
     const mx = RES_X + 4 * (SEG_W + SEG_GAP) + 4;
     text(ui, t('ui.hud.mult', { mult: res.mult }), mx, RES_Y - 4, { kind: 'display', size: 13 + Math.round(pulse * 2), color: hot ? C.braise : C.bronze, shadow: true });
+    const streak = feedback.streak();
+    if (streak >= 3) text(ui, t('ui.hud.streak', { count: streak }), mx + 34, RES_Y + 1, { size: 7, color: hot ? C.braise : C.os, shadow: true, alpha: 0.85 });
     // Indicateur visuel : balancier sur 4 temps sous la jauge, avec la fenêtre de frappe
-    // (bande bronze autour de chaque temps) et le curseur qui s'éclaire sur le temps.
+    // (bande bronze autour de chaque temps), le curseur qui s'éclaire sur le temps et le chevron du
+    // dernier jugement (◄ en avance / ► en retard) à côté du balancier.
     const opt = getSave().options.beatIndicator;
     if (opt === 'visual' || opt === 'both') {
       const bx = RES_X, bw = 4 * (SEG_W + SEG_GAP) - SEG_GAP, by = RES_Y + SEG_H + 6;
@@ -265,84 +182,81 @@ export function createHud() {
       const on = st.beatFlash > 0.5;
       ui.fillStyle = on ? C.clair : C.bronze;
       ui.fillRect(bx + Math.round(pos * bw) - 2, by - (on ? 5 : 4), 4, on ? 12 : 10);
+      const ja = feedback.judgeAlpha();
+      if (ja > 0 && Math.abs(feedback.last().offset) >= 8) {
+        const early = feedback.last().early;
+        chevron(ui, early ? bx + bw + 8 : bx + bw + 8, by + 1, early ? Math.PI : 0, 4, early ? C.os : C.bronze, ja);
+      }
     }
-    // Jugement rythmique, flottant sous le joueur (au centre de l'écran).
-    if (st.judgeT > 0) {
-      const key = st.judge === 'parfait' ? 'ui.hud.perfect' : st.judge === 'bon' ? 'ui.hud.good' : 'ui.hud.miss';
-      const col = st.judge === 'parfait' ? C.bronze : st.judge === 'bon' ? C.os : C.gris;
-      text(ui, t(key), W / 2, H / 2 + 14 - (0.6 - st.judgeT) * 14, { kind: 'display', size: 13, align: 'center', color: col, shadow: true, alpha: Math.min(1, st.judgeT * 3) });
-    }
+  }
+
+  /** Emplacement d'icône (fond plat, liseré). */
+  function slot(ui, x, y, w, h) {
+    ui.globalAlpha = 0.7; ui.fillStyle = C.suie; ui.fillRect(x, y, w, h); ui.globalAlpha = 1;
+    ui.fillStyle = C.encreClaire; ui.fillRect(x, y, w, 1); ui.fillRect(x, y + h - 1, w, 1); ui.fillRect(x, y, 1, h); ui.fillRect(x + w - 1, y, 1, h);
+  }
+
+  function buildIcon(ui, it, x, y) {
+    slot(ui, x, y, 18, 18);
+    icon(ui, it.def && it.def.icon ? it.def.icon : it.id, x + 1, y + 1, 0.5);
+    text(ui, String(it.level), x + 17, y + 18, { size: 8, align: 'right', baseline: 'bottom', color: C.bronze, shadow: true });
   }
 
   function renderBuild(ui, g) {
     const p = g.player;
-    if (touchActive()) { renderBuildRow(ui, p); return; }
-    for (let i = 0; i < p.weapons.length; i++) {
-      const w = p.weapons[i], x = 4 + i * 20, y = H - 22;
-      drawNineSlice(ui, 'gauge_bg', x, y, 18, 18);
-      icon(ui, w.def && w.def.icon ? w.def.icon : w.id, x + 1, y + 1, 0.5);
-      text(ui, String(w.level), x + 17, y + 18, { size: 8, align: 'right', baseline: 'bottom', color: C.bronze, shadow: true });
+    st.hover = null;
+    const hoverable = mouse.inside && !touchActive();
+    const place = (it, x, y, weapon) => {
+      buildIcon(ui, it, x, y);
+      if (weapon && hoverable && hit({ x, y, w: 18, h: 18 }, mouse.x, mouse.y)) { st.hover = it; st.hoverRect.x = x; st.hoverRect.y = y; }
+    };
+    if (touchActive()) {
+      let x = 4;
+      const y = 31;
+      for (const list of [p.weapons, p.passives]) { for (let i = 0; i < list.length; i++) { place(list[i], x, y, list === p.weapons); x += 20; } x += 6; }
+      return;
     }
-    for (let i = 0; i < p.passives.length; i++) {
-      const pa = p.passives[i], x = W - 22 - i * 20, y = H - 22;
-      drawNineSlice(ui, 'gauge_bg', x, y, 18, 18);
-      icon(ui, pa.def && pa.def.icon ? pa.def.icon : pa.id, x + 1, y + 1, 0.5);
-      text(ui, String(pa.level), x + 17, y + 18, { size: 8, align: 'right', baseline: 'bottom', color: C.bronze, shadow: true });
-    }
-  }
-
-  /** Mode tactile : Timbres puis Accords sur une rangée sous la vie (les coins bas sont sous les pouces). */
-  function renderBuildRow(ui, p) {
-    const y = 31;
-    let x = 4;
-    for (const list of [p.weapons, p.passives]) {
-      for (let i = 0; i < list.length; i++) {
-        const it = list[i];
-        drawNineSlice(ui, 'gauge_bg', x, y, 18, 18);
-        icon(ui, it.def && it.def.icon ? it.def.icon : it.id, x + 1, y + 1, 0.5);
-        text(ui, String(it.level), x + 17, y + 18, { size: 8, align: 'right', baseline: 'bottom', color: C.bronze, shadow: true });
-        x += 20;
-      }
-      x += 6;
-    }
+    for (let i = 0; i < p.weapons.length; i++) place(p.weapons[i], 4 + i * 20, H - 22, true);
+    for (let i = 0; i < p.passives.length; i++) place(p.passives[i], W - 22 - i * 20, H - 22, false);
   }
 
   return {
     reset() {
-      res.tier = 0; res.mult = 1; res.value = 0; st.minuteT = 0; st.bannerT = 0; st.judgeT = 0; st.blockedT = 0;
-      st.answerT = 0; st.bellHintT = 0; st.bellHintShown = false;
-      st.momentId = ''; st.momentT = 0; st.momentOut = -1; st.momentPersist = false; st.momentEndT = 0;
+      res.tier = 0; res.mult = 1; res.value = 0; st.blockedT = 0; st.ghostHp = 1; st.hover = null; st.quiet = false;
       st.hintT = getSave().stats.runs < HINT_RUNS ? HINT_SEC : 0;
+      banners.reset(); feedback.reset();
       if (!unsubs.length) listen();
     },
-    dispose() { for (const u of unsubs) u(); unsubs.length = 0; },
-    update(realDt) {
-      if (st.minuteT > 0) st.minuteT -= realDt;
-      if (st.bannerT > 0) st.bannerT -= realDt;
-      if (st.judgeT > 0) st.judgeT -= realDt;
+    dispose() { for (const u of unsubs) u(); unsubs.length = 0; banners.dispose(); feedback.dispose(); },
+    update(realDt, g) {
       if (st.blockedT > 0) st.blockedT -= realDt;
       if (st.beatFlash > 0) st.beatFlash -= realDt * 6;
-      if (st.hintT > 0) st.hintT -= realDt;
-      if (st.answerT > 0) st.answerT -= realDt;
-      if (st.bellHintT > 0) st.bellHintT -= realDt;
-      if (st.momentEndT > 0) st.momentEndT -= realDt;
-      if (st.momentId) {
-        st.momentT += realDt;
-        if (st.momentOut >= 0) { st.momentOut += realDt; if (st.momentOut >= MOMENT_OUT) { st.momentId = ''; st.momentOut = -1; } }
+      if (st.hintT > 0 && !banners.current()) st.hintT -= realDt;   // le rappel ne s'use pas sous une bannière
+      banners.update(realDt, g);
+      feedback.update(realDt);
+      if (g && g.player) {
+        const hp = g.player.maxHp > 0 ? g.player.hp / g.player.maxHp : 0;
+        if (hp >= st.ghostHp) st.ghostHp = hp; else st.ghostHp = Math.max(hp, st.ghostHp - GHOST_DECAY * realDt);
       }
     },
     render(ui, g) {
       if (!g || !g.player || !g.run || !g.world) return;
+      banners.renderVeil(ui);
       renderTop(ui, g);
       renderControls(ui);
-      renderMinute(ui, g);
-      renderBanner(ui, g);
-      renderMoment(ui, g);
-      renderBell(ui, g);
+      banners.renderBars(ui, g);
+      banners.render(ui, g);
+      renderOffscreen(ui, g);
+      if (!st.quiet) feedback.render(ui, g);
       renderResonance(ui);
       renderBuild(ui, g);
+      if (st.hover) renderWeaponRange(ui, g, st.hover, st.hoverRect);
       renderRelic(ui, g);
     },
+    /** Fin de run (mort / aube) : bannières et retours se taisent, le texte de fin a la place. */
+    setQuiet(on) { banners.quiet(on); st.quiet = !!on; },
     resonance: res,
+    feedback,
+    banners,
   };
 }

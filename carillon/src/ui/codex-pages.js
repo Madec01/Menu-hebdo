@@ -7,8 +7,9 @@
 import { getSave } from '../core/save.js';
 import * as atlas from '../render/atlas.js';
 import { t, has } from './i18n.js';
-import { enemies, weapons, passives, fusions, relics } from './gamedata.js';
+import { enemies, weapons, passives, fusions, relics, lore as loreDefs } from './gamedata.js';
 import { achievementList } from './achievements.js';
+import { leafIds, isUnlocked as leafUnlocked, isRead as leafRead } from './lore.js';
 import { isStartWeaponUnlocked, unlockLevel, weaponCost, weaponParams } from './start-weapons.js';
 import { text, paragraph, icon, pips, heading, C } from './widgets.js';
 
@@ -40,6 +41,12 @@ export function pageItems(tab) {
       return { id: d.id, def: d, kind: 'relic', known: n > 0, count: n, label: n > 0 ? t(d.name) : t('ui.common.unknown'), icon: n > 0 ? d.icon : 'ui_sceau' };
     });
     case 'achievements': return achievementList().map((a) => ({ id: a.id, def: a, kind: 'achievement', known: a.unlocked, label: a.name, icon: a.unlocked ? 'ui_sceau' : null }));
+    // Feuillets : le codex LISTE (titre, trouvé / lu) ; la lecture se fait à l'Autel des Feuillets.
+    case 'leaves': return leafIds().map((id, i) => {
+      const known = leafUnlocked(id), read = known && leafRead(id);
+      const def = loreDefs().find((l) => l.id === id) || { id };
+      return { id, def, kind: 'leaf', known, read, index: i, label: known ? t('lore.' + id + '.title') : t('ui.altar.leaf_number', { n: i + 1 }), icon: known ? 'ui_lanterne' : null };
+    });
     default: return [];
   }
 }
@@ -66,33 +73,29 @@ export function renderDetail(ui, tab, item, r, time) {
     paragraph(ui, item.known ? t(loreKey(d)) : t('ui.codex.never_seen'), r.x + 12, r.y + 114, r.w - 24, { size: 9, color: C.encre, lineHeight: 10, maxLines: 8 });
     return;
   }
-  if (tab === 'weapons' || tab === 'fusions') {
-    if (!item.known) {
-      icon(ui, 'ui_sceau', cx - 16, r.y + 30, 1);
-      heading(ui, t('ui.common.unknown'), cx, r.y + 70, 14);
-      text(ui, t('ui.codex.recipe_hidden'), cx, r.y + 92, { size: 9, align: 'center', color: C.encreClaire });
-      return;
-    }
-    icon(ui, d.icon, cx - 16, r.y + 30, 1);
-    heading(ui, t(d.name), cx, r.y + 70, 14);
-    const rk = 'ui.codex.rhythm_' + d.rhythm;
-    text(ui, t('ui.codex.rhythm', { rhythm: has(rk) ? t(rk) : String(d.rhythm) }), cx, r.y + 90, { size: 9, align: 'center', color: C.encreClaire });
-    if (tab === 'fusions') text(ui, t('ui.codex.recipe', { weapon: t('weapon.' + d.weapon + '.name'), passive: t('passive.' + d.passive + '.name') }), cx, r.y + 100, { size: 9, align: 'center', color: C.bronze });
-    else if (isStartWeaponUnlocked(d.id)) text(ui, t('ui.codex.start_unlocked'), cx, r.y + 100, { size: 9, align: 'center', color: C.bronze });
-    else text(ui, t('ui.codex.start_locked', { level: unlockLevel(), cost: weaponCost(d.id) }), cx, r.y + 100, { size: 8, align: 'center', color: C.encreClaire });
-    let y = r.y + 114;
-    y += paragraph(ui, t(d.desc, weaponParams(d)), r.x + 12, y, r.w - 24, { size: 9, color: C.encre, lineHeight: 10, maxLines: 5 });
-    const vk = (tab === 'fusions' ? 'fusion.' : 'weapon.') + d.id + '.voice';
-    if (has(vk)) paragraph(ui, t(vk), r.x + 12, y + 6, r.w - 24, { size: 8, color: C.encreClaire, lineHeight: 9, maxLines: 3 });
+  if (tab === 'weapons' || tab === 'fusions') { renderWeapon(ui, tab, item, r); return; }
+  if (tab === 'passives') {
+    icon(ui, d.icon, r.x + 14, r.y + 10, 1);
+    heading(ui, t(d.name), r.x + 54, r.y + 14, 14, 'left');
+    const sk = 'ui.codex.stat_' + d.stat;
+    text(ui, t('ui.codex.stat', { stat: has(sk) ? t(sk) : d.stat, value: statValue(d.stat, d.perLevel) }), r.x + 54, r.y + 34, { size: 9, color: C.encreClaire });
+    pips(ui, r.x + 54, r.y + 46, d.maxLevel, d.maxLevel);
+    text(ui, t('ui.codex.max_level', { max: d.maxLevel }), r.x + 54 + d.maxLevel * 5 + 6, r.y + 44, { size: 8, color: C.encreClaire });
+    let y = r.y + 58;
+    y += paragraph(ui, t(d.desc), r.x + 12, y, r.w - 24, { size: 9, color: C.encre, lineHeight: 10, maxLines: 5 });
+    // Effet cumulé au niveau max et fusion possible (fusions.json : weapon + passive).
+    text(ui, t('ui.codex.stat_total', { stat: has(sk) ? t(sk) : d.stat, value: statValue(d.stat, d.perLevel * d.maxLevel) }), r.x + 12, y + 6, { size: 8, color: C.bronze });
+    const fu = fusions().find((f) => f.passive === d.id);
+    text(ui, fu ? t('ui.codex.fusion_with', { fusion: fusionName(fu), other: t('weapon.' + fu.weapon + '.name') }) : t('ui.codex.no_fusion'), r.x + 12, y + 18, { size: 8, color: fu ? C.bronze : C.encreClaire, maxWidth: r.w - 24 });
     return;
   }
-  if (tab === 'passives') {
-    icon(ui, d.icon, cx - 16, r.y + 30, 1);
-    heading(ui, t(d.name), cx, r.y + 70, 14);
-    const sk = 'ui.codex.stat_' + d.stat;
-    text(ui, t('ui.codex.stat', { stat: has(sk) ? t(sk) : d.stat, value: d.perLevel }), cx, r.y + 90, { size: 9, align: 'center', color: C.encreClaire });
-    pips(ui, cx - d.maxLevel * 2.5, r.y + 102, d.maxLevel, d.maxLevel);
-    paragraph(ui, t(d.desc), r.x + 12, r.y + 114, r.w - 24, { size: 9, color: C.encre, lineHeight: 10, maxLines: 6 });
+  if (tab === 'leaves') {
+    const known = item.known;
+    icon(ui, known ? 'ui_lanterne' : 'ui_sceau', r.x + 14, r.y + 10, 1);
+    heading(ui, known ? t('lore.' + d.id + '.title') : t('ui.altar.leaf_number', { n: item.index + 1 }), r.x + 54, r.y + 14, 13, 'left');
+    text(ui, t(known ? (item.read ? 'ui.altar.read' : 'ui.altar.unread') : 'ui.codex.leaf_missing'), r.x + 54, r.y + 34, { size: 9, color: known ? (item.read ? C.encreClaire : C.braise) : C.encreClaire });
+    paragraph(ui, t(known ? 'ui.codex.leaf_read_at' : 'ui.altar.locked'), r.x + 12, r.y + 58, r.w - 24, { size: 9, color: C.encre, lineHeight: 10, maxLines: 3 });
+    if (!known && d.unlock) paragraph(ui, unlockHint(d.unlock), r.x + 12, r.y + 92, r.w - 24, { size: 8, color: C.encreClaire, lineHeight: 9, maxLines: 3 });
     return;
   }
   if (tab === 'relics') {
@@ -108,4 +111,71 @@ export function renderDetail(ui, tab, item, r, time) {
     text(ui, t(item.known ? 'ui.codex.unlocked' : 'ui.codex.locked'), cx, r.y + 90, { size: 9, align: 'center', color: item.known ? C.bronze : C.encreClaire });
     paragraph(ui, d.desc, r.x + 12, r.y + 110, r.w - 24, { size: 9, color: C.encre, lineHeight: 10, maxLines: 6 });
   }
+}
+
+/** Stats exprimées en pourcentage (valeur < 1 par niveau) plutôt qu'en points. */
+const PERCENT_STATS = { area: true, window: true, crit: true, windowMult: true, damageMult: true, magnet: true, xpGain: true, bronzeGain: true };
+function statValue(stat, v) { return PERCENT_STATS[stat] ? Math.round(v * 100) + ' %' : String(Math.round(v * 100) / 100); }
+function fusionName(fu) { return getSave().unlocked.fusions.indexOf(fu.id) >= 0 ? t(fu.name) : t('ui.common.unknown'); }
+
+/** Texte d'un palier de Timbre : « +8 dégâts, +20 % zone » depuis weapons.json levels[i]. */
+function levelEffects(lvl) {
+  const parts = [];
+  for (const k of Object.keys(lvl)) {
+    const v = lvl[k], key = 'ui.codex.lvl_' + k;
+    const shown = (k === 'area' || k === 'speed' || k === 'markBonus') ? Math.round(v * 100) : Math.round(v * 100) / 100;
+    parts.push(has(key) ? t(key, { v: shown }) : k + ' +' + shown);
+  }
+  return parts.join(', ');
+}
+
+/** Détail d'un Timbre ou d'une fusion : identité, cadence/portée, description, table des niveaux, fusion, voix. */
+function renderWeapon(ui, tab, item, r) {
+  const d = item.def, isFusion = tab === 'fusions';
+  const fu = isFusion ? d : fusions().find((f) => f.weapon === d.id);
+  if (!item.known) {
+    icon(ui, 'ui_sceau', r.x + 14, r.y + 10, 1);
+    heading(ui, t('ui.common.unknown'), r.x + 54, r.y + 14, 14, 'left');
+    // La recette reste lisible même si la fusion n'a jamais été faite : c'est le but d'un codex.
+    text(ui, t('ui.codex.recipe', { weapon: t('weapon.' + d.weapon + '.name'), passive: t('passive.' + d.passive + '.name') }), r.x + 54, r.y + 34, { size: 9, color: C.bronze, maxWidth: r.w - 66 });
+    paragraph(ui, t('ui.codex.recipe_how'), r.x + 12, r.y + 58, r.w - 24, { size: 9, color: C.encre, lineHeight: 10, maxLines: 4 });
+    return;
+  }
+  icon(ui, d.icon, r.x + 14, r.y + 10, 1);
+  heading(ui, t(d.name), r.x + 54, r.y + 14, 14, 'left');
+  const rk = 'ui.codex.rhythm_' + d.rhythm;
+  const base = d.base || {};
+  text(ui, t('ui.codex.rhythm', { rhythm: has(rk) ? t(rk) : String(d.rhythm) }) + ' · ' + t('ui.codex.range', { range: Math.round((base.range || 0) / 32 * 10) / 10 }), r.x + 54, r.y + 34, { size: 8, color: C.encreClaire, maxWidth: r.w - 66 });
+  if (isFusion) text(ui, t('ui.codex.recipe', { weapon: t('weapon.' + d.weapon + '.name'), passive: t('passive.' + d.passive + '.name') }), r.x + 54, r.y + 44, { size: 8, color: C.bronze, maxWidth: r.w - 66 });
+  else if (isStartWeaponUnlocked(d.id)) text(ui, t('ui.codex.start_unlocked'), r.x + 54, r.y + 44, { size: 8, color: C.bronze });
+  else text(ui, t('ui.codex.start_locked', { level: unlockLevel(), cost: weaponCost(d.id) }), r.x + 54, r.y + 44, { size: 8, color: C.encreClaire, maxWidth: r.w - 66 });
+  let y = r.y + 58;
+  y += paragraph(ui, t(d.desc, weaponParams(d)), r.x + 12, y, r.w - 24, { size: 9, color: C.encre, lineHeight: 10, maxLines: 3 });
+  // Table des niveaux (weapons.json `levels`), sur deux colonnes.
+  const levels = d.levels || [];
+  if (levels.length > 1) {
+    y += 4;
+    text(ui, t('ui.codex.levels'), r.x + 12, y, { size: 8, color: C.encreClaire }); y += 10;
+    const colW = (r.w - 24) / 2;
+    for (let i = 1; i < levels.length; i++) {
+      const col = (i - 1) % 2, row = Math.floor((i - 1) / 2);
+      text(ui, t('ui.codex.level_line', { level: i + 1, effects: levelEffects(levels[i]) }), r.x + 12 + col * colW, y + row * 9, { size: 7, color: C.encre, maxWidth: colW - 4 });
+    }
+    y += Math.ceil((levels.length - 1) / 2) * 9 + 4;
+  }
+  if (!isFusion) text(ui, fu ? t('ui.codex.fusion_with', { fusion: fusionName(fu), other: t('passive.' + fu.passive + '.name') }) : t('ui.codex.no_fusion'), r.x + 12, y, { size: 8, color: fu ? C.bronze : C.encreClaire, maxWidth: r.w - 24 });
+  const vk = (isFusion ? 'fusion.' : 'weapon.') + d.id + '.voice';
+  if (has(vk) && y + 12 < r.y + r.h - 20) paragraph(ui, t(vk), r.x + 12, y + 12, r.w - 24, { size: 8, color: C.encreClaire, lineHeight: 9, maxLines: 2 });
+}
+
+/** Indice de déblocage d'un Feuillet non retrouvé (lore.json `unlock`). */
+function unlockHint(u) {
+  const key = 'ui.codex.unlock_' + u.type;
+  if (!has(key)) return '';
+  return t(key, {
+    parish: u.parish ? t('parish.' + u.parish + '.name') : '', minute: u.minute || 0, count: u.count || 0,
+    enemy: u.enemy ? t('enemy.' + u.enemy + '.name') : '', boss: u.boss ? t('boss.' + u.boss + '.name') : '',
+    character: u.character ? t('char.' + u.character + '.name') : '', fusion: u.fusion ? t('fusion.' + u.fusion + '.name') : '',
+    sec: u.seconds || 0, runs: u.count || 0,
+  });
 }

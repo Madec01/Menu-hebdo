@@ -20,7 +20,7 @@ import * as music from '../audio/music.js';
 import { t } from './i18n.js';
 import { def as dataDef } from './gamedata.js';
 import * as states from './states.js';
-import { toast } from './toasts.js';
+import { toast, suspendToasts } from './toasts.js';
 import { createHud } from './hud.js';
 import { startMetronome, stopMetronome } from './metronome.js';
 import { text, C } from './widgets.js';
@@ -29,12 +29,15 @@ const W = 480, H = 270;
 const END_TO_RESULTS_SEC = 0.8;
 const MOMENT_INTENSITY_HIGH = 1, MOMENT_INTENSITY_LOW = 0.1;   // accent musical d'un Moment (0..1)
 const ASHES_NORMAL = 0.6, ASHES_LULL = 0.2;
+const DEATH_TOAST_HOLD_SEC = 4;                                // à la mort : silence des toasts (Feuillets, hauts-faits) jusqu'au bilan
+const BOSS_INTRO_MARGIN = 1.35;                                // cadrage : le boss et le sonneur tiennent dans l'écran avec cette marge
 
 export function createRun(deps) {
   const hud = createHud();
   let params = null, unsubs = [], endStats = null, endT = -1, tier3 = false, active = false;
   let overlay = null, overlayT = 0, killer = '';   // 'death' | 'victory' : texte de fin avant le bilan
   let baseIntensity = 0.5;                          // intensité musicale hors Moment (lue à l'entrée)
+  let bossFraming = false;                          // intro du boss : la caméra vise le milieu joueur/boss
 
   function playTrack(id, layers) {
     music.loadTrack(id).then(() => music.play(id, { layers: layers || music.layers(), fadeSec: 1 })).catch((e) => console.warn('[music]', e));
@@ -48,12 +51,17 @@ export function createRun(deps) {
   function subscribe() {
     unsubs.push(bus.on('level:up', (e) => { if (active) states.push('levelup', { level: e.level, choices: e.choices }); }));
     unsubs.push(bus.on('run:end', (e) => { endStats = { victory: e.victory, stats: e.stats }; endT = END_TO_RESULTS_SEC; }));
-    unsubs.push(bus.on('run:boss', (e) => { if (e.phase === 'intro') playTrack('boss'); }));
+    unsubs.push(bus.on('run:boss', (e) => {
+      if (e.phase === 'intro') { playTrack('boss'); bossFraming = true; frameZoom = 0; }
+      else if (bossFraming && e.phase !== 'phase') { bossFraming = false; camera.clearFocus(); restoreBossZoom(); }
+    }));
     unsubs.push(bus.on('player:death', (e) => {
       playTrack('death', 1);
       const g = deps.game.gameState();
       killer = (e && e.killer) || (g && g.player ? g.player.killer : '') || '';
       overlay = 'death'; overlayT = 0;
+      hud.setQuiet(true);
+      suspendToasts(DEATH_TOAST_HOLD_SEC);
     }));
     unsubs.push(bus.on('run:tier', (e) => { renderer.setVignette(Math.min(0.75, 0.35 + (e.tier - 1) * 0.07)); renderer.setGrain(Math.min(0.5, 0.25 + (e.tier - 1) * 0.04)); }));
     unsubs.push(bus.on('resonance:change', (e) => { tier3 = e.tier >= 3; }));
@@ -79,10 +87,30 @@ export function createRun(deps) {
 
   function unsubscribe() { for (const u of unsubs) u(); unsubs.length = 0; }
 
+  /** Zoom de combat du boss (waves.json balance.boss.zoom) une fois l'intro cadrée terminée. */
+  function restoreBossZoom() {
+    const b = deps.game && typeof deps.game.gameBalance === 'function' ? deps.game.gameBalance() : null;
+    const z = b && b.boss ? b.boss.zoom : 1;
+    camera.setZoom(z || 1, b && b.boss && b.boss.zoomSec ? b.boss.zoomSec * 0.6 : 0.8);
+  }
+
+  /** Intro du boss : cible = milieu sonneur/boss, zoom pour que les deux tiennent à l'écran. */
+  function frameBoss() {
+    const g = deps.game.gameState();
+    const boss = g.world && g.world.boss, p = g.player;
+    if (!boss || !p) return;
+    camera.setFocus(boss.x, boss.y - 16, 0.5);
+    const dx = Math.abs(boss.x - p.x) * BOSS_INTRO_MARGIN + 96, dy = Math.abs(boss.y - p.y) * BOSS_INTRO_MARGIN + 80;
+    const z = Math.max(0.55, Math.min(1, W / dx, H / dy));
+    if (Math.abs(z - frameZoom) > 0.03) { frameZoom = z; camera.setZoom(z, 0.5); }   // relancer le tween à chaque tick le figerait
+  }
+  let frameZoom = 0;
+
   return {
     cursor: 'target',
     enter(p) {
-      params = p; endStats = null; endT = -1; tier3 = false; overlay = null; overlayT = 0; killer = '';
+      params = p; endStats = null; endT = -1; tier3 = false; overlay = null; overlayT = 0; killer = ''; bossFraming = false;
+      camera.clearFocus();
       if (!deps.game) {
         toast({ title: t('ui.hub.start'), body: t('ui.hub.error_game'), icon: 'ui_mort' });
         states.replace('hub', null, { sound: 'ui_cancel' });
@@ -116,6 +144,7 @@ export function createRun(deps) {
       unsubscribe();
       hud.dispose();
       if (deps.game) deps.game.endGame();
+      camera.clearFocus(); bossFraming = false;
       camera.setZoom(1, 0);
       renderer.setVignette(0.35); renderer.setGrain(0.25); renderer.setAshes(ASHES_NORMAL);
       music.setIntensity(baseIntensity);
@@ -123,14 +152,15 @@ export function createRun(deps) {
     update(dt, realDt) {
       if (!active) return;
       if (!states.isFrozen() && deps.game.isGameActive()) deps.game.updateGame(dt);
-      hud.update(realDt);
-      if (!overlay) { const g = deps.game.gameState(); if (g.world && g.world.ended && g.world.victory) { overlay = 'victory'; overlayT = 0; } }
+      hud.update(realDt, deps.game.gameState());
+      if (bossFraming) frameBoss();
+      if (!overlay) { const g = deps.game.gameState(); if (g.world && g.world.ended && g.world.victory) { overlay = 'victory'; overlayT = 0; hud.setQuiet(true); } }
       if (overlay) overlayT += realDt;
       if (endT >= 0) {
         endT -= realDt;
         if (endT <= 0 && !states.isTransitioning()) {
           endT = -1;
-          states.replace('results', { victory: endStats.victory, stats: endStats.stats, params, killer }, { sound: endStats.victory ? 'victory_bell' : null });
+          states.replace('results', { victory: endStats.victory, stats: endStats.stats, params, killer, offsetAvgMs: hud.feedback.offsetAvgMs() }, { sound: endStats.victory ? 'victory_bell' : null });
         }
       }
     },

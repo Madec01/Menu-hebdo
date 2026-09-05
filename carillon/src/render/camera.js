@@ -15,6 +15,8 @@ let trauma = 0;           // intensité restante de la secousse
 let traumaDecay = 0;      // perte d'intensité par seconde
 let shakeSeed = 0;
 let zoomFrom = 1, zoomTo = 1, zoomT = 1, zoomDur = 0; // tween de zoom
+let focusX = 0, focusY = 0, focusW = 0, focusTarget = 0; // cible secondaire (boss) : poids 0..1 lissé
+let kickX = 0, kickY = 0, kickAmp = 0, kickT = 0, kickDur = 0.25; // secousse dirigée (coup reçu)
 const view = { x: 0, y: 0, w: 480, h: 270 };          // rectangle visible (monde), réutilisé
 const tmp = { x: 0, y: 0 };
 
@@ -22,7 +24,24 @@ export function initCamera({ w: width = 480, h: height = 270, smoothing: s = 8 }
   w = width; h = height; smoothing = s;
   state.x = 0; state.y = 0; state.zoom = 1; state.shakeX = 0; state.shakeY = 0;
   zoomFrom = zoomTo = 1; zoomT = 1; zoomDur = 0; trauma = 0;
+  focusW = 0; focusTarget = 0; kickT = 0; kickAmp = 0;
   updateView();
+}
+
+/**
+ * Cible secondaire (cadrage d'intro de boss) : la caméra vise le point situé entre la cible de
+ * follow() et (x, y), pondéré par weight (0.5 = milieu). Le poids est lissé ; clearFocus() rend
+ * la caméra au joueur.
+ */
+export function setFocus(x, y, weight = 0.5) { focusX = x; focusY = y; focusTarget = Math.max(0, Math.min(1, weight)); }
+export function clearFocus() { focusTarget = 0; }
+export function focusWeight() { return focusW; }
+
+/** Secousse dirigée : décalage de `px` pixels vers (dirX, dirY) qui revient en durationSec. */
+export function kick(dirX, dirY, px, durationSec = 0.25) {
+  const l = Math.hypot(dirX, dirY);
+  if (!(l > 0) || !(px > 0)) return;
+  kickX = dirX / l; kickY = dirY / l; kickAmp = px * shakeScale; kickDur = Math.max(0.05, durationSec); kickT = kickDur;
 }
 
 /** Place la caméra sans lissage (début de run, téléport). */
@@ -31,8 +50,11 @@ export function snap(x, y) { state.x = x; state.y = y; updateView(); }
 /** Suivi lissé (exponentiel, indépendant du framerate). À appeler au pas logique. */
 export function follow(x, y, dt) {
   const k = 1 - Math.exp(-smoothing * dt);
-  state.x += (x - state.x) * k;
-  state.y += (y - state.y) * k;
+  focusW += (focusTarget - focusW) * (1 - Math.exp(-3 * dt));
+  const tx = focusW > 0.001 ? x + (focusX - x) * focusW : x;
+  const ty = focusW > 0.001 ? y + (focusY - y) * focusW : y;
+  state.x += (tx - state.x) * k;
+  state.y += (ty - state.y) * k;
   updateView();
 }
 
@@ -67,6 +89,13 @@ export function advance(dt) {
     state.shakeX = Math.round(Math.sin(shakeSeed * 1.7) * Math.cos(shakeSeed * 0.9) * trauma);
     state.shakeY = Math.round(Math.sin(shakeSeed * 1.3 + 2.1) * trauma);
   } else { state.shakeX = 0; state.shakeY = 0; }
+  if (kickT > 0) {
+    kickT = Math.max(0, kickT - dt);
+    const k = kickT / kickDur;                       // recul immédiat puis retour amorti
+    const off = kickAmp * k * k;
+    state.shakeX += Math.round(kickX * off);
+    state.shakeY += Math.round(kickY * off);
+  }
   updateView();
 }
 
