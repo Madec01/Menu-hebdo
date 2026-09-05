@@ -133,8 +133,8 @@ export function onRhythmInput(grade, charge = true) {
   setStreak(grade === 'parfait' ? st.perfectStreak + 1 : 0);
   if (st.perfectOnly && !perfect) return;                   // Le Muet : un « bon » ne fait rien
   if (atMax && !perfect) return;                            // cran max : un « bon » n'ajoute ni ne retient rien
+  if (st.blockT > 0) return; // jauge étouffée par un Ouateux : ni gain ni maintien (la décroissance court)
   st.sinceInput = 0;
-  if (st.blockT > 0) return; // jauge étouffée par un Ouateux : pas de gain
   let g;
   if (st.perfectOnly && st.perfectTiers > 0) g = st.perfectTiers * c.stepsPerTier * st.gain;
   else g = (perfect ? c.gainParfait : c.gainBon) * st.gain;

@@ -24,6 +24,7 @@ import { panel, text, paragraph, gauge, icon, keycap, hit, chevron, C } from './
 import { createBanners } from './hud-banners.js';
 import { createFeedback } from './hud-feedback.js';
 import { renderOffscreen, renderWeaponRange } from './hud-markers.js';
+import * as passives from '../game/passives.js';
 
 const W = 480, H = 270;
 const HUD_RES_X = W / 2 - 74, RES_X_TOUCH = W / 2 - 110, RES_Y = H - 24, SEG_W = 34, SEG_H = 8, SEG_GAP = 4;
@@ -144,7 +145,7 @@ export function createHud() {
     }
   }
 
-  function renderResonance(ui) {
+  function renderResonance(ui, g) {
     const phase = conductor.isRunning() ? conductor.phase() : 0;
     const pulse = Math.pow(1 - phase, 3);
     const hot = res.tier >= 3;
@@ -167,20 +168,30 @@ export function createHud() {
     if (opt === 'visual' || opt === 'both') {
       const bx = RES_X, bw = 4 * (SEG_W + SEG_GAP) - SEG_GAP, by = RES_Y + SEG_H + 6;
       const beatPx = bw / 4;
+      // Fenêtre de frappe : conductor.windowMs() inclut déjà le Métronome (passives.metronomeWindowMult) ;
+      // la part due au Métronome est dessinée en clair pour que l'élargissement se voie.
+      const mult = g && g.player && typeof passives.metronomeWindowMult === 'function' ? Math.max(1, passives.metronomeWindowMult(g.player)) : 1;
       const winPx = conductor.isRunning() ? Math.min(beatPx / 2, (conductor.windowMs() / 1000) / conductor.beatDuration() * beatPx) : 4;
-      text(ui, t('ui.hud.beat'), bx - 6, by - 3, { size: 8, align: 'right', color: C.gris, shadow: true });
-      ui.fillStyle = C.tourbe; ui.fillRect(bx, by - 1, bw, 4);
-      ui.globalAlpha = 0.45; ui.fillStyle = C.bronze;
+      const basePx = winPx / mult;
+      const cri = banners.criActive();   // cri fêlé du Bourdon : la Mesure glisse, le balancier rougit
+      text(ui, t('ui.hud.beat'), bx - 6, by - 3, { size: 8, align: 'right', color: cri ? C.braise : C.gris, shadow: true });
+      ui.fillStyle = cri ? '#5a2418' : C.tourbe; ui.fillRect(bx, by - 1, bw, 4);
       for (let i = 0; i <= 4; i++) {
         const cx = bx + Math.round(i * beatPx);
-        const x0 = Math.max(bx, Math.round(cx - winPx)), x1 = Math.min(bx + bw, Math.round(cx + winPx));
+        if (mult > 1.01) {
+          ui.globalAlpha = 0.3; ui.fillStyle = cri ? C.braise : C.clair;
+          const e0 = Math.max(bx, Math.round(cx - winPx)), e1 = Math.min(bx + bw, Math.round(cx + winPx));
+          ui.fillRect(e0, by - 1, e1 - e0, 4);
+        }
+        ui.globalAlpha = 0.45; ui.fillStyle = cri ? C.braise : C.bronze;
+        const x0 = Math.max(bx, Math.round(cx - basePx)), x1 = Math.min(bx + bw, Math.round(cx + basePx));
         ui.fillRect(x0, by - 1, x1 - x0, 4);
       }
       ui.globalAlpha = 1;
       for (let i = 0; i < 4; i++) { ui.fillStyle = i === 0 ? C.bronze : C.os; ui.fillRect(bx + Math.round(i * beatPx), by - 2, 2, 6); }
       const pos = conductor.isRunning() ? (conductor.beatInBar() + phase) / 4 : 0;
       const on = st.beatFlash > 0.5;
-      ui.fillStyle = on ? C.clair : C.bronze;
+      ui.fillStyle = on ? C.clair : cri ? C.braise : C.bronze;
       ui.fillRect(bx + Math.round(pos * bw) - 2, by - (on ? 5 : 4), 4, on ? 12 : 10);
       const ja = feedback.judgeAlpha();
       if (ja > 0 && Math.abs(feedback.last().offset) >= 8) {
@@ -248,7 +259,7 @@ export function createHud() {
       banners.render(ui, g);
       renderOffscreen(ui, g);
       if (!st.quiet) feedback.render(ui, g);
-      renderResonance(ui);
+      renderResonance(ui, g);
       renderBuild(ui, g);
       if (st.hover) renderWeaponRange(ui, g, st.hover, st.hoverRect);
       renderRelic(ui, g);

@@ -199,7 +199,7 @@ export function chevron(ctx, x, y, ang, s, color, alpha = 1) {
 }
 
 /**
- * Carte de missel 96×128. c = { flip 0..1 (0 = dos), focused, icon, title, kind, level, desc, isNew, scale }.
+ * Carte de missel 96×128. c = { flip 0..1 (0 = dos), focused, icon, title, kind, level, desc, isNew, hint }.
  * Le retournement écrase la carte horizontalement (cosinus) ; la face apparaît à mi-course.
  */
 export function card(ctx, x, y, c) {
@@ -218,7 +218,9 @@ export function card(ctx, x, y, c) {
   if (c.kind) text(ctx, c.kind, lx + w / 2, 6, { size: 9, align: 'center', color: C.encreClaire });
   text(ctx, c.title, lx + w / 2, 50, { kind: 'display', size: 14, align: 'center', color: C.encre, maxWidth: w - 12 });
   if (c.level) text(ctx, c.level, lx + w / 2, 66, { size: 9, align: 'center', color: c.isNew ? C.braise : C.bronze });
-  if (c.desc) paragraph(ctx, c.desc, lx + 8, 75, w - 16, { size: 8, color: C.encre, lineHeight: 8, maxLines: 5 });
+  if (c.desc) paragraph(ctx, c.desc, lx + 8, 75, w - 16, { size: 8, color: C.encre, lineHeight: 8, maxLines: c.hint ? 3 : 5 });
+  // Indice de fusion (recette / seuils) en bas de la carte, en bronze sombre, sous un filet.
+  if (c.hint) { ctx.fillStyle = C.encreClaire; ctx.fillRect(lx + 10, 101, w - 20, 1); paragraph(ctx, c.hint, lx + 8, 104, w - 16, { size: 7, color: '#7a5620', lineHeight: 7, maxLines: 2 }); }
   ctx.restore();
 }
 

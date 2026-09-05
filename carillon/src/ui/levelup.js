@@ -7,7 +7,8 @@ import { bus } from '../core/events.js';
 import { playUi, play as playSfx } from '../audio/sfx.js';
 import { hasGamepad } from '../core/input.js';
 import { t } from './i18n.js';
-import { def as dataDef } from './gamedata.js';
+import { def as dataDef, fusions } from './gamedata.js';
+import { has } from './i18n.js';
 import * as states from './states.js';
 import { isActive as touchActive } from './touch.js';
 import { card, text, button, dimmer, hit, heading, C } from './widgets.js';
@@ -47,6 +48,28 @@ export function createLevelUp(deps) {
     const d = dataDef(c.type === 'fusion' ? 'fusions' : 'weapons', c.id);
     if (d && d.base && d.base.markBonus !== undefined) p.bonus = Math.round(d.base.markBonus * 100);
     return p;
+  }
+
+  /**
+   * Indice de fusion d'une carte (fusions.json `hint`, repli sur la recette) : carte de fusion, ou Timbre /
+   * Accord dont le partenaire de fusion est déjà porté par le joueur et la fusion pas encore faite.
+   */
+  function fusionHint(c) {
+    if (c.type === 'fusion') return c.hint && has(c.hint) ? t(c.hint) : null;
+    if (c.type !== 'weapon' && c.type !== 'passive') return null;
+    const g = deps.game ? deps.game.gameState() : null, pl = g && g.player;
+    if (!pl) return null;
+    for (const f of fusions()) {
+      if (pl.fusions && pl.fusions.indexOf(f.id) >= 0) continue;
+      const partner = c.type === 'weapon' && f.weapon === c.id ? f.passive : c.type === 'passive' && f.passive === c.id ? f.weapon : null;
+      if (!partner) continue;
+      const owned = c.type === 'weapon' ? pl.passives.some((x) => x.id === partner) : pl.weapons.some((x) => x.id === partner);
+      if (!owned) continue;
+      const u = f.unlock || {};
+      const hint = f.hint && has(f.hint) ? t(f.hint) : t('ui.codex.recipe_levels', { weapon: t('weapon.' + f.weapon + '.name'), wl: u.weapon || 1, passive: t('passive.' + f.passive + '.name'), pl: u.passive || 1 });
+      return t('ui.levelup.fusion_hint', { hint });
+    }
+    return null;
   }
 
   return {
@@ -92,7 +115,7 @@ export function createLevelUp(deps) {
         const levelLabel = c.type === 'bonus' ? '' : c.isNew ? t('ui.common.new') : t('ui.common.level_short', { level: c.level });
         card(ui, cardX(i), CARD_Y + lift, {
           flip: flips[i], focused: i === sel, icon: c.icon, kind: t(KIND_KEY[c.type] || KIND_KEY.bonus),
-          title: t(c.name), level: levelLabel, isNew: c.isNew, desc: t(c.desc, cardParams(c)),
+          title: t(c.name), level: levelLabel, isNew: c.isNew, desc: t(c.desc, cardParams(c)), hint: fusionHint(c),
         });
       }
       const n = rerolls();

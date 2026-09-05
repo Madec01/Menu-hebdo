@@ -276,17 +276,17 @@
     "osric": {
       "name": "Osric",
       "desc": "A former bell founder, sewn late, at twelve, which is not done. He remembers the time before the Clapper and never speaks of it.",
-      "trait": "Slow and heavy: more life, and every stroke on the beat hits harder."
+      "trait": "Cuirass: −20% damage taken and half the knockback. Slow, heavy, more life, harder strokes."
     },
     "maren": {
       "name": "Maren",
       "desc": "A shepherdess from Les Tourbes, she counted her flock by the sound of the bells. She was found alone in the marsh with the whole flock around her.",
-      "trait": "Fast, draws Echoes from farther away; the Resonance decays more slowly."
+      "trait": "Resonance rises twice as fast but fades faster (×1.5); draws Echoes from farther away."
     },
     "le_muet": {
       "name": "Le Muet",
       "desc": "A former ringer whose Clapper was taken out. Nobody speaks his name anymore, and he holds a tuning fork in his hand the way one holds a lamp.",
-      "trait": "No Clapper: the Resonance only rises on perfect strokes, but it rises two notches at a time."
+      "trait": "No Clapper: only perfect strokes charge the Resonance, but by two notches at once. The Gag cannot muffle him."
     }
   },
   "upgrade": {
@@ -538,7 +538,7 @@
     },
     "langue_de_cloche": {
       "name": "Bell Tongue",
-      "desc": "The Counter-beat reflects twice. Cost: strike window −20%."
+      "desc": "The Counter-beat reflects twice and has no cooldown. Cost: strike window −10%."
     },
     "suif_de_veillee": {
       "name": "Vigil Tallow",
@@ -550,7 +550,7 @@
     },
     "oreille_du_maitre": {
       "name": "Master's Ear",
-      "desc": "Strike window ×1.5. Cost: Resonance fades twice as fast."
+      "desc": "Strike window ×1.5. Cost: Resonance fades twice as fast and twice as soon."
     },
     "bourse_percee": {
       "name": "Torn Purse",
@@ -558,7 +558,7 @@
     },
     "corde_usee": {
       "name": "Worn Rope",
-      "desc": "Cadence +1 notch (one more shot). Cost: knockback −50%."
+      "desc": "The firing grid tightens one step: your Timbres strike more often. Cost: knockback halved."
     },
     "cierge_noir": {
       "name": "Black Candle",

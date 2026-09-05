@@ -150,7 +150,10 @@
       "early": "{ms} ms en avance",
       "late": "{ms} ms en retard",
       "next_moment": "{name} dans {sec} s",
-      "range": "portée {range} pas"
+      "range": "portée {range} pas",
+      "boss_cri": "Le cri fêlé",
+      "boss_cri_sub": "La Mesure glisse d’une croche : frappe sur le contretemps",
+      "boss_annonce": "Il annonce : {timbre}"
     },
     "levelup": {
       "title": "Niveau {level}",
@@ -161,7 +164,8 @@
       "fusion": "Fusion",
       "bonus": "Don",
       "hint": "◄► choisir · Entrée prendre",
-      "hint_pad": "Stick choisir · A prendre"
+      "hint_pad": "Stick choisir · A prendre",
+      "fusion_hint": "Fusion : {hint}"
     },
     "card": {
       "bonus_heal": "Cire chaude",
@@ -274,7 +278,8 @@
       "unlock_runs": "Sonne {runs} nuits.",
       "unlock_character": "Sonne une nuit avec {character}.",
       "unlock_fusion": "Fusionne {fusion}.",
-      "unlock_resonance_max_time": "Tiens la Résonance au plus haut pendant {sec} s."
+      "unlock_resonance_max_time": "Tiens la Résonance au plus haut pendant {sec} s.",
+      "recipe_levels": "{weapon} niv. {wl} + {passive} niv. {pl}"
     },
     "options": {
       "title": "Options",
@@ -443,7 +448,7 @@
       "ring": "La cloche sonne",
       "answered": "Répondu !",
       "bonus_heal": "Soin",
-      "bonus_resonance": "Résonance +1",
+      "bonus_resonance": "Résonance +1 (soin 25 % au cran max)",
       "bonus_card": "Carte offerte",
       "bonus_bronze": "Bronze"
     },

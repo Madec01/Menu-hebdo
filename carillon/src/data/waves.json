@@ -55,7 +55,6 @@
    "streakAreaBonus": 0.1
   },
   "mark": {
-   "perAccordLevel": 0.35,
    "spreadPx": 200,
    "fallbackDamage": 8
   },
@@ -100,11 +99,6 @@
    "fusionPartnerWeight": 6,
    "bonusHeal": 0.3,
    "bonusBronze": 20
-  },
-  "cadence": {
-   "countEvery": 2,
-   "halveRhythmAt": 5,
-   "bounceAreaBonus": 0.1
   },
   "boss": {
    "zoom": 0.85,
@@ -231,6 +225,20 @@
     "to": 240,
     "kind": "cierge",
     "perSec": 0.03,
+    "cap": 2
+   },
+   {
+    "from": 100,
+    "to": 240,
+    "kind": "contretemps",
+    "perSec": 0.06,
+    "cap": 3
+   },
+   {
+    "from": 130,
+    "to": 240,
+    "kind": "voleur_de_cran",
+    "perSec": 0.05,
     "cap": 2
    }
   ],
@@ -366,6 +374,27 @@
     "kind": "cierge",
     "perSec": 0.04,
     "cap": 3
+   },
+   {
+    "from": 70,
+    "to": 270,
+    "kind": "contretemps",
+    "perSec": 0.08,
+    "cap": 4
+   },
+   {
+    "from": 110,
+    "to": 270,
+    "kind": "voleur_de_cran",
+    "perSec": 0.06,
+    "cap": 3
+   },
+   {
+    "from": 180,
+    "to": 270,
+    "kind": "desaccordeur",
+    "perSec": 0.04,
+    "cap": 2
    }
   ],
   "events": [
@@ -508,6 +537,27 @@
     "kind": "cierge",
     "perSec": 0.05,
     "cap": 3
+   },
+   {
+    "from": 40,
+    "to": 300,
+    "kind": "contretemps",
+    "perSec": 0.1,
+    "cap": 5
+   },
+   {
+    "from": 90,
+    "to": 300,
+    "kind": "voleur_de_cran",
+    "perSec": 0.08,
+    "cap": 3
+   },
+   {
+    "from": 140,
+    "to": 300,
+    "kind": "desaccordeur",
+    "perSec": 0.05,
+    "cap": 2
    }
   ],
   "events": [
@@ -648,6 +698,27 @@
     "to": 330,
     "kind": "cierge",
     "perSec": 0.06,
+    "cap": 4
+   },
+   {
+    "from": 30,
+    "to": 330,
+    "kind": "desaccordeur",
+    "perSec": 0.06,
+    "cap": 3
+   },
+   {
+    "from": 60,
+    "to": 330,
+    "kind": "contretemps",
+    "perSec": 0.1,
+    "cap": 5
+   },
+   {
+    "from": 120,
+    "to": 330,
+    "kind": "voleur_de_cran",
+    "perSec": 0.08,
     "cap": 4
    }
   ],
@@ -791,6 +862,27 @@
     "kind": "ouateux",
     "perSec": 0.14,
     "cap": 8
+   },
+   {
+    "from": 20,
+    "to": 360,
+    "kind": "contretemps",
+    "perSec": 0.12,
+    "cap": 6
+   },
+   {
+    "from": 45,
+    "to": 360,
+    "kind": "voleur_de_cran",
+    "perSec": 0.1,
+    "cap": 4
+   },
+   {
+    "from": 70,
+    "to": 360,
+    "kind": "desaccordeur",
+    "perSec": 0.07,
+    "cap": 3
    }
   ],
   "events": [

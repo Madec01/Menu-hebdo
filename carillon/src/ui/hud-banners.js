@@ -12,6 +12,7 @@ import { bus } from '../core/events.js';
 import { getSave } from '../core/save.js';
 import * as conductor from '../audio/conductor.js';
 import { t, has as hasKey } from './i18n.js';
+import { def as dataDef } from './gamedata.js';
 import { isActive as touchActive } from './touch.js';
 import { panel, text, paragraph, gauge, icon, C } from './widgets.js';
 
@@ -24,7 +25,7 @@ const PRIO = { boss: 6, fissure: 5, bell: 4, answered: 4.5, minute: 3.5, moment:
 export function createBanners() {
   const queue = [];                 // { kind, prio, dur, wait, data, live }
   let cur = null, curT = 0, out = 0;   // bannière affichée, âge, temps de sortie (0 = pas en sortie)
-  let lull = false, bellHintShown = false, hasBossPhaseEvent = false, barsShown = false, quietOn = false;   // boss:phase reçu : run:boss phase n'est plus doublé
+  let lull = false, bellHintShown = false, hasBossPhaseEvent = false, barsShown = false, quietOn = false, criT = 0;   // criT : secondes restantes du cri fêlé   // boss:phase reçu : run:boss phase n'est plus doublé
   const unsubs = [];
 
   function push(kind, dur, data = null, live = null) {
@@ -41,7 +42,18 @@ export function createBanners() {
       if (e.phase === 'intro') push('boss', 4, { name: t('boss.' + e.bossId + '.name'), sub: t('ui.hud.boss') });
       else if (e.phase === 'phase' && !hasBossPhaseEvent) push('boss', 2.5, { name: t('ui.hud.boss_phase'), sub: t('ui.hud.boss_phase_n', { phase: e.index }), small: true });
     }));
-    unsubs.push(bus.on('boss:phase', (e) => { hasBossPhaseEvent = true; push('boss', 2.5, { name: t('ui.hud.boss_phase'), sub: phaseLabel(e.bossId, e.phase), small: true }); }));
+    unsubs.push(bus.on('boss:phase', (e) => {
+      hasBossPhaseEvent = true;
+      const k = 'boss.' + e.bossId + '.phase_' + e.phase, named = hasKey(k) ? t(k) : '';
+      if (e.phase === 'cri') {   // la Mesure glisse d'une croche pendant 2 mesures : bannière courte + balancier rouge (hud.js lit criT)
+        criT = conductor.isRunning() ? conductor.beatDuration() * conductor.beatsPerBar() * 2 : 5;
+        push('boss', 1.6, { name: named || t('ui.hud.boss_cri'), sub: t('ui.hud.boss_cri_sub'), small: true });
+      } else if (e.phase === 'annonce' && e.timbre) {
+        const wd = dataDef('weapons', e.timbre), tn = t('weapon.' + e.timbre + '.name');
+        push('boss', 2.2, { name: named || t('ui.hud.boss_annonce', { timbre: tn }), sub: named ? tn : '', icon: wd && wd.icon ? wd.icon : e.timbre, small: true });
+      } else if (named) push('boss', 2.5, { name: named, sub: typeof e.index === 'number' && e.index > 0 ? t('ui.hud.boss_phase_n', { phase: e.index }) : '', small: true });
+      else if (e.bossId === 'bourdon_fele') push('boss', 2.5, { name: t('ui.hud.boss_phase'), sub: '', small: true });
+    }));
     unsubs.push(bus.on('run:fissure', (e) => { if (e.phase === 'start') push('fissure', 3, { name: t('enemy.' + e.bossId + '.name'), sub: t('ui.hud.fissure') }); }));
     unsubs.push(bus.on('run:moment', (e) => {
       if (e.phase === 'start') { lull = e.id === 'accalmie'; push('moment', 3.6, { id: e.id }); }
@@ -54,13 +66,6 @@ export function createBanners() {
     }));
     unsubs.push(bus.on('bell:answered', (e) => { push('answered', 1.6, { bonus: e.bonus || '' }); }));
     unsubs.push(bus.on('run:tier', (e) => push('tier', 2, { tier: e.tier })));
-  }
-
-  /** Sous-titre d'une phase de boss : texte du contenu (boss.<id>.phase_<phase>) s'il existe, numéro sinon, rien pour un id opaque. */
-  function phaseLabel(bossId, phase) {
-    const k = 'boss.' + bossId + '.phase_' + phase;
-    if (hasKey(k)) return t(k);
-    return typeof phase === 'number' ? t('ui.hud.boss_phase_n', { phase }) : '';
   }
 
   /** Choisit la bannière à afficher : la plus prioritaire de la file (la cloche « live » compte tant qu'elle sonne). */
@@ -77,13 +82,16 @@ export function createBanners() {
   }
 
   return {
-    reset() { queue.length = 0; cur = null; curT = 0; out = 0; lull = false; quietOn = false; bellHintShown = false; hasBossPhaseEvent = false; if (!unsubs.length) listen(); },
+    reset() { queue.length = 0; cur = null; curT = 0; out = 0; lull = false; quietOn = false; criT = 0; bellHintShown = false; hasBossPhaseEvent = false; if (!unsubs.length) listen(); },
     dispose() { for (const u of unsubs) u(); unsubs.length = 0; },
     /** Bannière affichée (ou '') : le HUD s'en sert pour retirer le rappel des commandes. */
     current() { return cur ? cur.kind : ''; },
     /** Mort ou aube : la file se tait (le texte de fin a la place). */
     quiet(on) { quietOn = !!on; },
+    /** Cri fêlé du Bourdon en cours (la Mesure est décalée d'une croche) : le balancier rougit. */
+    criActive() { return criT > 0; },
     update(dt, g) {
+      if (criT > 0) criT -= dt;
       for (let i = 0; i < queue.length; i++) if (queue[i] !== cur) queue[i].wait += dt;
       const bell = g && g.bell && g.bell.ringing;
       if (cur) {
@@ -137,8 +145,9 @@ export function createBanners() {
         case 'boss': case 'fissure': {
           const d = cur.data;
           if (d.small) {
+            if (d.icon) { ui.globalAlpha = a; icon(ui, d.icon, W / 2 - 100, y + 4, 0.6); ui.globalAlpha = 1; }
             text(ui, d.name, W / 2, y + 4, { kind: 'display', size: 18, align: 'center', color: C.braise, shadow: true, alpha: a });
-            text(ui, d.sub, W / 2, y + 24, { size: 8, align: 'center', color: C.os, shadow: true, alpha: a });
+            if (d.sub) text(ui, d.sub, W / 2, y + 24, { size: 8, align: 'center', color: C.os, shadow: true, alpha: a });
           } else {
             text(ui, d.name, W / 2, y, { kind: 'display', size: 22, align: 'center', color: C.braise, shadow: true, alpha: a });
             text(ui, d.sub, W / 2, y + 24, { size: 9, align: 'center', color: C.os, shadow: true, alpha: a });

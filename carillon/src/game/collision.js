@@ -17,7 +17,7 @@ import { hasHit, recordHit, retarget, spawnBolt } from './projectiles.js';
 import { hitPlayer, notifyParry } from './player.js';
 import { killEnemy } from './enemies.js';
 import { recordDamage, findWeapon } from './weapons.js';
-import { orbitBounceHit } from './weapon-behaviors.js';
+import { orbitBounceHit, weaponOnBeat, playerOnBeat } from './weapon-behaviors.js';
 import { burstCloud } from './enemy-behaviors.js';
 
 const hitPayload = { id: 0, kind: '', damage: 0, crit: false, x: 0, y: 0, onBeat: false };
@@ -49,6 +49,7 @@ export function markEnemy(world, e, sec, bonus, weaponId, executeBelow) {
 export function damageEnemy(world, enemy, amount, opts = HIT) {
   if (enemy.state !== 'alive') return 0;
   if (enemy.boss && enemy.aiState === -1) return 0; // intro du boss : invulnérable jusqu'à `run:boss start`
+  if (enemy.vulnMult <= 0) { enemy.flashT = 0.03; return 0; } // Contretemps hors de sa fenêtre : invulnérable
   const C = balance().combat;
   if (enemy.def.onBeatOnly && !opts.onBeat) {
     // Chœur Muet : un coup hors du temps ne fait que l'écarter.
@@ -100,10 +101,12 @@ function projHit(e) {
   recordHit(o, e.id);
   const d = Math.hypot(dx, dy) || 1;
   const C = balance().combat;
-  HIT.crit = o.crit; HIT.onBeat = o.kind === 'orbit' ? true : curOnBeat; HIT.source = o.weaponId;
+  const w = findWeapon(curPlayer, o.weaponId);
+  // « Sur le temps » : même règle que les Timbres instantanés (weapon-behaviors) — Clarine/Carillon selon le
+  // Timbre (weaponOnBeat), projectiles selon l'instant du coup OU la frappe récente du sonneur (playerOnBeat).
+  HIT.crit = o.crit; HIT.onBeat = o.kind === 'orbit' ? (w ? weaponOnBeat(w) : curOnBeat) : (curOnBeat || playerOnBeat()); HIT.source = o.weaponId;
   HIT.knockX = dx / d * o.knockback; HIT.knockY = dy / d * o.knockback;
   damageEnemy(curWorld, e, o.crit ? o.damage * C.critMult : o.damage, HIT);
-  const w = findWeapon(curPlayer, o.weaponId);
   if (o.kind === 'orbit') { if (w && w.def.behavior === 'orbit_bounce') orbitBounceHit(curWorld, w, curPlayer, o, e); return; }
   if (o.kind === 'chain') {
     emitParticles('slash', e.x, e.y - 8, chainBurst);

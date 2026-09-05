@@ -79,7 +79,7 @@ function loadData(dir) {
 }
 
 // ---- Robot ------------------------------------------------------------------------------------------
-function makeRobot(profile, opts, mods, rng) {
+function makeRobot(profile, opts, mods, rng, PAIRS = {}) {
   const { input, audio, conductor } = mods;
   const R = {
     dirX: 0, dirY: 0, lastBeat: -1, grades: { parfait: 0, bon: 0, rate: 0 }, dashes: 0, parries: 0, pulses: 0,
@@ -282,7 +282,6 @@ function makeRobot(profile, opts, mods, rng) {
       if (strategy === 'premiere') return choices[0];
       const fus = choices.find((c) => c.type === 'fusion');
       if (fus) return fus;
-      const PAIRS = { tocsin: 'contrepoids', clarine: 'echo', bourdon: 'etain', diapason: 'metronome' };
       if (strategy === 'fusion') {
         // Vise une fusion : prend la première arme fusionnable offerte, puis monte ce couple en priorité.
         const fw = p.weapons.find((w) => PAIRS[w.id] && w.id !== 'diapason');
@@ -326,7 +325,11 @@ export async function runOne(o) {
     rngMod: await import('../src/core/rng.js'), bus: (await import('../src/core/events.js')).bus,
   };
   const { input, audio, conductor, game, weapons, resonance, bus } = mods;
-  await mods.data.loadGameData(loadData(dataDir));
+  const data = loadData(dataDir);
+  await mods.data.loadGameData(data);
+  // Couples Timbre → Accord des fusions (fusions.json) pour la stratégie de cartes.
+  const PAIRS = {};
+  for (const fu of data.fusions || []) PAIRS[fu.weapon] = fu.passive;
   mods.camera.initCamera({ w: 480, h: 270 });
   audio.__setTime(0);
   conductor.initConductor({ bpm: 96 });
@@ -335,7 +338,7 @@ export async function runOne(o) {
   if (!profile) throw new Error('profil inconnu ' + o.profile);
   if (o.inputEvery > 0) profile = Object.assign({}, profile, { inputEvery: o.inputEvery });   // --inputEvery N : cadence de frappe forcée
   const strategy = o.cards || profile.cards;
-  const robot = makeRobot(profile, o, mods, mods.rngMod.makeRng(o.seed * 7919 + 13));
+  const robot = makeRobot(profile, o, mods, mods.rngMod.makeRng(o.seed * 7919 + 13), PAIRS);
   const upgrades = {};
   if (o.upgrades) for (const kv of o.upgrades.split(',')) { const [k, v] = kv.split(':'); if (k) upgrades[k] = +(v || 1); }
 

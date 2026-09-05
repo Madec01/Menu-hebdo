@@ -276,17 +276,17 @@
     "osric": {
       "name": "Osric",
       "desc": "Ancien fondeur, cousu tard, à douze ans, ce qui ne se fait pas. Il se souvient d'avant le Battant et n'en parle jamais.",
-      "trait": "Lent et lourd : plus de vie, et chaque coup sur le temps frappe plus fort."
+      "trait": "Cuirasse : −20 % de dégâts subis et recul encaissé réduit de moitié. Lent, lourd, plus de vie, coups plus forts."
     },
     "maren": {
       "name": "Maren",
       "desc": "Bergère des Tourbes, elle comptait ses bêtes au son des grelots. On l'a trouvée seule dans le marais avec le troupeau entier.",
-      "trait": "Rapide, attire les Échos de plus loin ; la Résonance décroît moins vite."
+      "trait": "La Résonance monte deux fois plus vite mais retombe plus vite (×1,5) ; attire les Échos de plus loin."
     },
     "le_muet": {
       "name": "Le Muet",
       "desc": "Un ancien sonneur à qui l'on a retiré le Battant. Plus personne ne prononce son nom, et il tient un diapason à la main comme on tient une lampe.",
-      "trait": "Sans Battant : la Résonance ne monte que sur les coups parfaits, mais elle monte de deux crans."
+      "trait": "Sans Battant : seuls les coups parfaits chargent la Résonance, mais de deux crans d'un coup. Le Bâillon ne peut pas l'étouffer."
     }
   },
   "upgrade": {
@@ -538,7 +538,7 @@
     },
     "langue_de_cloche": {
       "name": "Langue de cloche",
-      "desc": "Le Contre-battement renvoie deux fois. Revers : fenêtre de frappe −20 %."
+      "desc": "Le Contre-battement renvoie deux fois et n'a plus de recharge. Revers : fenêtre de frappe −10 %."
     },
     "suif_de_veillee": {
       "name": "Suif de veillée",
@@ -550,7 +550,7 @@
     },
     "oreille_du_maitre": {
       "name": "Oreille du Maître",
-      "desc": "Fenêtre de frappe ×1,5. Revers : la Résonance retombe deux fois plus vite."
+      "desc": "Fenêtre de frappe ×1,5. Revers : la Résonance retombe deux fois plus vite et deux fois plus tôt."
     },
     "bourse_percee": {
       "name": "Bourse percée",
@@ -558,7 +558,7 @@
     },
     "corde_usee": {
       "name": "Corde usée",
-      "desc": "Cadence +1 cran (un tir de plus). Revers : recul des coups −50 %."
+      "desc": "La grille de tir s'affine d'un cran : tes Timbres frappent plus souvent. Revers : recul divisé par deux."
     },
     "cierge_noir": {
       "name": "Cierge noir",

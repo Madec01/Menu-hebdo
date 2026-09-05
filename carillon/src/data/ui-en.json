@@ -150,7 +150,10 @@
       "early": "{ms} ms early",
       "late": "{ms} ms late",
       "next_moment": "{name} in {sec}s",
-      "range": "range {range} paces"
+      "range": "range {range} paces",
+      "boss_cri": "The cracked cry",
+      "boss_cri_sub": "The Measure slips an eighth: strike on the off-beat",
+      "boss_annonce": "He announces: {timbre}"
     },
     "levelup": {
       "title": "Level {level}",
@@ -161,7 +164,8 @@
       "fusion": "Fusion",
       "bonus": "Gift",
       "hint": "◄► choose · Enter take",
-      "hint_pad": "Stick choose · A take"
+      "hint_pad": "Stick choose · A take",
+      "fusion_hint": "Fusion: {hint}"
     },
     "card": {
       "bonus_heal": "Warm wax",
@@ -274,7 +278,8 @@
       "unlock_runs": "Ring {runs} nights.",
       "unlock_character": "Ring a night as {character}.",
       "unlock_fusion": "Fuse {fusion}.",
-      "unlock_resonance_max_time": "Hold Resonance at its peak for {sec}s."
+      "unlock_resonance_max_time": "Hold Resonance at its peak for {sec}s.",
+      "recipe_levels": "{weapon} lv. {wl} + {passive} lv. {pl}"
     },
     "options": {
       "title": "Options",
@@ -443,7 +448,7 @@
       "ring": "The bell rings",
       "answered": "Answered!",
       "bonus_heal": "Heal",
-      "bonus_resonance": "Resonance +1",
+      "bonus_resonance": "Resonance +1 (25% heal at max notch)",
       "bonus_card": "Free card",
       "bonus_bronze": "Bronze"
     },

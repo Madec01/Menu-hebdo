@@ -39,6 +39,8 @@ export function createWorld({ parishDef, rng, waveDef }) {
     player: null, allParishes: Array.from(allParishes().values()),
     // Règles modifiées par une Relique (game/relics.js) : lues par spawner, collision et le rendu.
     fissureEarlySec: 0, knockbackMult: 1, parryTwice: false, hideRadius: 0,
+    // Désaccordeur (enemy-behaviors) : profondeur / position / cents du désaccord musical du tick.
+    detuneDepth: 0, detuneX: 0, detuneY: 0, detuneCents: 0, detuneWasIn: false,
   };
   return world;
 }

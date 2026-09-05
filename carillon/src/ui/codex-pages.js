@@ -129,6 +129,12 @@ function levelEffects(lvl) {
   return parts.join(', ');
 }
 
+/** « Tocsin niv. 5 + Contrepoids niv. 3 » (seuils `unlock` de fusions.json ; recette simple sans seuils). */
+function recipeText(f) {
+  const w = t('weapon.' + f.weapon + '.name'), p = t('passive.' + f.passive + '.name');
+  return f.unlock ? t('ui.codex.recipe_levels', { weapon: w, wl: f.unlock.weapon || 1, passive: p, pl: f.unlock.passive || 1 }) : t('ui.codex.recipe', { weapon: w, passive: p });
+}
+
 /** Détail d'un Timbre ou d'une fusion : identité, cadence/portée, description, table des niveaux, fusion, voix. */
 function renderWeapon(ui, tab, item, r) {
   const d = item.def, isFusion = tab === 'fusions';
@@ -136,8 +142,8 @@ function renderWeapon(ui, tab, item, r) {
   if (!item.known) {
     icon(ui, 'ui_sceau', r.x + 14, r.y + 10, 1);
     heading(ui, t('ui.common.unknown'), r.x + 54, r.y + 14, 14, 'left');
-    // La recette reste lisible même si la fusion n'a jamais été faite : c'est le but d'un codex.
-    text(ui, t('ui.codex.recipe', { weapon: t('weapon.' + d.weapon + '.name'), passive: t('passive.' + d.passive + '.name') }), r.x + 54, r.y + 34, { size: 9, color: C.bronze, maxWidth: r.w - 66 });
+    // La recette et ses seuils restent lisibles même si la fusion n'a jamais été faite : c'est le but d'un codex.
+    text(ui, recipeText(d), r.x + 54, r.y + 34, { size: 9, color: C.bronze, maxWidth: r.w - 66 });
     paragraph(ui, t('ui.codex.recipe_how'), r.x + 12, r.y + 58, r.w - 24, { size: 9, color: C.encre, lineHeight: 10, maxLines: 4 });
     return;
   }
@@ -146,7 +152,7 @@ function renderWeapon(ui, tab, item, r) {
   const rk = 'ui.codex.rhythm_' + d.rhythm;
   const base = d.base || {};
   text(ui, t('ui.codex.rhythm', { rhythm: has(rk) ? t(rk) : String(d.rhythm) }) + ' · ' + t('ui.codex.range', { range: Math.round((base.range || 0) / 32 * 10) / 10 }), r.x + 54, r.y + 34, { size: 8, color: C.encreClaire, maxWidth: r.w - 66 });
-  if (isFusion) text(ui, t('ui.codex.recipe', { weapon: t('weapon.' + d.weapon + '.name'), passive: t('passive.' + d.passive + '.name') }), r.x + 54, r.y + 44, { size: 8, color: C.bronze, maxWidth: r.w - 66 });
+  if (isFusion) { text(ui, recipeText(d), r.x + 54, r.y + 44, { size: 8, color: C.bronze, maxWidth: r.w - 66 }); if (d.hint && has(d.hint)) text(ui, t(d.hint), r.x + 54, r.y + 53, { size: 7, color: C.encreClaire, maxWidth: r.w - 66 }); }
   else if (isStartWeaponUnlocked(d.id)) text(ui, t('ui.codex.start_unlocked'), r.x + 54, r.y + 44, { size: 8, color: C.bronze });
   else text(ui, t('ui.codex.start_locked', { level: unlockLevel(), cost: weaponCost(d.id) }), r.x + 54, r.y + 44, { size: 8, color: C.encreClaire, maxWidth: r.w - 66 });
   let y = r.y + 58;
