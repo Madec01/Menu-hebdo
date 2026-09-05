@@ -495,10 +495,11 @@
     "bell": {
       "ring": "The bell rings",
       "answered": "Answered!",
-      "bonus_heal": "Heal",
+      "bonus_heal": "Heal 15%",
       "bonus_resonance": "Resonance +1 (25% heal at max notch)",
       "bonus_card": "Free card",
-      "bonus_bronze": "Bronze"
+      "bonus_bronze": "Bronze",
+      "answer_hint": "Answer on the 4th stroke: {bonus}"
     },
     "touch": {
       "dash": "Peal",

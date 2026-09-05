@@ -11,6 +11,7 @@
 import { bus } from '../core/events.js';
 import { getSave } from '../core/save.js';
 import * as conductor from '../audio/conductor.js';
+import { bonusFor } from '../game/bell-hour.js';
 import { t, has as hasKey } from './i18n.js';
 import { def as dataDef } from './gamedata.js';
 import { isActive as touchActive } from './touch.js';
@@ -191,8 +192,10 @@ export function createBanners() {
     const phase = conductor.isRunning() ? conductor.phase() : 0;
     const pulse = Math.pow(1 - phase, 3);
     ui.globalAlpha = a;
-    panel(ui, W / 2 - 76, y, 152, 34, 'dark');
+    panel(ui, W / 2 - 76, y, 152, 48, 'dark');
     text(ui, t('ui.bell.ring') + ' · ' + t('ui.hud.minute', { minute: b.minute }), W / 2, y + 8, { size: 9, align: 'center', color: C.clair, shadow: true });
+    // Le bonus est annoncé dès la sonnerie (bell-hour.bonusFor est déterministe par minute).
+    text(ui, t('ui.bell.answer_hint', { bonus: t('ui.bell.bonus_' + bonusFor(b.minute)) }), W / 2, y + 35, { size: 7, align: 'center', color: C.bronze, shadow: true, maxWidth: 144 });
     for (let k = 0; k < 4; k++) {
       const lit = k < b.lit, last = k === 3;
       const cx = W / 2 - 27 + k * 18, cy = y + 25;

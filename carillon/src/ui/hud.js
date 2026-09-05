@@ -9,6 +9,8 @@
 // (Parfait/Bon/Raté, cran, coup reçu, cloche), hud-markers.js (hors-écran, portée).
 // Mode tactile (ui/touch.js) : rien sous les pouces — Résonance décalée, Timbres/Accords en rangée sous
 // la vie, tués décalés à gauche du bouton pause.
+// Vague 2 : ligne des contrats de nuit sous la barre de nuit (g.run.contracts, texte hub-contracts.contractLine :
+// rempli en bronze, manqué en gris, en cours en os).
 
 import { bus } from '../core/events.js';
 import { getSave } from '../core/save.js';
@@ -20,8 +22,9 @@ import { def as dataDef } from './gamedata.js';
 import { keyName } from './options-items.js';
 import { mouse } from './states.js';
 import { isActive as touchActive } from './touch.js';
-import { panel, text, paragraph, gauge, icon, keycap, hit, chevron, C } from './widgets.js';
+import { panel, text, paragraph, gauge, icon, keycap, hit, chevron, fontOf, C } from './widgets.js';
 import { createBanners } from './hud-banners.js';
+import { contractLine } from './hub-contracts.js';
 import { createFeedback } from './hud-feedback.js';
 import { renderOffscreen, renderWeaponRange } from './hud-markers.js';
 import * as passives from '../game/passives.js';
@@ -83,6 +86,29 @@ export function createHud() {
     }
   }
 
+  /** Contrats de la nuit sous la barre de nuit : « Trois cloches · 1 / 3 » — rempli (bronze), manqué (gris). */
+  function renderContracts(ui, g) {
+    const list = g.run && g.run.contracts;
+    if (!list || !list.length || banners.current() === 'tutobell') return;
+    const y = NIGHT_Y + 7;
+    const parts = [];
+    let total = 0;
+    ui.font = fontOf('ui', 7);
+    for (let i = 0; i < list.length; i++) {
+      const c = list[i];
+      const str = contractLine({ id: c.id, progress: Math.min(c.progress, c.goal), goal: c.goal, done: c.done, failed: c.failed });
+      const w = ui.measureText(str).width;
+      parts.push({ str, w, failed: c.failed, color: c.done ? C.bronze : c.failed ? C.gris : C.os });
+      total += w + (i ? 10 : 0);
+    }
+    let x = W / 2 - total / 2;
+    for (let i = 0; i < parts.length; i++) {
+      if (i) { text(ui, '\u00b7', x + 3, y, { size: 7, color: C.gris, shadow: true }); x += 10; }
+      text(ui, parts[i].str, x, y, { size: 7, color: parts[i].color, shadow: true, alpha: parts[i].failed ? 0.7 : 1 });
+      x += parts[i].w;
+    }
+  }
+
   /** Icône de la Relique portée, info-bulle (nom + description) au survol. */
   function renderRelic(ui, g) {
     const id = g.run.relicId;
@@ -132,6 +158,7 @@ export function createHud() {
     // Chrono et barre de nuit.
     text(ui, fmtTime(run.timeSec), W / 2, 4, { kind: 'display', size: 18, align: 'center', color: C.os, shadow: true });
     renderNight(ui, g);
+    renderContracts(ui, g);
     // Tués et assistance (décalés à gauche du bouton pause tactile).
     const kx = touchActive() ? W - 60 : W;
     icon(ui, 'ui_mort', kx - 20, 4, 0.5);

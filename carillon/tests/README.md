@@ -9,8 +9,8 @@ seul `perf.mjs` a besoin de Playwright et de Chromium.
 | `checks.mjs` | Contrôles statiques (JSON, identifiants § 10 bis, i18n fr/en, assets référencés, règles de code) | `node tests/checks.mjs` |
 | `sim.mjs` | Simulation déterministe d'une run complète (durée de la paroisse dans `waves.json` + boss, Moments scriptés traversés) avec un joueur robot | `node tests/sim.mjs --matrix` |
 | `dps.mjs` | DPS théorique de chaque Timbre (niv 1 et 7) et de chaque fusion, cible seule et groupe | `node tests/dps.mjs` |
-| `perf.mjs` | Run réelle en navigateur, saut à la minute 10, fps/frameMs sur 10 s, 404 et erreurs console | `node tests/perf.mjs` |
-| `night.mjs` | Rythme de la nuit en navigateur (Playwright) : run réelle accélérée (`loop.setTimeScale`), cartes automatiques, journal des `run:moment` / `run:fissure` / `run:tier` / `run:minute`, captures des bannières de Moments et de la Fêlure dans `tests/results/night/`, 404 et erreurs console | `node tests/night.mjs [--seconds 200 --scale 3 --parish cendrelune]` |
+| `perf.mjs` | Run réelle en navigateur : « minute 3, bloc réel » (saut à 178 s, palier 5, spawner et Moments réels, rien d'injecté ; cible fps ≥ 55) puis « minute 10, foule injectée » (stress) ; fps/frameMs/updateMs/renderMs sur 10 s, 404 et erreurs console | `node tests/perf.mjs [--min-fps 55] [--no-fps-check]` |
+| `night.mjs` | Nuit complète en navigateur (Playwright) : run réelle accélérée ×4 (`loop.setTimeScale`, ×1 pendant le boss), robot clavier (Espace sur chaque temps, Shift sur le 4ᵉ coup de la cloche, ZQSD par à-coups), cartes automatiques, journal des `run:moment` / `run:fissure` / `run:tier` / `run:minute` / `bell:*` / `run:boss` / `boss:phase` / `run:end`, captures des bannières (Moments, Fêlure, boss, phases) dans `tests/results/night/` ; échec si erreur console/404, boss non atteint, phases cri/double/envers non vues, cloche jamais répondue, `moment_start` jamais joué, pas de victoire | `node tests/night.mjs [--scale 4 --parish cendrelune --seconds N]` |
 | `game-test.html` | Page de test manuelle de l'agent D (`src/game/_test/`), inchangée | `http://localhost:8080/carillon/src/game/_test/game-test.html` |
 | `mobile.mjs` | Jouabilité mobile (agent T) : émulation tactile Playwright 812×375 @3 (iPhone), 915×412 @2.625 (Android), FR et EN — tap « Cliquez pour sonner », titre → hub → nuit → Relique, joystick virtuel et taps Volée calés sur le temps (≥ 60 % de Parfait), cartes au tap, pause au bouton, options qui défilent au doigt, voile portrait ; captures dans `--out` | `node tests/mobile.mjs [--devices iphone,android,lowdpi] [--langs fr,en] [--out dir]` |
 | `timbres-audio.mjs` | Enregistre à l'oreille (MediaRecorder) 8 mesures de Timbres qui chantent : Battant seul, 4 armes, 6 armes → `tests/results/timbres/` | `node tests/timbres-audio.mjs` |
@@ -26,7 +26,7 @@ node tests/checks.mjs --json
 ```
 
 Vérifie : tous les JSON de `src/data/` et les deux manifestes sont valides ; les identifiants du registre
-(sonneurs, Timbres, Accords, fusions et leurs couples, ennemis, boss, paroisses, 14 améliorations, 18 hauts-faits,
+(sonneurs, Timbres, Accords, fusions et leurs couples, ennemis, boss, paroisses, 20 améliorations, 25 hauts-faits (dont les 20 du registre),
 24 Feuillets, 43 bruitages, 10 pistes) existent ; chaque clé i18n référencée par les JSON et chaque `t('…')`
 littéral du code existe dans **fr et en** ; `fr.json`/`en.json` et `ui-fr.json`/`ui-en.json` ont les mêmes clés ;
 chaque sprite, tileset, icône, bruitage, piste et preset de particules référencé existe dans les manifestes, et
@@ -43,6 +43,8 @@ node tests/sim.mjs --matrix                          # 5 seeds × {parfait, moye
 node tests/sim.mjs --matrix --chars wren,osric --profiles moyen,passif --seeds 3 --json > out.json
 node tests/sim.mjs --data ../autre/data              # comparer un autre jeu de JSON (avant/après)
 node tests/sim.mjs --seed 2 --trace boss             # trace des coups sur le boss et de l'état du robot
+node tests/sim.mjs --matrix --chars wren,osric,maren,le_muet --profiles parfait,moyen,norhythm,passif,parade_seule --out tests/results/x.json
+node tests/sim.mjs --summary tests/results/x.json [--md]   # retableau d'une matrice sauvegardée
 ```
 
 Options : `--seed N`, `--seeds N` (matrice), `--chars a,b`, `--profiles a,b`, `--parish id`,
@@ -56,11 +58,21 @@ Profils du robot (`PROFILES` en tête du fichier) :
 
 | profil | frappes (parfait / bon / raté) | mode | rôle |
 |---|---|---|---|
-| `parfait` | 100 / 0 / 0 | normal | joueur expert |
-| `moyen` | 10 / 50 / 40 | normal | joueur moyen (50 % de « bon ») |
+| `parfait` | 100 / 0 / 0 | normal | joueur expert (se réadapte au cri fêlé en 1 temps) |
+| `moyen` | 20 / 55 / 25 | normal | joueur moyen : presque toujours dans la fenêtre, rarement Parfait (réadaptation 2 temps) |
+| `faible` | 10 / 50 / 40 | normal | l'ancien « moyen », référence basse (3 temps) |
 | `norhythm` | aucune frappe rythmique | Sans rythme (cran 2 fixe) | accessibilité |
-| `passif` | 0 / 20 / 80, cartes « première proposée », se tourne peu vers l'ennemi | normal | joueur qui joue mal |
+| `passif` | 0 / 20 / 80, une frappe tous les 8 temps, cartes « première proposée », se tourne peu vers l'ennemi | normal | joueur qui joue mal |
+| `parade_seule` | 100 / 0 / 0 mais Contre-battement sur chaque temps, jamais de Volée | normal | diagnostic : la parade à vide ne doit rien rapporter (réso ≈ 1) |
 | `lead` | 100 / 0 / 0 mais Volée sur chaque temps | normal | diagnostic du style « dash permanent » |
+| `naif` | 30 / 50 / 20, Espace sur chaque temps, marche en cercle, jamais tourné vers l'ennemi, première carte | normal | le robot du lead (borne basse : découverte du jeu) |
+
+Vague 2 : le robot pose une parade **à vide** sur la croche quand un Contretemps fermé est à portée (elle l'ouvre un
+temps sans coûter de cran ; une Volée sur la croche serait jugée « raté »), poursuit un Voleur de cran qui emporte
+un cran (durée de la chasse mesurée : `voleur (s)`), ignore le Désaccordeur ; les `boss:phase` sont journalisées et le
+cri fêlé décale la grille du stub (`shiftGrid`), le robot gardant l'ancienne grille `adaptBeats` temps. Colonnes
+ajoutées au tableau : niveau à 60 s / 2 min, ennemis vivants à 2 min / au boss / max, phases de boss vues, fusions
+(nombre de runs et instant moyen), bronze victoire / défaite, part des Contretemps dans les tués, durée de chasse du Voleur.
 
 Le robot : engage l'ennemi le plus proche à portée de ses armes de contact, se tourne vers lui au tick où une
 arme directionnelle tire, recule quand il **prend** des dégâts (12 % des PV en 3 s) ou quand la menace cumulée
