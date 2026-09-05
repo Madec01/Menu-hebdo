@@ -56,6 +56,7 @@ const Room = {
     const e = new Enemy(def, x, y, opts); resolveRoomCollision(e); G.enemies.push(e); return e;
   },
   spawnAt(spawn) {
+    const bdef = Content.boss(spawn.enemy); if (bdef) { Room.spawnBoss(bdef, spawn.x >= 0 ? tileX(spawn.x) : null, spawn.y >= 0 ? tileY(spawn.y) : null); return; }
     const def = Content.enemy(spawn.enemy); if (!def) { console.warn('ennemi inconnu', spawn.enemy); return; }
     const n = spawn.count || 1; const pl = G.player; let x = W / 2, y = H / 2;
     for (let i = 0; i < n; i++) {
@@ -67,9 +68,10 @@ const Room = {
     }
     Particles.spawn(x, y, { count: 10, color: '#ff6b6b', glow: true });
   },
-  spawnBoss() {
-    const def = Content.boss(G.run.biome.miniboss); if (!def) { UI.toast('Mini-boss absent du contenu'); G.room.doorOpen = true; return; }
-    const b = new Boss(def, ROOM_X + ROOM_W * 0.72, ROOM_Y + ROOM_H / 2); G.enemies.push(b); G.room.boss = b;
+  spawnBoss(def, x, y) {
+    def = def || Content.boss(G.run.biome.miniboss); if (!def) { UI.toast('Mini-boss absent du contenu'); G.room.doorOpen = true; return; }
+    if (G.room.boss) return;
+    const b = new Boss(def, x || ROOM_X + ROOM_W * 0.72, y || ROOM_Y + ROOM_H / 2); G.enemies.push(b); G.room.boss = b;
     UI.banner(def.name, '#ff3b5c', def.subtitle || ''); AudioEngine.bossRoar({});
   },
   onBossDefeated(b) { G.room.bossDead = true; G.run.stats.bossKilled = true; G.shake = 14; UI.banner(Content.pick('bossWin') || 'Étalon neutralisé', '#ffd166'); AudioEngine.roomClear({}); for (let i = 0; i < 12; i++) Pickups.spawn(b.x, b.y, 'coin', 1); },
@@ -87,7 +89,7 @@ const Room = {
         const trig = w.at === 'start' ? r.stateT >= 0 : w.at === 'clear' ? (alive === 0 && r.wavesStarted && r.lastWaveT < r.stateT - 0.5) : typeof w.at === 'number' ? r.stateT >= w.at : false;
         if (trig) { w.done = true; r.wavesStarted = true; r.lastWaveT = r.stateT; for (const s of w.spawns) Room.spawnAt(s); if (w.at !== 'start') { UI.banner(STR.wave + ' ' + (++r.waveIdx + 1), '#ff6b6b'); } else r.waveIdx = 0; break; }
       }
-      if (r.type === 'MINIBOSS' && !r.boss && r.stateT > 0.2) Room.spawnBoss();
+      if (r.type === 'MINIBOSS' && !r.boss && r.stateT > 0.2 && !r.waves.length) Room.spawnBoss();
       /* fragments d'énergie */
       for (const f of r.fragmentsDef) { if (!f.spawned && r.stateT >= (f.at || 0)) { f.spawned = true; Pickups.spawn(tileX(f.x), tileY(f.y), 'fragment', f.xp || 12); r.fragmentsSpawned++; } }
       /* condition de fin */
@@ -234,7 +236,7 @@ const Run = {
     if (r.index === 5) { Meta.unlockLore('room5_reached'); if (r.hits === 0) Meta.unlockLore('boss_no_hit'); }
   },
   nextRoom() {
-    if (G.overlay) return;
+    if (G.overlay || G.room.leaving) return; G.room.leaving = true;
     Run.finishRoom();
     const next = G.room.index + 1; const maxPhase1 = 5;
     if (next > maxPhase1 || !G.run.rooms.find(x => x.index === next) || ROOM_TYPES[G.run.rooms.find(x => x.index === next).type].phase > 1) { Run.endLevel(true); return; }

@@ -99,7 +99,7 @@ const Debug = (() => {
     else if (rm.doorOpen && (!enemy || rm.state === 'clear' || rm.type === 'TRAP')) goal = { x: ROOM_X + ROOM_W + 10, y: ROOM_Y + ROOM_H / 2 };
     else if (enemy) goal = enemy;
     else { const pk = Pickups.list[0]; goal = pk ? { x: pk.x, y: pk.y } : { x: W / 2, y: H / 2 }; }
-    const wantDist = enemy && goal === enemy ? (isMelee ? 40 : (w.family === 'flame' ? 110 : 260)) : 0;
+    const wantDist = enemy && goal === enemy ? (w.type === 'orbital' ? (w.range || 90) * pl.stats.range * 0.9 : isMelee ? 40 : (w.family === 'flame' ? 110 : 260)) : 0;
     /* évaluation des directions */
     let best = DIRS[0], bs = -Infinity; const look = 34;
     for (const d of DIRS) {

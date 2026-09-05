@@ -426,7 +426,7 @@ const Weapons = {
     const n = (w.projectiles || 2) + st.projectiles;
     if (!pl.orbs || pl.orbs.length !== n) pl.orbs = Array.from({ length: n }, () => ({ x: pl.x, y: pl.y, cd: new Map() }));
     pl.orbAngle = (pl.orbAngle || 0) + dt * (w.special && (w.special.angularSpeed || w.special.spin) || 3.5) * Math.sqrt(st.fireRate);
-    const targetR = (w.range || 80) * st.range * (firing ? (w.special && w.special.expand || 1.8) : 1);
+    const targetR = (w.range || 80) * st.range * (firing ? (w.special && w.special.expand || 1.35) : 1);
     pl.orbR = lerp(pl.orbR || targetR, targetR, Math.min(1, 6 * dt));
     if (firing && pl.attackCd <= 0) { pl.attackCd = 0.5; AudioEngine.shootOrb({}); }
     const rr = (w.size || 10) * st.areaSize; const tick = 1 / Math.max(0.5, w.fireRate * st.fireRate);
