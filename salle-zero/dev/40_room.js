@@ -28,6 +28,7 @@ const Room = {
       hits: 0, kills: 0, combo: 0, comboUntil: 0, bestCombo: 0, comboTarget: 8, died: false,
       doorOpen: false, chest: null, boss: null,
       beams: [], blasts: [], slashes: [], hazards: [], turrets: [], decoys: [],
+      modular: (def.modular || []).map(m => Object.assign({ t: 0 }, m)),   // phase 2 : éléments de décor animés avec collision (murs coulissants, plateformes, zone sûre mobile)
       floorSeed: (def.index * 7919) ^ 0x5bd1, label: `${STR.room} ${def.index}/9 — ${ROOM_TYPES[def.type] ? ROOM_TYPES[def.type].label : def.type}`,
     };
     for (const t of (def.traps || [])) { const td = Content.trap(t.trap); if (!td) { console.warn('piège inconnu', t.trap); continue; } r.traps.push(new Trap(td, t)); }
@@ -105,6 +106,8 @@ const Room = {
     if (r.doorOpen && !pl.dead) { const dx = ROOM_X + ROOM_W, dy = ROOM_Y + ROOM_H / 2; if (pl.x > dx - pl.r - 26 && Math.abs(pl.y - dy) < TILE * 0.9) Run.nextRoom(); }
     /* pièges */
     for (const t of r.traps) t.update(dt, r.time);
+    /* salles modulaires (phase 2) : Modular.update(r, dt) déplacera les obstacles et recalculera px/py */
+    if (r.modular.length && typeof Modular !== 'undefined') Modular.update(r, dt);
     /* zones de dégâts (traînées de feu, gaz du joueur…) */
     for (let i = r.hazards.length - 1; i >= 0; i--) {
       const h = r.hazards[i]; if (Time.now > h.until) { r.hazards.splice(i, 1); continue; }
@@ -266,7 +269,7 @@ const Run = {
     const pl = G.player;
     pl.update(dt);
     for (const e of G.enemies) e.update(dt);
-    G.enemies = G.enemies.filter(e => !e.dead || e.deathT === undefined ? !e.dead : true);
+    G.enemies = G.enemies.filter(e => !e.dead);
     Projectiles.update(dt); Pickups.update(dt); Room.update(dt); Particles.update(dt); Floaters.update(dt);
     if (G.shake > 0) G.shake = Math.max(0, G.shake - dt * 30);
   },

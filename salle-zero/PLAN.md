@@ -114,3 +114,17 @@ Moi : architecture, moteur, intégration, arbitrage, cohérence.
 - Valider ou corriger le tableau du §1 (surtout : **musique dans `assets/` ou génératif ?**).
 - Valider l'emplacement `salle-zero/`.
 - Valider l'ordre des jalons. Ensuite je lance les Agents Lore + Contenu.
+
+---
+
+## 7. État à la fin du jalon 7 (moteur + contenu + audio + assets intégrés)
+
+**Ce qui marche** (testé dans Chromium headless via `window.__autoplay` et par entrées clavier/souris simulées) :
+- Menu → Mode Normal / Mode Test → hub (sujets, palier, boutique passifs/armes/fragments) → préparation (bonus/malus tirés, arme parmi celles débloquées, 1 compétence parmi 2) → salles 1 à 5 → fin de niveau ou mort → hub.
+- 8 armes, 8 compétences, 51 greffes en 4 raretés, 16 passifs méta à paliers, 7 ennemis + Étalon 07 (2 phases, faiblesse dorsale), 8 pièges déterministes, scores de salle et plancher de coffre, checkpoint des crédits en salle 4, règle des 10 % par salle en cas de mort, 5 fragments de lore à débloquer.
+- Panneau debug F1 (mode Test) : difficulté, saut de salle, multiplicateurs, rareté forcée, invulnérabilité, spawn, hitboxes, scores, test audio, autoplay.
+- `AudioEngine` organique (37 sons), musiques CC-BY avec repli génératif, sprites CC0 avec placeholders `TODO_SPRITE`.
+
+**Prévu, non implémenté** (architecture en place) : salles 6-9 (`ROOM_TYPES` phase 2, `modular[]` par salle, crochet `Modular.update`), boss revanche (`bosses[].revenge`), *Mémoire sélective* (n'agit qu'au coffre 8), manette (`Input` abstrait), mobile.
+
+**Comment tester** : `cd salle-zero && python3 -m http.server 8765`, ouvrir `http://localhost:8765/`, Mode Test, F1. Sources dans `dev/`, assemblage `node dev/build.js`.

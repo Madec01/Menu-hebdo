@@ -269,7 +269,8 @@ const UI = (() => {
     ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(8,10,18,.75)'; roundRect(ctx, W / 2 - 200, 8, 400, 36, 8); ctx.fill();
     ctx.fillStyle = '#e8ecf7'; ctx.font = 'bold 14px "Segoe UI", system-ui, sans-serif'; ctx.fillText(rm.label, W / 2, 20);
     const q = Run.qualityAvg(); const qs = Room.score();
-    ctx.font = '11px "Segoe UI", system-ui, sans-serif'; ctx.fillStyle = '#9aa4c4'; ctx.fillText(`${Math.floor(rm.time)} s · ${STR.quality} run ${Math.round(q * 100)} % · salle ${Math.round(qs * 100)} % · ${rm.hits} coup(s)${rm.combo > 1 ? ' · combo ' + rm.combo : ''}`, W / 2, 36);
+    const preview = Meta.chestPreview() && rm.index < 4 ? ' · coffre : ' + Progression.chestOptions(Run.qualityAvg(), r.scores.some(s => s.died) || rm.died).label : '';
+    ctx.font = '11px "Segoe UI", system-ui, sans-serif'; ctx.fillStyle = '#9aa4c4'; ctx.fillText(`${Math.floor(rm.time)} s · ${STR.quality} run ${Math.round(q * 100)} % · salle ${Math.round(qs * 100)} % · ${rm.hits} coup(s)${rm.combo > 1 ? ' · combo ' + rm.combo : ''}${preview}`, W / 2, 36);
     /* jauge qualité */
     ctx.fillStyle = '#1a2036'; ctx.fillRect(W / 2 - 180, 42, 360, 3); ctx.fillStyle = q >= 0.999 ? '#ffb347' : q >= 0.8 ? '#b46bff' : q >= 0.5 ? '#4fb3ff' : '#cfd6e6'; ctx.fillRect(W / 2 - 180, 42, 360 * q, 3);
     /* crédits */
