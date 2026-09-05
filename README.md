@@ -34,12 +34,7 @@ Vase (fonce sur toi), Chauve-souris (rapide et erratique), Tourelle (tire à dis
 
 ---
 
-## Autres projets de ce dépôt
-
-### SUJET NEUF — `salle-zero/`
-
-Roguelite à salles (phase 1 : salles 1 à 5 du palier ADMISSION), un seul `index.html` + `assets/`,
-modes Normal / Test, panneau debug, harness `window.__autoplay`. Voir [`salle-zero/README.md`](salle-zero/README.md).
+## Autre projet de ce dépôt
 
 ### TERRA NOVA — `terra-nova/`
 

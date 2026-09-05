@@ -1,5 +1,0 @@
-Icônes issues de game-icons.net (https://game-icons.net), récupérées via le paquet npm @iconify-json/game-icons 1.2.4.
-Licence : Creative Commons Attribution 3.0 Unported (CC BY 3.0) — https://creativecommons.org/licenses/by/3.0/
-Crédit obligatoire (à afficher dans le jeu, écran crédits/à propos) :
-  "Icons by Lorc, Delapouite, Skoll, sbed, Carl Olsen, Willdabeast, Andy Meneely and other contributors — game-icons.net — CC BY 3.0"
-Modifications : couleur de remplissage passée de currentColor à #F2F5FA ; viewBox 512×512 conservée.
