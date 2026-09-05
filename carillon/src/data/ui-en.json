@@ -45,7 +45,10 @@
       "credits": "Credits",
       "runs": "{runs} nights · {wins} dawns",
       "version": "The Deaf Marches",
-      "last_night": "Last night: {parish} · {character}"
+      "last_night": "Last night: {parish} · {character}",
+      "daily": "Night of the day",
+      "daily_best": "{parish} · best: {score} points",
+      "daily_hint": "{parish} · seed of {date}"
     },
     "hub": {
       "title": "The Mother Belfry",
@@ -82,7 +85,12 @@
       "weapon_condition": "Level {level} in a run, or {cost} bronze",
       "unlock_weapon": "Unlock ({cost} bronze)",
       "unlocked_weapon": "Starting Timbre unlocked: {name}",
-      "weapon_locked_start": "Pick an unlocked Timbre to ring the night"
+      "weapon_locked_start": "Pick an unlocked Timbre to ring the night",
+      "contracts": "Contracts",
+      "contracts_n": "Contracts {count} / {total}",
+      "record_short": "best {time}",
+      "quest": "{name}: {quest} ({progress} / {goal})",
+      "buy_char": "Buy back ({cost} bronze)"
     },
     "tree": {
       "title": "Belfry upgrades",
@@ -108,7 +116,17 @@
       "stat_revive": "revive",
       "stat_area": "area",
       "stat_cadence": "cadence step",
-      "stat_rerolls": "reroll"
+      "stat_rerolls": "reroll",
+      "remaining": "{cost} bronze left to spend",
+      "branch_corps": "Body",
+      "branch_cloche": "Bell",
+      "branch_memoire": "Memory",
+      "rule": "Rule",
+      "stat_bellHeal": "bell healing",
+      "stat_startWeaponLevel": "starting level",
+      "stat_relicChoices": "Relic offered",
+      "stat_contracts": "contract",
+      "stat_fissureEcho": "Rift Echo"
     },
     "altar": {
       "title": "Altar of the Leaves",
@@ -213,7 +231,22 @@
       "offset": "Average offset: {ms} ms, {dir}",
       "offset_early": "early",
       "offset_late": "late",
-      "offset_none": "on the Measure"
+      "offset_none": "on the Measure",
+      "sourdine": "Mute {level} · Bronze ×{bronze}",
+      "sourdine_next": "Mute {level} opened in this parish",
+      "contract_bronze": "Contracts: +{bronze} bronze",
+      "vigil": "Vigil: {time} past dawn",
+      "record": "record",
+      "parish_record": "Parish record: {time}",
+      "daily": "Night of the day: {score} points, rank {rank}",
+      "more": "… and {count} more",
+      "contracts": "Tonight's contracts",
+      "next": "Next: {text}",
+      "next_char": "{text}",
+      "next_leaf": "Leaf {n} — {hint}",
+      "next_parish": "{parish} opens by ringing the dawn of {from}",
+      "next_sourdine": "Mute {level} at {parish}: win at the level below",
+      "next_done": "everything is found; the vigil remains"
     },
     "codex": {
       "title": "Codex",
@@ -273,13 +306,26 @@
       "leaf_missing": "Not found yet",
       "unlock_run_minute": "Hold {minute} min in {parish}.",
       "unlock_run_win": "Ring the dawn in {parish}.",
-      "unlock_boss_kill": "Silence {boss}.",
-      "unlock_kills": "Silence {count} {enemy}.",
-      "unlock_runs": "Ring {runs} nights.",
-      "unlock_character": "Ring a night as {character}.",
-      "unlock_fusion": "Fuse {fusion}.",
-      "unlock_resonance_max_time": "Hold Resonance at its peak for {sec}s.",
-      "recipe_levels": "{weapon} lv. {wl} + {passive} lv. {pl}"
+      "unlock_boss_kill": "Silence {boss} at {parish}.",
+      "unlock_kills": "Silence {count} {enemy} (nights at {parish}).",
+      "unlock_runs": "Ring {runs} nights, then one at {parish}.",
+      "unlock_character": "Ring a night at {parish} with {character}.",
+      "unlock_fusion": "Fuse {fusion} at {parish}.",
+      "unlock_resonance_max_time": "Hold the Resonance at its highest for {sec} s at {parish}.",
+      "recipe_levels": "{weapon} lv. {wl} + {passive} lv. {pl}",
+      "tab_records": "Records",
+      "daily": "Night of the day",
+      "daily_empty": "No Night of the day rung yet. Start it from the title: seed = the date, local board of the five best.",
+      "score": "{score} pts",
+      "record_none": "Never rung. The record is written on the first night.",
+      "record_nights": "Nights · dawns",
+      "record_time": "Best time",
+      "record_level": "Best level",
+      "record_kills": "Most things silenced",
+      "record_sourdine": "Highest Mute rung",
+      "record_sourdine_open": "Mute opened",
+      "record_vigil": "Vigil record",
+      "unlock_bell_answers_run": "Answer {count} bells in one night at {parish}."
     },
     "options": {
       "title": "Options",
@@ -430,7 +476,9 @@
       "fusion": "Fusion",
       "parish_unlocked": "Parish opened",
       "saved": "Saved",
-      "start_weapon": "Starting Timbre unlocked"
+      "start_weapon": "Starting Timbre unlocked",
+      "battant": "The Clapper",
+      "contract": "Contract fulfilled"
     },
     "confirm": {
       "title": "Sure?"
@@ -494,6 +542,37 @@
       "apply": "Apply ({ms} ms)",
       "retry": "Start over",
       "applied": "Latency set: {ms} ms"
+    },
+    "sourdine": {
+      "level": "Mute {level}",
+      "summary": "Mute {level} · Bronze ×{bronze} · difficulty ×{difficulty}"
+    },
+    "contracts": {
+      "title": "Night contracts",
+      "subtitle": "The Belfry offers; you accept up to {max}. Nothing to lose, Bronze or a Leaf to gain.",
+      "difficulty_s": "Contract · easy",
+      "difficulty_m": "Contract · medium",
+      "difficulty_l": "Contract · long",
+      "accepted": "Accepted",
+      "reward_leaf": "Leaf of the parish",
+      "reward_bronze": "+{bronze} bronze",
+      "none": "No contract tonight.",
+      "count": "{count} / {max} accepted",
+      "hint": "◄► choose · Enter accept or refuse · Esc back",
+      "hint_pad": "Stick choose · A accept or refuse · B back",
+      "done": "fulfilled",
+      "failed": "missed",
+      "progress": "{progress} / {goal}"
+    },
+    "vigil": {
+      "results": "See the tally",
+      "continue": "Keep vigil",
+      "text": "The dawn has rung: the Bronze and the dawn are yours. Keeping vigil lets the night go on without end — the Mute rises every {step} s — for as long as you can hold. Falling takes nothing back.",
+      "record": "Vigil record: {time}"
+    },
+    "ending": {
+      "hint": "Enter: faster · Esc: skip",
+      "hint_done": "Enter: continue"
     }
   }
 }

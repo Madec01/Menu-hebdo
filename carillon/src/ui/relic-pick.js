@@ -1,5 +1,5 @@
 // ui/relic-pick.js — écran de Reliques de paroisse (§ 11 bis) : deux cartes de missel
-// retournées (style levelup) et un bouton « Aucune relique ». Posé par run-screen.js après le
+// retournées (style levelup) — trois avec le nœud « Deuxième Relique » — et un bouton « Aucune relique ». Posé par run-screen.js après le
 // tutoriel (ou dès le départ), avant la première vague ; fige la logique. Le choix va à
 // deps.game.pickRelic(id | null) (game/relics.js émet relic:pick). Échap = aucune.
 // enter({ choices: [relicId, relicId] }).
@@ -13,12 +13,13 @@ import { isActive as touchActive } from './touch.js';
 import { card, text, button, dimmer, hit, heading, C } from './widgets.js';
 
 const W = 480, H = 270;
-const CARD_W = 96, CARD_H = 128, GAP = 40, CARD_Y = 70, FLIP_SEC = 0.35, STAGGER = 0.25;
+const CARD_W = 96, CARD_H = 128, GAP = 40, GAP3 = 20, CARD_Y = 70, FLIP_SEC = 0.35, STAGGER = 0.25, MAX_CHOICES = 3;
 
 export function createRelicPick(deps) {
   let choices = [], sel = 0, time = 0, flips = [0, 0], chosen = false;
   const noneRect = { x: W / 2 - 60, y: CARD_Y + CARD_H + 12, w: 120, h: 20 };
-  const cardX = (i) => Math.round(W / 2 - (2 * CARD_W + GAP) / 2 + i * (CARD_W + GAP));
+  const gap = () => (choices.length > 2 ? GAP3 : GAP);
+  const cardX = (i) => Math.round(W / 2 - (choices.length * CARD_W + (choices.length - 1) * gap()) / 2 + i * (CARD_W + gap()));
   const cardRect = (i) => ({ x: cardX(i), y: CARD_Y, w: CARD_W, h: CARD_H });
   const allFlipped = () => flips.every((f) => f >= 1);
   const count = () => choices.length + 1;   // + « Aucune »
@@ -41,7 +42,7 @@ export function createRelicPick(deps) {
   return {
     freezes: true,
     enter(p) {
-      choices = (p && p.choices ? p.choices : []).filter((id) => !!dataDef('relics', id)).slice(0, 2);
+      choices = (p && p.choices ? p.choices : []).filter((id) => !!dataDef('relics', id)).slice(0, MAX_CHOICES);
       sel = 0; chosen = false; time = 0; flips = choices.map(() => 0);
       if (!choices.length) { finish(null); return; }
     },

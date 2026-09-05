@@ -1,6 +1,6 @@
 // ui/achievements.js — notifications de déblocage (hauts-faits, Feuillets,
-// fusions, paroisses) sous forme de toasts, et liste des hauts-faits pour le
-// codex. Les conditions sont évaluées côté gameplay (game/unlocks.js) ; ici on
+// fusions, paroisses, sonneurs gagnés par quête, contrats remplis) sous forme de toasts, et liste des
+// hauts-faits pour le codex. Les conditions sont évaluées côté gameplay (game/unlocks.js) ; ici on
 // ne fait qu'écouter le bus et afficher.
 
 import { bus } from '../core/events.js';
@@ -22,13 +22,21 @@ export function initAchievements() {
   bus.on('weapon:fusion', ({ fusionId }) => {
     toast({ title: t('ui.toast.fusion'), body: t('fusion.' + fusionId + '.name'), icon: 'fusion_' + fusionId });
   });
-  // Paroisses ouvertes par une victoire : comparées avant/après la sauvegarde.
+  bus.on('contract:done', ({ id }) => {
+    toast({ title: t('ui.toast.contract'), body: t('contract.' + id + '.name'), icon: 'ui_sceau' });
+  });
+  // Paroisses ouvertes par une victoire et sonneurs gagnés par quête : comparés avant/après la sauvegarde.
   let known = getSave().unlocked.parishes.slice();
+  let knownChars = getSave().unlocked.characters.slice();
   bus.on('save:changed', ({ save }) => {
     for (const p of save.unlocked.parishes) {
       if (known.indexOf(p) < 0) toast({ title: t('ui.toast.parish_unlocked'), body: t('parish.' + p + '.name'), icon: 'ui_lanterne' });
     }
     known = save.unlocked.parishes.slice();
+    for (const c of save.unlocked.characters) {
+      if (knownChars.indexOf(c) < 0) toast({ title: t('ui.hub.bell_ringer'), body: t('ui.hub.unlocked_char', { name: t('char.' + c + '.name') }), icon: 'ui_coeur' });
+    }
+    knownChars = save.unlocked.characters.slice();
   });
 }
 

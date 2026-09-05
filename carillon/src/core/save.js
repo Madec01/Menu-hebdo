@@ -4,10 +4,18 @@
 // Les modules mutent getSave() puis appellent commit(), qui émet save:changed.
 // v2 : `unlocked.weapons` = Timbres de départ débloqués (niveau max en run ou achat
 // en Bronze) et `lastWeaponByCharacter` = { sonneur: Timbre choisi } (hub).
+// v3 (vague 2, méta) : `sourdine` { unlocked: { paroisse: 1..5 }, chosen: { paroisse: 1..5 } } ;
+// `records` { parish: { id: { bestTime, bestLevel, bestKills, bestSourdine, wins, seed, character } },
+//   character: { id: {…} }, vigil: { paroisse: secondes tenues après l'aube } } ;
+// `daily` { board: [ { date, score, parish, character, victory, time } ] (5 max) } ;
+// `leavesPending` = Feuillets dont la condition est remplie mais retenus par le plafond de 2 par nuit ;
+// `battantSeen` = répliques du Battant déjà dites ; `ending` { seen, muet } ;
+// `stats.contracts` { offered, accepted, done }, `stats.deathsByCharacter`, `stats.tierHold` (record de
+// secondes d'affilée au cran 3 : quête du Muet). Une sauvegarde v1/v2 reste valide : tout est complété.
 
 import { bus } from './events.js';
 
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 const STORAGE_KEY = 'carillon.save';
 
 /** Valeurs par défaut du schéma courant (source unique de vérité). */
@@ -21,7 +29,10 @@ function defaults() {
       achievements: [], fusions: [], parishes: ['cendrelune'],
     },
     codex: { enemies: {}, bosses: {} },
-    stats: { runs: 0, wins: 0, kills: 0, bestTime: 0, bestResonance: 0 },
+    stats: {
+      runs: 0, wins: 0, kills: 0, bestTime: 0, bestResonance: 0, bellAnswers: 0,
+      contracts: { offered: 0, accepted: 0, done: 0 }, deathsByCharacter: {}, tierHold: 0,
+    },
     options: {
       lang: 'fr', volMaster: 0.8, volMusic: 0.8, volSfx: 0.9, shake: 1, particles: 1,
       reduceFlash: false, fullscreen: false, scale: 0, beatIndicator: 'both', assist: 'none',
@@ -31,6 +42,12 @@ function defaults() {
     lastParish: null,
     lastCharacter: null,
     lastWeaponByCharacter: {},
+    sourdine: { unlocked: {}, chosen: {} },
+    records: { parish: {}, character: {}, vigil: {} },
+    daily: { board: [] },
+    leavesPending: [],
+    battantSeen: [],
+    ending: { seen: false, muet: false },
   };
 }
 
@@ -63,7 +80,15 @@ function migrate(raw) {
     if (save.unlocked.weapons.indexOf('battant') < 0) save.unlocked.weapons.unshift('battant');
     if (!isObject(save.lastWeaponByCharacter)) save.lastWeaponByCharacter = {};
   }
-  // Les migrations futures s'enchaînent ici : if (raw.version < 3) { … }
+  // v2 → v3 : méta (Sourdine, records, contrats, Battant). Les nouveaux blocs viennent des défauts ;
+  // on reconstruit ce qui peut l'être depuis les stats existantes : une paroisse déjà gagnée ouvre la
+  // Sourdine II, et les Feuillets déjà retrouvés restent acquis (jamais repris).
+  if (!(raw.version >= 3)) {
+    const wins = (save.stats && save.stats.winsByParish) || {};
+    for (const pid of Object.keys(wins)) if (wins[pid] > 0 && !(save.sourdine.unlocked[pid] >= 2)) save.sourdine.unlocked[pid] = 2;
+    for (const pid of Object.keys(save.sourdine.chosen)) if (!(save.sourdine.chosen[pid] >= 1)) delete save.sourdine.chosen[pid];
+  }
+  // Les migrations futures s'enchaînent ici : if (raw.version < 4) { … }
   save.version = SAVE_VERSION;
   return save;
 }

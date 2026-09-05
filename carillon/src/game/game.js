@@ -6,6 +6,11 @@
 // (rien à faire ici) ; pendant l'écran de cartes, main ne tick plus updateGame.
 // § 11 bis : Reliques (relics.js : run.relicOffer, pickRelic) et Cloche horaire (bell-hour.js :
 // gameState().bell pour le HUD).
+// Vague 2 (hooks) : Sourdine I–V (`sourdine` : la vague est copiée à l'échelle par night-rules.js, le Bronze
+// par progression.js), contrats de nuit (`contracts` : ids acceptés au hub → contracts.js ; contractStatus()
+// pour le HUD/bilan), nœuds-règles de l'arbre (night-rules.js), Nuit du jour (`daily` = date), et « Veiller
+// encore » : avec `holdVictory`, la victoire n'enchaîne pas sur le bilan — l'UI appelle startVigil() (la nuit
+// continue, la mort garde la victoire) ou finishVictory().
 
 import { bus } from '../core/events.js';
 import { makeRng } from '../core/rng.js';
@@ -25,16 +30,30 @@ import { initResonance, update as updateResonance } from './resonance.js';
 import { initRun, updateRun, addXp, applyCard, finishRun, rerollCards } from './progression.js';
 import { initRelics, disposeRelics, offerRelics, pickRelic as pickRelicRun, updateRelics, renderRelics } from './relics.js';
 import { initBellHour, disposeBellHour, updateBellHour, bellState } from './bell-hour.js';
+import { initContracts, disposeContracts, updateContracts, status as contractStatusOf } from './contracts.js';
+import { initNightRules, disposeNightRules, sourdineMult, scaledWaveDef, applyStartWeaponLevel, extendRelicOffer, startVigil as startVigilRules, updateVigil } from './night-rules.js';
 
 /** Relance des cartes (bouton de l'écran de cartes, E) : renvoie les nouvelles cartes ou null. */
 export function rerollLevelUp() { return st.run && st.player ? rerollCards(st.run, st.player) : null; }
 
 /** Reliques (§ 11 bis) : choix de l'écran relic-pick (E) ; null = aucune. Renvoie true si enregistré. */
 export function pickRelic(relicId) { return st.run ? pickRelicRun(st.run, relicId) : false; }
-/** Les deux Reliques proposées pour cette nuit (ou null). */
+/** Les Reliques proposées pour cette nuit (2, ou 3 avec « Deuxième Relique » ; null sans run). */
 export function relicOffer() { return st.run ? st.run.relicOffer : null; }
+/** Contrats de la run : [{ id, name, desc, progress, goal, done, failed, difficulty }] (HUD, bilan). */
+export function contractStatus() { return contractStatusOf(); }
+/** Veiller encore : la nuit continue après l'aube (renvoie true si la veillée a commencé). */
+export function startVigil() {
+  if (!st.run || !st.world || !st.world.victory || st.run.finished || st.vigil) return false;
+  st.vigil = !!startVigilRules(); st.holdVictory = false; st.endT = -1;
+  return st.vigil;
+}
+/** Fin de la victoire mise en attente (holdVictory) : le bilan arrive. */
+export function finishVictory() { if (st.run && !st.run.finished && st.endT < 0) st.endT = 0.01; st.holdVictory = false; }
+export function isVictoryHeld() { return st.holdVictory && !!st.world && st.world.ended && st.world.victory && !st.vigil; }
+export function isVigil() { return st.vigil; }
 
-const st = { run: null, player: null, world: null, bell: null, endT: -1, unsubs: [], active: false, streakBonus: 0 };
+const st = { run: null, player: null, world: null, bell: null, endT: -1, unsubs: [], active: false, streakBonus: 0, holdVictory: false, vigil: false };
 const END_DELAY_DEATH = 2.2;   // ralenti de mort (0,4×) puis bilan
 const END_DELAY_VICTORY = 3.0;
 
@@ -55,22 +74,30 @@ function upgradeLevels(save) {
  * `weaponId` : Timbre de départ choisi au hub (repli sur cDef.startWeapon s'il est absent ou inconnu).
  * Un sonneur à `startWeaponFixed` (le Muet) reçoit toujours son Timbre, puis `weaponId` en second.
  */
-export function startGame({ parishId, characterId, seed, assist = null, upgrades = null, weaponId = null }) {
+export function startGame({ parishId, characterId, seed, assist = null, upgrades = null, weaponId = null, sourdine = 0, contracts = null, daily = null, holdVictory = false }) {
   endGame();
   const save = getSave();
   const pDef = parishDef(parishId), cDef = characterDef(characterId), wDef = waveDef(parishId);
   if (!pDef || !cDef || !wDef) throw new Error('startGame : paroisse ou sonneur inconnu');
   const mode = assist || save.options.assist || 'none';
-  const run = initRun({ parishId, characterId, seed, assist: mode });
-  const player = createPlayer(cDef, upgrades || upgradeLevels(save));
+  const level = sourdine > 0 ? sourdine | 0 : ((save.sourdine && save.sourdine.chosen && save.sourdine.chosen[parishId]) || 1);
+  const ups = upgrades || upgradeLevels(save);
+  const run = initRun({ parishId, characterId, seed, assist: mode, sourdine: level, daily });
+  const player = createPlayer(cDef, ups);
   initResonance({ assist: mode, gain: player.stats.resonanceGain, traits: cDef.traits || null });
-  const world = createWorld({ parishDef: pDef, rng: makeRng(run.rng.seed ^ 0x5bd1e995), waveDef: wDef });
+  const sm = sourdineMult(pDef, level);
+  const world = createWorld({ parishDef: pDef, rng: makeRng(run.rng.seed ^ 0x5bd1e995), waveDef: scaledWaveDef(wDef, sm.difficulty) });
   const chosen = weaponId && weaponDef(weaponId) ? weaponId : null;
   if (cDef.startWeaponFixed) { addWeapon(player, cDef.startWeapon); if (chosen && chosen !== cDef.startWeapon) addWeapon(player, chosen); }
   else addWeapon(player, chosen || cDef.startWeapon);
+  applyStartWeaponLevel(player, ups, [cDef.startWeaponFixed ? cDef.startWeapon : (chosen || cDef.startWeapon)]);
+  initNightRules(run, player, world, ups, sm.difficulty);
   initRelics(run, player, world);
   offerRelics(run);
+  extendRelicOffer(run, ups);
   initBellHour(run, player, world);
+  initContracts(run, player, world, contracts || []);
+  st.holdVictory = !!holdVictory; st.vigil = false;
   snap(player.x, player.y);
   setHaloPos(player.x, player.y);
   // Nuit de la paroisse, relevée par la « lune grise » (lisibilité hors du halo).
@@ -104,13 +131,16 @@ export function updateGame(dt) {
   updateResonance(dt);
   updateRelics(dt);
   updateBellHour(dt);
+  updateContracts(dt);
+  if (st.vigil) updateVigil(dt);
   updateRun(run, dt, player, world);
   follow(player.x, player.y, dt);
   setListener(player.x, player.y);
-  if (world.ended && world.victory && st.endT < 0) st.endT = END_DELAY_VICTORY;
+  if (world.ended && world.victory && st.endT < 0 && !st.holdVictory) st.endT = END_DELAY_VICTORY;
   if (st.endT >= 0) {
     st.endT -= dt;
-    if (st.endT <= 0) { st.endT = -1; finishRun(run, world.victory && !player.dead); st.active = false; }
+    // Veillée : la mort après l'aube garde la victoire (le bilan compte l'aube déjà sonnée).
+    if (st.endT <= 0) { st.endT = -1; finishRun(run, st.vigil ? true : world.victory && !player.dead); st.active = false; }
   }
 }
 
@@ -158,8 +188,8 @@ export function endGame() {
   for (let i = 0; i < st.unsubs.length; i++) st.unsubs[i]();
   st.unsubs.length = 0;
   if (st.player) for (let i = 0; i < st.player.weapons.length; i++) if (st.player.weapons[i].unschedule) st.player.weapons[i].unschedule();
-  disposeRelics(); disposeBellHour();
-  st.run = null; st.player = null; st.world = null; st.bell = null; st.active = false; st.endT = -1;
+  disposeRelics(); disposeBellHour(); disposeContracts(); disposeNightRules();
+  st.run = null; st.player = null; st.world = null; st.bell = null; st.active = false; st.endT = -1; st.holdVictory = false; st.vigil = false;
 }
 
 export function gameState() { return st; }

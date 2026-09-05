@@ -10,6 +10,9 @@
 // Moments scriptés (game/moments.js, run:moment) : accent musical par music.setIntensity (haut pendant
 // un assaut, bas pendant une accalmie, retour à la valeur d'entrée à la fin ; les crans de Résonance ne
 // sont pas touchés) et brume/cendres de l'accalmie via le renderer.
+// Vague 2 : `sourdine`, `contracts`, `daily` transmis à startGame ; avec `holdVictory`, l'aube n'enchaîne pas
+// sur le bilan : l'écran 'vigil' (Veiller encore / bilan) est posé après la bannière de victoire ; la veillée
+// retire le voile et continue ; RunStats.ending (Beffroi Mère sonné) → scène 'ending' avant le bilan.
 
 import { bus } from '../core/events.js';
 import { getSave } from '../core/save.js';
@@ -31,6 +34,7 @@ const MOMENT_INTENSITY_HIGH = 1, MOMENT_INTENSITY_LOW = 0.1;   // accent musical
 const ASHES_NORMAL = 0.6, ASHES_LULL = 0.2;
 const DEATH_TOAST_HOLD_SEC = 4;                                // à la mort : silence des toasts (Feuillets, hauts-faits) jusqu'au bilan
 const BOSS_INTRO_MARGIN = 1.35;                                // cadrage : le boss et le sonneur tiennent dans l'écran avec cette marge
+const VIGIL_OFFER_SEC = 2.6;                                   // l'écran « Veiller encore » arrive après la bannière d'aube
 
 export function createRun(deps) {
   const hud = createHud();
@@ -122,7 +126,10 @@ export function createRun(deps) {
       camera.setZoom(1, 0);
       baseIntensity = music.getIntensity ? music.getIntensity() : 0.5;
       try {
-        deps.game.startGame({ parishId: p.parishId, characterId: p.characterId, seed: p.seed, weaponId: p.weaponId || null });
+        deps.game.startGame({
+          parishId: p.parishId, characterId: p.characterId, seed: p.seed, weaponId: p.weaponId || null,
+          sourdine: p.sourdine || 0, contracts: p.contracts || null, daily: p.daily || null, holdVictory: !!p.holdVictory,
+        });
       } catch (e) {
         console.error('[run]', e);
         toast({ title: t('ui.hub.start'), body: t('ui.hub.error_game'), icon: 'ui_mort' });
@@ -156,11 +163,16 @@ export function createRun(deps) {
       if (bossFraming) frameBoss();
       if (!overlay) { const g = deps.game.gameState(); if (g.world && g.world.ended && g.world.victory) { overlay = 'victory'; overlayT = 0; hud.setQuiet(true); } }
       if (overlay) overlayT += realDt;
+      // Aube retenue (holdVictory) : proposer de veiller encore ; la veillée acceptée retire le voile d'aube.
+      if (overlay === 'victory' && overlayT >= VIGIL_OFFER_SEC && deps.game.isVictoryHeld && deps.game.isVictoryHeld() && !states.has('vigil') && !states.isFrozen()) states.push('vigil', { parishId: params.parishId });
+      if (overlay === 'victory' && deps.game.isVigil && deps.game.isVigil()) { overlay = null; overlayT = 0; hud.setQuiet(false); }
       if (endT >= 0) {
         endT -= realDt;
         if (endT <= 0 && !states.isTransitioning()) {
           endT = -1;
-          states.replace('results', { victory: endStats.victory, stats: endStats.stats, params, killer, offsetAvgMs: hud.feedback.offsetAvgMs() }, { sound: endStats.victory ? 'victory_bell' : null });
+          const p = { victory: endStats.victory, stats: endStats.stats, params, killer, offsetAvgMs: hud.feedback.offsetAvgMs() };
+          if (endStats.victory && endStats.stats && endStats.stats.ending) states.replace('ending', Object.assign(p, { muet: !!endStats.stats.ending.muet }), { sound: 'victory_bell' });
+          else states.replace('results', p, { sound: endStats.victory ? 'victory_bell' : null });
         }
       }
     },

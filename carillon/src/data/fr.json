@@ -276,17 +276,20 @@
     "osric": {
       "name": "Osric",
       "desc": "Ancien fondeur, cousu tard, à douze ans, ce qui ne se fait pas. Il se souvient d'avant le Battant et n'en parle jamais.",
-      "trait": "Cuirasse : −20 % de dégâts subis et recul encaissé réduit de moitié. Lent, lourd, plus de vie, coups plus forts."
+      "trait": "Cuirasse : −20 % de dégâts subis et recul encaissé réduit de moitié. Lent, lourd, plus de vie, coups plus forts.",
+      "quest": "sonne l'aube de Cendrelune — il connaît la coulée de sa cloche"
     },
     "maren": {
       "name": "Maren",
       "desc": "Bergère des Tourbes, elle comptait ses bêtes au son des grelots. On l'a trouvée seule dans le marais avec le troupeau entier.",
-      "trait": "La Résonance monte deux fois plus vite mais retombe plus vite (×1,5) ; attire les Échos de plus loin."
+      "trait": "La Résonance monte deux fois plus vite mais retombe plus vite (×1,5) ; attire les Échos de plus loin.",
+      "quest": "réponds dix fois à la cloche horaire — elle compte au son des grelots"
     },
     "le_muet": {
       "name": "Le Muet",
       "desc": "Un ancien sonneur à qui l'on a retiré le Battant. Plus personne ne prononce son nom, et il tient un diapason à la main comme on tient une lampe.",
-      "trait": "Sans Battant : seuls les coups parfaits chargent la Résonance, mais de deux crans d'un coup. Le Bâillon ne peut pas l'étouffer."
+      "trait": "Sans Battant : seuls les coups parfaits chargent la Résonance, mais de deux crans d'un coup. Le Bâillon ne peut pas l'étouffer.",
+      "quest": "lis « Rougemare » à l'Autel et tiens une minute au cran 3 — il faut qu'il t'entende"
     }
   },
   "upgrade": {
@@ -345,6 +348,30 @@
     "troisieme_carte": {
       "name": "Troisième carte",
       "desc": "Le droit de retourner une carte de plus. Une relance de plus par nuit à chaque niveau."
+    },
+    "cloche_qui_soigne": {
+      "name": "Cloche qui soigne",
+      "desc": "Règle : chaque réponse à la cloche horaire rend en plus un dixième de ta vie."
+    },
+    "timbre_niveau_2": {
+      "name": "Timbre de départ niveau 2",
+      "desc": "Règle : le Timbre avec lequel tu descends est déjà au niveau 2 quand la nuit commence."
+    },
+    "deuxieme_chance": {
+      "name": "Deuxième chance",
+      "desc": "Règle : une fois par nuit, tu peux retourner les trois cartes et en tirer trois autres."
+    },
+    "contrat_en_plus": {
+      "name": "Contrat en plus",
+      "desc": "Règle : le Beffroi te propose trois contrats de nuit au lieu de deux, et tu peux en accepter trois."
+    },
+    "deuxieme_relique": {
+      "name": "Deuxième Relique",
+      "desc": "Règle : trois Reliques te sont proposées au début de la nuit au lieu de deux."
+    },
+    "echo_de_felure": {
+      "name": "Écho de la Fêlure",
+      "desc": "Règle : chaque Fêlure qui tombe laisse un Écho géant, à ramasser d'une Volée sur le temps."
     }
   },
   "achievement": {
@@ -354,15 +381,15 @@
     },
     "sonneur_confirme": {
       "name": "Sonneur confirmé",
-      "desc": "Tenir jusqu'à l'aube dix fois."
+      "desc": "Sonner dix nuits, gagnées ou perdues."
     },
     "cent_echos": {
       "name": "Cent échos",
-      "desc": "Faire taire cent choses en une seule nuit."
+      "desc": "Ramasser cent Échos en une seule nuit."
     },
     "mille_silences": {
       "name": "Mille silences",
-      "desc": "Faire taire mille choses en une seule nuit."
+      "desc": "Faire taire mille choses, toutes nuits confondues."
     },
     "plein_timbre": {
       "name": "Plein timbre",
@@ -427,6 +454,26 @@
     "repondre_a_la_cloche": {
       "name": "Répondre à la cloche",
       "desc": "Répondre dix fois à la cloche horaire, sur le quatrième coup."
+    },
+    "sourdine_v_cendrelune": {
+      "name": "Cendrelune sous la Sourdine V",
+      "desc": "Sonner l'aube de Cendrelune à la Sourdine V."
+    },
+    "veillee_longue": {
+      "name": "Veillée longue",
+      "desc": "Veiller encore trois minutes après l'aube."
+    },
+    "nuit_du_jour": {
+      "name": "La nuit du jour",
+      "desc": "Sonner une Nuit du jour jusqu'au bout."
+    },
+    "premier_contrat": {
+      "name": "Parole tenue",
+      "desc": "Remplir un premier contrat de nuit."
+    },
+    "dix_contrats": {
+      "name": "Dix paroles",
+      "desc": "Remplir dix contrats de nuit."
     }
   },
   "lore": {
@@ -597,5 +644,105 @@
     "veuves_en_cercle": {
       "name": "Les Trois Veuves"
     }
+  },
+  "contract": {
+    "choeurs_sur_le_temps": {
+      "name": "Trente Chœurs sur le temps",
+      "desc": "Faire taire trente Chœurs Muets d'un coup tombé sur le temps."
+    },
+    "tenir_cran_2": {
+      "name": "Tenir le cran 2",
+      "desc": "Garder la Résonance au cran 2 ou plus pendant soixante secondes d'affilée."
+    },
+    "trois_cloches": {
+      "name": "Trois cloches",
+      "desc": "Répondre à trois cloches horaires, sur le quatrième coup."
+    },
+    "quatre_timbres": {
+      "name": "Quatre Timbres",
+      "desc": "Finir la nuit avec au moins quatre Timbres au carillon."
+    },
+    "sans_relique": {
+      "name": "Sans Relique",
+      "desc": "Refuser la Relique et sonner l'aube quand même."
+    },
+    "felure_rapide": {
+      "name": "La Fêlure en trente secondes",
+      "desc": "Faire taire une Fêlure moins de trente secondes après son arrivée."
+    },
+    "echo_geant": {
+      "name": "L'Écho géant",
+      "desc": "Ramasser l'Écho géant de l'Accalmie d'une Volée sur le temps."
+    },
+    "sans_coup_une_minute": {
+      "name": "Une minute sans coup",
+      "desc": "Ne recevoir aucun coup pendant une minute entière."
+    },
+    "douze_parfaits": {
+      "name": "Douze Parfaits",
+      "desc": "Enchaîner douze coups parfaits sans un seul raté."
+    },
+    "une_fusion": {
+      "name": "Une fusion",
+      "desc": "Fondre un Timbre et un Accord en une seule cloche cette nuit."
+    },
+    "gagner_muet": {
+      "name": "L'aube du Muet",
+      "desc": "Sonner l'aube avec Le Muet."
+    },
+    "sans_accord": {
+      "name": "Sans Accord",
+      "desc": "Sonner l'aube sans avoir pris un seul Accord."
+    },
+    "cierge_errant": {
+      "name": "Le Cierge errant",
+      "desc": "Rattraper et faire taire l'élite qui s'enfuit."
+    },
+    "aube_cran_4": {
+      "name": "Aube au cran 4",
+      "desc": "Arriver devant le Bourdon la Résonance au quatrième cran."
+    }
+  },
+  "ending": {
+    "register_title": "Registre de Cendrelune",
+    "register": "Sonneurs de Cendrelune, recopiés au registre du Beffroi Mère : Pel. La tante de Jorin, dont le nom est revenu avec la cloche : Sabine. Jorin, fils de Pel. Et, à la Saint-Michel, venu du Beffroi Mère et resté : Anselme, sonneur.",
+    "master": "Anselme. Je l'écris en entier, sur la ligne du haut, avec toutes ses lettres. Il sonnait de l'aube vers la nuit ; je lui ai répondu à contretemps, et c'est là qu'il était encore. Le bronze n'oublie jamais sa note. Moi non plus, c'est mon travail.",
+    "fallen_title": "Ceux qui sont tombés avant l'aube",
+    "fallen_line": "{name}, {count} {count|nuit|nuits} sans aube. Je les ai comptées. Le sol s'en souvient ; moi aussi.",
+    "fallen_none": "Personne n'est tombé. Je ne sais pas si je dois le croire, mais je l'écris.",
+    "nights": "{runs} {runs|nuit|nuits} sonnées, {wins} {wins|aube|aubes}. Chaque croix de charbon sur la carte a maintenant un nom en face.",
+    "letter_1": "Wren. Tu as fini la tournée que je n'ai pas finie. Le carnet est à toi ; le Battant l'était déjà. Il y a une chose que je ne t'ai pas apprise parce que je ne la savais pas moi-même : ce n'est pas la cloche qui les tient. C'est quelqu'un vers qui se tourner, et qui ne part pas.",
+    "letter_2": "Reste. Écris les noms. Quand la brume monte, sonne, et quand elle redescend, va t'asseoir avec eux sans lampe. Si ça sonne encore après, ce sera de leur côté. Anselme.",
+    "muet_1": "Le Muet pose le Diapason sur l'autel, sous la cloche fêlée. Il ne sonne pas. Il attend que le bronze se taise tout à fait, puis il dit un nom à voix haute, une fois, comme on lit une ligne de registre : Tomas Ferrand.",
+    "muet_2": "Personne dans Cendrelune ne le connaît. Jorin le répète pourtant, parce qu'il l'a entendu, et Pel après lui. Le nom passe de bouche en bouche jusqu'au bas du village, où la brume le prend et ne le rend pas. Mais il est écrit ici, en bas de la page, d'une main que je reconnais.",
+    "muet_3": "Il n'a plus de Battant, et il n'en veut pas. Il a un diapason, une lampe, et un registre. Il restera à Cendrelune. Il faut bien que quelqu'un garde quelqu'un.",
+    "last_line": "Sonne jusqu'à l'aube."
+  },
+  "battant": {
+    "first_night": "Le Beffroi Mère est vide. Il reste toi, et moi dans ta poitrine. Choisis une paroisse ; je battrai la mesure.",
+    "first_death": "Tu es tombée avant l'aube. Ils t'ont oubliée à midi, c'est le métier. Moi, je compte. Retournes-y.",
+    "wall": "Quatre nuits sans aube. Ce n'est pas la cloche qui manque, c'est le temps : frappe sur le temps, pas à côté.",
+    "first_win": "L'aube a sonné. Cendrelune se souvient de Jorin ce matin. C'est toi qui l'as tenu.",
+    "five_nights": "Cinq nuits. Le sol se souvient de tes pas ; moi aussi. Tu marches moins de travers.",
+    "ten_nights": "Dix nuits. Un sonneur qui sonne dix aubes, l'Ordre lui donnait un nom de cloche. Je n'ai pas de cloche à te donner. Continue.",
+    "first_leaf_read": "Tu as lu un Feuillet. C'est son écriture. Il en reste d'autres dans les paroisses ; je te dirai quand tu en trouves.",
+    "osric_joins": "Osric a entendu la cloche de Cendrelune. Il connaît la coulée ; il rejoint le Beffroi.",
+    "maren_joins": "Maren a compté dix cloches, comme ses brebis. Elle est là, avec les grelots.",
+    "muet_joins": "Il t'a entendue tenir la mesure. Il n'a plus de Battant, mais il a un diapason. Il sonnera.",
+    "beffroi_open": "Il reste une paroisse, et c'est la nôtre. Sonne-la à l'envers si tu m'entends.",
+    "first_contract": "Parole tenue. Le Beffroi paie ses contrats en Bronze, et parfois en Feuillets.",
+    "sourdine_v": "La Sourdine V. Il n'y a rien de plus sourd que cela. Tu l'as tenue.",
+    "daily_done": "La nuit du jour est sonnée. Demain, la seed change, et la brume aussi.",
+    "bronze_idle": "Le Bronze dort dans ta bourse. Le Beffroi a des nœuds à vendre ; la Sourdine a des niveaux.",
+    "ending_seen": "Le registre est écrit. Le reste, on l'apprend en sonnant.",
+    "ending_muet": "Il a posé le Diapason. Il s'appelle Tomas Ferrand, et Cendrelune le sait.",
+    "leaf_f03": "Jorin, fils de Pel. Retiens-le ; je le retiens aussi.",
+    "leaf_f05": "Il ne te le dira pas en rentrant. Tu le sauras sans lui.",
+    "leaf_f09": "Ce que le Bâillon prend, personne ne le réclame. Moi, je le réclame.",
+    "leaf_f10": "Anselme, du Beffroi Mère. Il l'a écrit pour l'exercice. Compte les lettres.",
+    "leaf_f12": "Tomas Ferrand. Je l'ai entendu sonner, autrefois. Il tenait bien la mesure.",
+    "leaf_f18": "Là où l'on ne se souvient pas. Il dit qu'on le reconnaîtra au bruit. Écoute le contretemps.",
+    "leaf_f19": "Voilà pourquoi il t'a cousue à sept ans. Je ne demande pas pardon ; je bats.",
+    "leaf_f23": "Il a posé son Battant sous la cloche. Il n'a pas posé son nom. Va le chercher."
   }
 }

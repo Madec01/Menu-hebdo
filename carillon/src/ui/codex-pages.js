@@ -3,6 +3,7 @@
 // fusions découvertes, hauts-faits). Les Feuillets sont rendus par ui/lore.js.
 // L'onglet Timbres indique si le Timbre est débloqué en départ (start-weapons.js).
 // Onglet Reliques (§ 11 bis) : découvertes = portées au moins une nuit (save.codex.relics).
+// Onglet Records (vague 2, codex-records.js) : records par paroisse et par sonneur, Nuit du jour.
 
 import { getSave } from '../core/save.js';
 import * as atlas from '../render/atlas.js';
@@ -12,8 +13,10 @@ import { achievementList } from './achievements.js';
 import { leafIds, isUnlocked as leafUnlocked, isRead as leafRead } from './lore.js';
 import { isStartWeaponUnlocked, unlockLevel, weaponCost, weaponParams } from './start-weapons.js';
 import { text, paragraph, icon, pips, heading, C } from './widgets.js';
+import { unlockHint } from './next-unlock.js';
+import { recordItems, renderRecordDetail } from './codex-records.js';
 
-export const TABS = ['bestiary', 'weapons', 'passives', 'fusions', 'relics', 'leaves', 'achievements'];
+export const TABS = ['bestiary', 'weapons', 'passives', 'fusions', 'relics', 'leaves', 'achievements', 'records'];
 
 function nameKey(def) { return has('enemy.' + def.id + '.name') ? 'enemy.' + def.id + '.name' : def.name; }
 function loreKey(def) { return has('enemy.' + def.id + '.lore') ? 'enemy.' + def.id + '.lore' : def.lore; }
@@ -41,6 +44,7 @@ export function pageItems(tab) {
       return { id: d.id, def: d, kind: 'relic', known: n > 0, count: n, label: n > 0 ? t(d.name) : t('ui.common.unknown'), icon: n > 0 ? d.icon : 'ui_sceau' };
     });
     case 'achievements': return achievementList().map((a) => ({ id: a.id, def: a, kind: 'achievement', known: a.unlocked, label: a.name, icon: a.unlocked ? 'ui_sceau' : null }));
+    case 'records': return recordItems();
     // Feuillets : le codex LISTE (titre, trouvé / lu) ; la lecture se fait à l'Autel des Feuillets.
     case 'leaves': return leafIds().map((id, i) => {
       const known = leafUnlocked(id), read = known && leafRead(id);
@@ -74,6 +78,7 @@ export function renderDetail(ui, tab, item, r, time) {
     return;
   }
   if (tab === 'weapons' || tab === 'fusions') { renderWeapon(ui, tab, item, r); return; }
+  if (tab === 'records') { renderRecordDetail(ui, item, r); return; }
   if (tab === 'passives') {
     icon(ui, d.icon, r.x + 14, r.y + 10, 1);
     heading(ui, t(d.name), r.x + 54, r.y + 14, 14, 'left');
@@ -172,16 +177,4 @@ function renderWeapon(ui, tab, item, r) {
   if (!isFusion) text(ui, fu ? t('ui.codex.fusion_with', { fusion: fusionName(fu), other: t('passive.' + fu.passive + '.name') }) : t('ui.codex.no_fusion'), r.x + 12, y, { size: 8, color: fu ? C.bronze : C.encreClaire, maxWidth: r.w - 24 });
   const vk = (isFusion ? 'fusion.' : 'weapon.') + d.id + '.voice';
   if (has(vk) && y + 12 < r.y + r.h - 20) paragraph(ui, t(vk), r.x + 12, y + 12, r.w - 24, { size: 8, color: C.encreClaire, lineHeight: 9, maxLines: 2 });
-}
-
-/** Indice de déblocage d'un Feuillet non retrouvé (lore.json `unlock`). */
-function unlockHint(u) {
-  const key = 'ui.codex.unlock_' + u.type;
-  if (!has(key)) return '';
-  return t(key, {
-    parish: u.parish ? t('parish.' + u.parish + '.name') : '', minute: u.minute || 0, count: u.count || 0,
-    enemy: u.enemy ? t('enemy.' + u.enemy + '.name') : '', boss: u.boss ? t('boss.' + u.boss + '.name') : '',
-    character: u.character ? t('char.' + u.character + '.name') : '', fusion: u.fusion ? t('fusion.' + u.fusion + '.name') : '',
-    sec: u.seconds || 0, runs: u.count || 0,
-  });
 }

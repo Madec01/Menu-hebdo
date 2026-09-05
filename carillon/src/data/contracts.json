@@ -1,0 +1,16 @@
+[
+  { "id": "choeurs_sur_le_temps", "name": "contract.choeurs_sur_le_temps.name", "desc": "contract.choeurs_sur_le_temps.desc", "type": "kills_on_beat", "enemy": "choeur_muet", "count": 30, "difficulty": "S", "reward": { "bronze": 50 } },
+  { "id": "tenir_cran_2", "name": "contract.tenir_cran_2.name", "desc": "contract.tenir_cran_2.desc", "type": "tier_hold", "tier": 1, "seconds": 60, "difficulty": "S", "reward": { "bronze": 40 } },
+  { "id": "trois_cloches", "name": "contract.trois_cloches.name", "desc": "contract.trois_cloches.desc", "type": "bell_answers", "count": 3, "difficulty": "M", "reward": { "leaf": true, "bronze": 80 } },
+  { "id": "quatre_timbres", "name": "contract.quatre_timbres.name", "desc": "contract.quatre_timbres.desc", "type": "weapons_end", "count": 4, "difficulty": "S", "reward": { "bronze": 40 } },
+  { "id": "sans_relique", "name": "contract.sans_relique.name", "desc": "contract.sans_relique.desc", "type": "no_relic_win", "difficulty": "L", "reward": { "bronze": 100 } },
+  { "id": "felure_rapide", "name": "contract.felure_rapide.name", "desc": "contract.felure_rapide.desc", "type": "fissure_time", "seconds": 30, "difficulty": "M", "reward": { "bronze": 60 } },
+  { "id": "echo_geant", "name": "contract.echo_geant.name", "desc": "contract.echo_geant.desc", "type": "giant_echo", "count": 1, "moment": "accalmie", "difficulty": "S", "reward": { "bronze": 40 } },
+  { "id": "sans_coup_une_minute", "name": "contract.sans_coup_une_minute.name", "desc": "contract.sans_coup_une_minute.desc", "type": "no_hit_seconds", "seconds": 60, "difficulty": "M", "reward": { "bronze": 60 } },
+  { "id": "douze_parfaits", "name": "contract.douze_parfaits.name", "desc": "contract.douze_parfaits.desc", "type": "perfect_streak", "count": 12, "difficulty": "M", "reward": { "bronze": 60 } },
+  { "id": "une_fusion", "name": "contract.une_fusion.name", "desc": "contract.une_fusion.desc", "type": "fusion", "count": 1, "difficulty": "L", "reward": { "leaf": true, "bronze": 100 } },
+  { "id": "gagner_muet", "name": "contract.gagner_muet.name", "desc": "contract.gagner_muet.desc", "type": "win_character", "character": "le_muet", "difficulty": "L", "reward": { "bronze": 120 } },
+  { "id": "sans_accord", "name": "contract.sans_accord.name", "desc": "contract.sans_accord.desc", "type": "no_passive_win", "difficulty": "L", "reward": { "bronze": 120 } },
+  { "id": "cierge_errant", "name": "contract.cierge_errant.name", "desc": "contract.cierge_errant.desc", "type": "kill_kind", "enemy": "cierge_elite", "count": 1, "moment": "cierge_errant", "difficulty": "S", "reward": { "bronze": 40 } },
+  { "id": "aube_cran_4", "name": "contract.aube_cran_4.name", "desc": "contract.aube_cran_4.desc", "type": "boss_tier", "tier": 3, "difficulty": "M", "reward": { "bronze": 70 } }
+]

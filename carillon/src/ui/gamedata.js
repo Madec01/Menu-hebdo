@@ -1,11 +1,12 @@
 // ui/gamedata.js — lecture des JSON de src/data/ pour l'interface (hub, codex,
 // bilan). Indépendant de src/game/data.js : le hub et le codex fonctionnent
 // même si le gameplay n'est pas chargé. Aucune valeur n'est interprétée ici,
-// seulement lue et indexée par id. `start-weapons` est un objet (règles des
-// Timbres de départ), les autres fichiers sont des listes.
+// seulement lue et indexée par id. `start-weapons` et `waves` sont des objets (règles des
+// Timbres de départ ; vagues par paroisse, lues pour les Moments et la difficulté), les autres
+// fichiers sont des listes. `contracts` = contrats de nuit (vague 2).
 
-const FILES = ['characters', 'parishes', 'upgrades', 'lore', 'achievements', 'weapons', 'passives', 'fusions', 'enemies', 'start-weapons', 'relics'];
-const OBJECT_FILES = { 'start-weapons': true };
+const FILES = ['characters', 'parishes', 'upgrades', 'lore', 'achievements', 'weapons', 'passives', 'fusions', 'enemies', 'start-weapons', 'relics', 'contracts', 'waves'];
+const OBJECT_FILES = { 'start-weapons': true, waves: true };
 const data = { loaded: false };
 for (const f of FILES) data[f] = OBJECT_FILES[f] ? {} : [];
 const byId = {};
@@ -44,3 +45,7 @@ export const fusions = () => data.fusions;
 export const enemies = () => data.enemies;
 export const relics = () => data.relics;
 export const startWeaponRules = () => data['start-weapons'];
+export const contracts = () => data.contracts;
+export const waves = () => data.waves;
+/** Vague d'une paroisse (waves.json) ou null. */
+export function waveOf(parishId) { const w = data.waves && data.waves[parishId]; return w && typeof w === 'object' ? w : null; }

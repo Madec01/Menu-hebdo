@@ -1,7 +1,9 @@
 // ui/screens.js — fabrique tous les écrans (§ 11 : create(deps) → écran) et les
 // renvoie sous forme { nom → écran } pour la pile d'états (ui/states.js).
-// Écrans de base : unlock, title, hub, run, results. Empilables : tutorial,
-// levelup, relicpick, pause, options, savetext, codex, credits, tree, altar, leaf, confirm.
+// Écrans de base : unlock, title, hub, run, results, ending. Empilables : tutorial,
+// levelup, relicpick, pause, options, savetext, codex, credits, tree, altar, leaf, confirm, contracts, vigil.
+// Vague 2 : les définitions des contrats (contracts.json, chargé par ui/gamedata.js) sont transmises à
+// game/contracts.js ici, au moment où tout est chargé.
 
 import { createUnlock, createTitle } from './menu.js';
 import { createHub } from './hub.js';
@@ -20,8 +22,14 @@ import { createSaveText } from './options-data.js';
 import { createCredits } from './credits.js';
 import { createConfirm } from './dialog.js';
 import { createCalibration } from './calibration.js';
+import { createContracts } from './hub-contracts.js';
+import { createVigil } from './vigil.js';
+import { createEnding } from './ending.js';
+import { contracts as contractList } from './gamedata.js';
+import { setContractDefs } from '../game/contracts.js';
 
 export function createScreens(deps) {
+  setContractDefs(contractList());
   return {
     unlock: createUnlock(deps),
     title: createTitle(deps),
@@ -41,5 +49,8 @@ export function createScreens(deps) {
     credits: createCredits(deps),
     confirm: createConfirm(deps),
     calibration: createCalibration(deps),
+    contracts: createContracts(deps),
+    vigil: createVigil(deps),
+    ending: createEnding(deps),
   };
 }

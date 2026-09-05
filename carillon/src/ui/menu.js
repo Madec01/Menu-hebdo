@@ -2,8 +2,9 @@
 // (title_beffroi) se dresse sous la pluie de cendres (renderer.setAshes), la
 // cloche (title_cloche) oscille lentement, le logo CARILLON est gravé en
 // CarillonDisplay avec relief et ombre, la brume roule (renderer.setFog).
-// Boutons : Jouer/Continuer, Tutoriel, Codex, Options, Crédits ; bouton plein écran en haut à
-// droite (ui/touch.js : conteneur #stage, verrouillage paysage, aide iOS).
+// Boutons : Jouer/Continuer, Nuit du jour (ui/daily.js : seed = date, classement local), Tutoriel, Codex,
+// Options, Crédits ; bouton plein écran en haut à droite (ui/touch.js : conteneur #stage, verrouillage
+// paysage, aide iOS).
 
 import { makeRng, mix32 } from '../core/rng.js';
 import { getSave } from '../core/save.js';
@@ -19,6 +20,7 @@ import { t } from './i18n.js';
 import * as states from './states.js';
 import * as touch from './touch.js';
 import { text, createMenu, hit, C } from './widgets.js';
+import { dailyDate, dailyParams, dailyBest } from './daily.js';
 
 const W = 480, H = 270;
 const BELL = { x: -150, y: -50 };        // coordonnées monde de la cloche
@@ -82,15 +84,16 @@ export function createUnlock() {
 /** Écran-titre. */
 export function createTitle() {
   let dt = 0;
-  const X = W / 2 - 60, BW = 120, BH = 20, Y0 = 92, STEP = 24;
+  const X = W / 2 - 60, BW = 120, BH = 20, Y0 = 88, STEP = 22;
   const rect = (i) => ({ x: X, y: Y0 + i * STEP, w: BW, h: BH });
   const hasRuns = () => getSave().stats.runs > 0;
   const items = [
     { label: () => t(hasRuns() ? 'ui.title.continue' : 'ui.title.play'), rect: rect(0), action: () => states.replace('hub'), icon: 'ui_coeur' },
-    { label: () => t('ui.title.tutorial'), rect: rect(1), action: () => startTutorial(), icon: 'ui_lanterne' },
-    { label: () => t('ui.title.codex'), rect: rect(2), action: () => states.push('codex'), icon: 'ui_sceau' },
-    { label: () => t('ui.title.options'), rect: rect(3), action: () => states.push('options'), icon: 'ui_options' },
-    { label: () => t('ui.title.credits'), rect: rect(4), action: () => states.push('credits'), icon: 'ui_musique' },
+    { label: () => t('ui.title.daily'), rect: rect(1), action: () => startDaily(), icon: 'ui_sceau' },
+    { label: () => t('ui.title.tutorial'), rect: rect(2), action: () => startTutorial(), icon: 'ui_lanterne' },
+    { label: () => t('ui.title.codex'), rect: rect(3), action: () => states.push('codex'), icon: 'ui_sceau' },
+    { label: () => t('ui.title.options'), rect: rect(4), action: () => states.push('options'), icon: 'ui_options' },
+    { label: () => t('ui.title.credits'), rect: rect(5), action: () => states.push('credits'), icon: 'ui_musique' },
   ];
   const menu = createMenu(items, { size: 11 });
   let fsRect = { x: W - 24, y: 6, w: 18, h: 18 };
@@ -102,6 +105,20 @@ export function createTitle() {
     const parish = s.lastParish || 'cendrelune', ch = s.lastCharacter || 'wren';
     const r = rect(0);
     text(ui, t('ui.title.last_night', { parish: t('parish.' + parish + '.name'), character: t('char.' + ch + '.name') }), r.x + r.w + 8, r.y + 6, { size: 8, color: C.gris, shadow: true });
+  }
+
+  /** « Nuit du jour : Cendrelune · meilleur 1 234 » à droite du bouton. */
+  function renderDailyHint(ui) {
+    const r = rect(1), p = dailyParams(), best = dailyBest();
+    const txt = best ? t('ui.title.daily_best', { parish: t('parish.' + p.parishId + '.name'), score: best.score }) : t('ui.title.daily_hint', { parish: t('parish.' + p.parishId + '.name'), date: dailyDate() });
+    text(ui, txt, r.x + r.w + 8, r.y + 6, { size: 8, color: C.gris, shadow: true });
+  }
+
+  function startDaily() {
+    const save = getSave();
+    const p = dailyParams();
+    save.lastParish = p.parishId;
+    states.replace('run', p, { sound: 'bell_tier' });
   }
 
   function startTutorial() {
@@ -136,6 +153,7 @@ export function createTitle() {
       renderLogo(ui, 14);
       menu.render(ui);
       renderContinueHint(ui);
+      renderDailyHint(ui);
       fsRect = touch.fullscreenButton(ui, W - (touch.isActive() ? 32 : 24), 6);
       const s = getSave().stats;
       text(ui, t('ui.title.runs', { runs: s.runs, wins: s.wins }), 6, H - 12, { size: 9, color: C.gris });

@@ -1,194 +1,24 @@
 [
- {
-  "id": "coeur_de_bronze",
-  "name": "upgrade.coeur_de_bronze.name",
-  "desc": "upgrade.coeur_de_bronze.desc",
-  "cost": [
-   30,
-   70,
-   150
-  ],
-  "stat": "maxHp",
-  "perLevel": 10,
-  "requires": []
- },
- {
-  "id": "semelles_de_cuir",
-  "name": "upgrade.semelles_de_cuir.name",
-  "desc": "upgrade.semelles_de_cuir.desc",
-  "cost": [
-   40,
-   80,
-   170
-  ],
-  "stat": "speed",
-  "perLevel": 5,
-  "requires": []
- },
- {
-  "id": "ferrure_du_beffroi",
-  "name": "upgrade.ferrure_du_beffroi.name",
-  "desc": "upgrade.ferrure_du_beffroi.desc",
-  "cost": [
-   50,
-   110,
-   210
-  ],
-  "stat": "armor",
-  "perLevel": 1,
-  "requires": [
-   "coeur_de_bronze"
-  ]
- },
- {
-  "id": "oreille_fine",
-  "name": "upgrade.oreille_fine.name",
-  "desc": "upgrade.oreille_fine.desc",
-  "cost": [
-   40,
-   100,
-   180
-  ],
-  "stat": "windowMult",
-  "perLevel": 0.1,
-  "requires": []
- },
- {
-  "id": "battant_lourd",
-  "name": "upgrade.battant_lourd.name",
-  "desc": "upgrade.battant_lourd.desc",
-  "cost": [
-   50,
-   120,
-   240
-  ],
-  "stat": "damageMult",
-  "perLevel": 0.05,
-  "requires": []
- },
- {
-  "id": "aimant_d_echos",
-  "name": "upgrade.aimant_d_echos.name",
-  "desc": "upgrade.aimant_d_echos.desc",
-  "cost": [
-   30,
-   70,
-   130
-  ],
-  "stat": "magnet",
-  "perLevel": 0.25,
-  "requires": []
- },
- {
-  "id": "reliquaire",
-  "name": "upgrade.reliquaire.name",
-  "desc": "upgrade.reliquaire.desc",
-  "cost": [
-   50,
-   100,
-   190
-  ],
-  "stat": "xpGain",
-  "perLevel": 0.08,
-  "requires": [
-   "aimant_d_echos"
-  ]
- },
- {
-  "id": "cire_de_veillee",
-  "name": "upgrade.cire_de_veillee.name",
-  "desc": "upgrade.cire_de_veillee.desc",
-  "cost": [
-   40,
-   90,
-   180
-  ],
-  "stat": "regen",
-  "perLevel": 0.3,
-  "requires": [
-   "coeur_de_bronze"
-  ]
- },
- {
-  "id": "main_sure",
-  "name": "upgrade.main_sure.name",
-  "desc": "upgrade.main_sure.desc",
-  "cost": [
-   50,
-   110,
-   230
-  ],
-  "stat": "crit",
-  "perLevel": 0.03,
-  "requires": [
-   "battant_lourd"
-  ]
- },
- {
-  "id": "bourse_de_cuivre",
-  "name": "upgrade.bourse_de_cuivre.name",
-  "desc": "upgrade.bourse_de_cuivre.desc",
-  "cost": [
-   60,
-   130,
-   270
-  ],
-  "stat": "bronzeGain",
-  "perLevel": 0.1,
-  "requires": []
- },
- {
-  "id": "second_souffle",
-  "name": "upgrade.second_souffle.name",
-  "desc": "upgrade.second_souffle.desc",
-  "cost": [
-   240
-  ],
-  "stat": "revive",
-  "perLevel": 1,
-  "requires": [
-   "ferrure_du_beffroi"
-  ]
- },
- {
-  "id": "contrepoids_de_fonte",
-  "name": "upgrade.contrepoids_de_fonte.name",
-  "desc": "upgrade.contrepoids_de_fonte.desc",
-  "cost": [
-   50,
-   120,
-   240
-  ],
-  "stat": "area",
-  "perLevel": 0.08,
-  "requires": []
- },
- {
-  "id": "corde_neuve",
-  "name": "upgrade.corde_neuve.name",
-  "desc": "upgrade.corde_neuve.desc",
-  "cost": [
-   180,
-   360
-  ],
-  "stat": "cadence",
-  "perLevel": 1,
-  "requires": [
-   "contrepoids_de_fonte"
-  ]
- },
- {
-  "id": "troisieme_carte",
-  "name": "upgrade.troisieme_carte.name",
-  "desc": "upgrade.troisieme_carte.desc",
-  "cost": [
-   90,
-   210
-  ],
-  "stat": "rerolls",
-  "perLevel": 1,
-  "requires": [
-   "reliquaire"
-  ]
- }
+  { "id": "coeur_de_bronze", "name": "upgrade.coeur_de_bronze.name", "desc": "upgrade.coeur_de_bronze.desc", "branch": "corps", "cost": [30, 80, 180], "stat": "maxHp", "perLevel": 10, "requires": [] },
+  { "id": "semelles_de_cuir", "name": "upgrade.semelles_de_cuir.name", "desc": "upgrade.semelles_de_cuir.desc", "branch": "corps", "cost": [50, 110, 220], "stat": "speed", "perLevel": 5, "requires": [] },
+  { "id": "cloche_qui_soigne", "name": "upgrade.cloche_qui_soigne.name", "desc": "upgrade.cloche_qui_soigne.desc", "branch": "corps", "rule": true, "cost": [70], "stat": "bellHeal", "perLevel": 0.1, "requires": [] },
+  { "id": "ferrure_du_beffroi", "name": "upgrade.ferrure_du_beffroi.name", "desc": "upgrade.ferrure_du_beffroi.desc", "branch": "corps", "cost": [70, 150, 300], "stat": "armor", "perLevel": 1, "requires": ["coeur_de_bronze"] },
+  { "id": "cire_de_veillee", "name": "upgrade.cire_de_veillee.name", "desc": "upgrade.cire_de_veillee.desc", "branch": "corps", "cost": [60, 130, 260], "stat": "regen", "perLevel": 0.3, "requires": ["coeur_de_bronze"] },
+  { "id": "second_souffle", "name": "upgrade.second_souffle.name", "desc": "upgrade.second_souffle.desc", "branch": "corps", "rule": true, "cost": [320], "stat": "revive", "perLevel": 1, "requires": ["ferrure_du_beffroi"] },
+
+  { "id": "oreille_fine", "name": "upgrade.oreille_fine.name", "desc": "upgrade.oreille_fine.desc", "branch": "cloche", "cost": [40, 110, 220], "stat": "windowMult", "perLevel": 0.1, "requires": [] },
+  { "id": "battant_lourd", "name": "upgrade.battant_lourd.name", "desc": "upgrade.battant_lourd.desc", "branch": "cloche", "cost": [60, 140, 280], "stat": "damageMult", "perLevel": 0.05, "requires": [] },
+  { "id": "timbre_niveau_2", "name": "upgrade.timbre_niveau_2.name", "desc": "upgrade.timbre_niveau_2.desc", "branch": "cloche", "rule": true, "cost": [90], "stat": "startWeaponLevel", "perLevel": 1, "requires": ["oreille_fine"] },
+  { "id": "contrepoids_de_fonte", "name": "upgrade.contrepoids_de_fonte.name", "desc": "upgrade.contrepoids_de_fonte.desc", "branch": "cloche", "cost": [70, 150, 300], "stat": "area", "perLevel": 0.08, "requires": ["battant_lourd"] },
+  { "id": "main_sure", "name": "upgrade.main_sure.name", "desc": "upgrade.main_sure.desc", "branch": "cloche", "cost": [80, 160, 320], "stat": "crit", "perLevel": 0.03, "requires": ["battant_lourd"] },
+  { "id": "corde_neuve", "name": "upgrade.corde_neuve.name", "desc": "upgrade.corde_neuve.desc", "branch": "cloche", "rule": true, "cost": [220, 420], "stat": "cadence", "perLevel": 1, "requires": ["contrepoids_de_fonte"] },
+
+  { "id": "deuxieme_chance", "name": "upgrade.deuxieme_chance.name", "desc": "upgrade.deuxieme_chance.desc", "branch": "memoire", "rule": true, "cost": [60], "stat": "rerolls", "perLevel": 1, "requires": [] },
+  { "id": "contrat_en_plus", "name": "upgrade.contrat_en_plus.name", "desc": "upgrade.contrat_en_plus.desc", "branch": "memoire", "rule": true, "cost": [80], "stat": "contracts", "perLevel": 1, "requires": [] },
+  { "id": "aimant_d_echos", "name": "upgrade.aimant_d_echos.name", "desc": "upgrade.aimant_d_echos.desc", "branch": "memoire", "cost": [40, 90, 170], "stat": "magnet", "perLevel": 0.25, "requires": [] },
+  { "id": "deuxieme_relique", "name": "upgrade.deuxieme_relique.name", "desc": "upgrade.deuxieme_relique.desc", "branch": "memoire", "rule": true, "cost": [150], "stat": "relicChoices", "perLevel": 1, "requires": ["deuxieme_chance"] },
+  { "id": "troisieme_carte", "name": "upgrade.troisieme_carte.name", "desc": "upgrade.troisieme_carte.desc", "branch": "memoire", "cost": [120, 260], "stat": "rerolls", "perLevel": 1, "requires": ["deuxieme_chance"] },
+  { "id": "reliquaire", "name": "upgrade.reliquaire.name", "desc": "upgrade.reliquaire.desc", "branch": "memoire", "cost": [70, 140, 260], "stat": "xpGain", "perLevel": 0.08, "requires": ["aimant_d_echos"] },
+  { "id": "bourse_de_cuivre", "name": "upgrade.bourse_de_cuivre.name", "desc": "upgrade.bourse_de_cuivre.desc", "branch": "memoire", "cost": [80, 170, 340], "stat": "bronzeGain", "perLevel": 0.1, "requires": ["aimant_d_echos"] },
+  { "id": "echo_de_felure", "name": "upgrade.echo_de_felure.name", "desc": "upgrade.echo_de_felure.desc", "branch": "memoire", "rule": true, "cost": [130], "stat": "fissureEcho", "perLevel": 1, "requires": ["reliquaire"] }
 ]

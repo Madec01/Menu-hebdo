@@ -45,7 +45,10 @@
       "credits": "Crédits",
       "runs": "{runs} nuits · {wins} aubes",
       "version": "Les Marches Sourdes",
-      "last_night": "Dernière nuit : {parish} · {character}"
+      "last_night": "Dernière nuit : {parish} · {character}",
+      "daily": "Nuit du jour",
+      "daily_best": "{parish} · meilleur : {score} points",
+      "daily_hint": "{parish} · seed du {date}"
     },
     "hub": {
       "title": "Le Beffroi Mère",
@@ -82,7 +85,12 @@
       "weapon_condition": "Niveau {level} en jeu, ou {cost} bronze",
       "unlock_weapon": "Débloquer ({cost} bronze)",
       "unlocked_weapon": "Timbre de départ débloqué : {name}",
-      "weapon_locked_start": "Choisis un Timbre débloqué pour sonner la nuit"
+      "weapon_locked_start": "Choisis un Timbre débloqué pour sonner la nuit",
+      "contracts": "Contrats",
+      "contracts_n": "Contrats {count} / {total}",
+      "record_short": "record {time}",
+      "quest": "{name} : {quest} ({progress} / {goal})",
+      "buy_char": "Racheter ({cost} bronze)"
     },
     "tree": {
       "title": "Améliorations du Beffroi",
@@ -108,7 +116,17 @@
       "stat_revive": "renaissance",
       "stat_area": "de zone",
       "stat_cadence": "cran de cadence",
-      "stat_rerolls": "relance"
+      "stat_rerolls": "relance",
+      "remaining": "Il reste {cost} bronze à dépenser",
+      "branch_corps": "Corps",
+      "branch_cloche": "Cloche",
+      "branch_memoire": "Mémoire",
+      "rule": "Règle",
+      "stat_bellHeal": "de soin à la cloche",
+      "stat_startWeaponLevel": "niveau de départ",
+      "stat_relicChoices": "Relique proposée",
+      "stat_contracts": "contrat",
+      "stat_fissureEcho": "Écho de Fêlure"
     },
     "altar": {
       "title": "Autel des Feuillets",
@@ -213,7 +231,22 @@
       "offset": "Décalage moyen : {ms} ms, {dir}",
       "offset_early": "en avance",
       "offset_late": "en retard",
-      "offset_none": "calé sur la Mesure"
+      "offset_none": "calé sur la Mesure",
+      "sourdine": "Sourdine {level} · Bronze ×{bronze}",
+      "sourdine_next": "Sourdine {level} ouverte dans cette paroisse",
+      "contract_bronze": "Contrats : +{bronze} bronze",
+      "vigil": "Veillée : {time} après l'aube",
+      "record": "record",
+      "parish_record": "Record de la paroisse : {time}",
+      "daily": "Nuit du jour : {score} points, rang {rank}",
+      "more": "… et {count} de plus",
+      "contracts": "Contrats de la nuit",
+      "next": "Prochain : {text}",
+      "next_char": "{text}",
+      "next_leaf": "Feuillet {n} — {hint}",
+      "next_parish": "{parish} s'ouvre en sonnant l'aube de {from}",
+      "next_sourdine": "Sourdine {level} à {parish} : gagne au niveau en dessous",
+      "next_done": "tout est retrouvé ; reste la veillée"
     },
     "codex": {
       "title": "Codex",
@@ -273,13 +306,26 @@
       "leaf_missing": "Pas encore retrouvé",
       "unlock_run_minute": "Tiens {minute} min à {parish}.",
       "unlock_run_win": "Sonne l’aube à {parish}.",
-      "unlock_boss_kill": "Fais taire {boss}.",
-      "unlock_kills": "Fais taire {count} {enemy}.",
-      "unlock_runs": "Sonne {runs} nuits.",
-      "unlock_character": "Sonne une nuit avec {character}.",
-      "unlock_fusion": "Fusionne {fusion}.",
-      "unlock_resonance_max_time": "Tiens la Résonance au plus haut pendant {sec} s.",
-      "recipe_levels": "{weapon} niv. {wl} + {passive} niv. {pl}"
+      "unlock_boss_kill": "Fais taire {boss} à {parish}.",
+      "unlock_kills": "Fais taire {count} {enemy} (nuits à {parish}).",
+      "unlock_runs": "Sonne {runs} nuits, puis une à {parish}.",
+      "unlock_character": "Sonne une nuit à {parish} avec {character}.",
+      "unlock_fusion": "Fusionne {fusion} à {parish}.",
+      "unlock_resonance_max_time": "Tiens la Résonance au plus haut pendant {sec} s à {parish}.",
+      "recipe_levels": "{weapon} niv. {wl} + {passive} niv. {pl}",
+      "tab_records": "Records",
+      "daily": "Nuit du jour",
+      "daily_empty": "Aucune Nuit du jour sonnée. Elle se lance depuis le titre : seed = la date, classement local des cinq meilleures.",
+      "score": "{score} pts",
+      "record_none": "Jamais sonné. Le record s'écrit à la première nuit.",
+      "record_nights": "Nuits · aubes",
+      "record_time": "Meilleur temps",
+      "record_level": "Meilleur niveau",
+      "record_kills": "Plus de choses tues",
+      "record_sourdine": "Sourdine la plus haute sonnée",
+      "record_sourdine_open": "Sourdine ouverte",
+      "record_vigil": "Veillée record",
+      "unlock_bell_answers_run": "Réponds à {count} cloches en une nuit à {parish}."
     },
     "options": {
       "title": "Options",
@@ -430,7 +476,9 @@
       "fusion": "Fusion",
       "parish_unlocked": "Paroisse ouverte",
       "saved": "Sauvegardé",
-      "start_weapon": "Timbre de départ débloqué"
+      "start_weapon": "Timbre de départ débloqué",
+      "battant": "Le Battant",
+      "contract": "Contrat rempli"
     },
     "confirm": {
       "title": "Sûr ?"
@@ -494,6 +542,37 @@
       "apply": "Appliquer ({ms} ms)",
       "retry": "Recommencer",
       "applied": "Latence réglée : {ms} ms"
+    },
+    "sourdine": {
+      "level": "Sourdine {level}",
+      "summary": "Sourdine {level} · Bronze ×{bronze} · difficulté ×{difficulty}"
+    },
+    "contracts": {
+      "title": "Contrats de nuit",
+      "subtitle": "Le Beffroi propose ; tu acceptes jusqu'à {max}. Rien à perdre, du Bronze ou un Feuillet à gagner.",
+      "difficulty_s": "Contrat · simple",
+      "difficulty_m": "Contrat · moyen",
+      "difficulty_l": "Contrat · long",
+      "accepted": "Accepté",
+      "reward_leaf": "Feuillet de la paroisse",
+      "reward_bronze": "+{bronze} bronze",
+      "none": "Aucun contrat cette nuit.",
+      "count": "{count} / {max} {count|accepté|acceptés}",
+      "hint": "◄► choisir · Entrée accepter ou refuser · Échap retour",
+      "hint_pad": "Stick choisir · A accepter ou refuser · B retour",
+      "done": "rempli",
+      "failed": "manqué",
+      "progress": "{progress} / {goal}"
+    },
+    "vigil": {
+      "results": "Voir le bilan",
+      "continue": "Veiller encore",
+      "text": "L'aube est sonnée : le Bronze et l'aube sont acquis. Veiller encore, c'est laisser la nuit continuer sans fin — la Sourdine monte toutes les {step} s — et tenir le plus longtemps possible. Tomber ne reprend rien.",
+      "record": "Veillée record : {time}"
+    },
+    "ending": {
+      "hint": "Entrée : accélérer · Échap : passer",
+      "hint_done": "Entrée : continuer"
     }
   }
 }

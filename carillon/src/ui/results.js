@@ -1,6 +1,7 @@
 // ui/results.js — bilan de la nuit : temps, tués, niveau, DPS par Timbre,
-// Résonance moyenne, Bronze gagné avec compteur animé, Feuillet, hauts-faits et
-// Timbres de départ débloqués, Relique de la nuit, réponses à la cloche, seed copiable,
+// Résonance moyenne, Bronze gagné avec compteur animé, puis toutes les lignes de la nuit
+// (results-lines.js : Sourdine, contrats, veillée, records, Feuillets, hauts-faits, sonneurs, Timbres),
+// Relique de la nuit, réponses à la cloche, « prochain déblocage », seed copiable,
 // Rejouer / Retour au Beffroi.
 // enter({ victory, stats: RunStats, params }) — le Bronze est déjà crédité (D).
 
@@ -14,13 +15,15 @@ import { def as dataDef } from './gamedata.js';
 import * as states from './states.js';
 import { copyText } from './dom.js';
 import { toast } from './toasts.js';
-import { panel, text, icon, gauge, createMenu, heading, C } from './widgets.js';
+import { panel, text, paragraph, icon, gauge, createMenu, heading, C } from './widgets.js';
+import { infoLines, contractLines, nextLine } from './results-lines.js';
 
 const W = 480, H = 270;
 const COUNT_SEC = 1.6;
+const LINE_H = 10;
 
 export function createResults() {
-  let victory = false, stats = null, params = null, time = 0, shown = 0, lastTick = 0, killer = '', offsetAvg = 0;
+  let victory = false, stats = null, params = null, time = 0, shown = 0, lastTick = 0, killer = '', offsetAvg = 0, lines = [], cLines = [], next = '';
   const PX = 16, PY = 12, PW = W - 32, PH = H - 24;
   const btn = (i) => ({ x: PX + 20 + i * 150, y: PY + PH - 30, w: 136, h: 20 });
   const items = [
@@ -55,11 +58,10 @@ export function createResults() {
     row(t('ui.results.level'), String(s.level));
     row(t('ui.results.resonance'), t('ui.hud.mult', { mult: s.resonanceAvg }), C.bronze);
     y += 2;
-    text(ui, t('ui.results.perfects', { perfects: s.perfects || 0, misses: s.misses || 0 }), lx, y, { size: 8, color: C.encreClaire }); y += 10;
-    // Décalage moyen des frappes (HUD) : signé, > 0 = en retard ; le joueur sait quoi corriger (ou calibrer).
+    // Frappes et décalage moyen (signé, > 0 = en retard) sur une ligne : le joueur sait quoi corriger (ou calibrer).
     const off = Math.round(offsetAvg);
     const dir = t(Math.abs(off) < 8 ? 'ui.results.offset_none' : off > 0 ? 'ui.results.offset_late' : 'ui.results.offset_early');
-    text(ui, t('ui.results.offset', { ms: Math.abs(off), dir }), lx, y, { size: 8, color: C.encreClaire }); y += 12;
+    text(ui, t('ui.results.perfects', { perfects: s.perfects || 0, misses: s.misses || 0 }) + ' · ' + t('ui.results.offset', { ms: Math.abs(off), dir }), lx, y, { size: 8, color: C.encreClaire, maxWidth: 196 }); y += 12;
     // Bronze : compteur animé.
     const target = s.bronze || 0;
     const k = Math.min(1, time / COUNT_SEC);
@@ -67,11 +69,14 @@ export function createResults() {
     icon(ui, 'ui_bronze', lx, y - 4, 0.6);
     text(ui, t('ui.results.bronze'), lx + 24, y, { size: 10, color: C.encreClaire });
     text(ui, String(shown), vx, y - 4, { kind: 'display', size: 18, align: 'right', color: C.bronze });
-    y += 20;
-    if (!victory && killer) { text(ui, t('ui.results.killer', { name: t('enemy.' + killer + '.name') }), lx, y, { size: 9, color: C.encreClaire, maxWidth: 190 }); y += 11; }
-    if (s.leafUnlocked) { text(ui, t('ui.results.leaf', { title: t('lore.' + s.leafUnlocked + '.title') }), lx, y, { size: 9, color: C.braise, maxWidth: 180 }); y += 11; }
-    if (s.achievements) for (const id of s.achievements.slice(0, 2)) { text(ui, t('ui.results.achievement', { name: t('achievement.' + id + '.name') }), lx, y, { size: 9, color: C.braise, maxWidth: 180 }); y += 11; }
-    if (s.startWeapons) for (const id of s.startWeapons.slice(0, 2)) { text(ui, t('ui.results.start_weapon', { name: t('weapon.' + id + '.name') }), lx, y, { size: 9, color: C.bronze, maxWidth: 180 }); y += 11; }
+    y += 18;
+    // Lignes de la nuit, jusqu'à la place disponible (la dernière résume le reste).
+    const bottom = PY + PH - 66;
+    const room = Math.max(1, Math.floor((bottom - y) / LINE_H));
+    const n = lines.length > room ? room - 1 : lines.length;
+    for (let i = 0; i < n; i++) { text(ui, lines[i].text, lx, y, { size: 8, color: lines[i].color, maxWidth: 192 }); y += LINE_H; }
+    if (lines.length > n) { text(ui, t('ui.results.more', { count: lines.length - n }), lx, y, { size: 8, color: C.encreClaire }); y += LINE_H; }
+    paragraph(ui, next, lx, PY + PH - 64, 192, { size: 8, color: C.braise, lineHeight: 9, maxLines: 2 });
     text(ui, t('ui.results.seed', { seed: seedLabel() }), lx, PY + PH - 44, { size: 8, color: C.encreClaire, maxWidth: 200 });
   }
 
@@ -80,7 +85,7 @@ export function createResults() {
     const bx = PX + 214, bw = PW - 230;
     let y = PY + 40;
     text(ui, t('ui.results.dps'), bx, y, { size: 10, color: C.encreClaire }); y += 14;
-    const entries = Object.entries(s.dpsByWeapon || {}).sort((a, b) => b[1] - a[1]).slice(0, 6);
+    const entries = Object.entries(s.dpsByWeapon || {}).sort((a, b) => b[1] - a[1]).slice(0, cLines.length ? 4 : 6);
     const max = entries.length ? Math.max(1, entries[0][1]) : 1;
     const dur = Math.max(1, s.timeSec);
     // Une ligne par Timbre : icône, nom, barre plate proportionnelle au plus fort, DPS lisible à droite.
@@ -93,6 +98,12 @@ export function createResults() {
       y += 14;
     }
     if (!entries.length) text(ui, t('ui.pause.empty'), bx + 20, y, { size: 9, color: C.encre });
+    // Contrats de la nuit (réussis en bronze, ratés en encre claire).
+    if (cLines.length) {
+      y += 2;
+      text(ui, t('ui.results.contracts'), bx, y, { size: 8, color: C.encreClaire }); y += LINE_H;
+      for (const l of cLines.slice(0, 3)) { text(ui, l.text, bx, y, { size: 8, color: l.color, maxWidth: bw }); y += LINE_H; }
+    }
     // Build final (Timbres puis Accords), Relique et cloches à côté.
     const b = s.build || { weapons: [], passives: [] };
     let x = bx;
@@ -110,6 +121,7 @@ export function createResults() {
   return {
     enter(p) {
       victory = !!p.victory; stats = p.stats || {}; params = p.params; killer = p.killer || ''; offsetAvg = p.offsetAvgMs || 0; time = 0; shown = 0; lastTick = 0; menu.index = 2;
+      lines = infoLines(stats, victory, killer); cLines = contractLines(stats); next = nextLine(stats);
       const track = victory ? 'victory' : 'death';
       if (music.current() !== track) music.loadTrack(track).then(() => music.play(track, { layers: 2, fadeSec: 1 })).catch(() => {});
     },
@@ -138,5 +150,7 @@ export function createResults() {
       renderDps(ui);
       menu.render(ui);
     },
+    /** Lignes affichées (tests). */
+    lines: () => lines,
   };
 }

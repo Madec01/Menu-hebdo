@@ -276,17 +276,20 @@
     "osric": {
       "name": "Osric",
       "desc": "A former bell founder, sewn late, at twelve, which is not done. He remembers the time before the Clapper and never speaks of it.",
-      "trait": "Cuirass: −20% damage taken and half the knockback. Slow, heavy, more life, harder strokes."
+      "trait": "Cuirass: −20% damage taken and half the knockback. Slow, heavy, more life, harder strokes.",
+      "quest": "ring the dawn of Cendrelune — he knows the pour of its bell"
     },
     "maren": {
       "name": "Maren",
       "desc": "A shepherdess from Les Tourbes, she counted her flock by the sound of the bells. She was found alone in the marsh with the whole flock around her.",
-      "trait": "Resonance rises twice as fast but fades faster (×1.5); draws Echoes from farther away."
+      "trait": "Resonance rises twice as fast but fades faster (×1.5); draws Echoes from farther away.",
+      "quest": "answer the hourly bell ten times — she counts by the sound of bells"
     },
     "le_muet": {
       "name": "Le Muet",
       "desc": "A former ringer whose Clapper was taken out. Nobody speaks his name anymore, and he holds a tuning fork in his hand the way one holds a lamp.",
-      "trait": "No Clapper: only perfect strokes charge the Resonance, but by two notches at once. The Gag cannot muffle him."
+      "trait": "No Clapper: only perfect strokes charge the Resonance, but by two notches at once. The Gag cannot muffle him.",
+      "quest": "read \"Rougemare\" at the Altar and hold notch 3 for a minute — he must hear you"
     }
   },
   "upgrade": {
@@ -345,6 +348,30 @@
     "troisieme_carte": {
       "name": "Third Card",
       "desc": "The right to turn over one more card. One more reroll per night at each level."
+    },
+    "cloche_qui_soigne": {
+      "name": "Healing Bell",
+      "desc": "Rule: every answer to the hourly bell also gives back a tenth of your life."
+    },
+    "timbre_niveau_2": {
+      "name": "Starting Timbre Level 2",
+      "desc": "Rule: the Timbre you go down with is already at level 2 when the night begins."
+    },
+    "deuxieme_chance": {
+      "name": "Second Chance",
+      "desc": "Rule: once a night, you may turn the three cards over and draw three others."
+    },
+    "contrat_en_plus": {
+      "name": "One More Contract",
+      "desc": "Rule: the Belfry offers three night contracts instead of two, and you may accept three."
+    },
+    "deuxieme_relique": {
+      "name": "Second Relic",
+      "desc": "Rule: three Relics are offered at the start of the night instead of two."
+    },
+    "echo_de_felure": {
+      "name": "Echo of the Rift",
+      "desc": "Rule: every Rift that falls leaves a giant Echo, to be picked up with a Volley on the beat."
     }
   },
   "achievement": {
@@ -354,15 +381,15 @@
     },
     "sonneur_confirme": {
       "name": "Seasoned Ringer",
-      "desc": "Hold until dawn ten times."
+      "desc": "Ring ten nights, won or lost."
     },
     "cent_echos": {
       "name": "A Hundred Echoes",
-      "desc": "Silence a hundred things in a single night."
+      "desc": "Pick up a hundred Echoes in a single night."
     },
     "mille_silences": {
       "name": "A Thousand Silences",
-      "desc": "Silence a thousand things in a single night."
+      "desc": "Silence a thousand things, all nights counted."
     },
     "plein_timbre": {
       "name": "Full Timbre",
@@ -427,6 +454,26 @@
     "repondre_a_la_cloche": {
       "name": "Answer the Bell",
       "desc": "Answer the hourly bell ten times, on the fourth stroke."
+    },
+    "sourdine_v_cendrelune": {
+      "name": "Cendrelune Under Mute V",
+      "desc": "Ring the dawn of Cendrelune at Mute level V."
+    },
+    "veillee_longue": {
+      "name": "Long Vigil",
+      "desc": "Keep vigil three minutes past dawn."
+    },
+    "nuit_du_jour": {
+      "name": "The Night of the Day",
+      "desc": "Ring a Night of the Day to its end."
+    },
+    "premier_contrat": {
+      "name": "Word Kept",
+      "desc": "Fulfil a first night contract."
+    },
+    "dix_contrats": {
+      "name": "Ten Words",
+      "desc": "Fulfil ten night contracts."
     }
   },
   "lore": {
@@ -597,5 +644,105 @@
     "veuves_en_cercle": {
       "name": "The Three Widows"
     }
+  },
+  "contract": {
+    "choeurs_sur_le_temps": {
+      "name": "Thirty Choirs on the Beat",
+      "desc": "Silence thirty Mute Choirs with a stroke that lands on the beat."
+    },
+    "tenir_cran_2": {
+      "name": "Hold the Second Notch",
+      "desc": "Keep the Resonance at notch 2 or higher for sixty seconds in a row."
+    },
+    "trois_cloches": {
+      "name": "Three Bells",
+      "desc": "Answer three hourly bells, on the fourth stroke."
+    },
+    "quatre_timbres": {
+      "name": "Four Timbres",
+      "desc": "End the night with at least four Timbres in your carillon."
+    },
+    "sans_relique": {
+      "name": "No Relic",
+      "desc": "Refuse the Relic and ring the dawn anyway."
+    },
+    "felure_rapide": {
+      "name": "The Rift in Thirty Seconds",
+      "desc": "Silence a Rift less than thirty seconds after it arrives."
+    },
+    "echo_geant": {
+      "name": "The Giant Echo",
+      "desc": "Pick up the Lull's giant Echo with a Volley on the beat."
+    },
+    "sans_coup_une_minute": {
+      "name": "A Minute Untouched",
+      "desc": "Take no hit for a full minute."
+    },
+    "douze_parfaits": {
+      "name": "Twelve Perfects",
+      "desc": "String twelve perfect strokes together without a single miss."
+    },
+    "une_fusion": {
+      "name": "One Fusion",
+      "desc": "Melt a Timbre and a Chord into a single bell tonight."
+    },
+    "gagner_muet": {
+      "name": "The Mute's Dawn",
+      "desc": "Ring the dawn with Le Muet."
+    },
+    "sans_accord": {
+      "name": "No Chord",
+      "desc": "Ring the dawn without taking a single Chord."
+    },
+    "cierge_errant": {
+      "name": "The Wandering Candle",
+      "desc": "Catch and silence the elite that flees."
+    },
+    "aube_cran_4": {
+      "name": "Dawn at Notch 4",
+      "desc": "Reach the Bourdon with the Resonance at the fourth notch."
+    }
+  },
+  "ending": {
+    "register_title": "Register of Cendrelune",
+    "register": "Ringers of Cendrelune, copied into the register of the Beffroi Mère: Pel. Jorin's aunt, whose name came back with the bell: Sabine. Jorin, son of Pel. And, at Michaelmas, come from the Beffroi Mère and stayed: Anselme, ringer.",
+    "master": "Anselme. I write it in full, on the top line, with all its letters. He rang from dawn towards night; I answered him off the beat, and that is where he still was. Bronze never forgets its note. Neither do I; it is my work.",
+    "fallen_title": "Those who fell before dawn",
+    "fallen_line": "{name}, {count} {count|night|nights} without a dawn. I counted them. The ground remembers; so do I.",
+    "fallen_none": "Nobody fell. I do not know whether to believe it, but I write it down.",
+    "nights": "{runs} {runs|night|nights} rung, {wins} {wins|dawn|dawns}. Every charcoal cross on the map now has a name facing it.",
+    "letter_1": "Wren. You finished the round I did not finish. The notebook is yours; the Clapper already was. There is one thing I did not teach you because I did not know it myself: it is not the bell that holds them. It is someone to turn to, who does not leave.",
+    "letter_2": "Stay. Write the names. When the fog rises, ring, and when it settles, go and sit with them without a lamp. If it still rings afterwards, it will be from their side. Anselme.",
+    "muet_1": "Le Muet lays the Tuning Fork on the altar, under the cracked bell. He does not ring. He waits for the bronze to fall wholly silent, then says a name aloud, once, the way one reads a line of a register: Tomas Ferrand.",
+    "muet_2": "Nobody in Cendrelune knows it. Jorin repeats it all the same, because he heard it, and Pel after him. The name passes from mouth to mouth down to the bottom of the village, where the fog takes it and does not give it back. But it is written here, at the foot of the page, in a hand I recognise.",
+    "muet_3": "He has no Clapper any more, and wants none. He has a tuning fork, a lamp, and a register. He will stay in Cendrelune. Somebody has to keep somebody.",
+    "last_line": "Ring until dawn."
+  },
+  "battant": {
+    "first_night": "The Beffroi Mère is empty. There is you, and me in your chest. Choose a parish; I will beat the measure.",
+    "first_death": "You fell before dawn. They forgot you by noon; it is the trade. I keep count. Go back.",
+    "wall": "Four nights without a dawn. It is not the bell you lack, it is the beat: strike on it, not beside it.",
+    "first_win": "The dawn has rung. Cendrelune remembers Jorin this morning. You held him.",
+    "five_nights": "Five nights. The ground remembers your steps; so do I. You walk less crooked.",
+    "ten_nights": "Ten nights. A ringer who rings ten dawns, the Order gave a bell name. I have no bell to give you. Go on.",
+    "first_leaf_read": "You have read a Leaf. That is his hand. There are more in the parishes; I will tell you when you find one.",
+    "osric_joins": "Osric heard the bell of Cendrelune. He knows the pour; he joins the Belfry.",
+    "maren_joins": "Maren counted ten bells, like her sheep. She is here, with the bells.",
+    "muet_joins": "He heard you hold the measure. He has no Clapper, but he has a tuning fork. He will ring.",
+    "beffroi_open": "One parish remains, and it is ours. Ring it backwards if you hear me.",
+    "first_contract": "Word kept. The Belfry pays its contracts in Bronze, and sometimes in Leaves.",
+    "sourdine_v": "Mute V. There is nothing deafer than that. You held it.",
+    "daily_done": "The night of the day is rung. Tomorrow the seed changes, and so does the fog.",
+    "bronze_idle": "The Bronze sleeps in your purse. The Belfry has nodes to sell; the Mute has levels.",
+    "ending_seen": "The register is written. The rest, one learns by ringing.",
+    "ending_muet": "He laid down the Tuning Fork. His name is Tomas Ferrand, and Cendrelune knows it.",
+    "leaf_f03": "Jorin, son of Pel. Keep it; I keep it too.",
+    "leaf_f05": "He will not tell you when he returns. You will learn it without him.",
+    "leaf_f09": "What the Gag takes, nobody claims. I claim it.",
+    "leaf_f10": "Anselme, of the Beffroi Mère. He wrote it for the exercise. Count the letters.",
+    "leaf_f12": "Tomas Ferrand. I heard him ring, once. He held the measure well.",
+    "leaf_f18": "Where nobody remembers. He says he will be known by the noise. Listen for the off-beat.",
+    "leaf_f19": "That is why he sewed you at seven. I do not ask forgiveness; I beat.",
+    "leaf_f23": "He laid his Clapper under the bell. He did not lay down his name. Go and fetch it."
   }
 }

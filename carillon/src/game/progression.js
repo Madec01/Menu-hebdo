@@ -8,6 +8,10 @@
 // Timbres de départ : un Timbre porté à son niveau max pendant la run (ou composant d'une fusion
 // découverte) est débloqué immédiatement dans save.unlocked.weapons (commit → l'UI affiche le toast
 // par différence sur `save:changed`) et listé dans RunStats.startWeapons pour le bilan.
+// Vague 2 : Sourdine (run.sourdine, multiplicateur de Bronze lu dans parishes.json), contrats de nuit
+// (contracts.js : réglés ici, Bronze ou Feuillet de la paroisse), tenue de cran (run.tierHold[t] = record de
+// secondes d'affilée au cran ≥ t, quête du Muet), veillée (run.vigilSec), Nuit du jour (run.daily = date),
+// records / Sourdine débloquée / fin (meta.js). RunStats porte tout ce que le bilan affiche.
 
 import { bus } from '../core/events.js';
 import { makeRng } from '../core/rng.js';
@@ -22,11 +26,16 @@ import { healPlayer } from './player.js';
 import { dpsReport, resetReport } from './weapons.js';
 import { mult as resonanceMult, maxTierTime, resetResonance } from './resonance.js';
 import { drawCards } from './cards.js';
-import { evaluateUnlocks, unlockStartWeapon, syncStartWeapons } from './unlocks.js';
+import { evaluateUnlocks, unlockStartWeapon, syncStartWeapons, grantParishLeaf } from './unlocks.js';
+import { tier as resonanceTier } from './resonance.js';
+import { settleContracts, leafFallbackBronze } from './contracts.js';
+import { applyMeta } from './meta.js';
+import { sourdineMult } from './night-rules.js';
 
 const levelPayload = { level: 1, choices: [] };
 const endPayload = { victory: false, stats: null };
-const unlockOut = { leaves: [], achievements: [] };
+const unlockOut = { leaves: [], achievements: [], characters: [] };
+const TIERS = 4;
 let current = null;
 let listening = false;
 
@@ -69,7 +78,7 @@ function checkMaxedWeapons(run, player) {
 }
 
 /** Démarre une run (état de progression). */
-export function initRun({ parishId, characterId, seed, assist = 'none' }) {
+export function initRun({ parishId, characterId, seed, assist = 'none', sourdine = 1, daily = null }) {
   listen();
   resetReport();
   const X = balance().xp;
@@ -81,6 +90,8 @@ export function initRun({ parishId, characterId, seed, assist = 'none' }) {
     echoes: 0, perfects: 0, misses: 0, inputs: 0, hitsTaken: 0, fusions: [],
     resonanceSum: 0, resonanceSamples: 0, bossKilled: null, world: null, player: null, finished: false, stats: null,
     startWeapons: [], relicId: null, relicOffer: null, relicPicked: false, bellAnswers: 0,
+    sourdine: Math.max(1, sourdine | 0), daily: daily || null, contracts: [], tierHold: [0, 0, 0, 0], holdCur: [0, 0, 0, 0],
+    vigil: false, vigilStart: 0, vigilSec: 0, vigilLevel: 0,
   };
   current = run;
   return run;
@@ -96,6 +107,12 @@ export function updateRun(run, dt, player, world) {
   run.resonanceSum += resonanceMult() * dt; run.resonanceSamples += dt;
   if (world) { run.kills = world.kills; run.echoes = world.echoes; if (world.bossKilled) run.bossKilled = world.bossKilled; }
   if (player) { run.rerolls = player.stats.rerolls; checkMaxedWeapons(run, player); }
+  // Tenue de cran : secondes d'affilée au cran ≥ t (t = 0..3), record conservé dans run.tierHold.
+  const tier = player && player.dead ? -1 : resonanceTier();
+  for (let t = 0; t < TIERS; t++) {
+    if (tier >= t) { run.holdCur[t] += dt; if (run.holdCur[t] > run.tierHold[t]) run.tierHold[t] = run.holdCur[t]; }
+    else run.holdCur[t] = 0;
+  }
 }
 
 /** Ajoute de l'XP ; déclenche level:up (une montée à la fois). */
@@ -168,7 +185,20 @@ export function finishRun(run, victory) {
   let bronze = (victory ? (parish ? parish.bronzeReward : 0) * B.win : 0)
     + (run.timeSec / 60) * B.perMinute + run.kills * B.perKill + resonanceAvg * B.perResonance;
   if (!victory) bronze *= B.lossMult;
-  bronze = Math.round(bronze * (p ? p.stats.bronzeGain : 1)) + (world ? world.bronzePicked : 0);
+  const sm = sourdineMult(parish, run.sourdine);
+  bronze = Math.round(bronze * (p ? p.stats.bronzeGain : 1) * sm.bronze) + (world ? world.bronzePicked : 0);
+  // Contrats de nuit : Bronze en prime, ou le prochain Feuillet fermé de la paroisse.
+  const settled = settleContracts(run, victory, p);
+  const contractLeaves = [];
+  unlockOut.leaves.length = 0;
+  for (let i = 0; i < settled.done.length; i++) {
+    const d = run.contracts.find((c) => c.id === settled.done[i]);
+    if (!(d && d.def.reward && d.def.reward.leaf)) continue;
+    const id = grantParishLeaf(save, run.parishId, unlockOut);
+    if (id) contractLeaves.push(id); else settled.bronze += leafFallbackBronze(d.id);
+  }
+  const contractBronze = Math.round(settled.bronze * sm.bronze);
+  bronze += contractBronze;
 
   // Sauvegarde : stats, codex, fusions, paroisses.
   save.bronze += bronze;
@@ -183,6 +213,10 @@ export function finishRun(run, victory) {
   }
   if (run.timeSec > save.stats.bestTime) save.stats.bestTime = Math.round(run.timeSec);
   save.stats.bellAnswers = (save.stats.bellAnswers || 0) + run.bellAnswers;
+  save.stats.contracts = save.stats.contracts || { offered: 0, accepted: 0, done: 0 };
+  save.stats.contracts.accepted += run.contracts.length;
+  save.stats.contracts.done += settled.done.length;
+  if (run.tierHold[2] > (save.stats.tierHold || 0)) save.stats.tierHold = Math.round(run.tierHold[2]);
   if (resonanceAvg > save.stats.bestResonance) save.stats.bestResonance = Math.round(resonanceAvg * 100) / 100;
   if (world) for (const k in world.killsByKind) save.codex.enemies[k] = (save.codex.enemies[k] || 0) + world.killsByKind[k];
   if (run.bossKilled) save.codex.bosses[run.bossKilled] = (save.codex.bosses[run.bossKilled] || 0) + 1;
@@ -200,8 +234,17 @@ export function finishRun(run, victory) {
     fusions: run.fusions, maxTierTime: maxTierTime(), echoes: run.echoes, perfects: run.perfects, misses: run.misses,
     assist: run.assist, inputs: run.inputs, weaponCount: p ? p.weapons.length : 0, passiveCount: p ? p.passives.length : 0,
     bellAnswers: run.bellAnswers, relicId: run.relicId,
+    sourdine: run.sourdine, vigilSec: run.vigilSec, daily: run.daily, tierHold: run.tierHold,
   };
+  const meta = applyMeta(run, save, victory, {});
+  const contractLeafList = unlockOut.leaves.slice();
   evaluateUnlocks(facts, save, unlockOut);
+  for (let i = 0; i < contractLeafList.length; i++) {
+    if (unlockOut.leaves.indexOf(contractLeafList[i]) >= 0) continue;
+    unlockOut.leaves.unshift(contractLeafList[i]);
+    bus.emit('lore:unlock', { leafId: contractLeafList[i] });
+  }
+  if (meta.endingLeaves) for (let i = 0; i < meta.endingLeaves.length; i++) if (unlockOut.leaves.indexOf(meta.endingLeaves[i]) < 0) unlockOut.leaves.push(meta.endingLeaves[i]);
   commit();
 
   const stats = {
@@ -215,6 +258,14 @@ export function finishRun(run, victory) {
     leaves: unlockOut.leaves.slice(), achievements: unlockOut.achievements.slice(), startWeapons: run.startWeapons.slice(),
     echoes: run.echoes, perfects: run.perfects, misses: run.misses, inputs: run.inputs, hitsTaken: run.hitsTaken,
     relicId: run.relicId, bellAnswers: run.bellAnswers,
+    characters: unlockOut.characters.slice(),
+    contracts: run.contracts.map((c) => ({ id: c.id, done: c.done, failed: !c.done, progress: Math.min(c.progress, c.goal), goal: c.goal, reward: c.def.reward, difficulty: c.def.difficulty })),
+    contractBronze, contractLeaves,
+    sourdine: run.sourdine, sourdineBronzeMult: sm.bronze, sourdineNext: meta.sourdineNext || 0,
+    vigil: run.vigil, vigilSec: Math.round(run.vigilSec || 0), isVigilRecord: !!meta.isVigilRecord,
+    isRecord: !!meta.isRecord, recordTime: meta.recordTime || 0,
+    daily: run.daily, dailyScore: meta.dailyScore || 0, dailyRank: meta.dailyRank || 0,
+    ending: meta.ending,
   };
   run.stats = stats;
   resetResonance();
