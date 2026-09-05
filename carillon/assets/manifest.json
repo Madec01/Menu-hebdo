@@ -3383,7 +3383,12 @@
     "ui_son": 25,
     "ui_musique": 26,
     "ui_lanterne": 27,
-    "ui_sceau": 28
+    "ui_sceau": 28,
+    "fusion_grande_volee": 0,
+    "fusion_transhumance": 3,
+    "fusion_corne_de_guet": 5,
+    "fusion_crecelle_du_vendredi": 6,
+    "fusion_angelus_de_veillee": 7
    },
    "credit": "gameicons",
    "sources": {

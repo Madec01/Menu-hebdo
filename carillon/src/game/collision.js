@@ -2,7 +2,9 @@
 // cercle/cercle uniquement. Projectiles du joueur → ennemis (perforation, rebonds, chaînes),
 // projectiles de Silence → joueur (parade : renvoi), ennemis → joueur (contact, annulé par la
 // parade). damageEnemy applique marque, critique, onBeat (Chœur Muet), recul, flash, nombres de
-// dégâts, hit-stop 40 ms sur les gros coups, et crédite dpsReport (weapons.recordDamage).
+// dégâts, hit-stop 40 ms sur les gros coups, et crédite dpsReport (weapons.recordDamage). Chaque coup
+// note `enemy.lastOnBeat` (lu par pickups.dropFor : Échos de Procession doublés seulement sur le temps).
+// hitPlayer reçoit la position de la source (direction de `player:hit`, recul du sonneur).
 
 import { bus } from '../core/events.js';
 import { play as playSfx } from '../audio/sfx.js';
@@ -63,6 +65,7 @@ export function damageEnemy(world, enemy, amount, opts = HIT) {
   const m = (world.knockbackMult || 1) / Math.max(0.2, enemy.mass);   // Relique « Corde usée » : recul réduit
   enemy.kx += opts.knockX * m; enemy.ky += opts.knockY * m;
   enemy.killedBy = opts.source;
+  enemy.lastOnBeat = !!opts.onBeat;
   recordDamage(opts.source, dmg - bonusPart);
   if (bonusPart > 0 && enemy.markBy) recordDamage(enemy.markBy, bonusPart);
   hitPayload.id = enemy.id; hitPayload.kind = enemy.kind; hitPayload.damage = dmg; hitPayload.crit = opts.crit;
@@ -136,7 +139,7 @@ export function collideProjectiles(world, p) {
       notifyParry(p);
       emitParticles('parry', o.x, o.y);
     } else if (p.iframesT <= 0) {
-      if (hitPlayer(p, o.damage, o.weaponId)) o.dead = true;
+      if (hitPlayer(p, o.damage, o.weaponId, o.x, o.y)) o.dead = true;
     }
   }
 }
@@ -155,7 +158,7 @@ function contact(e) {
     notifyParry(cp);
     return;
   }
-  if (hitPlayer(cp, e.damage, e.kind)) {
+  if (hitPlayer(cp, e.damage, e.kind, e.x, e.y)) {
     e.contactT = balance().player.contactCooldownSec;
     e.kx += dx / d * 80 / Math.max(0.2, e.mass); e.ky += dy / d * 80 / Math.max(0.2, e.mass);
   }

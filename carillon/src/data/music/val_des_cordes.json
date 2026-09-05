@@ -139,6 +139,105 @@
    ]
   },
   {
+   "tier": 0,
+   "name": "bourdon_8",
+   "instrument": "viola",
+   "gain": 0.24,
+   "events": [
+    {
+     "bar": 0,
+     "beat": 0,
+     "note": "E3",
+     "dur": 16
+    },
+    {
+     "bar": 4,
+     "beat": 0,
+     "note": "D3",
+     "dur": 8
+    },
+    {
+     "bar": 6,
+     "beat": 0,
+     "note": "E3",
+     "dur": 8
+    },
+    {
+     "bar": 8,
+     "beat": 0,
+     "note": "E3",
+     "dur": 8
+    },
+    {
+     "bar": 10,
+     "beat": 0,
+     "note": "G3",
+     "dur": 8
+    },
+    {
+     "bar": 12,
+     "beat": 0,
+     "note": "D3",
+     "dur": 8
+    },
+    {
+     "bar": 14,
+     "beat": 0,
+     "note": "E3",
+     "dur": 8
+    }
+   ]
+  },
+  {
+   "tier": 0,
+   "name": "pouls",
+   "instrument": "frame_drum",
+   "gain": 0.26,
+   "repeatBars": 1,
+   "pattern": {
+    "steps": 4,
+    "hits": [
+     [
+      "low",
+      0,
+      1.0
+     ],
+     [
+      "muted",
+      1,
+      0.55
+     ],
+     [
+      "muted",
+      2,
+      0.7
+     ],
+     [
+      "muted",
+      3,
+      0.55
+     ]
+    ]
+   }
+  },
+  {
+   "tier": 0,
+   "name": "un",
+   "instrument": "slit_drum",
+   "gain": 0.3,
+   "repeatBars": 1,
+   "pattern": {
+    "steps": 4,
+    "hits": [
+     [
+      "low",
+      0,
+      1.0
+     ]
+    ]
+   }
+  },
+  {
    "tier": 1,
    "name": "tambour",
    "instrument": "frame_drum",
@@ -164,7 +263,7 @@
      [
       "low",
       4,
-      0.8
+      0.52
      ],
      [
       "high",
@@ -569,6 +668,10 @@
      "note": "E5",
      "dur": 4.0
     }
+   ],
+   "intensityGain": [
+    1,
+    0.7
    ]
   },
   {
@@ -607,7 +710,7 @@
    "tier": 3,
    "name": "voix",
    "instrument": "choir",
-   "gain": 0.5,
+   "gain": 0.35,
    "events": [
     {
      "bar": 0,
@@ -741,7 +844,7 @@
    "tier": 3,
    "name": "cloches",
    "instrument": "tubular_bells",
-   "gain": 0.45,
+   "gain": 0.32,
    "events": [
     {
      "bar": 0,
@@ -779,7 +882,7 @@
    "tier": 3,
    "name": "clarines",
    "instrument": "hand_chimes",
-   "gain": 0.35,
+   "gain": 0.25,
    "events": [
     {
      "bar": 7,
@@ -819,5 +922,840 @@
     }
    ]
   }
- ]
+ ],
+ "melodic": [
+  "violon",
+  "melodie_B"
+ ],
+ "bridge": {
+  "bars": 4,
+  "chords": [
+   "Bm",
+   "Bm",
+   "B",
+   "B"
+  ],
+  "layers": [
+   {
+    "tier": 0,
+    "name": "pont_basse",
+    "instrument": "cello",
+    "gain": 0.65,
+    "events": [
+     {
+      "bar": 0,
+      "beat": 0,
+      "note": "B2",
+      "dur": 16
+     }
+    ]
+   },
+   {
+    "tier": 0,
+    "name": "pont_basse_8",
+    "instrument": "viola",
+    "gain": 0.23,
+    "events": [
+     {
+      "bar": 0,
+      "beat": 0,
+      "note": "B3",
+      "dur": 16
+     }
+    ]
+   },
+   {
+    "tier": 0,
+    "name": "pont_pouls",
+    "instrument": "frame_drum",
+    "gain": 0.8,
+    "repeatBars": 1,
+    "pattern": {
+     "steps": 16,
+     "hits": [
+      [
+       "low",
+       0,
+       1.0
+      ],
+      [
+       "muted",
+       1,
+       0.4
+      ],
+      [
+       "muted",
+       2,
+       0.5
+      ],
+      [
+       "muted",
+       3,
+       0.4
+      ],
+      [
+       "high",
+       4,
+       0.6
+      ],
+      [
+       "muted",
+       5,
+       0.4
+      ],
+      [
+       "muted",
+       6,
+       0.5
+      ],
+      [
+       "muted",
+       7,
+       0.4
+      ],
+      [
+       "low",
+       8,
+       0.7
+      ],
+      [
+       "muted",
+       9,
+       0.4
+      ],
+      [
+       "muted",
+       10,
+       0.5
+      ],
+      [
+       "muted",
+       11,
+       0.4
+      ],
+      [
+       "high",
+       12,
+       0.6
+      ],
+      [
+       "muted",
+       13,
+       0.45
+      ],
+      [
+       "high",
+       14,
+       0.55
+      ],
+      [
+       "muted",
+       15,
+       0.5
+      ]
+     ]
+    }
+   },
+   {
+    "tier": 0,
+    "name": "pont_un",
+    "instrument": "slit_drum",
+    "gain": 0.3,
+    "repeatBars": 1,
+    "pattern": {
+     "steps": 4,
+     "hits": [
+      [
+       "low",
+       0,
+       1.0
+      ]
+     ]
+    }
+   },
+   {
+    "tier": 0,
+    "name": "pont_caisse",
+    "instrument": "snare_rope",
+    "gain": 0.45,
+    "repeatBars": 1,
+    "pattern": {
+     "steps": 8,
+     "hits": [
+      [
+       "tenor",
+       2,
+       0.6
+      ],
+      [
+       "snare",
+       6,
+       0.7
+      ],
+      [
+       "tenor",
+       7,
+       0.45
+      ]
+     ]
+    }
+   },
+   {
+    "tier": 0,
+    "name": "pont_cloches",
+    "instrument": "tubular_bells",
+    "gain": 0.55,
+    "events": [
+     {
+      "bar": 0,
+      "beat": 0,
+      "note": "B4",
+      "dur": 4
+     },
+     {
+      "bar": 1,
+      "beat": 0,
+      "note": "F#4",
+      "dur": 4
+     },
+     {
+      "bar": 2,
+      "beat": 0,
+      "note": "B4",
+      "dur": 4
+     },
+     {
+      "bar": 3,
+      "beat": 0,
+      "note": "B4",
+      "dur": 4
+     },
+     {
+      "bar": 3,
+      "beat": 2,
+      "note": "B5",
+      "dur": 2,
+      "gain": 0.8
+     }
+    ]
+   },
+   {
+    "tier": 0,
+    "name": "pont_cymbale",
+    "instrument": "cymbal",
+    "gain": 0.38,
+    "events": [
+     {
+      "bar": 1,
+      "beat": 0,
+      "note": "roll",
+      "dur": 8,
+      "gain": 0.6
+     },
+     {
+      "bar": 3,
+      "beat": 0.5,
+      "note": "cresc",
+      "dur": 3.5,
+      "gain": 1.0
+     }
+    ]
+   },
+   {
+    "tier": 0,
+    "name": "pont_gong",
+    "instrument": "gong",
+    "gain": 0.4,
+    "events": [
+     {
+      "bar": 0,
+      "beat": 0,
+      "note": "soft",
+      "dur": 4
+     }
+    ]
+   }
+  ]
+ },
+ "sectionB": {
+  "bars": 8,
+  "chords": [
+   "A",
+   "A",
+   "G",
+   "G",
+   "Bm",
+   "Bm",
+   "D",
+   "Bm"
+  ],
+  "layers": [
+   {
+    "tier": 0,
+    "name": "bourdon_B",
+    "instrument": "cello",
+    "gain": 0.65,
+    "events": [
+     {
+      "bar": 0,
+      "beat": 0,
+      "note": "A2",
+      "dur": 4
+     },
+     {
+      "bar": 1,
+      "beat": 0,
+      "note": "A2",
+      "dur": 4
+     },
+     {
+      "bar": 2,
+      "beat": 0,
+      "note": "G2",
+      "dur": 4
+     },
+     {
+      "bar": 3,
+      "beat": 0,
+      "note": "G2",
+      "dur": 4
+     },
+     {
+      "bar": 4,
+      "beat": 0,
+      "note": "B2",
+      "dur": 4
+     },
+     {
+      "bar": 5,
+      "beat": 0,
+      "note": "B2",
+      "dur": 4
+     },
+     {
+      "bar": 6,
+      "beat": 0,
+      "note": "D3",
+      "dur": 4
+     },
+     {
+      "bar": 7,
+      "beat": 0,
+      "note": "B2",
+      "dur": 4
+     }
+    ]
+   },
+   {
+    "tier": 0,
+    "name": "bourdon_B_8",
+    "instrument": "viola",
+    "gain": 0.23,
+    "events": [
+     {
+      "bar": 0,
+      "beat": 0,
+      "note": "A3",
+      "dur": 4
+     },
+     {
+      "bar": 1,
+      "beat": 0,
+      "note": "A3",
+      "dur": 4
+     },
+     {
+      "bar": 2,
+      "beat": 0,
+      "note": "G3",
+      "dur": 4
+     },
+     {
+      "bar": 3,
+      "beat": 0,
+      "note": "G3",
+      "dur": 4
+     },
+     {
+      "bar": 4,
+      "beat": 0,
+      "note": "B3",
+      "dur": 4
+     },
+     {
+      "bar": 5,
+      "beat": 0,
+      "note": "B3",
+      "dur": 4
+     },
+     {
+      "bar": 6,
+      "beat": 0,
+      "note": "D4",
+      "dur": 4
+     },
+     {
+      "bar": 7,
+      "beat": 0,
+      "note": "B3",
+      "dur": 4
+     }
+    ]
+   },
+   {
+    "tier": 0,
+    "name": "pouls_B",
+    "instrument": "frame_drum",
+    "gain": 0.26,
+    "repeatBars": 1,
+    "pattern": {
+     "steps": 4,
+     "hits": [
+      [
+       "low",
+       0,
+       1.0
+      ],
+      [
+       "muted",
+       1,
+       0.55
+      ],
+      [
+       "muted",
+       2,
+       0.7
+      ],
+      [
+       "muted",
+       3,
+       0.55
+      ]
+     ]
+    }
+   },
+   {
+    "tier": 0,
+    "name": "un_B",
+    "instrument": "slit_drum",
+    "gain": 0.3,
+    "repeatBars": 1,
+    "pattern": {
+     "steps": 4,
+     "hits": [
+      [
+       "low",
+       0,
+       1.0
+      ]
+     ]
+    }
+   },
+   {
+    "tier": 1,
+    "name": "tambour_B",
+    "instrument": "frame_drum",
+    "gain": 0.9,
+    "repeatBars": 2,
+    "pattern": {
+     "steps": 16,
+     "hits": [
+      [
+       "low",
+       0,
+       1.0
+      ],
+      [
+       "high",
+       2,
+       0.5
+      ],
+      [
+       "high",
+       3,
+       0.7
+      ],
+      [
+       "low",
+       4,
+       0.52
+      ],
+      [
+       "high",
+       6,
+       0.6
+      ],
+      [
+       "muted",
+       7,
+       0.4
+      ],
+      [
+       "low",
+       8,
+       1.0
+      ],
+      [
+       "high",
+       10,
+       0.5
+      ],
+      [
+       "high",
+       11,
+       0.7
+      ],
+      [
+       "low",
+       12,
+       0.52
+      ],
+      [
+       "high",
+       14,
+       0.6
+      ],
+      [
+       "high",
+       14,
+       0.5
+      ],
+      [
+       "high",
+       15,
+       0.6
+      ]
+     ]
+    }
+   },
+   {
+    "tier": 1,
+    "name": "grosse_caisse_B",
+    "instrument": "bass_drum",
+    "gain": 0.65,
+    "repeatBars": 1,
+    "pattern": {
+     "steps": 4,
+     "hits": [
+      [
+       "hit",
+       0,
+       1.0
+      ],
+      [
+       "soft",
+       2,
+       0.45
+      ]
+     ]
+    }
+   },
+   {
+    "tier": 2,
+    "name": "melodie_B",
+    "instrument": "violin",
+    "gain": 0.5,
+    "intensityGain": [
+     1,
+     0.7
+    ],
+    "events": [
+     {
+      "bar": 0,
+      "beat": 0.0,
+      "note": "E5",
+      "dur": 1
+     },
+     {
+      "bar": 0,
+      "beat": 1.0,
+      "note": "F#5",
+      "dur": 1
+     },
+     {
+      "bar": 0,
+      "beat": 2.0,
+      "note": "A5",
+      "dur": 2
+     },
+     {
+      "bar": 1,
+      "beat": 0.0,
+      "note": "C#6",
+      "dur": 2
+     },
+     {
+      "bar": 1,
+      "beat": 2.0,
+      "note": "B5",
+      "dur": 1
+     },
+     {
+      "bar": 1,
+      "beat": 3.0,
+      "note": "A5",
+      "dur": 1
+     },
+     {
+      "bar": 2,
+      "beat": 0.0,
+      "note": "B5",
+      "dur": 2
+     },
+     {
+      "bar": 2,
+      "beat": 2.0,
+      "note": "G5",
+      "dur": 1
+     },
+     {
+      "bar": 2,
+      "beat": 3.0,
+      "note": "A5",
+      "dur": 1
+     },
+     {
+      "bar": 3,
+      "beat": 0.0,
+      "note": "B5",
+      "dur": 1
+     },
+     {
+      "bar": 3,
+      "beat": 1.0,
+      "note": "D6",
+      "dur": 1
+     },
+     {
+      "bar": 3,
+      "beat": 2.0,
+      "note": "B5",
+      "dur": 2
+     },
+     {
+      "bar": 4,
+      "beat": 0.0,
+      "note": "D6",
+      "dur": 2
+     },
+     {
+      "bar": 4,
+      "beat": 2.0,
+      "note": "F#5",
+      "dur": 1
+     },
+     {
+      "bar": 4,
+      "beat": 3.0,
+      "note": "B5",
+      "dur": 1
+     },
+     {
+      "bar": 5,
+      "beat": 0.0,
+      "note": "A5",
+      "dur": 1
+     },
+     {
+      "bar": 5,
+      "beat": 1.0,
+      "note": "F#5",
+      "dur": 1
+     },
+     {
+      "bar": 5,
+      "beat": 2.0,
+      "note": "D5",
+      "dur": 2
+     },
+     {
+      "bar": 6,
+      "beat": 0.0,
+      "note": "F#5",
+      "dur": 2
+     },
+     {
+      "bar": 6,
+      "beat": 2.0,
+      "note": "A5",
+      "dur": 1
+     },
+     {
+      "bar": 6,
+      "beat": 3.0,
+      "note": "D6",
+      "dur": 1
+     },
+     {
+      "bar": 7,
+      "beat": 0.0,
+      "note": "B5",
+      "dur": 2
+     },
+     {
+      "bar": 7,
+      "beat": 2.0,
+      "note": "F#5",
+      "dur": 2
+     }
+    ]
+   },
+   {
+    "tier": 2,
+    "name": "pad_B",
+    "instrument": "viola",
+    "gain": 0.4,
+    "events": [
+     {
+      "bar": 0,
+      "beat": 0,
+      "note": "A3",
+      "dur": 8
+     },
+     {
+      "bar": 0,
+      "beat": 0,
+      "note": "C#4",
+      "dur": 8
+     },
+     {
+      "bar": 2,
+      "beat": 0,
+      "note": "G3",
+      "dur": 8
+     },
+     {
+      "bar": 2,
+      "beat": 0,
+      "note": "B3",
+      "dur": 8
+     },
+     {
+      "bar": 4,
+      "beat": 0,
+      "note": "B3",
+      "dur": 8
+     },
+     {
+      "bar": 4,
+      "beat": 0,
+      "note": "D4",
+      "dur": 8
+     },
+     {
+      "bar": 6,
+      "beat": 0,
+      "note": "D4",
+      "dur": 8
+     },
+     {
+      "bar": 6,
+      "beat": 0,
+      "note": "F#4",
+      "dur": 8
+     }
+    ]
+   },
+   {
+    "tier": 3,
+    "name": "voix_B",
+    "instrument": "choir",
+    "gain": 0.45,
+    "events": [
+     {
+      "bar": 0,
+      "beat": 0,
+      "note": "A3",
+      "dur": 8
+     },
+     {
+      "bar": 0,
+      "beat": 0,
+      "note": "E4",
+      "dur": 8
+     },
+     {
+      "bar": 2,
+      "beat": 0,
+      "note": "G3",
+      "dur": 8
+     },
+     {
+      "bar": 2,
+      "beat": 0,
+      "note": "D4",
+      "dur": 8
+     },
+     {
+      "bar": 4,
+      "beat": 0,
+      "note": "B3",
+      "dur": 8
+     },
+     {
+      "bar": 4,
+      "beat": 0,
+      "note": "F#4",
+      "dur": 8
+     },
+     {
+      "bar": 6,
+      "beat": 0,
+      "note": "D3",
+      "dur": 4
+     },
+     {
+      "bar": 6,
+      "beat": 0,
+      "note": "A3",
+      "dur": 4
+     },
+     {
+      "bar": 7,
+      "beat": 0,
+      "note": "B3",
+      "dur": 4
+     },
+     {
+      "bar": 7,
+      "beat": 0,
+      "note": "F#4",
+      "dur": 4
+     }
+    ]
+   },
+   {
+    "tier": 3,
+    "name": "cloches_B",
+    "instrument": "tubular_bells",
+    "gain": 0.4,
+    "events": [
+     {
+      "bar": 0,
+      "beat": 0,
+      "note": "A4",
+      "dur": 4
+     },
+     {
+      "bar": 2,
+      "beat": 0,
+      "note": "G4",
+      "dur": 4
+     },
+     {
+      "bar": 4,
+      "beat": 0,
+      "note": "B4",
+      "dur": 4
+     },
+     {
+      "bar": 6,
+      "beat": 0,
+      "note": "D5",
+      "dur": 4
+     }
+    ]
+   }
+  ]
+ }
 }

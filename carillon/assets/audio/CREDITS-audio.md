@@ -2,12 +2,12 @@
 
 Tout l'audio du jeu est échantillonné : aucun oscillateur, aucun son de synthèse. Chaque fichier ci-dessous a été téléchargé par un canal autorisé (SOURCING.md § 1–2), ouvert et vérifié (`soundfile.info`), et sa licence est prouvée par un fichier présent dans le dépôt téléchargé. Les hauteurs sont en notation scientifique (A4 = 440 Hz) et ont été **mesurées** (YIN + HPS) : VSCO 2 CE et la plupart des dossiers VCSL étiquettent leurs fichiers en convention « C3 = do médian », soit un octave sous la notation scientifique.
 
-Fichiers livrés : 412 références, 35 instruments, 43 bruitages, 5 ambiances, 10 pistes.
+Fichiers livrés : 426 références, 37 instruments, 45 bruitages, 5 ambiances, 10 pistes (chacune avec ses sections : boucle A, section B, pont de Fêlure, levée). Depuis la vague « approfondissement », les jingles (`resonance_1..4`, `level_up`, `achievement`, `fusion`, `lore_unlock`, `victory_bell`), la levée `moment_start` et le grelot `pickup`/`xp_pickup` sont **rejoués par le sampler sur l'accord courant** (`src/audio/jingles.js`) ; leurs fichiers ci-dessous ne servent que de repli.
 
 ## Sources
 
 ### Versilian Community Sample Library (VCSL) 1.2
-- Fichiers (290) : `assets/audio/samples/anvil/hit_1.ogg`, `assets/audio/samples/anvil/hit_2.ogg`, `assets/audio/samples/anvil/hit_3.ogg`, `assets/audio/samples/anvil/soft_1.ogg`, `assets/audio/samples/anvil/soft_2.ogg`, `assets/audio/samples/bass_drum/hit_1.ogg`, `assets/audio/samples/bass_drum/hit_2.ogg`, `assets/audio/samples/bass_drum/hit_3.ogg`, `assets/audio/samples/bass_drum/soft_1.ogg`, `assets/audio/samples/bass_drum/soft_2.ogg`, `assets/audio/samples/bell_tree/hit_1.ogg`, `assets/audio/samples/bell_tree/hit_2.ogg` … (+278 autres, voir manifest.json, crédit `vcsl`)
+- Fichiers (304) : `assets/audio/samples/anvil/hit_1.ogg`, `assets/audio/samples/anvil/hit_2.ogg`, `assets/audio/samples/anvil/hit_3.ogg`, `assets/audio/samples/anvil/soft_1.ogg`, `assets/audio/samples/anvil/soft_2.ogg`, `assets/audio/samples/bass_drum/hit_1.ogg`, `assets/audio/samples/bass_drum/hit_2.ogg`, `assets/audio/samples/bass_drum/hit_3.ogg`, `assets/audio/samples/bass_drum/soft_1.ogg`, `assets/audio/samples/bass_drum/soft_2.ogg`, `assets/audio/samples/bell_tree/hit_1.ogg`, `assets/audio/samples/bell_tree/hit_2.ogg` … (+278 autres, voir manifest.json, crédit `vcsl`)
 - Auteur(s) : Versilian Studios LLC (Samuel Gossner), Simon Dalzell (Ivy Audio) pour l'orgue
 - Licence : CC0 1.0
 - Source d'origine : https://github.com/sgossner/VCSL
@@ -148,10 +148,12 @@ Fichiers livrés : 412 références, 35 instruments, 43 bruitages, 5 ambiances, 
 | `level_up` | 1 | vcsl | Arpège D4-F#4-A4-D5 en hand chimes + arbre à cloches. |
 | `card_flip` | 3 | kenney_rpg | Feuillet retourné (Kenney RPG Audio, bookFlip). |
 | `card_pick` | 1 | kenney_rpg + vcsl | Cuir manipulé + hand chime A4. |
-| `xp_pickup` | 3 | vcsl | Écho ramassé : coups isolés de l'arbre à cloches. |
+| `xp_pickup` | 3 | vcsl | Écho ramassé : grelot bref (sleigh bells `hit` + hand chime D6 / A5 / E6, −6 dBFS, 0,5 s). En jeu : sampler sur l'accord (degrés 8 / 10 / 12), calé sur la double-croche, un par double-croche. |
+| `pickup` | 3 | vcsl | Objet ramassé (soin, carillon, relique, bronze) : mêmes fichiers et même rendu que `xp_pickup` ; remplace `bell_tier`, désormais réservé au palier de Sourdine. |
 | `xp_pickup_big` | 1 | vcsl | Gros écho : arbre à cloches + hand chime D5 + glissando. |
 | `bell_minute` | 1 | vcsl | Sonnerie horaire : cloches tubulaires C4 et G4 une octave plus bas (C3, G3). |
-| `bell_tier` | 1 | vcsl | Palier de Sourdine : cloche inversée puis gong + cloche grave (−17 st). |
+| `bell_tier` | 1 | vcsl | Palier de Sourdine uniquement : cloche inversée puis gong + cloche grave (−17 st). |
+| `moment_start` | 1 | vcsl | Levée courte d'un Moment scripté : grelots secoués + hand chimes A5 puis D6 en croches (−6 dBFS, 1,6 s). En jeu : sampler sur l'accord (degrés 5 → 8), calé sur la croche. |
 | `silence_cry` | 3 | vcsl | Cri du Silence : aboiement de didgeridoo transposé (−6/−9/−12 st), étiré, convolué avec un verre frotté ; psaltérion à archet et tambour de frein archet inversés ; passe-bas 4,5 kHz. |
 | `silence_burst` | 1 | vcsl | Éclat du Silence : ocean drum inversé (montée) puis grosse caisse, gong raclé (−5 st), tambour de frein (−8 st). |
 | `ui_move` | 2 | vcsl | Woodblock pp. |
@@ -205,6 +207,8 @@ Fichiers livrés : 412 références, 35 instruments, 43 bruitages, 5 ambiances, 
 | `timpani` | percussion | 6 · low, mid, high | vcsl | Timbales (boss). |
 | `triangle` | percussion | 4 · hit, muted | vcsl | Triangle (ouvert / étouffé). |
 | `finger_cymbals` | percussion | 1 · hit | vcsl | Cymbalettes (« ting » de bronze). |
+| `slit_drum` | percussion | 6 · low, high | vcsl | Tambour à fente (« Slit Drum », log drum, 3 round-robins par hauteur) : le « 1 » de la pulsation dès le cran 0, timbre boisé distinct du tambour sur cadre. Découpe, −3 dBFS, OGG q0,4. |
+| `cymbal` | percussion | 7 · roll, hit, bell, cresc | vcsl | Cymbale suspendue (« Suspended Cymbal 1 ») : roulements mp/f (relâchés), baguette pp/mp, dôme pp/mf, crescendo 2 s ; pont de Fêlure et levée du boss. Queues limitées à 5–6,5 s, fondu de sortie, −3 dBFS. |
 | `slapstick` | percussion | 3 · hit | vcsl | Fouet (slapstick). |
 | `contrabass` | pitched (boucles) | 14 · E1–B3 | vsco2 | Contrebasse solo, tenue sans vibrato, v3 ; étiquettes +12 (mesuré) ; boucles. |
 | `cello` | pitched (boucles) | 13 · C2–F5 | vsco2 | Violoncelles (section), tenue vibrato, v3 ; étiquettes +12 ; boucles. |
@@ -220,16 +224,18 @@ Fichiers livrés : 412 références, 35 instruments, 43 bruitages, 5 ambiances, 
 
 | id | titre | tempo | état |
 |---|---|---|---|
-| `menu` | Le dernier apprenti | 84 BPM, 16 mesures | complete |
-| `hub` | Le Beffroi Mère — carte des paroisses | 88 BPM, 16 mesures | complete |
-| `cendrelune` | Cendrelune — la veillée des cendres | 96 BPM, 16 mesures | complete |
-| `tourbes` | Les Tourbes — la marche des noyés | 88 BPM, 16 mesures | complete |
-| `val_des_cordes` | Val-des-Cordes — la ronde des pendus | 104 BPM, 16 mesures | complete |
-| `nef_noyee` | La Nef Noyée — psaume sous l'eau | 84 BPM, 16 mesures | complete |
-| `beffroi_mere` | Le Beffroi Mère — la cloche-mère | 100 BPM, 16 mesures | complete |
-| `boss` | Le Bourdon Fêlé | 110 BPM, 16 mesures | complete |
-| `victory` | L'aube sonnée | 96 BPM, 16 mesures | complete |
-| `death` | Le Silence a mangé le son | 72 BPM, 16 mesures | complete |
+| `menu` | Le dernier apprenti | 84 BPM, 16 mesures, toutes couches | complete |
+| `hub` | Le Beffroi Mère — carte des paroisses | 88 BPM, 16 mesures, toutes couches | complete |
+| `cendrelune` | Cendrelune — la veillée des cendres | 96 BPM (+2/palier), A 16 + B 8 (F–C–Am–Dm sur pédale de la) + pont 4 (Am → A) | complete |
+| `tourbes` | Les Tourbes — la marche des noyés | 88 BPM (+2/palier), A 16 + B 8 (F–G–Am–Em) + pont 4 (Em → E) | complete |
+| `val_des_cordes` | Val-des-Cordes — la ronde des pendus | 104 BPM (+2/palier), A 16 + B 8 (A–G–Bm–D) + pont 4 (Bm → B) | complete |
+| `nef_noyee` | La Nef Noyée — psaume sous l'eau | 84 BPM (+2/palier), A 16 + B 8 (Eb–Bb–Ab–Gm/G) + pont 4 (Gm → G) | complete |
+| `beffroi_mere` | Le Beffroi Mère — la cloche-mère | 100 BPM (+2/palier), A 16 + B 8 (G–Em–F–Am) + pont 4 (Am → A) | complete |
+| `boss` | Le Bourdon Fêlé | 110 BPM, levée 2 mesures (timbales, caisse, cymbale, cloche) + 16 mesures | complete |
+| `victory` | L'aube sonnée | 96 BPM, volée 2 mesures + 16 mesures, toutes couches | complete |
+| `death` | Le Silence a mangé le son | 72 BPM, 16 mesures, toutes couches | complete |
+
+Toutes les paroisses portent depuis la vague « approfondissement » une pulsation dès le cran 0 (tambour sur cadre étouffé sur chaque temps, peau grave + tambour à fente sur le « 1 »), un « 1 » marqué à tous les crans, une doublure du bourdon à l'octave (violoncelle / alto, pour les haut-parleurs de téléphone) et des couches du cran 3 à −3 dB.
 
 ## Sources examinées et rejetées
 

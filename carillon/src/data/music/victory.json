@@ -211,6 +211,56 @@
    ]
   },
   {
+   "tier": 0,
+   "name": "bourdon_8",
+   "instrument": "cello",
+   "gain": 0.26,
+   "events": [
+    {
+     "bar": 0,
+     "beat": 0,
+     "note": "D3",
+     "dur": 16
+    },
+    {
+     "bar": 4,
+     "beat": 0,
+     "note": "G3",
+     "dur": 8
+    },
+    {
+     "bar": 6,
+     "beat": 0,
+     "note": "D3",
+     "dur": 8
+    },
+    {
+     "bar": 8,
+     "beat": 0,
+     "note": "D3",
+     "dur": 8
+    },
+    {
+     "bar": 10,
+     "beat": 0,
+     "note": "C3",
+     "dur": 8
+    },
+    {
+     "bar": 12,
+     "beat": 0,
+     "note": "G3",
+     "dur": 8
+    },
+    {
+     "bar": 14,
+     "beat": 0,
+     "note": "D3",
+     "dur": 8
+    }
+   ]
+  },
+  {
    "tier": 1,
    "name": "tambour",
    "instrument": "frame_drum",
@@ -231,7 +281,7 @@
      [
       "low",
       4,
-      0.8
+      0.52
      ],
      [
       "high",
@@ -284,7 +334,7 @@
      [
       "shake",
       0,
-      0.5
+      1.0
      ],
      [
       "hit",
@@ -590,6 +640,10 @@
      "note": "D6",
      "dur": 4.0
     }
+   ],
+   "intensityGain": [
+    1,
+    0.7
    ]
   },
   {
@@ -652,7 +706,7 @@
    "tier": 3,
    "name": "voix",
    "instrument": "choir",
-   "gain": 0.6,
+   "gain": 0.43,
    "events": [
     {
      "bar": 0,
@@ -816,7 +870,7 @@
    "tier": 3,
    "name": "cloches",
    "instrument": "tubular_bells",
-   "gain": 0.7,
+   "gain": 0.5,
    "events": [
     {
      "bar": 0,
@@ -914,7 +968,7 @@
    "tier": 3,
    "name": "clarines",
    "instrument": "hand_chimes",
-   "gain": 0.4,
+   "gain": 0.28,
    "pattern": {
     "steps": 8,
     "hits": [
@@ -942,5 +996,200 @@
    },
    "repeatBars": 1
   }
- ]
+ ],
+ "allLayers": true,
+ "followsTier": false,
+ "intro": {
+  "bars": 2,
+  "chords": [
+   "D",
+   "D"
+  ],
+  "layers": [
+   {
+    "tier": 0,
+    "name": "volee_basse",
+    "instrument": "contrabass",
+    "gain": 0.7,
+    "events": [
+     {
+      "bar": 0,
+      "beat": 0,
+      "note": "D2",
+      "dur": 8
+     }
+    ]
+   },
+   {
+    "tier": 0,
+    "name": "volee_orgue",
+    "instrument": "organ",
+    "gain": 0.35,
+    "events": [
+     {
+      "bar": 0,
+      "beat": 0,
+      "note": "D3",
+      "dur": 8
+     },
+     {
+      "bar": 0,
+      "beat": 0,
+      "note": "A3",
+      "dur": 8
+     },
+     {
+      "bar": 0,
+      "beat": 0,
+      "note": "F#4",
+      "dur": 8
+     }
+    ]
+   },
+   {
+    "tier": 0,
+    "name": "volee_cloches",
+    "instrument": "tubular_bells",
+    "gain": 0.6,
+    "events": [
+     {
+      "bar": 0,
+      "beat": 0.0,
+      "note": "D4",
+      "dur": 2
+     },
+     {
+      "bar": 0,
+      "beat": 0.5,
+      "note": "A4",
+      "dur": 2
+     },
+     {
+      "bar": 0,
+      "beat": 1.0,
+      "note": "D5",
+      "dur": 2
+     },
+     {
+      "bar": 0,
+      "beat": 1.5,
+      "note": "A4",
+      "dur": 2
+     },
+     {
+      "bar": 0,
+      "beat": 2.0,
+      "note": "F#4",
+      "dur": 2
+     },
+     {
+      "bar": 0,
+      "beat": 2.5,
+      "note": "A4",
+      "dur": 2
+     },
+     {
+      "bar": 0,
+      "beat": 3.0,
+      "note": "D5",
+      "dur": 2
+     },
+     {
+      "bar": 0,
+      "beat": 3.5,
+      "note": "D4",
+      "dur": 2
+     },
+     {
+      "bar": 1,
+      "beat": 0.0,
+      "note": "D5",
+      "dur": 2
+     },
+     {
+      "bar": 1,
+      "beat": 0.5,
+      "note": "A4",
+      "dur": 2
+     },
+     {
+      "bar": 1,
+      "beat": 1.0,
+      "note": "F#4",
+      "dur": 2
+     },
+     {
+      "bar": 1,
+      "beat": 1.5,
+      "note": "D4",
+      "dur": 2
+     },
+     {
+      "bar": 1,
+      "beat": 2.0,
+      "note": "A4",
+      "dur": 2
+     },
+     {
+      "bar": 1,
+      "beat": 3.0,
+      "note": "D5",
+      "dur": 2
+     }
+    ]
+   },
+   {
+    "tier": 0,
+    "name": "volee_arbre",
+    "instrument": "bell_tree",
+    "gain": 0.35,
+    "events": [
+     {
+      "bar": 0,
+      "beat": 0,
+      "note": "stroke",
+      "dur": 4
+     },
+     {
+      "bar": 1,
+      "beat": 2,
+      "note": "stroke",
+      "dur": 2
+     }
+    ]
+   },
+   {
+    "tier": 0,
+    "name": "volee_clarines",
+    "instrument": "hand_chimes",
+    "gain": 0.4,
+    "events": [
+     {
+      "bar": 1,
+      "beat": 2,
+      "note": "D6",
+      "dur": 1
+     },
+     {
+      "bar": 1,
+      "beat": 2.5,
+      "note": "F#6",
+      "dur": 1
+     },
+     {
+      "bar": 1,
+      "beat": 3,
+      "note": "A6",
+      "dur": 1
+     },
+     {
+      "bar": 1,
+      "beat": 3.5,
+      "note": "D6",
+      "dur": 1
+     }
+    ]
+   }
+  ]
+ }
 }

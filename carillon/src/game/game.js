@@ -18,9 +18,9 @@ import { renderParticles } from '../render/particles.js';
 import { renderFx } from '../render/fx.js';
 import { prepareTint } from '../render/atlas.js';
 import { balance, parishDef, characterDef, waveDef, allEnemies, weaponDef, fusionDef } from './data.js';
-import { createPlayer, updatePlayer } from './player.js';
+import { createPlayer, updatePlayer, recomputeStats } from './player.js';
 import { createWorld, updateWorld, renderWorld, entityCount } from './world.js';
-import { addWeapon, removeWeapon, updateWeapons } from './weapons.js';
+import { addWeapon, removeWeapon, updateWeapons, refreshWeapons } from './weapons.js';
 import { initResonance, update as updateResonance } from './resonance.js';
 import { initRun, updateRun, addXp, applyCard, finishRun, rerollCards } from './progression.js';
 import { initRelics, disposeRelics, offerRelics, pickRelic as pickRelicRun, updateRelics, renderRelics } from './relics.js';
@@ -34,7 +34,7 @@ export function pickRelic(relicId) { return st.run ? pickRelicRun(st.run, relicI
 /** Les deux Reliques proposées pour cette nuit (ou null). */
 export function relicOffer() { return st.run ? st.run.relicOffer : null; }
 
-const st = { run: null, player: null, world: null, bell: null, endT: -1, unsubs: [], active: false };
+const st = { run: null, player: null, world: null, bell: null, endT: -1, unsubs: [], active: false, streakBonus: 0 };
 const END_DELAY_DEATH = 2.2;   // ralenti de mort (0,4×) puis bilan
 const END_DELAY_VICTORY = 3.0;
 
@@ -63,7 +63,7 @@ export function startGame({ parishId, characterId, seed, assist = null, upgrades
   const mode = assist || save.options.assist || 'none';
   const run = initRun({ parishId, characterId, seed, assist: mode });
   const player = createPlayer(cDef, upgrades || upgradeLevels(save));
-  initResonance({ assist: mode, gain: player.stats.resonanceGain });
+  initResonance({ assist: mode, gain: player.stats.resonanceGain, traits: cDef.traits || null });
   const world = createWorld({ parishDef: pDef, rng: makeRng(run.rng.seed ^ 0x5bd1e995), waveDef: wDef });
   const chosen = weaponId && weaponDef(weaponId) ? weaponId : null;
   if (cDef.startWeaponFixed) { addWeapon(player, cDef.startWeapon); if (chosen && chosen !== cDef.startWeapon) addWeapon(player, chosen); }
@@ -76,10 +76,15 @@ export function startGame({ parishId, characterId, seed, assist = null, upgrades
   // Nuit de la paroisse, relevée par la « lune grise » (lisibilité hors du halo).
   setAmbient(floorAmbient(pDef.ambient || '#16130f'));
   prepareTints();
-  st.run = run; st.player = player; st.world = world; st.bell = bellState(); st.endT = -1; st.active = true;
+  st.run = run; st.player = player; st.world = world; st.bell = bellState(); st.endT = -1; st.active = true; st.streakBonus = 0;
   st.unsubs.push(bus.on('pickup:xp', (e) => { if (st.run) addXp(st.run, e.amount); }));
   st.unsubs.push(bus.on('level:choice', (e) => { if (st.run && st.player) applyCard(st.run, st.player, e.card); }));
   st.unsubs.push(bus.on('player:death', () => { if (st.endT < 0) st.endT = END_DELAY_DEATH; }));
+  // Streak de Parfaits (§ 8 bis) : le bonus de zone entre/sort → stats et armes recalculées.
+  st.unsubs.push(bus.on('resonance:change', (e) => {
+    if (!st.player || e.streakBonus === st.streakBonus) return;
+    st.streakBonus = e.streakBonus; recomputeStats(st.player); refreshWeapons(st.player);
+  }));
   return st;
 }
 

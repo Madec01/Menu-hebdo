@@ -1,9 +1,11 @@
 // game/enemies.js — pool d'ennemis, spawn, mise à jour commune (séparation, recul, flash, mort),
 // rendu (ARCHITECTURE.md § 11). Les comportements (chase, leap, explode, ranged, swarm, crawl,
-// veuve_grise, summon) sont dans enemy-behaviors.js ; le boss est délégué à boss.js.
-// PV mis à l'échelle par palier de Sourdine (balance.enemyHp). Mort → particules `deathParticles`,
-// Écho (pickups.dropFor), `enemy:death`. `player:inAura` est émis une fois par tick avec la
-// profondeur maximale accumulée par les Feutres.
+// veuve_grise, summon, contretemps, voleur, desaccordeur) sont dans enemy-behaviors.js ; le boss est
+// délégué à boss.js. PV mis à l'échelle par palier de Sourdine (balance.enemyHp). Mort → particules
+// `deathParticles`, Écho (pickups.dropFor), `enemy:death` ; un Voleur de cran tué rend le cran volé.
+// `player:inAura` (Feutres) et `enemy:desaccord` (Désaccordeurs) sont émis une fois par tick avec la
+// profondeur maximale accumulée. `tinted: true` dans enemies.json applique la teinte `tint` au sprite
+// (variantes teintées des ennemis rythmiques ; les élites restent bronze).
 
 import { bus } from '../core/events.js';
 import { createPool } from '../core/pool.js';
@@ -12,11 +14,13 @@ import { draw, drawShadow, frameAt, animDone, dirAnim, isDirectional } from '../
 import { addLight, addGlow } from '../render/lighting.js';
 import { emit as emitParticles } from '../render/particles.js';
 import { enemyDef, balance } from './data.js';
-import { BEHAVIORS as AI } from './enemy-behaviors.js';
+import { BEHAVIORS as AI, applyDetune, tickBehaviors } from './enemy-behaviors.js';
 import { updateBossEnemy } from './boss.js';
 import { dropFor } from './pickups.js';
+import { bump as bumpResonance } from './resonance.js';
 
 let nextId = 1;
+let lastWorld = null;
 const spawnPayload = { kind: '', id: 0 };
 const deathPayload = { id: 0, kind: '', x: 0, y: 0, boss: false };
 const auraPayload = { depth: 0 };
@@ -29,6 +33,7 @@ function factory() {
     flashT: 0, kx: 0, ky: 0, slow: 1, slowT: 0, contactT: 0, markedT: 0, markBonus: 0, markBy: '', executeBelow: 0,
     aiT: 0, aiState: 0, aiX: 0, aiY: 0, aiBeat: 0, lastBar: -1, boss: false, elite: false, scale: 1,
     phase: 0, hitById: 0, spawnT: 0, silenceWave: 0, tint: null, _gridStamp: 0, _gridStamp1: 0, _gridStamp2: 0, _gridStamp3: 0, killedBy: '', vulnMult: 1,
+    carry: 0, criT: 0, charges: 0, coda: false,
   };
 }
 
@@ -38,6 +43,7 @@ function reset(e) {
   e.flashT = 0; e.kx = 0; e.ky = 0; e.slow = 1; e.slowT = 0; e.contactT = 0; e.markedT = 0; e.markBonus = 0; e.markBy = '';
   e.executeBelow = 0; e.aiT = 0; e.aiState = 0; e.aiX = 0; e.aiY = 0; e.aiBeat = 0; e.lastBar = -1; e.phase = 0;
   e.vx = 0; e.vy = 0; e.dirX = 0; e.dirY = 1; e.moving = false; e.spawnT = 0; e.killedBy = ''; e.tint = null;
+  e.carry = 0; e.criT = 0; e.charges = 0; e.coda = false;
 }
 
 export function createEnemyPool() { return createPool(factory, reset, 200); }
@@ -59,12 +65,20 @@ export function spawnEnemy(world, kind, x, y) {
   e.speed = def.speed * Math.pow(S.speedPerTier, t);
   e.damage = Math.round(def.damage * Math.pow(S.damagePerTier, t));
   e.xp = def.xp; e.boss = !!def.boss; e.elite = !!def.elite; e.scale = def.scale || 1;
-  e.tint = def.elite ? '#c9973f' : null;
+  e.tint = def.elite ? '#c9973f' : (def.tinted ? def.tint : null);
   e.aiBeat = world.beat;
   world.spawned++;
   spawnPayload.kind = kind; spawnPayload.id = e.id;
   bus.emit('enemy:spawn', spawnPayload);
   return e;
+}
+
+/** Débogage / captures : fait apparaître `kind` à (dx, dy) du sonneur du monde courant (null hors run).
+ *  Ex. (await import('./src/game/enemies.js')).debugSpawnEnemy('contretemps', 120, 0). */
+export function debugSpawnEnemy(kind, dx = 120, dy = 0) {
+  const w = lastWorld;
+  if (!w || !w.player) return null;
+  return spawnEnemy(w, kind, w.player.x + dx, w.player.y + dy);
 }
 
 // Séparation entre ennemis via la grille (aucune closure par tick : contexte de module).
@@ -84,8 +98,10 @@ function separate(o) {
 export function updateEnemies(world, dt, p) {
   const C = balance().combat;
   const items = world.enemies.items;
-  world.auraDepth = 0;
+  lastWorld = world;
+  world.auraDepth = 0; world.detuneDepth = 0;
   sepForce = C.separationForce * dt;
+  tickBehaviors(dt);
   for (let i = items.length - 1; i >= 0; i--) {
     const e = items[i];
     e.px = e.x; e.py = e.y;
@@ -115,6 +131,7 @@ export function updateEnemies(world, dt, p) {
   auraPayload.depth = Math.min(1, world.auraDepth);
   if (auraPayload.depth > 0 || world.auraWasIn) bus.emit('player:inAura', auraPayload);
   world.auraWasIn = auraPayload.depth > 0;
+  applyDetune(world);
 }
 
 function updateAnim(e, dt) {
@@ -124,13 +141,14 @@ function updateAnim(e, dt) {
   if (base === 'attack' && animDone(e.def.sprite, e.anim, e.animT)) e.animBase = 'walk';
 }
 
-/** Tue un ennemi : anim de mort, particules, Écho, événement. */
+/** Tue un ennemi : anim de mort, particules, Écho, événement ; un Voleur rend le cran qu'il emportait. */
 export function killEnemy(world, e, source = '') {
   if (e.state !== 'alive') return;
   e.state = 'dying'; e.stateT = 0; e.hp = 0;
   e.animBase = 'die'; e.anim = dirAnim(e.def.sprite, 'die', e.dirX, e.dirY); e.animT = 0;
   emitParticles(e.def.deathParticles || 'silence', e.x, e.y - 8);
   playSfx(e.boss || e.elite ? 'enemy_die_big' : 'enemy_die', { x: e.x, y: e.y });
+  if (e.carry > 0) { bumpResonance(e.carry); e.carry = 0; emitParticles('bell', e.x, e.y - 10); }
   world.kills++;
   world.killsByKind[e.kind] = (world.killsByKind[e.kind] || 0) + 1;
   dropFor(world, e);
@@ -166,5 +184,8 @@ export function drawEnemy(ctx, e, alpha) {
   if (e.def.special && e.def.special.lightRadius) addLight(x, y - 10, e.def.special.lightRadius, '#e0603a', 0.7, 0.2);
   else if (!dying) addLight(x, y - 8, 22 + e.r * 1.4 * e.scale, COLD_LIGHT, e.boss ? 0.8 : 0.5, 0, true);
   if (e.markedT > 0) addGlow(x, y - 12, 18, '#c9973f', 0.5);
+  if (e.carry > 0) addGlow(x, y - 14, 26, '#c9973f', 0.8);                       // le cran volé, visible
+  if (e.vulnMult <= 0 && !dying) addGlow(x, y - 10, 14, '#8f8d93', 0.35);          // Contretemps fermé
+  if (e.criT > 0) addLight(x, y - 20, 160, '#e0603a', 0.6, 0.3);                    // cri fêlé du Bourdon
   if (e.boss) addLight(x, y - 20, 120, '#8d8780', 0.5, 0.05);
 }

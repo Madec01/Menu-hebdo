@@ -63,15 +63,17 @@ export function createInstrument(def) {
    *  duration (s) : null = jusqu'à la fin du fichier ; sinon la note est tenue (bouclée si possible)
    *  puis relâchée. `dest` (facultatif) remplace le bus : nœud de destination (couche de music.js).
    *  `release` (s, facultatif) : durée du relâchement (≥ 30 ms) — les Timbres laissent sonner les cloches. */
-  function play(noteOrKey, at, { gain = 1, pitchSemis = 0, duration = null, bus = 'music', pan = 0, dest = null, release = null } = {}) {
+  function play(noteOrKey, at, { gain = 1, pitchSemis = 0, duration = null, bus = 'music', pan = 0, dest = null, release = null, detune = null } = {}) {
     const s = pick(noteOrKey);
     const buf = s && getBuffer(s.url);
     const ac = ctx();
-    if (!buf || !ac || !acquireVoice()) return { stop() {} };
+    if (!buf || !ac || !acquireVoice()) return { stop() {}, detune() {}, live: false };
     const src = ac.createBufferSource();
     src.buffer = buf;
     const rate = s.rate * Math.pow(2, pitchSemis / 12);
     src.playbackRate.value = rate;
+    // désaccord (cents) : valeur de départ puis retour à 0 (ennemi désaccordeur, music.setDetune)
+    if (detune && src.detune) { src.detune.setValueAtTime(detune.cents, at); if (detune.backAt > at) src.detune.linearRampToValueAtTime(0, detune.backAt); }
     const looped = Boolean(s.loop && duration !== null);
     if (looped) { src.loop = true; src.loopStart = s.loop[0]; src.loopEnd = s.loop[1]; }
     const env = ac.createGain();
@@ -101,7 +103,15 @@ export function createInstrument(def) {
     }
     if (duration !== null) stop(at + duration);
     else if (!looped) src.stop(at + buf.duration / rate + 0.01);
-    return { stop };
+    /** Désaccord d'une note vivante : `cents` à `t`, retour à 0 en `backSec`. */
+    function detuneTo(cents, t = ac.currentTime, backSec = 1) {
+      if (!src.detune) return;
+      src.detune.cancelScheduledValues(t);
+      src.detune.setValueAtTime(cents, t);
+      src.detune.linearRampToValueAtTime(0, t + backSec);
+    }
+    const handle = { stop, detune: detuneTo, live: true, endAt: duration !== null ? at + duration + rel : at + buf.duration / rate };
+    return handle;
   }
 
   return { def, load, play, pick, urls };

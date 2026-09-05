@@ -1,6 +1,7 @@
 // game/spawner.js — lit waves.json : spawns par fenêtre temporelle (perSec × densité du palier,
 // cap par type), paliers de Sourdine toutes les tierEvery s (`run:tier`), sonnerie horaire
-// (`run:minute`), Fêlures (élites) et boss aux `events`. Les ennemis apparaissent hors écran,
+// (`run:minute`, sans son : la sonnerie est à bell-hour.js), Fêlures (élites) et boss aux `events`.
+// Les ennemis apparaissent hors écran,
 // sur un anneau autour du joueur (angle tiré au rng du run). Après le boss, le flux régulier
 // est réduit (balance.spawn.afterBossRate). Les Moments scriptés (moments.js) vivent à côté : une
 // accalmie suspend le flux régulier (world.moments.noSpawn) ; la durée de la nuit est `duration`.
@@ -68,8 +69,7 @@ export function updateSpawner(world, dt, p) {
   if (t >= sp.nextMinute * 60) {
     minutePayload.minute = sp.nextMinute;
     world.minute = sp.nextMinute;
-    bus.emit('run:minute', minutePayload);
-    playSfx('bell_minute');
+    bus.emit('run:minute', minutePayload);   // la cloche (bell_minute) est jouée par bell-hour.js seulement
     sp.nextMinute++;
   }
   // Événements (Fêlures, boss).

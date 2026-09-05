@@ -56,7 +56,8 @@
    "cloudRadius": 70,
    "cloudSec": 4,
    "blockSec": 3,
-   "triggerRange": 40
+   "triggerRange": 40,
+   "drainBeats": 1
   },
   "onBeatOnly": false,
   "tint": "#d8cdb4",
@@ -144,7 +145,8 @@
    "teleportDist": 110,
    "chargeSpeed": 220,
    "chargeSec": 0.45,
-   "pauseSec": 0.5
+   "pauseSec": 0.5,
+   "chargeOnBar": true
   },
   "onBeatOnly": false,
   "tint": "#8f8d93",
@@ -174,6 +176,86 @@
   "deathParticles": "ember"
  },
  {
+  "id": "contretemps",
+  "name": "enemy.contretemps.name",
+  "lore": "enemy.contretemps.lore",
+  "sprite": "fossoyeur",
+  "tinted": true,
+  "hp": 70,
+  "speed": 26,
+  "damage": 9,
+  "xp": 7,
+  "radius": 12,
+  "mass": 1.2,
+  "behavior": "contretemps",
+  "special": {
+   "keepDistance": 120,
+   "fireBeats": 4,
+   "projSpeed": 60,
+   "projRadius": 8,
+   "projLife": 4,
+   "openBeats": 1,
+   "openTint": "#f2e6c8",
+   "openScale": 1.15
+  },
+  "onBeatOnly": false,
+  "tint": "#d8cdb4",
+  "deathParticles": "silence"
+ },
+ {
+  "id": "voleur_de_cran",
+  "name": "enemy.voleur_de_cran.name",
+  "lore": "enemy.voleur_de_cran.lore",
+  "sprite": "baillon",
+  "tinted": true,
+  "hp": 55,
+  "speed": 42,
+  "damage": 6,
+  "xp": 8,
+  "radius": 10,
+  "mass": 0.8,
+  "behavior": "voleur",
+  "special": {
+   "leapRange": 150,
+   "leapSpeed": 260,
+   "leapBeats": 6,
+   "fleeDistance": 220,
+   "fleeSpeedMult": 1.4,
+   "carryTint": "#c9973f"
+  },
+  "onBeatOnly": false,
+  "tint": "#8f6a3a",
+  "deathParticles": "silence"
+ },
+ {
+  "id": "desaccordeur",
+  "name": "enemy.desaccordeur.name",
+  "lore": "enemy.desaccordeur.lore",
+  "sprite": "choeur_muet",
+  "tinted": true,
+  "hp": 40,
+  "speed": 30,
+  "damage": 5,
+  "xp": 6,
+  "radius": 10,
+  "mass": 0.5,
+  "behavior": "desaccordeur",
+  "special": {
+   "detuneRadius": 150,
+   "detuneCents": 60,
+   "fireBeats": 4,
+   "fireRange": 300,
+   "projSpeed": 70,
+   "projRadius": 8,
+   "projLife": 3,
+   "wobble": 20,
+   "wobbleHz": 1
+  },
+  "onBeatOnly": false,
+  "tint": "#b04a3a",
+  "deathParticles": "silence"
+ },
+ {
   "id": "veuve_grise_elite",
   "name": "enemy.veuve_grise.name",
   "lore": "enemy.veuve_grise.lore",
@@ -192,7 +274,8 @@
    "teleportDist": 120,
    "chargeSpeed": 240,
    "chargeSec": 0.5,
-   "pauseSec": 0.4
+   "pauseSec": 0.4,
+   "chargeOnBar": true
   },
   "onBeatOnly": false,
   "tint": "#c9973f",
@@ -312,14 +395,22 @@
   "behavior": "boss",
   "scale": 1,
   "special": {
-   "ringCount": 12,
+   "ringCount": 16,
    "ringSpeed": 60,
    "ringRadius": 9,
-   "ringLife": 5,
+   "ringLife": 4,
    "summonKind": "feutre",
    "summonCount": 4,
    "summonBars": 4,
-   "phase2At": 0.5
+   "phase2At": 0.5,
+   "ringLayers": 2,
+   "layerGap": 14,
+   "criBars": 4,
+   "criBeats": 8,
+   "phase3At": 0.2,
+   "summonKind2": "choeur_muet",
+   "summonCount2": 6,
+   "inverseRadius": 260
   },
   "onBeatOnly": false,
   "tint": "#c9973f",
@@ -352,7 +443,11 @@
    "childAt": [
     0.66,
     0.33
-   ]
+   ],
+   "webBeat": 1,
+   "chargeBeat": 3,
+   "deuilWebs": 3,
+   "deuilCharges": 2
   },
   "onBeatOnly": false,
   "tint": "#8f8d93",
@@ -379,7 +474,8 @@
    "exposedMult": 1.5,
    "enrageSpeed": 1.5,
    "markSec": 3,
-   "markBonus": 0.5
+   "markBonus": 0.5,
+   "codaAt": 0.25
   },
   "onBeatOnly": false,
   "tint": "#c9973f",

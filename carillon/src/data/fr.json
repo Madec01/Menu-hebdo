@@ -14,12 +14,15 @@
     "beat1": "Écoute. Un, deux, trois, quatre. C'est moi qui bats dans ta poitrine. Appuie sur Espace quand l'anneau se referme : sans bouger, je bats sur place ; en marchant, c'est une Volée.",
     "beat2": "Encore. Sur le temps, pas à côté. Tu entends ? Le tambour vient d'entrer.",
     "beat3": "Une troisième fois. Là. Quand tu tiens la Mesure, je frappe plus fort, et la nuit chante avec nous.",
-    "levelup": "Les Échos te montent au cœur. Choisis un Timbre ou un Accord ; je m'y ferai.",
-    "goal": "Tiens jusqu'à l'aube. Douze minutes. À la fin il y aura un Bourdon, et il faudra le faire taire.",
+    "parry": "Le Contre-battement. Quand un Bâillon bondit ou qu'une onde de Silence arrive, appuie sur Maj sur le temps : le coup s'annule, l'onde repart d'où elle vient.",
+    "levelup": "Les Échos te sont montés au cœur : voilà ta première carte. Un Timbre ou un Accord à chaque niveau ; je m'y ferai.",
+    "goal": "Tiens jusqu'à l'aube : {minutes} minutes. Ramasse les Échos, ils te montent au cœur et t'offrent des Timbres et des Accords. À la fin il y aura un Bourdon, et il faudra le faire taire.",
+    "goal_short": "Tiens jusqu'à l'aube : {minutes} minutes. À la fin il y aura un Bourdon, et il faudra le faire taire.",
     "done": "C'est tout ce que je sais. Le reste, on l'apprend en sonnant.",
     "bell": "La cloche sonne quatre coups. Un Contre-battement sur le quatrième, et elle te répond.",
     "move_touch": "Marche. Pose ton pouce à gauche de l'écran et glisse : le sol se souvient de tes pas ; moi aussi, c'est mon travail.",
     "beat1_touch": "Écoute. Un, deux, trois, quatre. C'est moi qui bats dans ta poitrine. Touche le grand bouton de Volée quand l'anneau se referme.",
+    "parry_touch": "Le Contre-battement. Quand un Bâillon bondit ou qu'une onde de Silence arrive, touche Parade sur le temps : le coup s'annule, l'onde repart d'où elle vient.",
     "bell_touch": "La cloche sonne quatre coups. Touche Parade sur le quatrième, et elle te répond."
   },
   "weapon": {
@@ -35,22 +38,22 @@
     },
     "bourdon": {
       "name": "Bourdon",
-      "desc": "Tous les quatre temps, une onde de {area} pas repousse tout ce qui l'entend : {damage} dégâts.",
+      "desc": "Tous les deux temps, une onde de {area} % de portée repousse tout ce qui l'entend : {damage} dégâts.",
       "voice": "La note la plus basse est celle qui va le plus loin."
     },
     "grelots": {
       "name": "Grelots",
-      "desc": "Lance {count} {count|grelot|grelots} en éventail à chaque croche : {damage} dégâts chacun.",
+      "desc": "Lance {count} {count|grelot|grelots} à chaque temps vers les plus proches : {damage} dégâts chacun.",
       "voice": "Maren en cousait au cou des agneaux pour ne pas les perdre dans le marais."
     },
     "tocsin": {
       "name": "Tocsin",
-      "desc": "Un cercle de {area} pas autour de toi mord tout ce qui y entre, sur le temps : {damage} dégâts.",
+      "desc": "Un cercle de {area} % de portée autour de toi mord tout ce qui y entre, à chaque temps : {damage} dégâts.",
       "voice": "Quand il sonne, on ne demande pas pourquoi. On court."
     },
     "cor_de_brume": {
       "name": "Cor de Brume",
-      "desc": "Souffle un cône de brume tous les deux temps : {damage} dégâts et ralentit ce qu'il touche.",
+      "desc": "Souffle un cône de brume tous les deux temps : {damage} dégâts, et ce qu'il touche est ralenti un temps.",
       "voice": "Le cor des passeurs de la Nef. Il ne perce pas la brume, il la repousse."
     },
     "crecelle": {
@@ -60,65 +63,94 @@
     },
     "chaine_d_angelus": {
       "name": "Chaîne d'Angélus",
-      "desc": "Sur le temps, l'angélus saute d'ennemi en ennemi, {count} fois : {damage} dégâts.",
+      "desc": "Sur le temps, l'angélus saute d'ennemi en ennemi, {bounces} {bounces|rebond|rebonds} : {damage} dégâts.",
       "voice": "Trois fois trois coups, matin, midi et soir. Elle connaît le chemin d'une poitrine à l'autre."
     },
     "diapason": {
       "name": "Diapason",
-      "desc": "Marque {count} {count|ennemi|ennemis} par mesure ; la marque éclate sur le temps suivant : +{bonus} % de dégâts sur les marqués.",
+      "desc": "Marque {count} {count|ennemi|ennemis} par temps ; à chaque temps, tout marqué résonne : +{bonus} % de dégâts subis, et d'autant plus que tu portes d'Accords.",
       "voice": "Le seul bronze qu'on peut porter sans qu'on vous l'ait cousu."
     }
   },
   "passive": {
     "ferrure": {
       "name": "Ferrure",
-      "desc": "Le fer qui cercle la cloche. Chaque coup reçu fait un peu moins mal."
+      "desc": "Le fer qui cercle la cloche. Chaque coup reçu fait {value} de moins, et renvoie {pct} % du recul de parade à ce qui te touche."
     },
     "souffle": {
       "name": "Souffle",
-      "desc": "Les poumons d'un sonneur qui monte les marches. Tu marches plus vite."
+      "desc": "Les poumons d'un sonneur qui monte les marches. +{value} pas de marche, et la Volée laisse une traînée de bronze qui blesse ce qu'elle traverse."
     },
     "contrepoids": {
       "name": "Contrepoids",
-      "desc": "La masse qui fait aller la cloche plus loin. Tes Timbres portent plus large."
+      "desc": "La masse qui fait aller la cloche plus loin. Tes Timbres portent {pct} % plus large ; l'aura du Tocsin suit tes pas avec retard et gonfle sur le temps fort, l'onde du Bourdon laisse un sol qui ralentit."
     },
     "corde_de_chanvre": {
       "name": "Corde de chanvre",
-      "desc": "Une corde neuve épissée dans la vieille. Tes Timbres tirent plus souvent."
+      "desc": "Une corde neuve épissée dans la vieille. Tes Timbres gagnent un point de grille sur cinq par niveau : au niveau 5, la noire devient croche, la croche double."
     },
     "cire_d_abeille": {
       "name": "Cire d'abeille",
-      "desc": "On en met sur les plaies et sur les mèches. Tu regagnes de la vie lentement."
+      "desc": "On en met sur les plaies et sur les mèches. Tu regagnes {value} PV par seconde, deux fois plus tant que tu enchaînes les Parfaits."
     },
     "metronome": {
       "name": "Métronome",
-      "desc": "Le petit balancier du maître de chant. La fenêtre de la Mesure s'élargit."
+      "desc": "Le petit balancier du maître de chant. La fenêtre de la Mesure s'élargit de {pct} %, celle de la cloche horaire aussi."
     },
     "etain": {
       "name": "Étain",
-      "desc": "Vingt-deux parts sur cent. C'est lui qui donne le tranchant à la note : plus de coups critiques."
+      "desc": "Vingt-deux parts sur cent. {pct} % de coups critiques ; à partir du niveau 3, le coup du temps fort est toujours critique."
     },
     "echo": {
       "name": "Écho",
-      "desc": "Ce que la vallée renvoie. Tes coups rebondissent sur un ennemi de plus."
+      "desc": "Ce que la vallée renvoie. Grelots et Crécelle rebondissent {level} fois de plus, la Clarine relance un éclair sur ce qu'elle touche, et tes frappes ont {pct} % de chance de faire écho une croche plus tard."
     }
   },
   "fusion": {
     "glas": {
       "name": "Glas",
-      "desc": "Tocsin et Contrepoids. Tous les quatre temps, la paroisse entière l'entend dans la poitrine : dégâts sur tout l'écran."
+      "desc": "Tocsin et Contrepoids. Tous les quatre temps, la paroisse entière l'entend dans la poitrine : {damage} dégâts sur tout l'écran.",
+      "hint": "Tocsin niveau 5 + Contrepoids niveau 3"
     },
     "carillon": {
       "name": "Carillon",
-      "desc": "Clarine et Écho. Les clarines se répondent et se multiplient à chaque coup qui tombe sur le temps."
+      "desc": "Clarine et Écho. Chaque cloche qui touche lance un éclair vers {bounces} voisins : les clarines se répondent.",
+      "hint": "Clarine niveau 5 + Écho niveau 3"
     },
     "tonnerre": {
       "name": "Tonnerre",
-      "desc": "Bourdon et Étain. L'onde ne repousse plus : elle fend, et chaque coup peut être critique."
+      "desc": "Bourdon et Étain. L'onde ne repousse plus : elle fend, chaque coup est critique et la foudre saute sur {bounces} voisins.",
+      "hint": "Bourdon niveau 5 + Étain niveau 3"
     },
     "requiem": {
       "name": "Requiem",
-      "desc": "Diapason et Métronome. Toutes les marques éclatent ensemble, sur la ronde, et la fenêtre reste ouverte."
+      "desc": "Diapason et Métronome. Cinq marques par temps qui éclatent ensemble, et ce qui tombe sous {execute} % de vie meurt sur le coup.",
+      "hint": "Diapason niveau 5 + Métronome niveau 3"
+    },
+    "grande_volee": {
+      "name": "Grande Volée",
+      "desc": "Battant et Corde de chanvre. Deux arcs par temps ; chaque Parfait du sonneur fait tourner le coup suivant à 360°, à {mult} % de dégâts et double recul.",
+      "hint": "Battant niveau 5 + Corde de chanvre niveau 3"
+    },
+    "transhumance": {
+      "name": "Transhumance",
+      "desc": "Grelots et Souffle. Les grelots suivent le sonneur en troupeau et partent tous ensemble sur le temps fort, {count} à la fois, perçant trois ennemis ; la Volée les lance devant toi.",
+      "hint": "Grelots niveau 5 + Souffle niveau 3"
+    },
+    "corne_de_guet": {
+      "name": "Corne de Guet",
+      "desc": "Cor de Brume et Ferrure. Le cône pare : tout projectile de Silence qu'il contient est renvoyé, tout ennemi touché est figé un temps. {damage} dégâts.",
+      "hint": "Cor de Brume niveau 5 + Ferrure niveau 3"
+    },
+    "crecelle_du_vendredi": {
+      "name": "Crécelle du Vendredi",
+      "desc": "Crécelle et Étain. Un roulement en doubles croches ; le coup qui tombe sur le temps est critique garanti et perce tout.",
+      "hint": "Crécelle niveau 5 + Étain niveau 3"
+    },
+    "angelus_de_veillee": {
+      "name": "Angélus de Veillée",
+      "desc": "Chaîne d'Angélus et Cire d'abeille. Trois fois trois coups qui sautent de poitrine en poitrine ; chaque ennemi touché te rend 1 PV, jusqu'à {heal} par mesure.",
+      "hint": "Chaîne d'Angélus niveau 5 + Cire d'abeille niveau 3"
     }
   },
   "enemy": {
@@ -185,6 +217,18 @@
     "cierge_elite": {
       "name": "Cierge pascal",
       "lore": "Le grand cierge de l'autel, haut comme un homme. Il brûle pour tout le monde et pour personne, et il tombe lourd."
+    },
+    "contretemps": {
+      "name": "Contretemps",
+      "lore": "Un fossoyeur qui a appris à creuser entre les coups. Il ne s'ouvre qu'à la croche, quand la cloche se tait, et c'est là qu'il faut frapper — à contretemps."
+    },
+    "voleur_de_cran": {
+      "name": "Voleur de cran",
+      "lore": "Un Bâillon qui a goûté au bronze. Il bondit, prend un cran de ta Résonance et s'enfuit avec, luisant comme un cierge volé. Rattrape-le : il te le rendra en mourant."
+    },
+    "desaccordeur": {
+      "name": "Désaccordeur",
+      "lore": "Un chantre qui chante faux exprès. Près de lui la musique se voile et boite d'une croche ; ses coups arrivent toujours un peu trop tard pour la parade. Frappe sur ce que tu entends, pas sur ce que tu sais."
     }
   },
   "boss": {

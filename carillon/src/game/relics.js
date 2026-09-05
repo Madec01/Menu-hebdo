@@ -4,7 +4,9 @@
 // Les effets sont appliqués d'ici sans toucher player.js / pickups.js / enemies.js :
 //   · stats du joueur → p.upgradeBonus (survit à recomputeStats) ; · règles du monde → champs de
 //   world lus par les hooks (spawner : Fêlures avancées ; collision : recul, parade double ; world :
-//   ennemis cachés hors halo) ; · Résonance → setDecayMult ; · soin interdit → revers du player:heal ;
+//   ennemis cachés hors halo) ; · parade sans recharge (Langue de cloche) → p.parryCooldownMult ;
+//   · Résonance → setDecayMult (Oreille du Maître : décroissance ×2 et délai ÷2, resonance.js) ;
+//   · soin interdit → revers du player:heal ;
 //   · PV des ennemis → enemy:spawn ; · régénération ×2 et halo → tick / rendu de ce module.
 // API : offerRelics(run) → [id, id] (run.relicOffer), pickRelic(run, id|null), relicMods(run),
 // événement relic:pick {relicId}. Codex : save.codex.relics[id] = nombre de nuits portée.
@@ -94,6 +96,7 @@ function applyToPlayer(p, m) {
   if (m.maxHpMult) b.maxHp += Math.round(m.maxHpMult * base('maxHp'));
   if (m.cadence) b.cadence += m.cadence;
   if (m.regenFlat) b.regen += m.regenFlat;
+  if (m.parryNoCooldown) p.parryCooldownMult = 0;
   recomputeStats(p);
   if (p.hp > p.maxHp) p.hp = p.maxHp;
   refreshWeapons(p);

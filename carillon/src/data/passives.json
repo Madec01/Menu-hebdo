@@ -1,10 +1,18 @@
 [
-  { "id": "ferrure", "name": "passive.ferrure.name", "desc": "passive.ferrure.desc", "icon": "ferrure", "stat": "armor", "perLevel": 1, "maxLevel": 5 },
-  { "id": "souffle", "name": "passive.souffle.name", "desc": "passive.souffle.desc", "icon": "souffle", "stat": "speed", "perLevel": 8, "maxLevel": 5 },
-  { "id": "contrepoids", "name": "passive.contrepoids.name", "desc": "passive.contrepoids.desc", "icon": "contrepoids", "stat": "area", "perLevel": 0.1, "maxLevel": 5 },
-  { "id": "corde_de_chanvre", "name": "passive.corde_de_chanvre.name", "desc": "passive.corde_de_chanvre.desc", "icon": "corde_de_chanvre", "stat": "cadence", "perLevel": 1, "maxLevel": 5 },
-  { "id": "cire_d_abeille", "name": "passive.cire_d_abeille.name", "desc": "passive.cire_d_abeille.desc", "icon": "cire_d_abeille", "stat": "regen", "perLevel": 0.5, "maxLevel": 5 },
-  { "id": "metronome", "name": "passive.metronome.name", "desc": "passive.metronome.desc", "icon": "metronome", "stat": "window", "perLevel": 0.1, "maxLevel": 5 },
-  { "id": "etain", "name": "passive.etain.name", "desc": "passive.etain.desc", "icon": "etain", "stat": "crit", "perLevel": 0.05, "maxLevel": 5 },
-  { "id": "echo", "name": "passive.echo.name", "desc": "passive.echo.desc", "icon": "echo", "stat": "bounce", "perLevel": 1, "maxLevel": 5 }
+  { "id": "ferrure", "name": "passive.ferrure.name", "desc": "passive.ferrure.desc", "icon": "ferrure", "stat": "armor", "perLevel": 1, "maxLevel": 5,
+    "special": { "reflectKnock": 260, "reflectPerLevel": 0.2, "reflectRadius": 40 } },
+  { "id": "souffle", "name": "passive.souffle.name", "desc": "passive.souffle.desc", "icon": "souffle", "stat": "speed", "perLevel": 8, "maxLevel": 5,
+    "special": { "trailDamage": 4, "trailPoints": 3, "trailStep": 18, "trailRadius": 14, "trailBeats": 1 } },
+  { "id": "contrepoids", "name": "passive.contrepoids.name", "desc": "passive.contrepoids.desc", "icon": "contrepoids", "stat": "area", "perLevel": 0.1, "maxLevel": 5,
+    "special": { "auraLagSec": 0.06, "auraSwell": 0.08, "waveSlowPerLevel": 0.1, "waveBeats": 1 } },
+  { "id": "corde_de_chanvre", "name": "passive.corde_de_chanvre.name", "desc": "passive.corde_de_chanvre.desc", "icon": "corde_de_chanvre", "stat": "cadence", "perLevel": 1, "maxLevel": 5,
+    "special": { "fractionPerLevel": 0.2, "minRhythm": 0.25 } },
+  { "id": "cire_d_abeille", "name": "passive.cire_d_abeille.name", "desc": "passive.cire_d_abeille.desc", "icon": "cire_d_abeille", "stat": "regen", "perLevel": 0.5, "maxLevel": 5,
+    "special": { "streakMin": 2, "streakMult": 2 } },
+  { "id": "metronome", "name": "passive.metronome.name", "desc": "passive.metronome.desc", "icon": "metronome", "stat": "window", "perLevel": 0.1, "maxLevel": 5,
+    "special": { "bellWindow": true } },
+  { "id": "etain", "name": "passive.etain.name", "desc": "passive.etain.desc", "icon": "etain", "stat": "crit", "perLevel": 0.05, "maxLevel": 5,
+    "special": { "guaranteeAtLevel": 3 } },
+  { "id": "echo", "name": "passive.echo.name", "desc": "passive.echo.desc", "icon": "echo", "stat": "bounce", "perLevel": 1, "maxLevel": 5,
+    "special": { "echoChancePerLevel": 0.2, "echoDamage": 0.5, "orbitChainDamage": 0.5 } }
 ]

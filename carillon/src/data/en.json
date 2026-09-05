@@ -14,12 +14,15 @@
     "beat1": "Listen. One, two, three, four. That's me beating in your chest. Press Space as the ring closes: standing still, I beat in place; while walking, it's a Peal.",
     "beat2": "Again. On the beat, not beside it. Do you hear? The drum has just come in.",
     "beat3": "A third time. There. When you hold the Measure, I strike harder, and the night sings with us.",
-    "levelup": "The Echoes rise to your heart. Choose a Timbre or a Chord; I will get used to it.",
-    "goal": "Hold until dawn. Twelve minutes. At the end there will be a Bourdon, and it will have to be silenced.",
+    "parry": "The Counter-beat. When a Gag leaps or a wave of Silence comes, press Shift on the beat: the blow is undone, the wave goes back where it came from.",
+    "levelup": "The Echoes have risen to your heart: here is your first card. A Timbre or a Chord at every level; I will get used to it.",
+    "goal": "Hold until dawn: {minutes} minutes. Gather the Echoes, they rise to your heart and offer you Timbres and Chords. At the end there will be a Bourdon, and it will have to be silenced.",
+    "goal_short": "Hold until dawn: {minutes} minutes. At the end there will be a Bourdon, and it will have to be silenced.",
     "done": "That is all I know. The rest is learned by ringing.",
     "bell": "The bell rings four strokes. A Counter-beat on the fourth, and it answers you.",
     "move_touch": "Walk. Rest your thumb on the left of the screen and slide: the ground remembers your steps; so do I, it's my job.",
     "beat1_touch": "Listen. One, two, three, four. That's me beating in your chest. Tap the big Peal button as the ring closes.",
+    "parry_touch": "The Counter-beat. When a Gag leaps or a wave of Silence comes, tap Parry on the beat: the blow is undone, the wave goes back where it came from.",
     "bell_touch": "The bell rings four strokes. Tap Parry on the fourth, and it answers you."
   },
   "weapon": {
@@ -35,22 +38,22 @@
     },
     "bourdon": {
       "name": "Bourdon",
-      "desc": "Every four beats, a wave {area} {area|pace|paces} wide pushes back everything that hears it: {damage} damage.",
+      "desc": "Every two beats, a wave at {area}% reach pushes back everything that hears it: {damage} damage.",
       "voice": "The lowest note is the one that travels farthest."
     },
     "grelots": {
       "name": "Sleigh Bells",
-      "desc": "Throws {count} {count|bell|bells} in a fan on every eighth note: {damage} damage each.",
+      "desc": "Throws {count} {count|bell|bells} on every beat toward the nearest: {damage} damage each.",
       "voice": "Maren sewed them onto the lambs' necks so as not to lose them in the marsh."
     },
     "tocsin": {
       "name": "Tocsin",
-      "desc": "A circle {area} {area|pace|paces} wide around you bites everything that enters it, on the beat: {damage} damage.",
+      "desc": "A circle at {area}% reach around you bites everything that enters it, on every beat: {damage} damage.",
       "voice": "When it rings, nobody asks why. They run."
     },
     "cor_de_brume": {
       "name": "Fog Horn",
-      "desc": "Blows a cone of fog every two beats: {damage} damage and slows whatever it touches.",
+      "desc": "Blows a cone of fog every two beats: {damage} damage, and whatever it touches is slowed for a beat.",
       "voice": "The horn of the ferrymen of the Nef. It does not pierce the fog, it pushes it back."
     },
     "crecelle": {
@@ -60,65 +63,94 @@
     },
     "chaine_d_angelus": {
       "name": "Angelus Chain",
-      "desc": "On the beat, the angelus leaps from enemy to enemy, {count} {count|time|times}: {damage} damage.",
+      "desc": "On the beat, the angelus leaps from enemy to enemy, {bounces} {bounces|bounce|bounces}: {damage} damage.",
       "voice": "Three times three strokes, morning, noon and evening. It knows the way from one chest to the next."
     },
     "diapason": {
       "name": "Tuning Fork",
-      "desc": "Marks {count} {count|enemy|enemies} per bar; the mark bursts on the next beat: +{bonus}% damage on the marked.",
+      "desc": "Marks {count} {count|enemy|enemies} per beat; on every beat, every marked foe resonates: +{bonus}% damage taken, more for every Accord you carry.",
       "voice": "The only bronze you can carry without having it sewn into you."
     }
   },
   "passive": {
     "ferrure": {
       "name": "Ironwork",
-      "desc": "The iron that hoops the bell. Every blow you take hurts a little less."
+      "desc": "The iron that hoops the bell. Every blow you take hurts {value} less, and sends {pct}% of a parry's recoil back into whatever touches you."
     },
     "souffle": {
       "name": "Breath",
-      "desc": "The lungs of a ringer climbing the stairs. You walk faster."
+      "desc": "The lungs of a ringer climbing the stairs. +{value} paces of speed, and the Volley leaves a trail of bronze that wounds whatever it crosses."
     },
     "contrepoids": {
       "name": "Counterweight",
-      "desc": "The mass that carries the bell farther. Your Timbres reach wider."
+      "desc": "The mass that carries the bell farther. Your Timbres reach {pct}% wider; the Tocsin's aura trails your steps and swells on the downbeat, the Bourdon's wave leaves slowing ground."
     },
     "corde_de_chanvre": {
       "name": "Hemp Rope",
-      "desc": "A new rope spliced into the old. Your Timbres fire more often."
+      "desc": "A new rope spliced into the old. Your Timbres gain one grid point in five per level: at level 5 the quarter becomes an eighth, the eighth a sixteenth."
     },
     "cire_d_abeille": {
       "name": "Beeswax",
-      "desc": "Put on wounds and on wicks alike. You slowly regain life."
+      "desc": "Put on wounds and on wicks alike. You regain {value} HP per second, twice as much while you chain Perfects."
     },
     "metronome": {
       "name": "Metronome",
-      "desc": "The choirmaster's little pendulum. The window of the Measure widens."
+      "desc": "The choirmaster's little pendulum. The window of the Measure widens by {pct}%, and so does the hour bell's."
     },
     "etain": {
       "name": "Tin",
-      "desc": "Twenty-two parts in a hundred. It gives the note its edge: more critical hits."
+      "desc": "Twenty-two parts in a hundred. {pct}% critical hits; from level 3 on, the downbeat's blow is always critical."
     },
     "echo": {
       "name": "Echo",
-      "desc": "What the valley sends back. Your blows bounce to one more enemy."
+      "desc": "What the valley sends back. Sleigh Bells and Rattle bounce {level} more {level|time|times}, the Cowbell throws a bolt at what it strikes, and your blows have a {pct}% chance to echo an eighth later."
     }
   },
   "fusion": {
     "glas": {
       "name": "Knell",
-      "desc": "Tocsin and Counterweight. Every four beats, the whole parish feels it in the chest: damage across the entire screen."
+      "desc": "Tocsin and Counterweight. Every four beats, the whole parish feels it in the chest: {damage} damage across the entire screen.",
+      "hint": "Tocsin level 5 + Counterweight level 3"
     },
     "carillon": {
       "name": "Carillon",
-      "desc": "Cowbell and Echo. The bells answer one another and multiply with every blow that lands on the beat."
+      "desc": "Cowbell and Echo. Every bell that strikes throws a bolt at {bounces} neighbours: the cowbells answer one another.",
+      "hint": "Cowbell level 5 + Echo level 3"
     },
     "tonnerre": {
       "name": "Thunder",
-      "desc": "Bourdon and Tin. The wave no longer pushes: it splits, and every blow can be critical."
+      "desc": "Bourdon and Tin. The wave no longer pushes: it splits, every blow is critical and the lightning leaps to {bounces} neighbours.",
+      "hint": "Bourdon level 5 + Tin level 3"
     },
     "requiem": {
       "name": "Requiem",
-      "desc": "Tuning Fork and Metronome. All the marks burst together, on the whole note, and the window stays open."
+      "desc": "Tuning Fork and Metronome. Five marks per beat that burst together, and whatever falls under {execute}% health dies on the spot.",
+      "hint": "Tuning Fork level 5 + Metronome level 3"
+    },
+    "grande_volee": {
+      "name": "Great Peal",
+      "desc": "Clapper and Hemp Rope. Two arcs per beat; every Perfect of the ringer turns the next blow a full circle, at {mult}% damage and double knockback.",
+      "hint": "Clapper level 5 + Hemp Rope level 3"
+    },
+    "transhumance": {
+      "name": "Transhumance",
+      "desc": "Sleigh Bells and Breath. The bells follow the ringer as a flock and leave all together on the downbeat, {count} at a time, piercing three foes; the Volley sends them ahead of you.",
+      "hint": "Sleigh Bells level 5 + Breath level 3"
+    },
+    "corne_de_guet": {
+      "name": "Watch Horn",
+      "desc": "Fog Horn and Ironwork. The cone parries: every projectile of Silence inside it is thrown back, every foe it touches is frozen for a beat. {damage} damage.",
+      "hint": "Fog Horn level 5 + Ironwork level 3"
+    },
+    "crecelle_du_vendredi": {
+      "name": "Good Friday Rattle",
+      "desc": "Rattle and Tin. A roll in sixteenth notes; the blow that lands on the beat is a guaranteed critical and pierces everything.",
+      "hint": "Rattle level 5 + Tin level 3"
+    },
+    "angelus_de_veillee": {
+      "name": "Wake Angelus",
+      "desc": "Angelus Chain and Beeswax. Three times three strokes leaping from chest to chest; every foe struck gives you 1 HP back, up to {heal} per bar.",
+      "hint": "Angelus Chain level 5 + Beeswax level 3"
     }
   },
   "enemy": {
@@ -185,6 +217,18 @@
     "cierge_elite": {
       "name": "Paschal Taper",
       "lore": "The great candle of the altar, tall as a man. It burns for everyone and for no one, and it falls heavy."
+    },
+    "contretemps": {
+      "name": "Offbeat",
+      "lore": "A gravedigger who learned to dig between the strokes. He only opens on the eighth, when the bell falls silent, and that is when you must strike — against the beat."
+    },
+    "voleur_de_cran": {
+      "name": "Notch Thief",
+      "lore": "A Gag that has tasted bronze. It leaps, takes a notch of your Resonance and runs off with it, glowing like a stolen candle. Catch it: it gives it back when it dies."
+    },
+    "desaccordeur": {
+      "name": "Detuner",
+      "lore": "A cantor who sings false on purpose. Near him the music blurs and limps by an eighth; his blows always land a little too late for the parry. Strike on what you hear, not on what you know."
     }
   },
   "boss": {

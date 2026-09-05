@@ -6,6 +6,10 @@
 // plus proche au tick où une arme directionnelle tire, presse Volée/Contre-battement sur les temps avec un
 // taux de réussite paramétrable (profil), répond à la cloche horaire sur le 4ᵉ coup, prend la première
 // Relique proposée (--relic) et choisit les cartes selon une stratégie.
+// § 8 bis : la parade a une recharge (p.parryCdT) et ne charge la Résonance que si elle pare : le robot ne
+// pare que si c'est « utile » (contact imminent ou projectile de Silence qui arrive), sinon il bat sur place
+// (Volée sans direction) quand une menace est à portée, ou dash s'il fuit. Profil `parade_seule` : parade sur
+// chaque temps quoi qu'il arrive, jamais de Volée (diagnostic : ne doit pas dépasser le cran 1 en moyenne).
 //
 //   node tests/sim.mjs                                  # une run : Wren, parfait, seed 1, Cendrelune
 //   node tests/sim.mjs --char le_muet --profile moyen --seed 3 --parish tourbes
@@ -15,7 +19,8 @@
 //   node tests/sim.mjs --json                           # sortie JSON brute (une ligne)
 //   node tests/sim.mjs --relic none|first|<id>          # Relique de paroisse (défaut : la première proposée)
 // Options : --seeds N, --cards honnete|premiere|fusion, --upgrades coeur_de_bronze:3,battant_lourd:2,
-//           --secondWeapon <id> (variante : arme supplémentaire au départ), --minutes 13 (défaut : durée de la
+//           --secondWeapon <id> (variante : arme supplémentaire au départ), --inputEvery 1 (frappe à chaque temps),
+//           --minutes 13 (défaut : durée de la
 //           paroisse waves.json + 2 min 30 pour le boss), --jobs 4. Les Moments scriptés (run:moment) sont traversés
 //           et listés (id@seconde) ; le bilan agrégé lit la durée de la nuit (niv@fin = niveau à `duration`).
 
@@ -33,21 +38,29 @@ const DT = 1 / 60;
 const PROFILES = {
   // Probabilités de grade par frappe ; faceRate = part des tirs directionnels où le robot se tourne vers
   // l'ennemi ; emergency = dash hors temps quand un ennemi touche et PV bas ; inputEvery = temps entre 2
-  // frappes (0 = seulement des Volées d'urgence) ; fleeThreat = menace cumulée (Σ (dégâts+4)/d²) qui fait
+  // frappes (1 = à chaque temps, comme un joueur qui tient la Mesure ; 0 = seulement des Volées d'urgence) ;
+  // fleeThreat = menace cumulée (Σ (dégâts+4)/d²) qui fait
   // passer en fuite ; fleeHp = fraction de PV sous laquelle le robot devient prudent.
-  parfait: { parfait: 1, bon: 0, rate: 0, faceRate: 1, emergency: false, inputEvery: 2, assist: 'none', cards: 'honnete', fleeThreat: 0.12, fleeHp: 0.35 },
-  moyen: { parfait: 0.1, bon: 0.5, rate: 0.4, faceRate: 0.6, emergency: true, inputEvery: 2, assist: 'none', cards: 'honnete', fleeThreat: 0.1, fleeHp: 0.35 },
+  parfait: { parfait: 1, bon: 0, rate: 0, faceRate: 1, emergency: false, inputEvery: 1, assist: 'none', cards: 'honnete', fleeThreat: 0.12, fleeHp: 0.35 },
+  // moyen : un joueur qui tombe presque toujours dans la fenêtre (Wren ±143 ms) mais rarement dans le Parfait ;
+  // faible : l'ancien « moyen » (40 % de ratés), gardé comme référence basse.
+  moyen: { parfait: 0.2, bon: 0.55, rate: 0.25, faceRate: 0.6, emergency: true, inputEvery: 1, assist: 'none', cards: 'honnete', fleeThreat: 0.1, fleeHp: 0.35 },
+  faible: { parfait: 0.1, bon: 0.5, rate: 0.4, faceRate: 0.6, emergency: true, inputEvery: 1, assist: 'none', cards: 'honnete', fleeThreat: 0.1, fleeHp: 0.35 },
   norhythm: { parfait: 0, bon: 0, rate: 1, faceRate: 0.6, emergency: true, inputEvery: 0, assist: 'norhythm', cards: 'honnete', fleeThreat: 0.1, fleeHp: 0.35 },
   passif: { parfait: 0, bon: 0.2, rate: 0.8, faceRate: 0.35, emergency: false, inputEvery: 8, assist: 'none', cards: 'premiere', fleeThreat: 0.2, fleeHp: 0.2 },
   // Diagnostic : le style « Volée sur chaque temps » observé par le lead (dash permanent, jamais de parade).
   lead: { parfait: 1, bon: 0, rate: 0, faceRate: 1, emergency: false, inputEvery: 1, dashAlways: true, assist: 'none', cards: 'honnete', fleeThreat: 0.1, fleeHp: 0.35 },
+  // Diagnostic : la stratégie dominante de l'audit — se déplacer comme « parfait » mais presser la parade sur
+  // CHAQUE temps, jamais de Volée (parryAlways). Avec la recharge et le gain conditionnel, elle ne doit pas
+  // dépasser le cran 1 en moyenne.
+  parade_seule: { parfait: 1, bon: 0, rate: 0, faceRate: 1, emergency: false, inputEvery: 1, parryAlways: true, assist: 'none', cards: 'honnete', fleeThreat: 0.12, fleeHp: 0.35 },
 };
 const WEAPON_PREF = ['bourdon', 'grelots', 'clarine', 'tocsin', 'chaine_d_angelus', 'cor_de_brume', 'crecelle', 'battant', 'diapason'];
 const PASSIVE_PREF = ['ferrure', 'contrepoids', 'cire_d_abeille', 'corde_de_chanvre', 'souffle', 'etain', 'echo', 'metronome'];
 
 function parseArgs(argv) {
   const o = { seed: 1, seeds: 5, char: 'wren', profile: 'parfait', parish: 'cendrelune', cards: null, data: null, upgrades: '', secondWeapon: null, trace: null,
-    minutes: 0, json: false, matrix: false, chars: 'wren,le_muet', profiles: 'parfait,moyen,norhythm', jobs: 4, quiet: false, weapons: 4, relic: 'first' };
+    minutes: 0, json: false, matrix: false, chars: 'wren,le_muet', profiles: 'parfait,moyen,norhythm', jobs: 4, quiet: false, weapons: 4, relic: 'first', inputEvery: 0 };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (!a.startsWith('--')) continue;
@@ -55,7 +68,7 @@ function parseArgs(argv) {
     if (k === 'json' || k === 'matrix' || k === 'quiet') { o[k] = true; continue; }
     o[k] = argv[++i];
   }
-  for (const k of ['seed', 'seeds', 'minutes', 'jobs', 'weapons']) o[k] = +o[k] || 0;
+  for (const k of ['seed', 'seeds', 'minutes', 'jobs', 'weapons', 'inputEvery']) o[k] = +o[k] || 0;
   return o;
 }
 
@@ -69,7 +82,7 @@ function loadData(dir) {
 function makeRobot(profile, opts, mods, rng) {
   const { input, audio, conductor } = mods;
   const R = {
-    dirX: 0, dirY: 0, lastBeat: -1, grades: { parfait: 0, bon: 0, rate: 0 }, dashes: 0, parries: 0,
+    dirX: 0, dirY: 0, lastBeat: -1, grades: { parfait: 0, bon: 0, rate: 0 }, dashes: 0, parries: 0, pulses: 0,
     lastFire: -1, facing: false, flee: false, hpHist: new Array(180), hpIdx: 0,
   };
   function grade() {
@@ -87,7 +100,7 @@ function makeRobot(profile, opts, mods, rng) {
     const g = grade();
     R.grades[g]++;
     input.__press(action, beatT + offsetFor(g));
-    if (action === 'dash') R.dashes++; else R.parries++;
+    if (action === 'dash') R.dashes++; else R.parries++;   // (les battements sur place sont comptés à part dans R.pulses, inclus dans dashes)
   }
   const DIRS = 16;
   return {
@@ -105,7 +118,7 @@ function makeRobot(profile, opts, mods, rng) {
       }
       if (!hasMelee) engage = 120;
       // 1. Menaces : répulsion 1/d² pondérée par les dégâts (ennemis, projectiles de Silence, zones).
-      let sx = 0, sy = 0, nearest = null, nd = 1e9, boss = null, threat = 0, nearTouch = false;
+      let sx = 0, sy = 0, nearest = null, nd = 1e9, boss = null, threat = 0, nearTouch = false, parryContact = false;
       const items = world.enemies.items;
       for (let i = 0; i < items.length; i++) {
         const e = items[i];
@@ -117,18 +130,34 @@ function makeRobot(profile, opts, mods, rng) {
         const w = (e.damage + 4) / (d2 + 400) * (e.boss ? 4 : e.elite ? 2 : 1);
         sx -= dx / d * w; sy -= dy / d * w; threat += w;
         if (d < e.r + p.r + 10) nearTouch = true;
+        if (d < e.r + p.r + 22) parryContact = true;   // contact imminent (0,2 s de parade) : parade utile
       }
-      let px = 0, py = 0, projThreat = 0;
+      let px = 0, py = 0, projThreat = 0, parryUseful = false;
+      const B = mods.data.balance().player;
       const projs = world.projectiles.items;
       for (let i = 0; i < projs.length; i++) {
         const o = projs[i];
         if (o.owner !== 'enemy' || !o.collides || o.dead) continue;
+        // Parade utile : le projectile passera à portée de parade (parryRadius) pendant la fenêtre (0,2 s).
+        for (let k = 1; k <= 2 && !parryUseful; k++) {
+          const ex = o.x + o.vx * 0.1 * k - p.x, ey = o.y + o.vy * 0.1 * k - (p.y - 8);
+          if (ex * ex + ey * ey <= (B.parryRadius + o.r) * (B.parryRadius + o.r)) parryUseful = true;
+        }
         const fx = o.x + o.vx * 0.5, fy = o.y + o.vy * 0.5; // position dans 0,5 s
         const dx = fx - p.x, dy = fy - p.y, d2 = dx * dx + dy * dy, d = Math.sqrt(d2) || 1;
         if (d > 120) continue;
         const w = 40 / (d2 + 200);
         px -= dx / d * w; py -= dy / d * w; projThreat += w;
       }
+      if (nearTouch || parryContact) parryUseful = true;   // un ennemi au contact : la parade annule le coup et le repousse
+      // Bâillon en plein bond (aiState 1) vers le sonneur : la parade est la réponse enseignée par le jeu.
+      if (!parryUseful) for (let i = 0; i < items.length; i++) {
+        const e = items[i];
+        if (e.state !== 'alive' || e.def.behavior !== 'leap' || e.aiState !== 1) continue;
+        const dx = e.x - p.x, dy = e.y - p.y;
+        if (dx * dx + dy * dy < 110 * 110) { parryUseful = true; break; }
+      }
+      const threatNear = nd < mods.data.balance().resonance.threatRadius || projThreat > 0;
       const hz = world.hazards.items;
       for (let i = 0; i < hz.length; i++) {
         const h = hz[i];
@@ -213,28 +242,35 @@ function makeRobot(profile, opts, mods, rng) {
         if (tgt && Math.hypot(tgt.x - p.x, tgt.y - p.y) < 140 && rng.next() < profile.faceRate) faceTarget = tgt;
       }
 
-      // 5. Frappes rythmiques sur les temps : Volée si l'on fuit (i-frames + distance), sinon Contre-battement.
+      // 5. Frappes rythmiques sur les temps : Volée (dash) si l'on fuit, Contre-battement s'il est utile ET
+      //    rechargé (p.parryCdT), sinon battement sur place (Volée sans direction) si une menace est à portée.
       const beat = Math.floor((t - conductor.startAt()) / conductor.beatDuration());
-      let dashNow = false;
+      let dashNow = false, pulseNow = false;
       const fleeDx = sx + px, fleeDy = sy + py, fleeLen = Math.hypot(fleeDx, fleeDy);
+      const parryOk = p.parryT <= 0 && p.parryCdT <= 0;
       if (beat !== R.lastBeat) {
         R.lastBeat = beat;
         const beatT = conductor.beatTime(beat);
         const bell = g.bell;
+        const bellNext = bell && bell.ringing && beat === bell.fourthBeat - 1;   // garder la parade pour le 4ᵉ coup
         // Cloche horaire (§ 11 bis) : Contre-battement sur le 4ᵉ coup, avec le grade du profil.
-        if (bell && bell.ringing && beat === bell.fourthBeat && profile.inputEvery > 0 && p.parryT <= 0) press('parry', beatT);
+        if (bell && bell.ringing && beat === bell.fourthBeat && profile.inputEvery > 0 && parryOk) press('parry', beatT);
+        else if (profile.parryAlways) { if (parryOk) press('parry', beatT); }
         else if (profile.inputEvery > 0 && beat % profile.inputEvery === 0 && beat > 0) {
           if (profile.dashAlways && p.dashT <= 0) { press('dash', beatT); dashNow = true; R.dashDir = len > 0 ? 1 : 0; }
-          else if ((flee || nearTouch) && p.dashT <= 0 && fleeLen > 0) { press('dash', beatT); dashNow = true; }
-          else if (p.parryT <= 0) press('parry', beatT);
+          else if ((flee || nearTouch) && !parryUseful && p.dashT <= 0 && fleeLen > 0) { press('dash', beatT); dashNow = true; }
+          else if (parryUseful && parryOk && !bellNext) press('parry', beatT);
+          else if (threatNear && p.dashT <= 0) { press('dash', beatT); pulseNow = true; R.pulses++; }
         } else if (profile.inputEvery === 0 && (flee || nearTouch) && p.dashT <= 0 && fleeLen > 0) {
           input.__press('dash', beatT); R.dashes++; dashNow = true;
         }
       }
+      if (profile.still) { input.__setAxis(0, 0); return; }
       if (!dashNow && profile.emergency && nearTouch && p.dashT <= 0 && p.iframesT <= 0 && fleeLen > 0 && lowHp) {
         input.__press('dash', t); R.dashes++; dashNow = true;
       }
-      if (dashNow) {
+      if (pulseNow) { axisX = 0; axisY = 0; }   // battement sur place : aucune direction ce tick
+      else if (dashNow) {
         if (profile.dashAlways && !(flee || nearTouch)) { if (len === 0 && nearest) { axisX = (nearest.x - p.x) / nd; axisY = (nearest.y - p.y) / nd; } }
         else { axisX = fleeDx / fleeLen; axisY = fleeDy / fleeLen; }
       }
@@ -295,8 +331,9 @@ export async function runOne(o) {
   audio.__setTime(0);
   conductor.initConductor({ bpm: 96 });
   conductor.start(0.05);
-  const profile = PROFILES[o.profile];
+  let profile = PROFILES[o.profile];
   if (!profile) throw new Error('profil inconnu ' + o.profile);
+  if (o.inputEvery > 0) profile = Object.assign({}, profile, { inputEvery: o.inputEvery });   // --inputEvery N : cadence de frappe forcée
   const strategy = o.cards || profile.cards;
   const robot = makeRobot(profile, o, mods, mods.rngMod.makeRng(o.seed * 7919 + 13));
   const upgrades = {};
@@ -306,7 +343,7 @@ export async function runOne(o) {
     seed: o.seed, char: o.char, profile: o.profile, parish: o.parish, cards: strategy, upgrades,
     samples: [], xpTotal: 0, outcome: 'timeout', endSec: 0, kills: 0, level: 1, levelUps: 0, hitsTaken: 0, dmgTaken: {}, dmgTakenTotal: 0,
     boss: { startSec: null, endSec: null, hpAtStart: null, fightSec: null }, fissures: [], dps: {}, resonanceAvg: 0, bronze: 0,
-    grades: null, dashes: 0, parries: 0, maxEnemies: 0, build: null, achievements: [], leaves: [], firstDeathRisk: null, minHp: 1e9, minHpSec: 0,
+    grades: null, dashes: 0, parries: 0, pulses: 0, parriesOk: 0, maxEnemies: 0, tierHist: [0, 0, 0, 0], streakMax: 0, build: null, achievements: [], leaves: [], firstDeathRisk: null, minHp: 1e9, minHpSec: 0,
     relic: null, relicOffer: null, bellRings: 0, bellAnswers: 0, duration: 0, moments: [], momentsTotal: 0,
   };
   const offs = [];
@@ -318,6 +355,8 @@ export async function runOne(o) {
   offs.push(bus.on('pickup:xp', (e) => { out.xpTotal += e.amount; }));
   offs.push(bus.on('bell:ring', () => { out.bellRings++; }));
   offs.push(bus.on('bell:answered', () => { out.bellAnswers++; }));
+  offs.push(bus.on('player:parry', (e) => { if (e.success) out.parriesOk++; }));
+  offs.push(bus.on('resonance:streak', (e) => { if (e.count > out.streakMax) out.streakMax = e.count; }));
   offs.push(bus.on('player:hit', (e) => { out.hitsTaken++; out.dmgTaken[e.from] = (out.dmgTaken[e.from] || 0) + e.damage; out.dmgTakenTotal += e.damage; }));
   offs.push(bus.on('run:boss', (e) => {
     if (e.phase === 'start') { out.boss.startSec = g.run.timeSec; out.boss.hpAtStart = g.player.hp; }
@@ -360,6 +399,7 @@ export async function runOne(o) {
     if (world.enemies.active > out.maxEnemies) out.maxEnemies = world.enemies.active;
     if (o.trace === 'boss' && world.boss && i % 60 === 0) console.error(`[robot] t=${g.run.timeSec.toFixed(1)} dBoss=${robot.R.bossD.toFixed(0)} flee=${robot.R.flee} threat=${robot.R.threat.toFixed(3)} proj=${robot.R.projThreat.toFixed(3)} hp=${p.hp} alive=${world.enemies.active} bossHp=${world.boss.hp} bossState=${world.boss.aiState}`);
     if (!p.dead && p.hp < out.minHp) { out.minHp = p.hp; out.minHpSec = Math.round(g.run.timeSec); }
+    out.tierHist[resonance.tier()]++;
     if (g.run.timeSec >= nextSample) {
       out.samples.push({ t: nextSample, level: g.run.level, xp: Math.round(out.xpTotal), hp: Math.max(0, Math.round(p.hp)), maxHp: p.maxHp, kills: world.kills, spawned: world.spawned, enemies: world.enemies.active,
         tier: resonance.tier(), bossHp: world.boss ? Math.round(world.boss.hp) : null, weapons: p.weapons.map((w) => w.id + ':' + w.level).join(' ') });
@@ -375,7 +415,9 @@ export async function runOne(o) {
     out.build = { weapons: p.weapons.map((w) => ({ id: w.id, level: w.level })), passives: p.passives.map((x) => ({ id: x.id, level: x.level })) };
     if (world.boss) out.boss.hpLeft = Math.round(world.boss.hp);
   }
-  out.grades = robot.R.grades; out.dashes = robot.R.dashes; out.parries = robot.R.parries;
+  out.grades = robot.R.grades; out.dashes = robot.R.dashes; out.parries = robot.R.parries; out.pulses = robot.R.pulses;
+  const th = out.tierHist.reduce((a, b) => a + b, 0) || 1;
+  out.tierPct = out.tierHist.map((n) => Math.round(n / th * 100));
   out.minHp = out.minHp === 1e9 ? p.maxHp : Math.round(out.minHp);
   offs.forEach((f) => f());
   game.endGame();
@@ -391,7 +433,7 @@ function fmtRun(r) {
   lines.push('  t(s)   niv    XP   PV        vivants  tués/appar.  cran  boss PV  armes');
   for (const s of r.samples) lines.push(`  ${String(s.t).padStart(4)}   ${String(s.level).padStart(3)} ${String(s.xp).padStart(5)}   ${String(s.hp + '/' + s.maxHp).padEnd(9)} ${String(s.enemies).padStart(5)}   ${String(s.kills + '/' + s.spawned).padStart(10)}   ${s.tier}    ${String(s.bossHp === null ? '' : s.bossHp).padStart(6)}   ${s.weapons}`);
   lines.push('  DPS par arme : ' + Object.entries(r.dps).map(([k, v]) => k + ' ' + v).join(', '));
-  lines.push('  frappes : ' + JSON.stringify(r.grades) + ` (${r.dashes} volées, ${r.parries} parades) ; coups reçus ${r.hitsTaken} (${r.dmgTakenTotal} PV) : ` + Object.entries(r.dmgTaken).map(([k, v]) => k + ' ' + v).join(', '));
+  lines.push('  frappes : ' + JSON.stringify(r.grades) + ` (${r.dashes} volées dont ${r.pulses} battements sur place, ${r.parries} parades dont ${r.parriesOk} utiles ; streak max ${r.streakMax}) ; temps par cran % ${(r.tierPct || []).join('/')} ; coups reçus ${r.hitsTaken} (${r.dmgTakenTotal} PV) : ` + Object.entries(r.dmgTaken).map(([k, v]) => k + ' ' + v).join(', '));
   lines.push(`  PV mini ${r.minHp} à ${r.minHpSec} s ; ennemis max ${r.maxEnemies} ; Fêlures ${r.fissures.join(' ')}`);
   lines.push(`  nuit de ${r.duration} s ; Moments ${r.moments.length}/${r.momentsTotal} : ${r.moments.join(' ')}`);
   lines.push(`  Relique : ${r.relic || 'aucune'} (proposées : ${(r.relicOffer || []).join(', ')}) ; cloche : ${r.bellAnswers}/${r.bellRings} réponses`);
@@ -455,6 +497,7 @@ export async function runMatrix(o) {
     if (o.cards) args.push('--cards', o.cards);
     if (o.upgrades) args.push('--upgrades', o.upgrades);
     if (o.secondWeapon) args.push('--secondWeapon', o.secondWeapon);
+    if (o.inputEvery > 0) args.push('--inputEvery', String(o.inputEvery));
     jobs.push(args);
   }
   const results = [];

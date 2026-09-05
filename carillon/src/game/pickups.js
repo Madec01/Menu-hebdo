@@ -2,6 +2,11 @@
 // l'écran), relique (un cran de Résonance + soin), lingot de bronze. Pool dans world.pickups.
 // Les ramassages émettent `pickup:xp` / `pickup:item` ; l'XP est comptée par progression.js
 // (game.js relie les deux). Sprites : `echo` (small/medium/large) et `pickups` (heal/chime/relic/bronze).
+// Lisibilité (audit) : chaque Écho porte une lueur forte (addGlow 0,9 / rayon 14) et flotte légèrement.
+// Écho géant (Accalmie, moments.js → spawnGiantEcho) : jamais aimanté, ramassé seulement par une Volée
+// jugée sur le temps (p.volleyT > 0 et p.volleyGrade ≠ 'rate') à portée ; il pulse sur le temps.
+// Procession : l'Écho d'un ennemi suivi par le Moment n'est doublé que si le coup mortel était sur le
+// temps (enemy.lastOnBeat, posé par collision.damageEnemy).
 
 import { bus } from '../core/events.js';
 import { createPool } from '../core/pool.js';
@@ -12,6 +17,7 @@ import { addGlow } from '../render/lighting.js';
 import { emit as emitParticles } from '../render/particles.js';
 import { flash } from '../render/fx.js';
 import { balance } from './data.js';
+import { phase } from '../audio/conductor.js';
 import { healPlayer } from './player.js';
 import { onRhythmInput } from './resonance.js';
 import { damageEnemy } from './collision.js';
@@ -20,8 +26,8 @@ const xpPayload = { amount: 0 };
 const itemPayload = { kind: '' };
 const HIT = { crit: true, onBeat: true, knockX: 0, knockY: 0, source: 'carillon_pickup' };
 
-function factory() { return { x: 0, y: 0, px: 0, py: 0, vx: 0, vy: 0, kind: 'xp', value: 0, t: 0, anim: 'small', sprite: 'echo', magnet: false, bob: 0 }; }
-function reset(o) { o.t = 0; o.magnet = false; o.vx = 0; o.vy = 0; o.bob = 0; }
+function factory() { return { x: 0, y: 0, px: 0, py: 0, vx: 0, vy: 0, kind: 'xp', value: 0, t: 0, anim: 'small', sprite: 'echo', magnet: false, bob: 0, giant: false, life: 0 }; }
+function reset(o) { o.t = 0; o.magnet = false; o.vx = 0; o.vy = 0; o.bob = 0; o.giant = false; o.life = 0; }
 
 export function createPickupPool() { return createPool(factory, reset, 300); }
 
@@ -46,10 +52,33 @@ function sizeOf(o) {
   o.anim = o.value >= P.largeAt ? 'large' : o.value >= P.mediumAt ? 'medium' : 'small';
 }
 
+/**
+ * Écho géant de l'Accalmie : posé en (x, y), vaut `value` XP, disparaît après lifeSec. Ramassable
+ * uniquement par une Volée sur le temps (voir updatePickups). Renvoie le ramassable ou null.
+ */
+export function spawnGiantEcho(world, x, y, value, lifeSec) {
+  const o = spawnPickup(world, 'xp', x, y, value);
+  if (!o) return null;
+  o.giant = true; o.anim = 'large'; o.vx = 0; o.vy = 0; o.life = lifeSec;
+  emitParticles('bell', x, y);
+  return o;
+}
+
+/** XP lâchée par un ennemi : Procession → doublée seulement si le coup mortel était sur le temps. */
+function xpFor(world, e) {
+  const mo = world.moments;
+  if (mo && mo.active && mo.active.id === 'procession' && mo.ids.indexOf(e.id) >= 0) {
+    const base = e.def ? e.def.xp : e.xp;
+    return e.lastOnBeat ? base * balance().moments.processionXpMult : base;
+  }
+  return e.xp;
+}
+
 /** Butin d'un ennemi mort : Écho + objets rares (tirés au rng du run). */
 export function dropFor(world, e) {
   const P = balance().pickups;
-  if (e.xp > 0) spawnPickup(world, 'xp', e.x, e.y, e.xp);
+  const xp = xpFor(world, e);
+  if (xp > 0) spawnPickup(world, 'xp', e.x, e.y, xp);
   if (e.elite) { spawnPickup(world, 'relic', e.x + 10, e.y, 0); spawnPickup(world, 'heal', e.x - 10, e.y, 0); return; }
   if (e.boss) return;
   const r = world.rng.next();
@@ -68,6 +97,7 @@ function collect(world, o, p) {
       playSfx(o.anim === 'large' ? 'xp_pickup_big' : 'xp_pickup', { volume: o.anim === 'small' ? 0.5 : 0.9 });
       emitParticles('xp', o.x, o.y);
       emitParticles('echo_spark', o.x, o.y - 4); // petite étincelle chaude
+      if (o.giant) { emitParticles('bell', o.x, o.y); flash('#d8cdb4', 1); }
       return;
     case 'heal': healPlayer(p, Math.ceil(p.maxHp * P.healPct)); break;
     case 'chime': chime(world, p); break;
@@ -102,6 +132,16 @@ export function updatePickups(world, dt, p) {
   for (let i = items.length - 1; i >= 0; i--) {
     const o = items[i];
     o.px = o.x; o.py = o.y; o.t += dt;
+    if (o.giant) {
+      // Écho géant : immobile, ramassé par une Volée jugée sur le temps à portée, sinon il s'éteint.
+      if (o.t > o.life) { emitParticles('silence', o.x, o.y); world.pickups.release(o); continue; }
+      if (!p.dead && p.volleyT > 0 && p.volleyGrade !== 'rate') {
+        const R = balance().moments.accalmieEchoRadius || 70;
+        const dx = p.x - o.x, dy = p.y - o.y;
+        if (dx * dx + dy * dy <= R * R) { collect(world, o, p); world.pickups.release(o); continue; }
+      }
+      continue;
+    }
     if (o.t > P.lifeSec && o.kind === 'xp') { world.pickups.release(o); continue; }
     const dx = p.x - o.x, dy = p.y - o.y, d2 = dx * dx + dy * dy;
     const pull = o.kind === 'xp' ? magnetR : magnetR * 0.6;
@@ -123,15 +163,28 @@ export function updatePickups(world, dt, p) {
 
 const drawOpts = { flipX: false, alpha: 1, tint: null, scale: 1 };
 
+const ECHO_GLOW = '#dcae52', ITEM_GLOW = '#e0603a', GIANT_GLOW = '#f2e6c8';
+
 export function renderPickups(ctx, world, alpha) {
   const items = world.pickups.items;
+  const beat = 1 - phase();   // pulsation sur le temps (Écho géant)
   for (let i = 0; i < items.length; i++) {
     const o = items[i];
-    const x = o.px + (o.x - o.px) * alpha, y = o.py + (o.y - o.py) * alpha - Math.abs(Math.sin(o.t * 3 + o.x)) * 2;
-    if (!isVisible(x, y, 16)) continue;
+    // Léger flottement (sinus, déphasé par la position) : l'Écho « vit » même hors du halo.
+    const x = o.px + (o.x - o.px) * alpha, y = o.py + (o.y - o.py) * alpha - 2 - Math.sin(o.t * 3 + o.x * 0.1) * 2.5;
+    if (!isVisible(x, y, o.giant ? 48 : 16)) continue;
+    if (o.giant) {
+      const k = o.life > 0 ? Math.max(0, Math.min(1, (o.life - o.t) / 1.5)) : 1;   // extinction sur la dernière seconde et demie
+      drawOpts.scale = 2.2 + beat * 0.25; drawOpts.alpha = k;
+      draw(ctx, o.sprite, o.anim, frameAt(o.sprite, o.anim, o.t), x, y, drawOpts);
+      drawOpts.alpha = 1;
+      addGlow(x, y, 34 + beat * 10, GIANT_GLOW, (0.55 + beat * 0.45) * k);
+      addGlow(x, y, 60, ECHO_GLOW, 0.5 * k);
+      continue;
+    }
     drawOpts.scale = o.kind === 'xp' ? 0.75 : 1;
     draw(ctx, o.sprite, o.anim, frameAt(o.sprite, o.anim, o.t), x, y, drawOpts);
-    if (o.kind !== 'xp') addGlow(x, y, 12, '#e0603a', 0.45);
-    else if (o.anim !== 'small') addGlow(x, y, 11, '#dcae52', 0.34); // lueurs additives : discrètes, les Échos s'empilent
+    if (o.kind !== 'xp') addGlow(x, y, 12, ITEM_GLOW, 0.45);
+    else addGlow(x, y, 14, ECHO_GLOW, 0.9);   // lueur forte : les Échos se voient hors du halo (audit feel)
   }
 }

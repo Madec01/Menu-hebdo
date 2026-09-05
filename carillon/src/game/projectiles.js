@@ -11,11 +11,17 @@
 // Les projectiles 'chain' gardent leur point de départ (fromX/fromY) pour tracer l'éclair.
 // Les collisions sont résolues dans collision.js ; ici on ne fait que déplacer et dessiner.
 // spawnProjectile copie un objet `spec` réutilisable (voir SPEC) : aucune allocation par tir.
+// Lisibilité des projectiles de Silence (owner 'enemy', audit feel) : teinte gris-silence désaturée,
+// contour sombre (atlas.drawOutlined si le rendu le fournit, sinon double tracé décalé d'une teinte
+// sombre), animation bouclée quelle que soit l'anim du manifeste, taille ×1,25, traînée de particules
+// `silence`, et un liseré os autour de chaque projectile parable quand la parade du sonneur est prête.
 
 import { createPool } from '../core/pool.js';
-import { draw, frameAt } from '../render/atlas.js';
+import * as atlas from '../render/atlas.js';
+import { draw, frameAt, animFrames } from '../render/atlas.js';
 import { isVisible } from '../render/camera.js';
 import { addGlow } from '../render/lighting.js';
+import { emit as emitParticles } from '../render/particles.js';
 
 const MAX_HITS = 24;
 let nextId = 1;
@@ -28,7 +34,7 @@ function factory() {
     knockback: 0, speed: 0, angle: 0, orbitR: 0, orbitSpeed: 0, target: null, targetId: 0,
     scale: 1, alpha: 1, tint: null, flipX: false, collides: true, mark: false, markSec: 0, markBonus: 0,
     growTo: 0, fadeOut: false, followPlayer: false, hitOnBeat: false, dead: false, parried: false,
-    shape: 0, spread: 0, fromX: 0, fromY: 0,
+    shape: 0, spread: 0, fromX: 0, fromY: 0, trail: 0,
   };
 }
 
@@ -37,7 +43,7 @@ function reset(o) {
   o.big = false; o.crit = false; o.mark = false; o.collides = true; o.fadeOut = false; o.followPlayer = false;
   o.growTo = 0; o.alpha = 1; o.scale = 1; o.tint = null; o.flipX = false; o.parried = false; o.bounce = 0; o.bounces = 0;
   o.angle = 0; o.orbitR = 0; o.orbitSpeed = 0; o.vx = 0; o.vy = 0; o.markSec = 0; o.markBonus = 0; o.hitOnBeat = false;
-  o.shape = 0; o.spread = 0;
+  o.shape = 0; o.spread = 0; o.trail = 0;
 }
 
 /** Spécification réutilisable remplie par les comportements d'armes avant spawnProjectile. */
@@ -159,13 +165,52 @@ export function updateProjectiles(world, dt, player) {
       }
       default: // linear
         o.x += o.vx * dt; o.y += o.vy * dt;
+        if (o.owner === 'enemy' && o.sprite) {
+          // Traînée de Silence : quelques grains gris derrière l'onde (lisibilité de la trajectoire).
+          o.trail += dt;
+          if (o.trail >= SILENCE_TRAIL_EVERY) { o.trail = 0; emitParticles('silence', o.x, o.y, SILENCE_TRAIL); }
+        }
     }
     if (o.kind !== 'orbit' && o.kind !== 'fx' && Math.abs(o.x - player.x) + Math.abs(o.y - player.y) > 900) o.dead = true;
   }
 }
 
 const drawOpts = { flipX: false, alpha: 1, tint: null, scale: 1 };
+const outlineOpts = { flipX: false, alpha: 1, tint: null, scale: 1, outline: '#1a1614', outlineWidth: 1 };
 const ARC_FILL = '#c9973f', ARC_EDGE = '#f2e6c8';
+const SILENCE_TINT = '#9a9aa0', SILENCE_DARK = '#1a1614', SILENCE_SCALE = 1.25, SILENCE_ANIM_FPS = 10;
+const PARRY_READY = '#d8cdb4';
+const SILENCE_TRAIL = { count: 0.15 }, SILENCE_TRAIL_EVERY = 0.07;
+
+/**
+ * Projectile de Silence : onde grise cerclée de sombre, animée en boucle, plus grande que le sprite du
+ * manifeste. Contour : atlas.drawOutlined (rendu C) si présent, sinon quatre tracés décalés de la feuille
+ * teintée sombre puis le sprite. Liseré os si la parade du sonneur est prête (parable maintenant).
+ */
+function drawSilence(ctx, o, x, y, scale, parryOk) {
+  const a = animFrames(o.sprite, o.anim);
+  const frame = a.frames > 1 ? Math.floor(o.t * (a.fps || SILENCE_ANIM_FPS)) % a.frames : 0;
+  const flip = o.vx < 0;
+  const sc = scale * SILENCE_SCALE;
+  if (typeof atlas.drawOutlined === 'function') {
+    outlineOpts.scale = sc; outlineOpts.alpha = o.alpha; outlineOpts.tint = o.tint || SILENCE_TINT; outlineOpts.flipX = flip;
+    atlas.drawOutlined(ctx, o.sprite, o.anim, frame, x, y, outlineOpts);
+  } else {
+    drawOpts.scale = sc; drawOpts.alpha = o.alpha * 0.9; drawOpts.tint = SILENCE_DARK; drawOpts.flipX = flip;
+    draw(ctx, o.sprite, o.anim, frame, x - 1, y, drawOpts); draw(ctx, o.sprite, o.anim, frame, x + 1, y, drawOpts);
+    draw(ctx, o.sprite, o.anim, frame, x, y - 1, drawOpts); draw(ctx, o.sprite, o.anim, frame, x, y + 1, drawOpts);
+    drawOpts.alpha = o.alpha; drawOpts.tint = o.tint || SILENCE_TINT;
+    draw(ctx, o.sprite, o.anim, frame, x, y, drawOpts);
+  }
+  const r = Math.max(6, o.r * SILENCE_SCALE);
+  if (parryOk && o.collides) {
+    ctx.globalAlpha = 0.85;
+    ctx.strokeStyle = PARRY_READY; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.ellipse(x, y, r + 3, (r + 3) * 0.8, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+  addGlow(x, y, r + 8, SILENCE_TINT, 0.35);
+}
 
 /** Arc de mêlée : secteur elliptique (vue de dessus) qui s'éteint, bord clair, cloche qui balaie. */
 function drawArc(ctx, o, x, y, k) {
@@ -242,6 +287,8 @@ function drawRing(ctx, o, x, y, k) {
 
 export function renderProjectiles(ctx, world, alpha) {
   const items = world.projectiles.items;
+  const pl = world.player;
+  const parryOk = !!pl && !pl.dead && pl.parryT <= 0 && pl.parryCdT <= 0;
   for (let i = 0; i < items.length; i++) {
     const o = items[i];
     if (!o.sprite && !o.shape) continue;
@@ -256,6 +303,7 @@ export function renderProjectiles(ctx, world, alpha) {
     if (o.growTo > 0) scale = o.scale + (o.growTo - o.scale) * k;
     const rr = Math.max(o.r, 40 * scale);
     if (!isVisible(x, y, rr)) continue;
+    if (o.owner === 'enemy' && o.kind !== 'fx') { drawSilence(ctx, o, x, y, scale, parryOk); continue; }
     drawOpts.scale = scale;
     drawOpts.alpha = o.fadeOut ? o.alpha * (1 - k) : o.alpha;
     drawOpts.tint = o.tint;

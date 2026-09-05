@@ -253,7 +253,11 @@
     "damage": 16
    }
   ],
-  "maxLevel": 7
+  "maxLevel": 7,
+  "special": {
+   "slow": 0.6,
+   "slowBeats": 1
+  }
  },
  {
   "id": "crecelle",
@@ -386,6 +390,9 @@
     "damage": 3
    }
   ],
-  "maxLevel": 7
+  "maxLevel": 7,
+  "special": {
+   "perAccordLevel": 0.03
+  }
  }
 ]

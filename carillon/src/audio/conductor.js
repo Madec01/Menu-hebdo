@@ -15,6 +15,7 @@ const st = {
   timer: null,
   entries: new Set(),            // { sub, fn, nextK }
   windowMs: BASE_WINDOW_MS,
+  inputLatencyMs: 0,           // § 8 bis : décalage soustrait à inputAt dans judge() (calibration, −150…+150 ms)
   lastEmittedBeat: -1,
 };
 
@@ -129,17 +130,22 @@ export function conductorTick() {
   if (inBar === 0) bus.emit('bar', { bar: barIdx, at });
 }
 
-/** Juge une frappe (temps audio de l'entrée) contre le temps le plus proche. */
+/** Juge une frappe (temps audio de l'entrée, corrigé de la latence d'entrée) contre le temps le plus
+ *  proche. `early` = la frappe est arrivée AVANT le temps (retour « avance / retard » du HUD). */
 export function judge(inputAt) {
-  const bf = beatFloat(inputAt);
+  const bf = beatFloat(inputAt - st.inputLatencyMs / 1000);
   const nearest = Math.round(bf);
   const offsetMs = (bf - nearest) * st.beatDur * 1000;
   const a = Math.abs(offsetMs);
   const grade = a <= st.windowMs / 3 ? 'parfait' : a <= st.windowMs ? 'bon' : 'rate';
-  return { grade, offsetMs, beat: nearest };
+  return { grade, offsetMs, beat: nearest, early: offsetMs < 0 };
 }
 
 export function setWindowMs(ms) { st.windowMs = ms; }
 export function windowMs() { return st.windowMs; }
+/** Latence d'entrée (ms, −150…+150) : positive = le geste est mesuré en retard sur le son (Bluetooth,
+ *  écran tactile) et judge() le ramène vers le temps ; réglée dans les options. */
+export function setInputLatencyMs(ms) { st.inputLatencyMs = Math.max(-150, Math.min(150, Number(ms) || 0)); }
+export function inputLatencyMs() { return st.inputLatencyMs; }
 export function beatsPerBar() { return st.beatsPerBar; }
 export function startAt() { return st.startAt; }

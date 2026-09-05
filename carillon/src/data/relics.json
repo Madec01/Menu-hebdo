@@ -4,7 +4,7 @@
   { "id": "clef_du_beffroi", "name": "relic.clef_du_beffroi.name", "desc": "relic.clef_du_beffroi.desc", "icon": "ui_sceau",
     "effects": { "bronzeMult": 2 }, "drawbacks": { "fissureEarlySec": 60 } },
   { "id": "langue_de_cloche", "name": "relic.langue_de_cloche.name", "desc": "relic.langue_de_cloche.desc", "icon": "clarine",
-    "effects": { "parryTwice": true }, "drawbacks": { "windowMult": -0.2 } },
+    "effects": { "parryTwice": true, "parryNoCooldown": true }, "drawbacks": { "windowMult": -0.1 } },
   { "id": "suif_de_veillee", "name": "relic.suif_de_veillee.name", "desc": "relic.suif_de_veillee.desc", "icon": "ui_lanterne",
     "effects": { "regenMult": 2, "regenFlat": 0.5 }, "drawbacks": { "speedMult": -0.1 } },
   { "id": "bronze_fele", "name": "relic.bronze_fele.name", "desc": "relic.bronze_fele.desc", "icon": "ui_bronze",

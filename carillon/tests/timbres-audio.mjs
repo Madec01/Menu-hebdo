@@ -3,7 +3,7 @@
 // Lance le jeu servi sur http://localhost:8080/carillon/ (Playwright + Chromium, audio réel via
 // --autoplay-policy), démarre une run à Cendrelune, puis enregistre 8 mesures (MediaRecorder sur un
 // MediaStreamDestination) deux fois : Battant seul, puis 4 Timbres (Battant, Clarine, Bourdon, Chaîne).
-// Deux prises par phase : la sortie des voix seule (timbresNode) et le master. Les notes planifiées
+// Trois prises par phase : la sortie des voix seule (timbresNode), le bus musique et le master. Les notes planifiées
 // (événement bus `timbre:note`) sont journalisées. Les WAV et le journal sont écrits dans tests/results/
 // et analysés par tests/timbres-analyze.py (hauteurs, gamme, crête, variation).
 //   node tests/timbres-audio.mjs [--url http://localhost:8080/carillon/index.html] [--headed]
@@ -77,12 +77,16 @@ async function main() {
   console.log('préparation :', JSON.stringify(prep));
   if (!prep.ready) throw new Error('voix des Timbres non chargées');
 
-  async function record(label, weapons, bars) {
-    await page.evaluate((ws) => {
+  async function record(label, weapons, bars, tier = 0) {
+    await page.evaluate(async ({ ws, tier }) => {
       const game = window.carillon.deps.game;
       game.debugGiveWeapon(ws[0], true);
       for (const w of ws.slice(1)) game.debugGiveWeapon(w);
-    }, weapons);
+      const R = await import('./src/game/resonance.js');
+      const cur = R.tier(); if (tier > cur) R.bump(tier - cur);
+      if (tier > 0 && !window.__hold) window.__hold = setInterval(() => { try { R.onRhythmInput('parfait', true); } catch (e) {} }, 1000);
+    }, { ws, tier });
+    await page.waitForTimeout(tier > 0 ? 600 : 0);
     const res = await page.evaluate(async ({ bars, label }) => {
       const { ac, A, T } = window.__rec;
       const C = await import('./src/audio/conductor.js');
@@ -96,6 +100,7 @@ async function main() {
       };
       const voices = mk(T.timbresNode());
       const master = mk(A.busNode('master'));
+      const musicTap = mk(A.busNode('music'));
       // départ sur une mesure : on attend la prochaine mesure puis on enregistre `bars` mesures + 1 temps de queue
       const barSec = C.beatDuration() * C.beatsPerBar();
       const startAt = C.nextBeatAt(C.beatsPerBar());
@@ -104,15 +109,15 @@ async function main() {
       const t0 = A.now();
       let maxVoices = 0;
       const poll = setInterval(() => { maxVoices = Math.max(maxVoices, A.voiceCount()); }, 50);
-      voices.rec.start(); master.rec.start();
+      voices.rec.start(); master.rec.start(); musicTap.rec.start();
       await new Promise((r) => setTimeout(r, (bars * barSec + C.beatDuration()) * 1000));
       clearInterval(poll);
       // diagnostic : un écran superposé (montée de niveau, relique…) ou un contexte suspendu tronque la prise
       const screen = window.carillon.states.topName(), acState = ac.state, gameActive = window.carillon.deps.game.isGameActive();
       const stop = (m) => new Promise((resolve) => { m.rec.onstop = () => resolve(); m.rec.stop(); });
-      await Promise.all([stop(voices), stop(master)]);
+      await Promise.all([stop(voices), stop(master), stop(musicTap)]);
       const t1 = A.now();
-      voices.node.disconnect(voices.dest); master.node.disconnect(master.dest);
+      voices.node.disconnect(voices.dest); master.node.disconnect(master.dest); musicTap.node.disconnect(musicTap.dest);
       const decode = async (m) => {
         const blob = new Blob(m.chunks, { type: 'audio/webm' });
         const ab = await blob.arrayBuffer();
@@ -126,11 +131,11 @@ async function main() {
         for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
         return { b64: btoa(s), sampleRate: buf.sampleRate, seconds: buf.duration };
       };
-      const [v, m] = await Promise.all([decode(voices), decode(master)]);
+      const [v, m, mu] = await Promise.all([decode(voices), decode(master), decode(musicTap)]);
       const notes = window.__notes.map((n) => ({ weaponId: n.weaponId, midi: n.midi, t: n.at - t0, bar: n.bar, degree: n.degree, gain: n.gain }));
-      return { label, t0, t1, screen, acState, gameActive, elapsedAudio: t1 - t0, bpm: C.bpm(), beatDur: C.beatDuration(), barSec, maxVoices, voices: v, master: m, notes, roster: T.currentRoster(), weapons: window.carillon.deps.game.gameState().player.weapons.map((w) => w.id + ':' + w.rhythm) };
+      return { label, t0, t1, screen, acState, gameActive, elapsedAudio: t1 - t0, bpm: C.bpm(), beatDur: C.beatDuration(), barSec, maxVoices, voices: v, master: m, music: mu, notes, roster: T.currentRoster(), weapons: window.carillon.deps.game.gameState().player.weapons.map((w) => w.id + ':' + w.rhythm) };
     }, { bars, label });
-    for (const k of ['voices', 'master']) {
+    for (const k of ['voices', 'master', 'music']) {
       const f32 = new Float32Array(Buffer.from(res[k].b64, 'base64').buffer.slice(0));
       const raw = Buffer.from(res[k].b64, 'base64');
       const arr = new Float32Array(raw.buffer, raw.byteOffset, raw.length / 4);
@@ -144,7 +149,8 @@ async function main() {
   }
 
   await record('battant', ['battant'], 8);
-  await record('quatre', ['battant', 'clarine', 'bourdon', 'chaine_d_angelus'], 8);
+  // 4 Timbres au cran 3 : c'est là que la lisibilité voix / musique se juge (masquage par bande)
+  await record('quatre', ['battant', 'clarine', 'bourdon', 'chaine_d_angelus'], 8, 3);
   // bonus : 6 armes (plafond du mélangeur : ≤ 3 voix tonales par point de grille)
   await record('six', ['battant', 'clarine', 'bourdon', 'chaine_d_angelus', 'tocsin', 'grelots'], 4);
 

@@ -11,7 +11,11 @@ Contrôles :
      (Cendrelune : ré dorien D E F G A B C ; les accords Dm, C, Am n'ajoutent aucune altération) ;
   3. crête < −1 dBFS sur les prises master et voix ;
   4. ≤ 3 voix tonales journalisées par point de grille (phases quatre et six) ;
-  5. aucune erreur console / page / HTTP (report.json).
+  5. aucune erreur console / page / HTTP (report.json) ;
+  6. registres séparés (timbres.json) : jamais deux Timbres tonals dans le même registre (octave + moitié), et la
+     partition de test (Battant, Clarine, Bourdon, Chaîne) occupe quatre octaves distinctes ;
+  7. lisibilité à 4 armes (phase quatre, prise master vs musique) : les voix ne sont masquées de plus de 3 dB par
+     la musique dans aucune bande entre 500 Hz et 4 kHz (mesuré sur voices.wav et music.wav).
 Usage : python3 tests/timbres-analyze.py   → code de sortie 1 si un contrôle échoue.
 """
 import json, os, sys
@@ -22,6 +26,7 @@ OUT = os.path.join(ROOT, 'tests', 'results', 'timbres')
 NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 SCALE_PC = {2, 4, 5, 7, 9, 11, 0}          # ré dorien : D E F G A B C
 TONAL = {'battant', 'clarine', 'bourdon', 'chaine_d_angelus', 'tocsin', 'grelots', 'diapason', 'cor_de_brume'}
+BANDS = [(500, 1000), (1000, 2000), (2000, 4000)]
 fails = []
 def check(name, ok, detail=''):
     print(('[OK] ' if ok else '[KO] ') + name + (('  — ' + detail) if detail else ''))
@@ -70,6 +75,32 @@ def onsets_and_pitches(x, sr, fmin=180, fmax=2600):
         f = (kk + d) * sr / M
         pitches.append((c / sr, f, 69 + 12 * np.log2(f / 440)))
     return pitches
+
+def band_levels(x, sr):
+    N = 4096; hop = 1024; w = np.hanning(N); fr = np.fft.rfftfreq(N, 1 / sr)
+    n = (len(x) - N) // hop
+    S = np.array([np.abs(np.fft.rfft(x[i * hop:i * hop + N] * w)) for i in range(n)])
+    return np.array([10 * np.log10((S[:, (fr >= lo) & (fr < hi)] ** 2).mean() + 1e-12) for lo, hi in BANDS])
+
+def check_registers():
+    conf = json.load(open(os.path.join(ROOT, 'src', 'data', 'music', 'timbres.json')))
+    regs = {}
+    for wid, v in conf['voices'].items():
+        if v.get('percussive') or v.get('chord'): continue      # percussions et fusions (remplacent leur arme) exclues
+        regs.setdefault((v.get('octave', 5), v.get('range', 'low')), []).append(wid)
+    dup = [ws for ws in regs.values() if len(ws) > 1]
+    check('registres : aucun couple de Timbres tonals dans le même registre (octave + moitié)', not dup, str(dup))
+    four = ['battant', 'clarine', 'bourdon', 'chaine_d_angelus']
+    octs = [conf['voices'][w]['octave'] for w in four]
+    check('registres : la partition de test occupe quatre octaves distinctes', len(set(octs)) == 4, str(dict(zip(four, octs))))
+
+def check_masking(phase):
+    vp, mp = os.path.join(OUT, f'{phase}-voices.wav'), os.path.join(OUT, f'{phase}-music.wav')
+    if not (os.path.exists(vp) and os.path.exists(mp)): check(f'{phase} : prises voix + musique présentes', False); return
+    v, sr = sf.read(vp); m, _ = sf.read(mp)
+    d = band_levels(v, sr) - band_levels(m, sr)
+    print('  voix − musique (dB) 500–1k / 1–2k / 2–4k :', ' '.join(f'{x:+.1f}' for x in d))
+    check(f'{phase} : masquage des voix par la musique ≤ 3 dB par bande (500 Hz – 4 kHz)', float(d.min()) >= -3, f'pire bande {d.min():+.1f} dB')
 
 def analyze(phase, strict_pitch):
     print(f'\n=== phase {phase} ===')
@@ -129,8 +160,10 @@ rep = json.load(open(os.path.join(OUT, 'report.json')))
 check('aucune erreur console', not rep['consoleErrors'], str(rep['consoleErrors'][:3]))
 check('aucune erreur de page', not rep['pageErrors'], str(rep['pageErrors'][:3]))
 check('aucune réponse HTTP ≥ 400', not rep['badResponses'], str(rep['badResponses'][:3]))
+check_registers()
 analyze('battant', True)
 analyze('quatre', False)
+check_masking('quatre')
 analyze('six', False)
 print(f'\n{len(fails)} contrôle(s) en échec' if fails else '\nTous les contrôles passent.')
 sys.exit(1 if fails else 0)

@@ -1,10 +1,12 @@
 {
- "version": 1,
+ "version": 2,
  "_notes": [
   "Chemins relatifs à assets/. Notes en notation scientifique (A4 = 440 Hz), hauteurs mesurées.",
   "samples.<i>.kind = pitched (files par note, loop par note [début, fin] en secondes) | percussion (files par variante = round-robins ; loop par nom de fichier pour les drones).",
   "sfx.<id>.files = variantes ; gain = volume de base ; pitchVar facultatif ; bus facultatif (ui) ; kind = ambience pour les boucles d'ambiance (loop = [0, durée]).",
-  "tracks.<id>.score = partition § 9.3 ; status = complete | esquisse."
+  "tracks.<id>.score = partition § 9.3 ; status = complete | esquisse.",
+  "sfx.<id>.jingle = false désactive le rendu par le sampler (jingles.js) et force le fichier. Les ambiances (kind = ambience) sont lancées par music-events.js d'après parishes.json `ambience` (gain 0.9 : leur RMS natif est à −33/−40 dBFS).",
+  "tracks : la partition peut porter intro / bridge / sectionB / allLayers / followsTier / melodic (voir src/audio/music-score.js)."
  ],
  "sfx": {
   "hit_light": {
@@ -140,7 +142,7 @@
    ],
    "gain": 0.8,
    "credit": "vcsl",
-   "note": "Cran 1 : cloche tubulaire D4 seule."
+   "note": "Cran 1 : cloche tubulaire D4 seule. Repli seulement : en jeu, rejoué par le sampler sur l'accord courant (jingles.js)."
   },
   "resonance_2": {
    "files": [
@@ -148,7 +150,7 @@
    ],
    "gain": 0.8,
    "credit": "vcsl",
-   "note": "Cran 2 : cloche D4 + hand chimes D4/A4 (quinte)."
+   "note": "Cran 2 : cloche D4 + hand chimes D4/A4 (quinte). Repli seulement : en jeu, rejoué par le sampler sur l'accord courant (jingles.js)."
   },
   "resonance_3": {
    "files": [
@@ -156,7 +158,7 @@
    ],
    "gain": 0.8,
    "credit": "vcsl",
-   "note": "Cran 3 : accord D4/F#4/A4 en hand chimes + cloche A4."
+   "note": "Cran 3 : accord D4/F#4/A4 en hand chimes + cloche A4. Repli seulement : en jeu, rejoué par le sampler sur l'accord courant (jingles.js)."
   },
   "resonance_4": {
    "files": [
@@ -164,7 +166,7 @@
    ],
    "gain": 0.85,
    "credit": "vcsl",
-   "note": "Cran 4 : accord D5/F#5/A5 + cloches D4/D5 + arbre à cloches."
+   "note": "Cran 4 : accord D5/F#5/A5 + cloches D4/D5 + arbre à cloches. Repli seulement : en jeu, rejoué par le sampler sur l'accord courant (jingles.js)."
   },
   "resonance_drop": {
    "files": [
@@ -180,7 +182,7 @@
    ],
    "gain": 0.85,
    "credit": "vcsl",
-   "note": "Arpège D4-F#4-A4-D5 en hand chimes + arbre à cloches."
+   "note": "Arpège D4-F#4-A4-D5 en hand chimes + arbre à cloches. Repli seulement : en jeu, rejoué par le sampler sur l'accord courant (jingles.js)."
   },
   "card_flip": {
    "files": [
@@ -202,14 +204,25 @@
   },
   "xp_pickup": {
    "files": [
-    "audio/sfx/xp_pickup_1.ogg",
-    "audio/sfx/xp_pickup_2.ogg",
-    "audio/sfx/xp_pickup_3.ogg"
+    "audio/sfx/pickup_1.ogg",
+    "audio/sfx/pickup_2.ogg",
+    "audio/sfx/pickup_3.ogg"
    ],
-   "gain": 0.55,
+   "gain": 0.5,
    "credit": "vcsl",
-   "pitchVar": 0.06,
-   "note": "Écho ramassé : coups isolés de l'arbre à cloches."
+   "pitchVar": 0.03,
+   "note": "Écho ramassé : grelot bref (sleigh bells + hand chime) ; en jeu, rejoué par le sampler sur l'accord (jingles.js), calé sur la double-croche, un par double-croche ; ce fichier est le repli."
+  },
+  "pickup": {
+   "files": [
+    "audio/sfx/pickup_1.ogg",
+    "audio/sfx/pickup_2.ogg",
+    "audio/sfx/pickup_3.ogg"
+   ],
+   "gain": 0.5,
+   "credit": "vcsl",
+   "pitchVar": 0.03,
+   "note": "Objet ramassé (soin, carillon, relique, bronze) : même grelot que xp_pickup, sur l'accord courant (jingles.js) ; repli fichier."
   },
   "xp_pickup_big": {
    "files": [
@@ -233,7 +246,16 @@
    ],
    "gain": 0.85,
    "credit": "vcsl",
-   "note": "Palier de Sourdine : cloche inversée puis gong + cloche grave (−17 st)."
+   "note": "Palier de Sourdine UNIQUEMENT (§ 8 bis) : cloche inversée puis gong + cloche grave (−17 st). Les Moments utilisent moment_start, les objets pickup."
+  },
+  "moment_start": {
+   "files": [
+    "audio/sfx/moment_start_1.ogg"
+   ],
+   "gain": 0.7,
+   "credit": "vcsl",
+   "pitchVar": 0.02,
+   "note": "Levée courte d'un Moment scripté : grelots secoués + deux clochettes en croches (dominante → tonique) ; en jeu, rejouée par le sampler sur l'accord et calée sur la croche (jingles.js) ; repli fichier."
   },
   "silence_cry": {
    "files": [
@@ -369,7 +391,7 @@
    ],
    "gain": 0.85,
    "credit": "vcsl",
-   "note": "Fusion : gong doux + cloches D4/A4 + arbre à cloches."
+   "note": "Fusion : gong doux + cloches D4/A4 + arbre à cloches. Repli seulement : en jeu, rejoué par le sampler sur l'accord courant (jingles.js)."
   },
   "achievement": {
    "files": [
@@ -377,7 +399,7 @@
    ],
    "gain": 0.8,
    "credit": "vcsl",
-   "note": "Arpège A-C#-E-A en hand chimes + cymbalettes."
+   "note": "Arpège A-C#-E-A en hand chimes + cymbalettes. Repli seulement : en jeu, rejoué par le sampler sur l'accord courant (jingles.js)."
   },
   "lore_unlock": {
    "files": [
@@ -385,7 +407,7 @@
    ],
    "gain": 0.7,
    "credit": "kenney_rpg+vcsl",
-   "note": "Feuillet du Battant : livre ouvert (Kenney) + hand chime grave."
+   "note": "Feuillet du Battant : livre ouvert (Kenney) + hand chime grave. Repli seulement : en jeu, rejoué par le sampler sur l'accord courant (jingles.js)."
   },
   "victory_bell": {
    "files": [
@@ -393,13 +415,13 @@
    ],
    "gain": 0.9,
    "credit": "vcsl",
-   "note": "Volée de victoire : cloches D4-F4-A4-D5 + arbre à cloches + hand chimes."
+   "note": "Volée de victoire : cloches D4-F4-A4-D5 + arbre à cloches + hand chimes. Repli seulement : en jeu, rejoué par le sampler sur l'accord courant (jingles.js)."
   },
   "ambience_wind": {
    "files": [
     "audio/sfx/ambience_wind.ogg"
    ],
-   "gain": 0.5,
+   "gain": 0.9,
    "loop": [
     0.0,
     58.5
@@ -413,7 +435,7 @@
    "files": [
     "audio/sfx/ambience_fire.ogg"
    ],
-   "gain": 0.5,
+   "gain": 0.9,
    "loop": [
     0.0,
     48.5
@@ -427,7 +449,7 @@
    "files": [
     "audio/sfx/ambience_rain.ogg"
    ],
-   "gain": 0.5,
+   "gain": 0.9,
    "loop": [
     0.0,
     43.5
@@ -441,7 +463,7 @@
    "files": [
     "audio/sfx/ambience_storm.ogg"
    ],
-   "gain": 0.5,
+   "gain": 0.9,
    "loop": [
     0.0,
     58.5
@@ -455,7 +477,7 @@
    "files": [
     "audio/sfx/ambience_sea.ogg"
    ],
-   "gain": 0.5,
+   "gain": 0.9,
    "loop": [
     0.0,
     28.5
@@ -1668,6 +1690,45 @@
    },
    "credit": "vcsl",
    "note": "Glockenspiel (frappes medium) ; étiquettes VCSL +12 (mesuré sur les partiels : G4 → 786 Hz = G5). Voix des Timbres (timbres.js)."
+  },
+  "slit_drum": {
+   "kind": "percussion",
+   "files": {
+    "low": [
+     "audio/samples/slit_drum/low_1.ogg",
+     "audio/samples/slit_drum/low_2.ogg",
+     "audio/samples/slit_drum/low_3.ogg"
+    ],
+    "high": [
+     "audio/samples/slit_drum/high_1.ogg",
+     "audio/samples/slit_drum/high_2.ogg",
+     "audio/samples/slit_drum/high_3.ogg"
+    ]
+   },
+   "credit": "vcsl",
+   "note": "Tambour à fente (log drum) : le « 1 » de la pulsation du cran 0, timbre boisé distinct du tambour sur cadre."
+  },
+  "cymbal": {
+   "kind": "percussion",
+   "files": {
+    "roll": [
+     "audio/samples/cymbal/roll_1.ogg",
+     "audio/samples/cymbal/roll_2.ogg"
+    ],
+    "hit": [
+     "audio/samples/cymbal/hit_1.ogg",
+     "audio/samples/cymbal/hit_2.ogg"
+    ],
+    "bell": [
+     "audio/samples/cymbal/bell_1.ogg",
+     "audio/samples/cymbal/bell_2.ogg"
+    ],
+    "cresc": [
+     "audio/samples/cymbal/cresc_1.ogg"
+    ]
+   },
+   "credit": "vcsl",
+   "note": "Cymbale suspendue (roulement, baguette, dôme, crescendo 2 s) : pont de Fêlure et levée du boss ; queues limitées à 5–6,5 s."
   }
  },
  "tracks": {

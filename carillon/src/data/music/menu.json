@@ -115,6 +115,38 @@
    ]
   },
   {
+   "tier": 0,
+   "name": "bourdon_8",
+   "instrument": "cello",
+   "gain": 0.26,
+   "events": [
+    {
+     "bar": 0,
+     "beat": 0,
+     "note": "A2",
+     "dur": 32
+    },
+    {
+     "bar": 8,
+     "beat": 0,
+     "note": "F3",
+     "dur": 8
+    },
+    {
+     "bar": 10,
+     "beat": 0,
+     "note": "G3",
+     "dur": 8
+    },
+    {
+     "bar": 12,
+     "beat": 0,
+     "note": "A2",
+     "dur": 16
+    }
+   ]
+  },
+  {
    "tier": 1,
    "name": "harpe",
    "instrument": "folk_harp",
@@ -125,7 +157,7 @@
      [
       "A2",
       0,
-      0.9
+      1.0
      ],
      [
       "E3",
@@ -177,7 +209,7 @@
      [
       "hand",
       0,
-      0.8
+      1.0
      ],
      [
       "muted",
@@ -379,13 +411,17 @@
      "note": "A5",
      "dur": 4.0
     }
+   ],
+   "intensityGain": [
+    1,
+    0.7
    ]
   },
   {
    "tier": 3,
    "name": "voix",
    "instrument": "choir",
-   "gain": 0.5,
+   "gain": 0.35,
    "events": [
     {
      "bar": 0,
@@ -489,7 +525,7 @@
    "tier": 3,
    "name": "clarines",
    "instrument": "hand_chimes",
-   "gain": 0.35,
+   "gain": 0.25,
    "events": [
     {
      "bar": 7,
@@ -529,5 +565,7 @@
     }
    ]
   }
- ]
+ ],
+ "allLayers": true,
+ "followsTier": false
 }

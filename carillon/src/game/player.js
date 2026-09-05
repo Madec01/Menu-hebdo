@@ -3,13 +3,19 @@
 // (fenêtre courte : renvoie les projectiles de Silence, annule un contact). Chaque action rythmique
 // est jugée par conductor.judge(pressedAt(action)) et émet `rhythm:input`. Les stats agrègent le
 // sonneur, les améliorations du Beffroi (upgradesApplied) et les Accords (passives.js).
-// `unique` du sonneur : 'cuirasse' (Osric, déjà dans ses stats), 'aimant' (Maren, magnet), 'sans_voix'
-// (Le Muet : immunisé au silence des Bâillons).
+// § 8 bis : la parade a une recharge (balance.player.parryCooldownBeats, en temps de la Mesure) ; elle
+// n'est créditée à la Résonance qu'au moment où elle pare quelque chose (notifyParry) — une parade à
+// vide est une frappe jugée sans gain ni perte. La Volée (dash ou battement sur place) charge normalement
+// si une menace est à portée. `player:hit` porte {damage, from, source, dirX, dirY, hp, maxHp} : dirX/dirY
+// = direction de la source vers le sonneur, qui reçoit un petit recul (balance.player.hitKnock).
+// Traits des sonneurs (characters.json `traits`) : damageTaken / knockTaken (Osric « cuirasse »),
+// silenceImmune (Le Muet « sans_voix ») ; resonanceDecay / perfectOnly sont lus par resonance.js.
+// Volée jugée : p.volleyT / p.volleyGrade (lus par pickups.js : l'Écho géant de l'Accalmie).
 
 import { bus } from '../core/events.js';
 import { axis, justPressed, pressedAt } from '../core/input.js';
 import { spawnRing } from './projectiles.js';
-import { judge, setWindowMs } from '../audio/conductor.js';
+import { judge, setWindowMs, beatDuration } from '../audio/conductor.js';
 import { play as playSfx } from '../audio/sfx.js';
 import { draw, drawShadow, frameAt, animDone } from '../render/atlas.js';
 import { addLight } from '../render/lighting.js';
@@ -17,7 +23,7 @@ import { emit as emitParticles } from '../render/particles.js';
 import { flash, slowMo, dashTrail } from '../render/fx.js';
 import { shake } from '../render/camera.js';
 import { balance, upgradeDef } from './data.js';
-import { onRhythmInput, assistWindowMult, tier as resonanceTier } from './resonance.js';
+import { onRhythmInput, assistWindowMult, tier as resonanceTier, areaBonus } from './resonance.js';
 
 const STAT_KEYS = ['maxHp', 'speed', 'armor', 'windowMult', 'resonanceGain', 'damageMult', 'area', 'cadence',
   'regen', 'crit', 'bounce', 'magnet', 'xpGain', 'bronzeGain', 'revive', 'rerolls'];
@@ -25,19 +31,20 @@ const STAT_KEYS = ['maxHp', 'speed', 'armor', 'windowMult', 'resonanceGain', 'da
 const MULT_STATS = { area: 1, magnet: 1, xpGain: 1, bronzeGain: 1, windowMult: 1, damageMult: 1, resonanceGain: 1 };
 
 const rhythmPayload = { action: 'dash', grade: 'bon', offsetMs: 0 };
-const hitPayload = { damage: 0, from: '', hp: 0, maxHp: 0 };
+const hitPayload = { damage: 0, from: '', source: '', dirX: 0, dirY: 0, hp: 0, maxHp: 0 };
 const dashPayload = { x: 0, y: 0, dirX: 0, dirY: 0 };
 const parryPayload = { x: 0, y: 0, success: false };
 const healPayload = { amount: 0 };
 const deathPayload = { at: 0, killer: '' };
 
+const EMPTY_TRAITS = Object.freeze({});
 let current = null; // joueur courant (pour les écouteurs du bus)
 let listening = false;
 
 function listen() {
   if (listening) return;
   listening = true;
-  bus.on('player:silenced', (e) => { if (current && current.unique !== 'sans_voix') current.silencedT = Math.max(current.silencedT, e.durationSec); });
+  bus.on('player:silenced', (e) => { if (current && current.unique !== 'sans_voix' && !current.traits.silenceImmune) current.silencedT = Math.max(current.silencedT, e.durationSec); });
   bus.on('player:inAura', (e) => { if (current) current.auraDepth = e.depth; });
 }
 
@@ -66,10 +73,12 @@ export function createPlayer(characterDef, upgradesApplied = {}) {
     weapons: [], passives: [], fusions: [],
     facing: { x: 0, y: 1 }, state: 'idle', anim: 'idle_down', animT: 0, moving: false,
     dashT: 0, dashDirX: 0, dashDirY: 0, iframesT: 0, parryT: 0, parryHits: 0, hitInvulnT: 0,
+    parryCdT: 0, parryGrade: 'bon', parryJudged: true, parryCooldownMult: 1, volleyT: 0, volleyGrade: 'rate',
+    kx: 0, ky: 0,
     silencedT: 0, auraDepth: 0, attackT: 0, slowMult: 1, slowT: 0, regenAcc: 0,
     revives: 0, dead: false, killer: '', markedT: 0, trailTick: 0,
-    def: characterDef, sprite: characterDef.sprite, unique: characterDef.unique || null,
-    stepAcc: 0,
+    def: characterDef, sprite: characterDef.sprite, unique: characterDef.unique || null, traits: characterDef.traits || EMPTY_TRAITS,
+    stepAcc: 0, world: null,
   };
   // Base = stats du sonneur (les stats manquantes prennent 0 ou 1 selon leur nature).
   for (let i = 0; i < STAT_KEYS.length; i++) {
@@ -101,6 +110,7 @@ export function recomputeStats(p) {
     const stat = pa.def.stat === 'window' ? 'windowMult' : pa.def.stat;
     if (s[stat] !== undefined) s[stat] += pa.def.perLevel * pa.level;
   }
+  s.area += areaBonus();   // streak de Parfaits (resonance.js) : zone +10 %
   const oldMax = p.maxHp;
   p.maxHp = s.maxHp;
   if (oldMax > 0 && p.maxHp > oldMax) p.hp += p.maxHp - oldMax;
@@ -127,18 +137,25 @@ function threatNear(p, world) {
   return false;
 }
 
-/** Juge une action rythmique ; la Résonance ne se charge que si une menace est proche. */
+/**
+ * Juge une action rythmique et émet rhythm:input. Volée : la Résonance ne se charge que si une menace
+ * est proche. Parade : le crédit est différé (notifyParry / fin de parade), voir updatePlayer.
+ */
 function judgeAction(action, p, world) {
   const j = judge(pressedAt(action));
   rhythmPayload.action = action; rhythmPayload.grade = j.grade; rhythmPayload.offsetMs = j.offsetMs;
   bus.emit('rhythm:input', rhythmPayload);
-  onRhythmInput(j.grade, threatNear(p, world));
+  if (action !== 'parry') onRhythmInput(j.grade, threatNear(p, world));
   return j.grade;
 }
+
+/** La parade est-elle disponible (ni en cours, ni en recharge) ? Lu par le rendu des projectiles. */
+export function parryReady(p) { return !p.dead && p.parryT <= 0 && p.parryCdT <= 0; }
 
 /** Tick logique du joueur. */
 export function updatePlayer(p, dt, world) {
   const B = balance().player;
+  p.world = world;
   p.px = p.x; p.py = p.y;
   if (p.dead) { p.animT += dt; return; }
   const a = axis();
@@ -149,11 +166,11 @@ export function updatePlayer(p, dt, world) {
   // battement sur place (onde de bronze qui repousse, i-frames courtes) : tenir la Mesure ne
   // déplace pas le sonneur malgré lui.
   if (p.dashT <= 0 && justPressed('dash') && !p.moving) {
-    judgeAction('dash', p, world);
+    p.volleyGrade = judgeAction('dash', p, world); p.volleyT = 0.15;
     p.iframesT = B.iframesSec * 0.6;
     beatPulse(p, world);
   } else if (p.dashT <= 0 && justPressed('dash')) {
-    judgeAction('dash', p, world);
+    p.volleyGrade = judgeAction('dash', p, world); p.volleyT = B.dashSec + 0.05;
     p.dashT = B.dashSec; p.iframesT = B.iframesSec;
     const len = Math.hypot(p.facing.x, p.facing.y) || 1;
     p.dashDirX = p.facing.x / len; p.dashDirY = p.facing.y / len;
@@ -161,10 +178,15 @@ export function updatePlayer(p, dt, world) {
     bus.emit('player:dash', dashPayload);
     playSfx('dash');
   }
-  // Contre-battement (parade) : fenêtre courte, résolue dans collision.js.
-  if (p.parryT <= 0 && justPressed('parry')) {
-    judgeAction('parry', p, world);
+  // Contre-battement (parade) : fenêtre courte, résolue dans collision.js ; recharge d'un temps
+  // (parryCooldownBeats × durée du temps, annulée par la Relique « Langue de cloche »). Le jugement est
+  // émis tout de suite (retour visuel) mais la Résonance n'est créditée que si la parade pare (notifyParry).
+  if (p.parryCdT > 0) p.parryCdT -= dt;
+  if (p.parryT <= 0 && p.parryCdT <= 0 && justPressed('parry')) {
+    p.parryGrade = judgeAction('parry', p, world); p.parryJudged = false;
     p.parryT = B.parrySec; p.parryHits = 0;
+    // ≈ un temps (× 0,8 : une frappe légèrement en avance sur le temps suivant n'est pas refusée).
+    p.parryCdT = (B.parryCooldownBeats || 0) * (beatDuration() || 0.625) * 0.8 * p.parryCooldownMult;
     emitParticles('parry', p.x, p.y);
   }
   if (p.parryT > 0) {
@@ -172,9 +194,10 @@ export function updatePlayer(p, dt, world) {
     if (p.parryT <= 0) {
       parryPayload.x = p.x; parryPayload.y = p.y; parryPayload.success = p.parryHits > 0;
       bus.emit('player:parry', parryPayload);
-      if (p.parryHits === 0) playSfx('parry_miss');
+      if (p.parryHits === 0) { playSfx('parry_miss'); if (!p.parryJudged) { p.parryJudged = true; onRhythmInput(p.parryGrade, false); } }
     }
   }
+  if (p.volleyT > 0) p.volleyT -= dt;
 
   // Déplacement.
   let speed = p.stats.speed * (1 - B.auraSlow * p.auraDepth) * p.slowMult;
@@ -187,6 +210,13 @@ export function updatePlayer(p, dt, world) {
     if (p.trailTick) dashTrail(p.sprite, p.anim, frameAt(p.sprite, p.anim, p.animT), p.x, p.y, false);
   } else {
     p.vx = a.x * speed; p.vy = a.y * speed;
+  }
+  // Recul reçu (coup encaissé) : friction exponentielle comme les ennemis.
+  if (p.kx !== 0 || p.ky !== 0) {
+    const f = Math.exp(-balance().combat.knockFriction * dt);
+    p.x += p.kx * dt; p.y += p.ky * dt;
+    p.kx *= f; p.ky *= f;
+    if (Math.abs(p.kx) + Math.abs(p.ky) < 1) { p.kx = 0; p.ky = 0; }
   }
   p.x += p.vx * dt; p.y += p.vy * dt;
   if (p.slowT > 0) { p.slowT -= dt; if (p.slowT <= 0) p.slowMult = 1; }
@@ -228,19 +258,50 @@ export function playerAttack(p) { p.attackT = 0.3; }
 /** Applique une ralentissement temporaire (traînée de suie, toile). */
 export function slowPlayer(p, mult, sec) { if (mult < p.slowMult || p.slowT <= 0) p.slowMult = mult; p.slowT = Math.max(p.slowT, sec); }
 
-/** Un projectile renvoyé ou un contact annulé pendant la parade. */
-export function notifyParry(p) { if (p.parryHits === 0) playSfx('parry_ok'); p.parryHits++; }
+/** Un projectile renvoyé ou un contact annulé pendant la parade : la parade « pare », gain normal. */
+export function notifyParry(p) {
+  if (p.parryHits === 0) playSfx('parry_ok');
+  p.parryHits++;
+  if (!p.parryJudged) { p.parryJudged = true; onRhythmInput(p.parryGrade, true); }
+}
 
-/** Inflige des dégâts (armure, i-frames, parade). Renvoie true si le coup a porté. */
-export function hitPlayer(p, damage, fromKind) {
+let srcKind = '', srcBest = 0, srcX2 = NaN, srcY2 = NaN, srcPx = 0, srcPy = 0;
+function nearestSource(e) {
+  if (e.state !== 'alive' || e.kind !== srcKind) return;
+  const dx = e.x - srcPx, dy = e.y - srcPy, d2 = dx * dx + dy * dy;
+  if (srcX2 !== srcX2 || d2 < srcBest) { srcBest = d2; srcX2 = e.x; srcY2 = e.y; }
+}
+
+/**
+ * Inflige des dégâts (armure, i-frames, parade, trait « cuirasse »). (srcX, srcY) : position de la source
+ * du coup (ennemi, projectile, zone) pour la direction du recul et de `player:hit` ; absente = pas de recul.
+ * Renvoie true si le coup a porté.
+ */
+export function hitPlayer(p, damage, fromKind, srcX = NaN, srcY = NaN) {
   if (p.dead || p.iframesT > 0 || p.hitInvulnT > 0) return false;
   if (p.parryT > 0) { notifyParry(p); return false; }
   let dmg = Math.max(1, damage - p.stats.armor);
   if (p.markedT > 0) dmg = Math.round(dmg * balance().combat.markMult);
+  if (p.traits.damageTaken > 0) dmg = Math.max(1, Math.round(dmg * p.traits.damageTaken));
   p.hp -= dmg;
   p.hitInvulnT = balance().player.hitInvulnSec;
   p.state = 'hurt'; p.anim = 'hurt'; p.animT = 0;
-  hitPayload.damage = dmg; hitPayload.from = fromKind; hitPayload.hp = Math.max(0, p.hp); hitPayload.maxHp = p.maxHp;
+  let dirX = 0, dirY = 0;
+  if (srcX !== srcX && p.world && p.world.grid) {
+    // Source inconnue (bond du Bâillon, boss, zone) : l'ennemi vivant de ce type le plus proche fait foi.
+    srcKind = fromKind; srcBest = 0; srcX2 = NaN; srcY2 = NaN; srcPx = p.x; srcPy = p.y;
+    p.world.grid.query(p.x, p.y, 96, nearestSource);
+    srcX = srcX2; srcY = srcY2;
+  }
+  if (srcX === srcX && srcY === srcY) {
+    const dx = p.x - srcX, dy = p.y - srcY, d = Math.hypot(dx, dy);
+    if (d > 0.001) { dirX = dx / d; dirY = dy / d; }
+    else { dirX = -p.facing.x; dirY = -p.facing.y; }
+    const knock = (balance().player.hitKnock || 0) * (p.traits.knockTaken > 0 ? p.traits.knockTaken : 1);
+    p.kx += dirX * knock; p.ky += dirY * knock;
+  }
+  hitPayload.damage = dmg; hitPayload.from = fromKind; hitPayload.source = fromKind; hitPayload.dirX = dirX; hitPayload.dirY = dirY;
+  hitPayload.hp = Math.max(0, p.hp); hitPayload.maxHp = p.maxHp;
   bus.emit('player:hit', hitPayload);
   playSfx('player_hurt');
   shake(4, 0.25);

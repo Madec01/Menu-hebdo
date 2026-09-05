@@ -3,8 +3,12 @@
 // `at` facultatif pour caler un son sur la grille de la Mesure. Bus 'ui' pour l'interface.
 // Impacts RARES : les Timbres chantent (timbres.js), les coups ne sont plus le premier plan sonore —
 // au plus 1 hit_light/heavy/crit audible par temps (et par `source` = arme, si fournie), 2 morts par temps.
+// Jingles (resonance_1..4, level_up, achievement, fusion, lore_unlock, victory_bell), levée `moment_start`
+// et grelot `pickup` / `xp_pickup` : rejoués par le sampler sur l'accord courant (jingles.js) ; les fichiers
+// du manifeste restent le repli hors partition ou avant le chargement des instruments.
 import { ctx, now, busNode, loadBuffer, getBuffer, assetUrl, acquireVoice, releaseVoice } from './audio.js';
 import { isRunning, beatIndex, beatDuration } from './conductor.js';
+import * as jingles from './jingles.js';
 
 const MAX_SAME_PER_100MS = 6;
 const RARE_PER_BEAT = { hit_light: 1, hit_heavy: 1, hit_crit: 1, enemy_die: 2, enemy_die_big: 2 };
@@ -24,7 +28,8 @@ export async function loadSfx(manifest) {
   defs = manifest.sfx ? manifest.sfx : manifest;
   const urls = [];
   for (const e of Object.values(defs)) if (e.kind !== 'ambience') for (const f of e.files) urls.push(assetUrl(f));
-  await Promise.all(urls.map(loadBuffer));
+  const jinglesReady = manifest.samples ? jingles.load(manifest) : Promise.resolve(false);
+  await Promise.all([...urls.map(loadBuffer), jinglesReady]);
 }
 
 /** Position du joueur, pour l'atténuation/pan des sons localisés (appelé par le gameplay). */
@@ -71,15 +76,18 @@ export function play(id, { volume = 1, pitchVar = null, x = null, y = null, bus 
   const def = defs[id];
   const ac = ctx();
   if (!def || !ac || !rareAllowed(id, source) || !allowed(id)) return;
-  let gain = volume * (def.gain ?? 1);
+  let atten = 1;
   let pan = 0;
   if (x !== null && y !== null) {
     const dx = x - listener.x;
     const d = Math.hypot(dx, y - listener.y);
     if (d >= HEAR_MAX) return;
-    if (d > HEAR_FULL) gain *= 1 - (d - HEAR_FULL) / (HEAR_MAX - HEAR_FULL);
+    if (d > HEAR_FULL) atten = 1 - (d - HEAR_FULL) / (HEAR_MAX - HEAR_FULL);
     pan = Math.max(-1, Math.min(1, dx / PAN_RANGE)) * 0.8;
   }
+  // jingle sur l'accord courant (sampler) ; le fichier n'est joué qu'en repli
+  if (def.jingle !== false && jingles.handles(id) && jingles.ready() && jingles.play(id, { gain: volume * atten, at, pan, bus: def.bus || bus })) return;
+  const gain = volume * atten * (def.gain ?? 1);
   const buf = getBuffer(pickFile(id));
   if (!buf || !acquireVoice()) return;
   const src = ac.createBufferSource();
@@ -120,6 +128,16 @@ export async function playAmbience(id, { volume = 1, fadeSec = 2 } = {}) {
   ambiences[id] = { src, g };
 }
 
+/** Nouveau volume d'une ambiance en cours (fondu). */
+export function setAmbienceVolume(id, volume, fadeSec = 2) {
+  const a = ambiences[id], def = defs[id];
+  if (!a || !def) return;
+  const t = now();
+  a.g.gain.cancelScheduledValues(t);
+  a.g.gain.setValueAtTime(a.g.gain.value, t);
+  a.g.gain.linearRampToValueAtTime(volume * (def.gain ?? 0.5), t + fadeSec);
+}
+
 export function stopAmbience(id, fadeSec = 2) {
   const a = ambiences[id];
   if (!a) return;
@@ -132,4 +150,8 @@ export function stopAmbience(id, fadeSec = 2) {
 }
 
 export function stopAllAmbiences(fadeSec = 1) { for (const id of Object.keys(ambiences)) stopAmbience(id, fadeSec); }
-export function has(id) { return Boolean(defs[id]); }
+export function activeAmbiences() { return Object.keys(ambiences); }
+/** L'identifiant existe dans le manifeste (fichier de repli) ou comme jingle du sampler. */
+export function has(id) { return Boolean(defs[id]) || (jingles.handles(id) && jingles.ready()); }
+/** L'identifiant est actuellement rendu par le sampler sur l'accord courant (et non par son fichier). */
+export function isJingle(id) { return jingles.handles(id) && jingles.ready() && !(defs[id] && defs[id].jingle === false); }

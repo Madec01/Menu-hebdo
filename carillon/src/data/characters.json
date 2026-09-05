@@ -33,7 +33,11 @@
    "damageMult": 1.1
   },
   "unlockCost": 250,
-  "unique": "cuirasse"
+  "unique": "cuirasse",
+  "traits": {
+   "damageTaken": 0.8,
+   "knockTaken": 0.5
+  }
  },
  {
   "id": "maren",
@@ -47,12 +51,15 @@
    "speed": 125,
    "armor": 0,
    "windowMult": 1,
-   "resonanceGain": 1,
+   "resonanceGain": 2,
    "damageMult": 1,
    "magnet": 1.5
   },
   "unlockCost": 250,
-  "unique": "aimant"
+  "unique": "aimant",
+  "traits": {
+   "resonanceDecay": 1.5
+  }
  },
  {
   "id": "le_muet",
@@ -66,11 +73,16 @@
    "speed": 115,
    "armor": 0,
    "windowMult": 1.1,
-   "resonanceGain": 1.5,
+   "resonanceGain": 1,
    "damageMult": 1
   },
   "unlockCost": 400,
   "unique": "sans_voix",
-  "startWeaponFixed": true
+  "startWeaponFixed": true,
+  "traits": {
+   "perfectOnly": true,
+   "perfectTiers": 2,
+   "silenceImmune": true
+  }
  }
 ]
