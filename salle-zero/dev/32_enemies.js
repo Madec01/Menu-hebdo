@@ -63,7 +63,7 @@ class Enemy {
     }
     for (const dc of G.room.decoys) if (dist(this.x, this.y, dc.x, dc.y) < this.r + dc.r && this.contactCd <= 0) { dc.hp -= this.damage; this.contactCd = 0.6; }
   }
-  contactDamage() { return this.damage; }
+  contactDamage() { return this.archetype === 'tank' && this.state === 'charge' ? Math.round(this.damage * (this.behavior.chargeDamageMul || 1.5)) : this.damage; }
   pickTarget() { const pl = G.player; let t = pl; let bd = Infinity; for (const dc of G.room.decoys) { const d = dist(this.x, this.y, dc.x, dc.y); if (d < bd) { bd = d; t = dc; } } return t; }
   /* --- archétypes --- */
   ai_rusher(dt, t, d) {
@@ -93,7 +93,6 @@ class Enemy {
     else if (this.state === 'stunned') { if (this.stateT > (b.stun || 1.2)) this.setState('walk'); }
     if (this.state === 'walk' && this.stateT < (b.chargeCooldown || 0) - (b.stun || 1.2)) { /* attente avant nouvelle charge */ }
   }
-  contactDamageTank() { return this.state === 'charge' ? this.damage * 1.5 : this.damage; }
   ai_kamikaze(dt, t, d) {
     const b = this.behavior;
     if (this.state === 'spawn') this.setState('chase');
@@ -172,7 +171,6 @@ class Enemy {
     ctx.restore();
   }
 }
-Enemy.prototype.contactDamage = function () { return this.archetype === 'tank' && this.state === 'charge' ? Math.round(this.damage * 1.5) : this.damage; };
 
 /* ---------- Mini-boss ---------- */
 class Boss extends Enemy {

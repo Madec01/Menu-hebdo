@@ -36,9 +36,9 @@ const CONTENT = {
   weapons: [
     {
       id: 'weapon_blade', name: 'Lame d\'essai',
-      desc: 'Lame courte et rapide. Arc de 125° devant vous, 3 coups/s. Sûre, sans portée. (54 DPS)',
+      desc: 'Lame courte et rapide. Arc de 125° devant vous, 3 coups/s. Sûre, sans portée. (66 DPS)',
       family: 'blade', type: 'melee',
-      damage: 18, fireRate: 3.0, range: 70, projSpeed: 0, projectiles: 0, spread: 0,
+      damage: 22, fireRate: 3.0, range: 70, projSpeed: 0, projectiles: 0, spread: 0,
       pierce: 0, bounce: 0, knockback: 1.0, size: 60,
       charge: null,
       special: { kind: 'sweep', arc: 2.18, hitAllInArc: true },
@@ -86,12 +86,12 @@ const CONTENT = {
     },
     {
       id: 'weapon_orb', name: 'Orbe orbitale',
-      desc: '2 orbes tournent autour de vous. 12 dégâts, 4 ticks/s au contact. Pas de visée. (48 DPS / orbe)',
+      desc: '2 orbes tournent autour de vous et se resserrent quand vous tirez. 12 dégâts, 4 ticks/s. (48 DPS / orbe)',
       family: 'orb', type: 'orbital',
-      damage: 12, fireRate: 4.0, range: 90, projSpeed: 0, projectiles: 2, spread: 0,
-      pierce: 99, bounce: 0, knockback: 0.6, size: 14,
+      damage: 12, fireRate: 4.0, range: 65, projSpeed: 0, projectiles: 2, spread: 0,
+      pierce: 99, bounce: 0, knockback: 0.6, size: 18,
       charge: null,
-      special: { kind: 'orbit', radius: 90, angularSpeed: 4.5, tickRate: 4, blocksProjectiles: false },
+      special: { kind: 'orbit', radius: 65, angularSpeed: 5.8, tickRate: 4, blocksProjectiles: false },
       unlocked: false, price: 250
     },
     {
@@ -362,22 +362,22 @@ const CONTENT = {
   enemies: [
     { id: 'enemy_rodeur', name: 'Rôdeur', archetype: 'rusher',
       desc: 'Court vers vous ; à 90 px il se fige 0,35 s puis bondit. Le bond peut être esquivé de côté.',
-      hp: 30, speed: 200, damage: 10, radius: 14, xp: 4, coins: 1, color: '#e05a4a',
+      hp: 38, speed: 200, damage: 8, radius: 14, xp: 4, coins: 1, color: '#e05a4a',
       behavior: { lungeRange: 90, lungeWindup: 0.35, lungeSpeed: 520, lungeDuration: 0.25, lungeCooldown: 1.2 },
       telegraph: { time: 0.35, color: '#ffd166' } },
     { id: 'enemy_sentinelle', name: 'Sentinelle', archetype: 'shooter',
       desc: 'Garde 300 px de distance, vise 0,5 s (ligne pointillée) puis tire une balle lente de 10 dégâts.',
-      hp: 26, speed: 130, damage: 8, radius: 14, xp: 6, coins: 2, color: '#4fa3e0',
+      hp: 32, speed: 130, damage: 8, radius: 14, xp: 6, coins: 2, color: '#4fa3e0',
       behavior: { fireRate: 0.7, projSpeed: 320, projDamage: 10, projSize: 7, keepDistance: 300, aimTime: 0.5, burst: 1 },
       telegraph: { time: 0.5, color: '#7bd3ff' } },
     { id: 'enemy_bloc', name: 'Bloc', archetype: 'tank',
       desc: 'Lent et massif. S\'arrête, tremble 0,8 s, puis charge en ligne droite. S\'il percute un mur : étourdi 1,2 s.',
-      hp: 140, speed: 90, damage: 15, radius: 24, xp: 14, coins: 4, color: '#8c6d4f',
+      hp: 175, speed: 90, damage: 12, radius: 24, xp: 14, coins: 4, color: '#8c6d4f',
       behavior: { chargeWindup: 0.8, chargeSpeed: 560, chargeDuration: 0.7, chargeCooldown: 3.0, stunOnWallHit: 1.2, chargeDamageMul: 1.5 },
       telegraph: { time: 0.8, color: '#ff8c42' } },
     { id: 'enemy_meche', name: 'Mèche', archetype: 'kamikaze',
       desc: 'Fonce sur vous ; à 60 px la mèche s\'allume (0,9 s, clignote) puis explose sur 80 px. Tuez-la loin de vous.',
-      hp: 18, speed: 240, damage: 6, radius: 12, xp: 5, coins: 1, color: '#ff5f3b',
+      hp: 22, speed: 240, damage: 6, radius: 12, xp: 5, coins: 1, color: '#ff5f3b',
       behavior: { fuse: 0.9, radius: 80, explosionDamage: 22, triggerRange: 60, explodeOnDeath: true },
       telegraph: { time: 0.9, color: '#ff3b3b' } },
     { id: 'enemy_incubateur', name: 'Incubateur', archetype: 'summoner',
@@ -387,7 +387,7 @@ const CONTENT = {
       telegraph: { time: 0.7, color: '#b98cff' } },
     { id: 'enemy_nuee', name: 'Nuée', archetype: 'swarm',
       desc: 'Groupe de 5 petits organismes rapides et fragiles. Tremblent 0,2 s avant de mordre. Zone et chaîne les balaient.',
-      hp: 8, speed: 300, damage: 5, radius: 8, xp: 3, coins: 1, color: '#7ed957',
+      hp: 10, speed: 300, damage: 5, radius: 8, xp: 3, coins: 1, color: '#7ed957',
       behavior: { groupSize: 5, jitter: 40, biteWindup: 0.2, biteCooldown: 0.8 },
       telegraph: { time: 0.2, color: '#9cff57' } },
     { id: 'enemy_eclipse', name: 'Éclipse', archetype: 'dasher',
@@ -404,21 +404,21 @@ const CONTENT = {
     {
       id: 'boss_etalon_07', name: 'Étalon 07, dit « le Portier »',
       desc: 'Le sujet de référence d\'ADMISSION, gardé comme mètre-étalon. Vérin hydraulique au bras droit, prise de calibration à nu dans le dos. Lourd, prévisible : il faut le faire pivoter.',
-      hp: 900, speed: 120, radius: 36, damage: 18, xp: 120, coins: 40,
+      hp: 1900, speed: 120, radius: 36, damage: 14, xp: 120, coins: 40,
       phases: [
         { hpBelow: 1.0, patterns: [
-          { kind: 'ring', telegraph: 0.8, duration: 0.3, cooldown: 3.5, count: 12, projSpeed: 260, projDamage: 12, projSize: 8 },
-          { kind: 'charge', telegraph: 0.9, duration: 0.8, cooldown: 5.0, speed: 620, damage: 20, stopOnWall: true, stunTime: 1.5 },
-          { kind: 'slam', telegraph: 1.0, duration: 0.4, cooldown: 6.0, radius: 140, damage: 25, knockback: 3.0 }
+          { kind: 'ring', telegraph: 0.8, duration: 0.3, cooldown: 2.6, count: 12, projSpeed: 260, projDamage: 15, projSize: 8 },
+          { kind: 'charge', telegraph: 0.9, duration: 0.8, cooldown: 3.8, speed: 620, damage: 25, stopOnWall: true, stunTime: 1.5 },
+          { kind: 'slam', telegraph: 1.0, duration: 0.4, cooldown: 4.5, radius: 140, damage: 31, knockback: 3.0 }
         ] },
         { hpBelow: 0.5, patterns: [
-          { kind: 'fan', telegraph: 0.6, duration: 0.5, cooldown: 2.5, count: 7, spread: 1.2, projSpeed: 300, projDamage: 12, projSize: 8 },
-          { kind: 'spiral', telegraph: 0.7, duration: 3.0, cooldown: 6.0, arms: 2, rate: 12, angularSpeed: 2.0, projSpeed: 220, projDamage: 10, projSize: 7 },
-          { kind: 'summon', telegraph: 0.8, duration: 0.5, cooldown: 9.0, enemy: 'enemy_nuee', count: 4 },
-          { kind: 'charge', telegraph: 0.7, duration: 0.8, cooldown: 5.0, speed: 700, damage: 22, stopOnWall: true, stunTime: 1.5 }
+          { kind: 'fan', telegraph: 0.6, duration: 0.5, cooldown: 1.9, count: 7, spread: 1.2, projSpeed: 300, projDamage: 15, projSize: 8 },
+          { kind: 'spiral', telegraph: 0.7, duration: 3.0, cooldown: 4.5, arms: 2, rate: 12, angularSpeed: 2.0, projSpeed: 220, projDamage: 13, projSize: 7 },
+          { kind: 'summon', telegraph: 0.8, duration: 0.5, cooldown: 7.0, enemy: 'enemy_nuee', count: 4 },
+          { kind: 'charge', telegraph: 0.7, duration: 0.8, cooldown: 3.8, speed: 700, damage: 27, stopOnWall: true, stunTime: 1.5 }
         ] }
       ],
-      weakness: { desc: 'Sa prise de calibration dorsale est à nu : tout coup porté dans un cône de 90° derrière lui fait ×2 et le "débranche" 0,8 s (étourdi, ne se retourne pas). Une charge finie dans un mur (1,5 s d\'étourdissement) est le moyen le plus sûr d\'atteindre son dos.', rule: 'back', damageMul: 2.0, window: 0.8, coneAngle: 1.57, stunCooldown: 3.0 },
+      weakness: { desc: 'Sa prise de calibration dorsale est à nu : tout coup porté dans un cône de 90° derrière lui fait ×1,6 et le "débranche" 0,6 s (étourdi, ne se retourne pas). Une charge finie dans un mur (1,5 s d\'étourdissement) est le moyen le plus sûr d\'atteindre son dos.', rule: 'back', damageMul: 1.6, window: 0.6, coneAngle: 1.57, stunCooldown: 4.0 },
       revenge: {
         hpMul: 1.6,
         extraPhases: [
@@ -428,7 +428,7 @@ const CONTENT = {
             { kind: 'charge', telegraph: 0.5, duration: 0.6, cooldown: 3.0, speed: 800, damage: 26, stopOnWall: false, stunTime: 0.6 }
           ] }
         ],
-        desc: 'PRÉVU (salle 9) : ÉTALON 07 / rév. B, reconditionné entre les salles 5 et 9. 1440 PV. Une plaque de tôle vissée à la va-vite couvre la prise dorsale : la faiblesse est inactive jusqu\'à 6 impacts dans le dos, puis la plaque saute et la faiblesse revient avec une fenêtre de 0,4 s au lieu de 0,8. Ses charges ne s\'arrêtent plus dans les murs (0,6 s d\'étourdissement). Il a chargé vos données de consignation : en phase 2 il reproduit votre compétence de salle 1 (dash → charge courte, tourelle → summon, onde → slam, blink → téléportation dans votre dos) et ses patterns sous 30 % PV s\'inspirent des greffes refusées aux level-ups (proposition lore, à trancher en phase 2).'
+        desc: 'PRÉVU (salle 9) : ÉTALON 07 / rév. B, reconditionné entre les salles 5 et 9. 3040 PV (×1,6). Une plaque de tôle vissée à la va-vite couvre la prise dorsale : la faiblesse est inactive jusqu\'à 6 impacts dans le dos, puis la plaque saute et la faiblesse revient avec une fenêtre de 0,4 s au lieu de 0,6. Ses charges ne s\'arrêtent plus dans les murs (0,6 s d\'étourdissement). Il a chargé vos données de consignation : en phase 2 il reproduit votre compétence de salle 1 (dash → charge courte, tourelle → summon, onde → slam, blink → téléportation dans votre dos) et ses patterns sous 30 % PV s\'inspirent des greffes refusées aux level-ups (proposition lore, à trancher en phase 2).'
       }
     }
   ],
@@ -439,7 +439,7 @@ const CONTENT = {
   traps: [
     { id: 'trap_balayage', name: 'Balayage laser', kind: 'laser_sweep',
       desc: 'Un rayon vertical parcourt la zone de gauche à droite en 1,6 s, puis revient au cycle suivant.',
-      damage: 14, telegraph: 0.8, period: 4.0, active: 1.6,
+      damage: 14, telegraph: 0.8, period: 5.0, active: 1.6,
       params: { orientation: 'vertical', pingpong: true, thickness: 0.5, hitOnce: true } },
     { id: 'trap_tourniquet', name: 'Tourniquet', kind: 'laser_rotate',
       desc: '2 bras laser de 5 tuiles tournent (1,2 rad/s). Pause de 1 s tous les 6 s : la fenêtre pour traverser.',
@@ -455,7 +455,7 @@ const CONTENT = {
       params: { dir: 'down', projSpeed: 320, size: 12, count: 1, lifetime: 3.0 } },
     { id: 'trap_dalles', name: 'Dalles à pointes', kind: 'spike_tiles',
       desc: 'Damier : les cases paires sortent leurs pointes 0,8 s, puis les impaires. Toujours une case sûre à côté.',
-      damage: 10, telegraph: 0.5, period: 2.0, active: 0.8,
+      damage: 10, telegraph: 0.5, period: 2.6, active: 0.8,
       params: { pattern: 'checker', groups: 2, hitOnce: true } },
     { id: 'trap_nappe', name: 'Nappe de gaz', kind: 'gas_zone',
       desc: 'Une bouche siffle 1,2 s puis libère un nuage de 2,5 tuiles pendant 3 s : 8 dégâts/s et -30 % vitesse.',
@@ -492,7 +492,12 @@ const CONTENT = {
         { at: 'clear', spawns: [
           { enemy: 'enemy_nuee', count: 1, x: 21, y: 2 },
           { enemy: 'enemy_sentinelle', count: 2, x: 21, y: 10 },
-          { enemy: 'enemy_rodeur', count: 2, x: 2, y: 1 } ] }
+          { enemy: 'enemy_rodeur', count: 2, x: 2, y: 1 } ] },
+        { at: 'clear', spawns: [
+          { enemy: 'enemy_rodeur', count: 3, x: -1, y: -1 },
+          { enemy: 'enemy_nuee', count: 1, x: 2, y: 11 },
+          { enemy: 'enemy_sentinelle', count: 1, x: 21, y: 6 },
+          { enemy: 'enemy_eclipse', count: 1, x: 12, y: 1 } ] }
       ],
       traps: [], fragments: [], modular: [] },
 
@@ -542,7 +547,12 @@ const CONTENT = {
         { at: 'clear', spawns: [
           { enemy: 'enemy_meche', count: 2, x: 2, y: 1 },
           { enemy: 'enemy_sentinelle', count: 2, x: 21, y: 10 },
-          { enemy: 'enemy_nuee', count: 1, x: 21, y: 2 } ] }
+          { enemy: 'enemy_nuee', count: 1, x: 21, y: 2 } ] },
+        { at: 'clear', spawns: [
+          { enemy: 'enemy_eclipse', count: 1, x: 21, y: 6 },
+          { enemy: 'enemy_rodeur', count: 3, x: -1, y: -1 },
+          { enemy: 'enemy_incubateur', count: 1, x: 2, y: 6 },
+          { enemy: 'enemy_sentinelle', count: 1, x: 12, y: 11 } ] }
       ],
       traps: [
         { trap: 'trap_tourniquet', x: 11, y: 6, phase: 0 },

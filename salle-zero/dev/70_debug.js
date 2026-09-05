@@ -99,7 +99,7 @@ const Debug = (() => {
     else if (rm.doorOpen && (!enemy || rm.state === 'clear' || rm.type === 'TRAP')) goal = { x: ROOM_X + ROOM_W + 10, y: ROOM_Y + ROOM_H / 2 };
     else if (enemy) goal = enemy;
     else { const pk = Pickups.list[0]; goal = pk ? { x: pk.x, y: pk.y } : { x: W / 2, y: H / 2 }; }
-    const wantDist = enemy && goal === enemy ? (w.type === 'orbital' ? (w.range || 90) * pl.stats.range * 0.9 : isMelee ? 40 : (w.family === 'flame' ? 110 : 260)) : 0;
+    const wantDist = enemy && goal === enemy ? (w.type === 'orbital' ? (w.range || 90) * pl.stats.range * 0.8 : isMelee ? enemy.r + pl.r + 14 : (w.family === 'flame' ? 110 : 260)) : 0;
     /* évaluation des directions */
     let best = DIRS[0], bs = -Infinity; const look = 34;
     for (const d of DIRS) {
@@ -124,8 +124,8 @@ const Debug = (() => {
   function autoEnd() { setTimeout(() => finishAuto(), 0); }
   function finishAuto(reason) {
     const a = G.autoplay; if (!a) return; const r = G.run; const st = r ? r.stats : {};
-    const res = { seed: a.config.seed, outcome: reason || (st.bossKilled && !r.ended ? 'timeout' : r && r.ended && !G.player.dead ? 'victory' : 'death'), roomReached: r ? G.room.index : 0, levelReached: st.levelReached, kills: st.kills, damageTaken: st.damageTaken, hitsTaken: st.hitsTaken, damageDealt: st.damageDealt, coins: st.coins, deathRoom: st.deathRoom, roomTimes: st.roomTimes, upgrades: r ? r.upgrades.map(u => u.def.id + (u.stacks > 1 ? '×' + u.stacks : '')) : [], weapon: r && r.weapon, skill: r && r.skill, character: r && r.char.id, durationSec: Math.round((Time.now - a.startedAt) * 10) / 10, bossKilled: !!st.bossKilled };
-    G.autoplay = null; Time.scale = 1; Engine.setHeadless(false); if (G.player) G.player.bot = null;
+    const res = { seed: a.config.seed, outcome: reason || (st.bossKilled && !r.ended ? 'timeout' : r && r.ended && !G.player.dead ? 'victory' : 'death'), roomReached: r ? G.room.index : 0, levelReached: st.levelReached, kills: st.kills, damageTaken: st.damageTaken, hitsTaken: st.hitsTaken, damageDealt: st.damageDealt, coins: st.coins, deathRoom: st.deathRoom, roomTimes: st.roomTimes, upgrades: r ? r.upgrades.map(u => u.def.id + (u.stacks > 1 ? '×' + u.stacks : '')) : [], weapon: r && r.weapon, skill: r && r.skill, character: r && r.char.id, durationSec: Math.round((Time.now - a.startedAt) * 10) / 10, bossKilled: !!st.bossKilled, skillUses: st.skillUses, deathCause: st.deathCause };
+    G.autoplay = null; Time.scale = 1; Engine.setHeadless(false); if (G.player) G.player.bot = null; if (a.config.mode === 'normal') Meta.setMode('normal');
     UI.hideAll(); if (G.run && !G.run.ended) { G.run.ended = true; } Run.toHub();
     a.resolve(res);
   }
@@ -134,7 +134,7 @@ const Debug = (() => {
     if (G.autoplay) return Promise.reject(new Error('autoplay déjà en cours'));
     return new Promise(resolve => {
       const c = Object.assign({ seed: Date.now() & 0xffff, timeScale: 20, render: false, character: null, weapon: null, skill: null, difficulty: 1, maxRooms: 5, maxSeconds: 900, pickStrategy: 'random', mode: 'test' }, config);
-      Meta.setMode(c.mode); G.debug.difficulty = c.difficulty; UI.hideAll();
+      Meta.setMode(c.mode === 'normal' ? 'sandbox' : c.mode); G.debug.difficulty = c.difficulty; UI.hideAll();   // 'normal' → profil jetable : l'autoplay n'écrit jamais dans la sauvegarde
       const rng = makeRng(c.seed); G.autoplay = { config: c, resolve, rng, startedAt: Time.now };
       Engine.setHeadless(!c.render); Time.scale = c.timeScale;
       const character = c.character || Meta.profile.character;

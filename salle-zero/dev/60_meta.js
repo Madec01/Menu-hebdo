@@ -23,7 +23,8 @@ const Meta = (() => {
     if (mode === 'test') {
       test = fresh(); test.coins = 99999; test.weapons = Content.weapons().map(w => w.id); test.characters = Content.characters().map(c => c.id); test.character = test.characters[0];
       for (const m of Content.metaPassives()) test.metaTiers[m.id] = m.tiers.length; test.lore = LORE.fragments.map(f => f.id); test.volume = Object.assign({}, normal.volume); profile = test;
-    } else profile = normal;
+    } else if (mode === 'sandbox') { const sb = fresh(); ensureDefaults(sb); sb.volume = Object.assign({}, normal.volume); profile = sb; G.mode = 'normal'; }
+    else profile = normal;
   }
   const tierOf = id => profile.metaTiers[id] || 0;
   function setTier(id, t) { profile.metaTiers[id] = clamp(t, 0, (Content.metaPassive(id) || { tiers: [] }).tiers.length); save(); }

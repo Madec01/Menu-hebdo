@@ -114,7 +114,7 @@ const Projectiles = {
           if (e.dead || p.hit.has(e)) continue;
           if (dist(p.x, p.y, e.x, e.y) < p.r + e.r) {
             p.hit.add(e);
-            Combat.hitEnemy(e, p.damage, { x: p.x, y: p.y, crit: p.crit, proj: p, knockback: p.knockback || 1, vx: p.vx, vy: p.vy });
+            Combat.hitEnemy(e, p.damage, { x: p.x, y: p.y, crit: p.crit, noCrit: p.noCrit, proj: p, knockback: p.knockback || 1, vx: p.vx, vy: p.vy });
             if (p.pierce > 0) p.pierce--; else if (!p.returning && !p.ghostHits) { this.list.splice(i, 1); break; }
           }
         }
@@ -212,7 +212,7 @@ const Combat = {
     }
     if (e.isBoss) {
       if (e.weakActive) d *= e.weakMul;
-      else if (e.weak.rule === 'back' && !info.dot && info.vx != null) {
+      else if (e.weak.rule === 'back' && !info.dot && info.vx != null && !(info.proj && info.proj.returning)) {   // le retour du boomerang ne compte pas comme un coup dans le dos
         const a = Math.atan2(info.vy, info.vx);
         if (Math.abs(wrapAngle(a - e.facingA)) < (e.weak.coneAngle || 1.57) / 2) {
           d *= e.weakMul; info.backHit = true;
@@ -289,7 +289,7 @@ const Combat = {
     if (Time.now < pl.invulnUntil) return false;
     if (pl.dashing && pl.dashInvuln) return false;
     if (info.type === 'trap') {
-      dmg *= pl.stats.trapDamageMul * G.debug.difficulty;
+      dmg *= pl.stats.trapDamageMul;   // la difficulté est déjà appliquée dans Trap (G.difficulty.damageMul)
       const heal = Progression.hasPassive(pl.hooks, 'traps_heal');
       if (heal) { pl.heal(Math.max(1, dmg * (heal.fraction || 0.5))); pl.invulnUntil = Time.now + 0.3; Floaters.add(pl.x, pl.y - 30, 'greffe !', '#7fff9a'); return false; }
       for (const h of pl.hooks.onTrapDamage) { if (h.effect === 'shockwave') Combat.playerShockwave(h); else if (h.effect === 'speed_burst') { pl.killSpeedUntil = Time.now + (h.duration || 2); pl.killSpeedMul = h.speedMul || 1.2; } }
@@ -298,6 +298,7 @@ const Combat = {
     dmg = Math.max(1, Math.round(dmg - pl.stats.armor));
     if (pl.shield > 0) { const used = Math.min(pl.shield, dmg); pl.shield -= used; dmg -= used; if (dmg <= 0) { pl.invulnUntil = Time.now + 0.25; Particles.spawn(pl.x, pl.y, { count: 6, color: '#8ff', size: 2 }); return true; } }
     pl.hp -= dmg; pl.invulnUntil = Time.now + pl.stats.invulnTime; pl.hurtFlash = 0.25;
+    Run.lastDamageSource = (info.type || 'inconnu') + (info.source && info.source.name ? ' : ' + info.source.name : info.trapName ? ' : ' + info.trapName : '');
     G.room.hits++; G.room.combo = 0; G.run.stats.damageTaken += dmg; G.run.stats.hitsTaken++;
     AudioEngine.playerHurt({ intensity: clamp(dmg / 30, 0.3, 1) });
     Floaters.add(pl.x, pl.y - 30, '-' + dmg, '#ff5e7a', 16);
@@ -412,12 +413,12 @@ const Weapons = {
   flame(pl, dt, aim, rate) {
     const w = pl.weapon, st = pl.stats;
     if (!pl.flameOn) { pl.flameOn = true; AudioEngine.startFlame({}); }
-    pl.flameAcc = (pl.flameAcc || 0) + dt * rate * 14;
+    pl.flameAcc = (pl.flameAcc || 0) + dt * rate * 3;   // 3 particules par tick, chacune 1/3 des dégâts → DPS nominal = damage × fireRate
     const cone = (w.spread || 0.5) * st.areaSize, range = (w.range || 170) * st.range;
     while (pl.flameAcc >= 1) {
       pl.flameAcc--;
       const a = aim + RNG.range(-cone / 2, cone / 2); const spd = (w.projSpeed || 380) * st.projSpeed * RNG.range(0.8, 1.2);
-      Projectiles.spawn({ x: pl.x + Math.cos(aim) * (pl.r + 4), y: pl.y + Math.sin(aim) * (pl.r + 4), vx: Math.cos(a) * spd, vy: Math.sin(a) * spd, r: 7 * st.areaSize, damage: Weapons.dmgOf(pl), owner: 'player', pierce: 2 + st.pierce, life: range / spd, range, color: w.color || '#ff8c42', kind: 'flame', ghost: true, knockback: 0.15 });
+      Projectiles.spawn({ x: pl.x + Math.cos(aim) * (pl.r + 4), y: pl.y + Math.sin(aim) * (pl.r + 4), vx: Math.cos(a) * spd, vy: Math.sin(a) * spd, r: 7 * st.areaSize, damage: Math.max(1, Weapons.dmgOf(pl) / 3), owner: 'player', pierce: 2 + st.pierce, life: range / spd, range, color: w.color || '#ff8c42', kind: 'flame', ghost: true, knockback: 0.15, noCrit: true });
     }
     G.run.stats.shots += dt;
   },
@@ -426,7 +427,7 @@ const Weapons = {
     const n = (w.projectiles || 2) + st.projectiles;
     if (!pl.orbs || pl.orbs.length !== n) pl.orbs = Array.from({ length: n }, () => ({ x: pl.x, y: pl.y, cd: new Map() }));
     pl.orbAngle = (pl.orbAngle || 0) + dt * (w.special && (w.special.angularSpeed || w.special.spin) || 3.5) * Math.sqrt(st.fireRate);
-    const targetR = (w.range || 80) * st.range * (firing ? (w.special && w.special.expand || 1.35) : 1);
+    const targetR = (w.range || 80) * st.range * (firing ? (w.special && w.special.expand || 0.7) : 1);   // tirer = resserrer l'anneau sur les ennemis au contact
     pl.orbR = lerp(pl.orbR || targetR, targetR, Math.min(1, 6 * dt));
     if (firing && pl.attackCd <= 0) { pl.attackCd = 0.5; AudioEngine.shootOrb({}); }
     const rr = (w.size || 10) * st.areaSize; const tick = 1 / Math.max(0.5, w.fireRate * st.fireRate);

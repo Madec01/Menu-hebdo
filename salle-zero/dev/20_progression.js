@@ -105,11 +105,12 @@ const Progression = (() => {
   /* --- Score de salle --- */
   function roomScore(r) {
     if (r.died) return 0;
-    if (r.hits === 0) return 1;
+    const fragK = r.fragmentsTotal ? clamp(r.fragments / r.fragmentsTotal, 0, 1) : 1;   // salle de pièges : les fragments comptent
+    if (r.hits === 0) return fragK >= 1 ? 1 : clamp(0.8 + 0.2 * fragK, 0, 0.99);
     const dmg = Math.max(0, 1 - r.hits * 0.2);
     const time = r.refTime ? clamp(r.refTime / Math.max(1, r.time), 0, 1) : 1;
     const combo = clamp(r.bestCombo / Math.max(1, r.comboTarget || 8), 0, 1);
-    return clamp(dmg * 0.8 + time * 0.1 + combo * 0.1, 0, 0.99);
+    return clamp((dmg * 0.8 + time * 0.1 + combo * 0.1) * (0.85 + 0.15 * fragK), 0, 0.99);
   }
   function avgScore(scores) { return scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : 1; }
   function bestN(scores, n) { return scores.slice().sort((a, b) => b - a).slice(0, n); }

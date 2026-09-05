@@ -41,7 +41,7 @@ class Trap {
     return { stage: 'idle', k: t / Math.max(0.01, on0 - this.telegraph), idx: Math.floor(this.lt(rt) / this.period) };
   }
   warn(idx, snd = 'trapWarn') { if (this.warned !== idx) { this.warned = idx; AudioEngine[snd]({ x: (this.cx - W / 2) / (W / 2), intensity: 0.5 }); } }
-  hit(pl) { if (this.hitCd > 0) return; if (Combat.hitPlayer(this.damage, { type: 'trap', x: this.cx, y: this.cy })) this.hitCd = 0.5; }
+  hit(pl) { if (this.hitCd > 0) return; if (Combat.hitPlayer(this.damage, { type: 'trap', x: this.cx, y: this.cy, trapName: this.name })) this.hitCd = 0.5; }
   update(dt, rt) { this.hitCd -= dt; if (this.disabled) return; this['u_' + this.kind](dt, rt, G.player); }
   render(ctx, rt) { if (this.disabled) return; this['r_' + this.kind](ctx, rt); }
   dangerAt(x, y, rt) { const f = this['d_' + this.kind]; return f ? f.call(this, x, y, rt) : 0; }
@@ -133,7 +133,7 @@ class Trap {
   d_spike_tiles(x, y, rt) { const c = this.cycle(rt + 0.3); if (c.stage === 'idle') return 0; for (let ty = 0; ty < this.th; ty++) for (let tx = 0; tx < this.tw; tx++) if (this.spikeActive(tx, ty, c.idx) && circleRect(x, y, 16, this.x + tx * TILE, this.y + ty * TILE, TILE, TILE)) return 1; return 0; }
 
   /* --- gas_zone : nuage circulaire périodique, dégâts continus --- */
-  u_gas_zone(dt, rt, pl) { const c = this.cycle(rt); if (c.stage === 'warn') this.warn(c.idx, 'trapGas'); if (c.stage === 'on' && !pl.dead && dist(pl.x, pl.y, this.cx, this.cy) < (this.p.radius || 90) + pl.r * 0.5) { if (this.p.slow) pl.gasSlowUntil = Time.now + 0.1; this.acc = (this.acc || 0) + dt; if (this.acc >= 0.5) { this.acc = 0; Combat.hitPlayer(Math.max(1, Math.round(this.damage * 0.5)), { type: 'trap', x: this.cx, y: this.cy }); } } }
+  u_gas_zone(dt, rt, pl) { const c = this.cycle(rt); if (c.stage === 'warn') this.warn(c.idx, 'trapGas'); if (c.stage === 'on' && !pl.dead && dist(pl.x, pl.y, this.cx, this.cy) < (this.p.radius || 90) + pl.r * 0.5) { if (this.p.slow) pl.gasSlowUntil = Time.now + 0.1; this.acc = (this.acc || 0) + dt; if (this.acc >= 0.5) { this.acc = 0; Combat.hitPlayer(Math.max(1, Math.round(this.damage * 0.5)), { type: 'trap', x: this.cx, y: this.cy, trapName: this.name }); } } }
   r_gas_zone(ctx, rt) {
     const c = this.cycle(rt); const R = this.p.radius || 90; ctx.save();
     ctx.fillStyle = '#2f3a2a'; ctx.beginPath(); ctx.arc(this.cx, this.cy, 10, 0, TAU); ctx.fill();
