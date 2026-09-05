@@ -147,6 +147,56 @@
    ]
   },
   {
+   "tier": 0,
+   "name": "bourdon_8",
+   "instrument": "cello",
+   "gain": 0.32,
+   "events": [
+    {
+     "bar": 0,
+     "beat": 0,
+     "note": "D3",
+     "dur": 16
+    },
+    {
+     "bar": 4,
+     "beat": 0,
+     "note": "A#2",
+     "dur": 8
+    },
+    {
+     "bar": 6,
+     "beat": 0,
+     "note": "D3",
+     "dur": 8
+    },
+    {
+     "bar": 8,
+     "beat": 0,
+     "note": "D3",
+     "dur": 8
+    },
+    {
+     "bar": 10,
+     "beat": 0,
+     "note": "F3",
+     "dur": 8
+    },
+    {
+     "bar": 12,
+     "beat": 0,
+     "note": "A#2",
+     "dur": 8
+    },
+    {
+     "bar": 14,
+     "beat": 0,
+     "note": "D3",
+     "dur": 8
+    }
+   ]
+  },
+  {
    "tier": 1,
    "name": "timbales",
    "instrument": "timpani",
@@ -167,7 +217,7 @@
      [
       "mid",
       4,
-      0.59
+      0.38
      ],
      [
       "low",
@@ -225,7 +275,7 @@
      [
       "hit",
       2,
-      0.7
+      0.52
      ],
      [
       "soft",
@@ -235,7 +285,7 @@
      [
       "hit",
       6,
-      0.7
+      0.52
      ]
     ]
    },
@@ -736,7 +786,7 @@
    "tier": 3,
    "name": "voix",
    "instrument": "choir",
-   "gain": 0.5,
+   "gain": 0.35,
    "events": [
     {
      "bar": 0,
@@ -912,7 +962,7 @@
    "tier": 3,
    "name": "gong",
    "instrument": "gong",
-   "gain": 0.35,
+   "gain": 0.25,
    "events": [
     {
      "bar": 0,
@@ -950,7 +1000,7 @@
    "tier": 3,
    "name": "cloches",
    "instrument": "tubular_bells",
-   "gain": 0.39,
+   "gain": 0.28,
    "events": [
     {
      "bar": 0,

@@ -3,15 +3,25 @@
 // points de grille tombant dans [now, now + lookaheadSec] en appelant les callbacks `schedule`
 // avec le temps audio exact. Jamais setInterval, jamais de son déclenché depuis le timer :
 // les événements `beat`/`bar` du bus partent de conductorTick(), appelé par la boucle 60 Hz.
+// Changements différés (tempo à la mesure suivante, décalage de grille du Bourdon Fêlé) : une file
+// d'intentions ; la tête est matérialisée en { switchBeat, switchAt, newStartAt, bpm } — l'ancienne grille
+// est planifiée pour les indices < switchBeat, la nouvelle à partir de switchBeat ; les indices restent
+// monotones, aucun point n'est joué deux fois. `boss:phase {phase:'cri'}` : la grille recule d'une croche
+// pendant 8 temps puis revient en phase à la mesure suivante (le « 1 » arrive une croche plus tôt).
 import { bus } from '../core/events.js';
 import { now } from './audio.js';
+
+// Le cri du Bourdon Fêlé fausse la Mesure : la grille recule d'une croche pendant 8 temps.
+bus.on('boss:phase', (e) => { if (e && e.phase === 'cri') shiftGrid(0.5, 8); });
 
 const BASE_WINDOW_MS = 110;
 
 const st = {
   bpm: 96, beatsPerBar: 4, lookaheadSec: 0.12, tickMs: 25,
   running: false, startAt: 0, beatDur: 60 / 96,
-  pending: null,                 // { bpm, applyAt, beatAtApply } : changement de tempo à la prochaine mesure
+  pending: null,                 // tête matérialisée : { bpm, switchBeat, switchAt, newStartAt }
+  queue: [],                     // intentions : { kind:'bpm', bpm } | { kind:'shift', beats } | { kind:'unshift', beats, fromBeat, holdBeats }
+  shifted: 0,                    // décalage de grille en cours (temps), pour le HUD / les tests
   timer: null,
   entries: new Set(),            // { sub, fn, nextK }
   windowMs: BASE_WINDOW_MS,
@@ -22,7 +32,7 @@ const st = {
 export function initConductor({ bpm = 96, beatsPerBar = 4, lookaheadSec = 0.12, tickMs = 25 } = {}) {
   stop();
   st.bpm = bpm; st.beatsPerBar = beatsPerBar; st.lookaheadSec = lookaheadSec; st.tickMs = tickMs;
-  st.beatDur = 60 / bpm; st.pending = null; st.entries.clear(); st.lastEmittedBeat = -1;
+  st.beatDur = 60 / bpm; st.pending = null; st.queue.length = 0; st.shifted = 0; st.entries.clear(); st.lastEmittedBeat = -1;
 }
 
 /** Lance la Mesure : le temps 0 (mesure 0, temps 0) est `atTime` (temps audio). */
@@ -46,19 +56,52 @@ export function beatDuration() { return st.beatDur; }
 
 /** Nouveau tempo, appliqué à la prochaine mesure (continuité de la grille garantie). */
 export function setBpm(newBpm) {
-  if (!(newBpm > 0) || newBpm === st.bpm) { st.pending = null; return; }
-  if (!st.running) { st.bpm = newBpm; st.beatDur = 60 / newBpm; st.pending = null; return; }
-  const applyAt = nextBeatAt(st.beatsPerBar);
-  st.pending = { bpm: newBpm, applyAt, beatAtApply: Math.round((applyAt - st.startAt) / st.beatDur) };
+  if (!(newBpm > 0)) return;
+  st.queue = st.queue.filter((q) => q.kind !== 'bpm');
+  if (st.pending && st.pending.kind === 'bpm') st.pending = null;
+  if (!st.running) { st.bpm = newBpm; st.beatDur = 60 / newBpm; return; }
+  if (newBpm !== st.bpm) st.queue.push({ kind: 'bpm', bpm: newBpm });
+}
+
+/** Décale la grille de `beats` (croche = 0,5) à partir du prochain temps, puis la ramène en phase à la
+ *  première mesure après `holdBeats` temps (le « 1 » arrive alors `beats` plus tôt). Bourdon Fêlé, « cri ». */
+export function shiftGrid(beats = 0.5, holdBeats = 8) {
+  if (!st.running || !(beats > 0) || st.shifted) return;
+  st.queue = st.queue.filter((q) => q.kind === 'bpm');
+  st.queue.push({ kind: 'shift', beats, holdBeats });
+}
+export function gridShift() { return st.shifted; }
+
+/** Premier indice de grille (multiple de `sub`) strictement après maintenant. */
+function nextIndex(sub) { return (Math.floor((now() - st.startAt) / (st.beatDur * sub) + 1e-6) + 1) * sub; }
+
+/** Matérialise la tête de la file : indices et temps de bascule calculés sur la grille courante. */
+function materialize() {
+  if (st.pending || !st.queue.length || !st.running) return;
+  const it = st.queue.shift();
+  const bd = st.beatDur;
+  let bpm = st.bpm, switchBeat, anchorBeat, offset = 0;
+  if (it.kind === 'bpm') { bpm = it.bpm; switchBeat = anchorBeat = nextIndex(st.beatsPerBar); }
+  else if (it.kind === 'shift') { switchBeat = anchorBeat = nextIndex(1); offset = it.beats * bd; }
+  else {                                           // unshift : le « 1 » de la mesure kb arrive à la place de kb − beats
+    const first = it.fromBeat + it.holdBeats;
+    let kb = Math.ceil(first / st.beatsPerBar) * st.beatsPerBar;
+    while (kb - it.beats <= nextIndex(0.25)) kb += st.beatsPerBar;
+    switchBeat = kb - it.beats; anchorBeat = kb;
+  }
+  const switchAt = st.startAt + switchBeat * bd;             // temps (grille courante) du point de bascule
+  st.pending = { kind: it.kind, bpm, switchBeat, switchAt, newStartAt: switchAt + offset - anchorBeat * (60 / bpm), it };
 }
 
 function applyPending(t) {
-  if (st.pending && t >= st.pending.applyAt) {
-    const { bpm: b, applyAt, beatAtApply } = st.pending;
-    st.bpm = b; st.beatDur = 60 / b;
-    st.startAt = applyAt - beatAtApply * st.beatDur;   // le temps `beatAtApply` reste exactement à applyAt
-    st.pending = null;
-  }
+  if (!st.pending || t < st.pending.switchAt) return;
+  const p = st.pending;
+  st.bpm = p.bpm; st.beatDur = 60 / p.bpm;
+  st.startAt = p.newStartAt;
+  st.pending = null;
+  if (p.kind === 'shift') { st.shifted = p.it.beats; st.queue.unshift({ kind: 'unshift', beats: p.it.beats, fromBeat: p.switchBeat, holdBeats: p.it.holdBeats }); }
+  else if (p.kind === 'unshift') st.shifted = 0;
+  materialize();
 }
 
 /** Position flottante en temps (peut être négative avant le départ). */
@@ -105,14 +148,14 @@ function tick() {
   if (!st.running) return;
   const t = now();
   const horizon = t + st.lookaheadSec;
-  // tempo en attente : on planifie l'ancienne grille jusqu'au point d'application, puis on bascule
-  // (les indices de grille sont absolus, le point d'application garde le même indice : aucun trou)
-  const limit = st.pending ? Math.min(horizon, st.pending.applyAt - 1e-6) : horizon;
-  scheduleUpTo(t, limit);
-  if (st.pending && horizon >= st.pending.applyAt) {
-    applyPending(st.pending.applyAt);
-    scheduleUpTo(t, horizon);
+  materialize();
+  // bascule en attente : l'ancienne grille est planifiée jusqu'au point de bascule (exclu), puis on bascule
+  // (les indices sont absolus : aucun point n'est joué deux fois ; ceux qui tombent dans le passé sont sautés)
+  for (let guard = 0; guard < 4 && st.pending && horizon >= st.pending.switchAt; guard++) {
+    scheduleUpTo(t, st.pending.switchAt - 1e-6);
+    applyPending(st.pending.switchAt);
   }
+  scheduleUpTo(t, st.pending ? Math.min(horizon, st.pending.switchAt - 1e-6) : horizon);
   st.timer = setTimeout(tick, st.tickMs);
 }
 

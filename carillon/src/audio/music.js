@@ -18,6 +18,8 @@ const XFADE_IN = 0.2;                    // fondu d'ouverture d'une couche (cont
 const XFADE_OUT = 0.7;                   // fondu de fermeture : un chœur qui s'éteint ne doit pas « couper »
 const AUDIBLE = 0.01;                    // gain cible au-delà duquel une couche est planifiée
 const DETUNE_BACK_SEC = 1;               // retour à l'accord après un désaccord
+const HIT_MAX_SEC = { percussion: 1.6, pitched: 2.4 };   // queue max d'une frappe de motif (budget de voix : ≤ 40 en combat)
+const HIT_RELEASE_SEC = 0.35;
 const tracks = new Map();                // trackId → { score, compiled, instruments }
 let manifestPromise = null;
 let manifestBase = 'audio/manifest.json';
@@ -86,7 +88,10 @@ function playEvent(me, e, at, durationBeats) {
   const layer = me.track.compiled.layers[e.li];
   const bd = conductor.beatDuration();
   const melodic = me.track.compiled.melodicLayers.has(e.li);
-  const h = me.track.instruments[layer.instrument].play(e.note, at, { gain: e.gain, duration: durationBeats === null ? null : durationBeats * bd, dest: me.gains[e.li], detune: melodic ? detuneFor(at) : null });
+  const inst = me.track.instruments[layer.instrument];
+  const opts = { gain: e.gain, duration: durationBeats === null ? null : durationBeats * bd, dest: me.gains[e.li], detune: melodic ? detuneFor(at) : null };
+  if (durationBeats === null) { opts.duration = HIT_MAX_SEC[inst.def.kind] || HIT_MAX_SEC.percussion; opts.release = HIT_RELEASE_SEC; }   // frappe : queue bornée
+  const h = inst.play(e.note, at, opts);
   if (melodic && h.live) { me.live.add(h); if (me.live.size > 64) for (const x of me.live) { if (x.endAt < at) me.live.delete(x); } }
 }
 

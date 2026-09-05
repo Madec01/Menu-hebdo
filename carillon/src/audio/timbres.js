@@ -231,10 +231,11 @@ export function playTimbre(weaponId, { at, x = null, y = null, rhythm = 1, tier 
   // cran 3 : tierce ET quinte ajoutées sur les temps accentués (l'accord se remplit)
   if (tonal && tier >= 3 && accent >= 0.8 && !def.chord) {
     const added = (cfg.harmony && cfg.harmony.tier3Added) || [2, 4];
+    const addDur = dur === null ? 1 : Math.min(dur, 1);     // notes ajoutées : un temps (budget de voix)
     added.forEach((iv, i) => {
       const addDeg = degree + iv;
       const m = degreeToMidi(chord, addDeg, octave);
-      playNote(v.inst, m, t0 + 0.012 * (i + 1), gain * cfg.ornaments.addedGain, dur, dest, tunedKey, def.tuned ?? null, release);
+      playNote(v.inst, m, t0 + 0.012 * (i + 1), gain * cfg.ornaments.addedGain, addDur, dest, tunedKey, def.tuned ?? null, release);
       bus.emit('timbre:note', { weaponId, midi: m, at: t0 + 0.012 * (i + 1), gain: gain * cfg.ornaments.addedGain, bar, degree: addDeg });
     });
   }

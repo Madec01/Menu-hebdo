@@ -238,6 +238,110 @@
    }
   },
   {
+   "tier": 0,
+   "name": "bourdon_8",
+   "instrument": "viola",
+   "gain": 0.24,
+   "events": [
+    {
+     "bar": 0,
+     "beat": 0,
+     "note": "E3",
+     "dur": 16
+    },
+    {
+     "bar": 4,
+     "beat": 0,
+     "note": "D3",
+     "dur": 8
+    },
+    {
+     "bar": 6,
+     "beat": 0,
+     "note": "E3",
+     "dur": 8
+    },
+    {
+     "bar": 8,
+     "beat": 0,
+     "note": "E3",
+     "dur": 8
+    },
+    {
+     "bar": 10,
+     "beat": 0,
+     "note": "G3",
+     "dur": 8
+    },
+    {
+     "bar": 12,
+     "beat": 0,
+     "note": "D3",
+     "dur": 8
+    },
+    {
+     "bar": 14,
+     "beat": 0,
+     "note": "E3",
+     "dur": 8
+    }
+   ]
+  },
+  {
+   "tier": 0,
+   "name": "pouls",
+   "instrument": "frame_drum",
+   "gain": 0.42,
+   "repeatBars": 1,
+   "pattern": {
+    "steps": 4,
+    "hits": [
+     [
+      "low",
+      0,
+      1.0
+     ],
+     [
+      "muted",
+      1,
+      0.6
+     ],
+     [
+      "muted",
+      2,
+      0.75
+     ],
+     [
+      "muted",
+      3,
+      0.6
+     ]
+    ]
+   }
+  },
+  {
+   "tier": 0,
+   "name": "un",
+   "instrument": "slit_drum",
+   "gain": 0.5,
+   "repeatBars": 1,
+   "pattern": {
+    "steps": 4,
+    "hits": [
+     [
+      "low",
+      0,
+      1.0
+     ],
+     [
+      "high",
+      0,
+      0.7
+     ]
+    ]
+   }
+  },
+  {
    "tier": 1,
    "name": "tambour",
    "instrument": "frame_drum",
@@ -253,7 +357,7 @@
      [
       "high",
       2,
-      0.5
+      0.38
      ],
      [
       "high",
@@ -263,12 +367,12 @@
      [
       "low",
       4,
-      0.52
+      0.34
      ],
      [
       "high",
       6,
-      0.6
+      0.45
      ],
      [
       "muted",
@@ -304,7 +408,7 @@
      [
       "hit",
       6,
-      0.5
+      0.38
      ]
     ]
    },
@@ -321,7 +425,7 @@
      [
       "hit",
       2,
-      0.6
+      0.45
      ],
      [
       "shake",
@@ -331,7 +435,7 @@
      [
       "hit",
       6,
-      0.6
+      0.45
      ]
     ]
    },
@@ -710,7 +814,7 @@
    "tier": 3,
    "name": "voix",
    "instrument": "choir",
-   "gain": 0.35,
+   "gain": 0.25,
    "events": [
     {
      "bar": 0,
@@ -844,7 +948,7 @@
    "tier": 3,
    "name": "cloches",
    "instrument": "tubular_bells",
-   "gain": 0.32,
+   "gain": 0.23,
    "events": [
     {
      "bar": 0,
@@ -882,7 +986,7 @@
    "tier": 3,
    "name": "clarines",
    "instrument": "hand_chimes",
-   "gain": 0.25,
+   "gain": 0.18,
    "events": [
     {
      "bar": 7,
@@ -1306,7 +1410,7 @@
     "tier": 0,
     "name": "pouls_B",
     "instrument": "frame_drum",
-    "gain": 0.26,
+    "gain": 0.42,
     "repeatBars": 1,
     "pattern": {
      "steps": 4,
@@ -1319,17 +1423,17 @@
       [
        "muted",
        1,
-       0.55
+       0.6
       ],
       [
        "muted",
        2,
-       0.7
+       0.75
       ],
       [
        "muted",
        3,
-       0.55
+       0.6
       ]
      ]
     }
@@ -1338,7 +1442,7 @@
     "tier": 0,
     "name": "un_B",
     "instrument": "slit_drum",
-    "gain": 0.3,
+    "gain": 0.5,
     "repeatBars": 1,
     "pattern": {
      "steps": 4,
@@ -1347,6 +1451,11 @@
        "low",
        0,
        1.0
+      ],
+      [
+       "high",
+       0,
+       0.7
       ]
      ]
     }
@@ -1368,7 +1477,7 @@
       [
        "high",
        2,
-       0.5
+       0.38
       ],
       [
        "high",
@@ -1378,12 +1487,12 @@
       [
        "low",
        4,
-       0.52
+       0.34
       ],
       [
        "high",
        6,
-       0.6
+       0.45
       ],
       [
        "muted",
@@ -1398,7 +1507,7 @@
       [
        "high",
        10,
-       0.5
+       0.38
       ],
       [
        "high",
@@ -1408,12 +1517,12 @@
       [
        "low",
        12,
-       0.52
+       0.34
       ],
       [
        "high",
        14,
-       0.6
+       0.45
       ],
       [
        "high",

@@ -225,6 +225,56 @@
    ]
   },
   {
+   "tier": 0,
+   "name": "bourdon_8",
+   "instrument": "viola",
+   "gain": 0.22,
+   "events": [
+    {
+     "bar": 0,
+     "beat": 0,
+     "note": "G3",
+     "dur": 16
+    },
+    {
+     "bar": 4,
+     "beat": 0,
+     "note": "F3",
+     "dur": 8
+    },
+    {
+     "bar": 6,
+     "beat": 0,
+     "note": "G3",
+     "dur": 8
+    },
+    {
+     "bar": 8,
+     "beat": 0,
+     "note": "G3",
+     "dur": 8
+    },
+    {
+     "bar": 10,
+     "beat": 0,
+     "note": "A#3",
+     "dur": 8
+    },
+    {
+     "bar": 12,
+     "beat": 0,
+     "note": "F3",
+     "dur": 8
+    },
+    {
+     "bar": 14,
+     "beat": 0,
+     "note": "G3",
+     "dur": 8
+    }
+   ]
+  },
+  {
    "tier": 1,
    "name": "harpe",
    "instrument": "folk_harp",
@@ -637,7 +687,7 @@
    "tier": 3,
    "name": "voix",
    "instrument": "choir",
-   "gain": 0.32,
+   "gain": 0.23,
    "events": [
     {
      "bar": 0,
@@ -801,7 +851,7 @@
    "tier": 3,
    "name": "clarines",
    "instrument": "hand_chimes",
-   "gain": 0.25,
+   "gain": 0.18,
    "events": [
     {
      "bar": 7,

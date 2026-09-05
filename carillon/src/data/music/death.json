@@ -123,6 +123,32 @@
    ]
   },
   {
+   "tier": 0,
+   "name": "bourdon_8",
+   "instrument": "cello",
+   "gain": 0.26,
+   "events": [
+    {
+     "bar": 0,
+     "beat": 0,
+     "note": "D3",
+     "dur": 32
+    },
+    {
+     "bar": 8,
+     "beat": 0,
+     "note": "A#2",
+     "dur": 16
+    },
+    {
+     "bar": 12,
+     "beat": 0,
+     "note": "D3",
+     "dur": 16
+    }
+   ]
+  },
+  {
    "tier": 1,
    "name": "grosse_caisse",
    "instrument": "bass_drum",
@@ -318,7 +344,7 @@
    "tier": 3,
    "name": "voix",
    "instrument": "choir",
-   "gain": 0.43,
+   "gain": 0.31,
    "events": [
     {
      "bar": 0,
@@ -452,7 +478,7 @@
    "tier": 3,
    "name": "cloche",
    "instrument": "tubular_bells",
-   "gain": 0.35,
+   "gain": 0.25,
    "events": [
     {
      "bar": 0,

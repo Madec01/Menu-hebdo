@@ -112,6 +112,15 @@ try {
   check('run:tier 3 → 96 + 2·3 = 102 bpm à la mesure suivante', bpmTier === 102, `bpm=${bpmTier}`);
   await page.evaluate(`${T}.bus.emit('run:tier', { tier: 0 })`);
 
+  // cri du Bourdon Fêlé : la grille recule d'une croche pendant 8 temps puis revient en phase ; indices monotones
+  for (let i = 0; i < 80 && (await page.evaluate(`${T}.conductor.bpm()`)) !== 96; i++) await sleep(50);   // le retour à 96 (palier 0) est appliqué à la mesure suivante
+  const shiftRes = await page.evaluate(`(async () => { const c = ${T}.conductor; const bpm0 = c.bpm(); const seen = []; const beats = []; const t0 = ${T}.audio.now();
+    ${T}.bus.emit('boss:phase', { bossId: 'bourdon_fele', phase: 'cri' });
+    for (let i = 0; i < 160; i++) { await new Promise((r) => setTimeout(r, 50)); seen.push(c.gridShift()); beats.push(c.beatIndex()); }
+    const mono = beats.every((b, i) => i === 0 || (b >= beats[i - 1] && b - beats[i - 1] <= 1));
+    return { shifted: seen.some((x) => x === 0.5), back: seen[seen.length - 1] === 0, mono, bpm: c.bpm(), bpm0, beats: beats[beats.length - 1] - beats[0], voices: ${T}.audio.voiceCount(), secs: ${T}.audio.now() - t0 }; })()`);
+  check('boss:phase cri → grille décalée d\'une croche puis retour en phase, beatIndex monotone, tempo intact', shiftRes.shifted && shiftRes.back && shiftRes.mono && shiftRes.bpm === shiftRes.bpm0 && shiftRes.voices > 0, JSON.stringify(shiftRes));
+
   // jingles : rejoués par le sampler sur l'accord courant (plus de fichier en majeur)
   const jg = await page.evaluate(`(() => { const s = ${T}.sfx; const before = ${T}.audio.voiceCount(); s.play('resonance_3'); s.play('level_up'); s.play('pickup'); s.play('moment_start'); return [s.isJingle('resonance_3'), s.isJingle('xp_pickup'), s.has('pickup'), s.has('moment_start'), s.isJingle('hit_light')]; })()`);
   check('jingles : resonance_3 / xp_pickup rendus par le sampler, pickup et moment_start connus, hit_light reste un fichier', jg[0] && jg[1] && jg[2] && jg[3] && !jg[4], JSON.stringify(jg));

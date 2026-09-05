@@ -101,8 +101,9 @@ export function createInstrument(def) {
       env.gain.linearRampToValueAtTime(0, t + rel);
       src.stop(t + rel + 0.005);
     }
-    if (duration !== null) stop(at + duration);
-    else if (!looped) src.stop(at + buf.duration / rate + 0.01);
+    const natural = at + buf.duration / rate + 0.01;
+    if (duration !== null && (looped || at + duration < natural)) stop(at + duration);
+    else if (!looped) src.stop(natural);
     /** Désaccord d'une note vivante : `cents` à `t`, retour à 0 en `backSec`. */
     function detuneTo(cents, t = ac.currentTime, backSec = 1) {
       if (!src.detune) return;

@@ -261,6 +261,56 @@
    ]
   },
   {
+   "tier": 0,
+   "name": "bourdon_8",
+   "instrument": "cello",
+   "gain": 0.26,
+   "events": [
+    {
+     "bar": 0,
+     "beat": 0,
+     "note": "D3",
+     "dur": 16
+    },
+    {
+     "bar": 4,
+     "beat": 0,
+     "note": "G3",
+     "dur": 8
+    },
+    {
+     "bar": 6,
+     "beat": 0,
+     "note": "D3",
+     "dur": 8
+    },
+    {
+     "bar": 8,
+     "beat": 0,
+     "note": "D3",
+     "dur": 8
+    },
+    {
+     "bar": 10,
+     "beat": 0,
+     "note": "C3",
+     "dur": 8
+    },
+    {
+     "bar": 12,
+     "beat": 0,
+     "note": "G3",
+     "dur": 8
+    },
+    {
+     "bar": 14,
+     "beat": 0,
+     "note": "D3",
+     "dur": 8
+    }
+   ]
+  },
+  {
    "tier": 1,
    "name": "tambour",
    "instrument": "frame_drum",
@@ -281,12 +331,12 @@
      [
       "low",
       4,
-      0.52
+      0.34
      ],
      [
       "high",
       6,
-      0.6
+      0.45
      ]
     ]
    },
@@ -307,7 +357,7 @@
      [
       "hit",
       2,
-      0.7
+      0.52
      ],
      [
       "shake",
@@ -317,7 +367,7 @@
      [
       "hit",
       6,
-      0.7
+      0.52
      ]
     ]
    },
@@ -339,7 +389,7 @@
      [
       "hit",
       4,
-      0.4
+      0.3
      ]
     ]
    },
@@ -706,7 +756,7 @@
    "tier": 3,
    "name": "voix",
    "instrument": "choir",
-   "gain": 0.43,
+   "gain": 0.31,
    "events": [
     {
      "bar": 0,
@@ -870,7 +920,7 @@
    "tier": 3,
    "name": "cloches",
    "instrument": "tubular_bells",
-   "gain": 0.5,
+   "gain": 0.35,
    "events": [
     {
      "bar": 0,
@@ -968,7 +1018,7 @@
    "tier": 3,
    "name": "clarines",
    "instrument": "hand_chimes",
-   "gain": 0.28,
+   "gain": 0.2,
    "pattern": {
     "steps": 8,
     "hits": [
