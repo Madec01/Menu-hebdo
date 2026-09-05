@@ -14,7 +14,7 @@
 import { bus } from '../core/events.js';
 import { schedule, isRunning, beatDuration, beatsPerBar, startAt } from '../audio/conductor.js';
 import { now } from '../audio/audio.js';
-import { duck } from '../audio/audio.js';
+
 import { play as playSfx } from '../audio/sfx.js';
 import { playTimbre, loadTimbres } from '../audio/timbres.js';
 import { tier as resonanceTier } from './resonance.js';
@@ -142,7 +142,7 @@ function fire(w, p, world, at, b, echo) {
   w.fireCount++; w.lastAt = at;
   firePayload.weaponId = w.id; firePayload.x = p.x; firePayload.y = p.y; firePayload.count = w.stats.count; firePayload.big = big;
   bus.emit('weapon:fire', firePayload);
-  if (big) duck();
+  // (ducking : géré par le bus audio sur les crits et fusions, plus par tir)
   // Écho : une frappe instantanée peut être rejouée une croche plus tard (dégâts réduits).
   if (!echo && INSTANT[w.def.behavior] && w.echoAt <= 0) {
     const l = passiveLevel(p, 'echo');

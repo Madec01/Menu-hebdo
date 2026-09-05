@@ -147,38 +147,6 @@
    ]
   },
   {
-   "tier": 0,
-   "name": "bourdon_8",
-   "instrument": "cello",
-   "gain": 0.26,
-   "events": [
-    {
-     "bar": 0,
-     "beat": 0,
-     "note": "A2",
-     "dur": 32
-    },
-    {
-     "bar": 8,
-     "beat": 0,
-     "note": "F3",
-     "dur": 8
-    },
-    {
-     "bar": 10,
-     "beat": 0,
-     "note": "G3",
-     "dur": 8
-    },
-    {
-     "bar": 12,
-     "beat": 0,
-     "note": "A2",
-     "dur": 16
-    }
-   ]
-  },
-  {
    "tier": 1,
    "name": "harpe",
    "instrument": "folk_harp",
@@ -267,181 +235,211 @@
      "bar": 2,
      "beat": 0.0,
      "note": "E5",
-     "dur": 2.0
+     "dur": 2.0,
+     "gain": 1.15
     },
     {
      "bar": 2,
      "beat": 2.0,
      "note": "G5",
-     "dur": 1.0
+     "dur": 1.0,
+     "gain": 0.85
     },
     {
      "bar": 2,
      "beat": 3.0,
      "note": "A5",
-     "dur": 1.0
+     "dur": 1.0,
+     "gain": 0.85
     },
     {
      "bar": 3,
      "beat": 0.0,
      "note": "C6",
-     "dur": 2.0
+     "dur": 2.0,
+     "gain": 1.15
     },
     {
      "bar": 3,
      "beat": 2.0,
      "note": "B5",
-     "dur": 1.0
+     "dur": 1.0,
+     "gain": 0.85
     },
     {
      "bar": 3,
      "beat": 3.0,
      "note": "A5",
-     "dur": 1.0
+     "dur": 1.0,
+     "gain": 0.85
     },
     {
      "bar": 4,
      "beat": 0.0,
      "note": "G5",
-     "dur": 2.0
+     "dur": 2.0,
+     "gain": 1.15
     },
     {
      "bar": 4,
      "beat": 2.0,
      "note": "E5",
-     "dur": 1.0
+     "dur": 1.0,
+     "gain": 0.85
     },
     {
      "bar": 4,
      "beat": 3.0,
      "note": "D5",
-     "dur": 1.0
+     "dur": 1.0,
+     "gain": 0.85
     },
     {
      "bar": 5,
      "beat": 0.0,
      "note": "E5",
-     "dur": 4.0
+     "dur": 4.0,
+     "gain": 1.15
     },
     {
      "bar": 6,
      "beat": 0.0,
      "note": "A5",
-     "dur": 1.5
+     "dur": 1.5,
+     "gain": 1.15
     },
     {
      "bar": 6,
      "beat": 1.5,
      "note": "G5",
-     "dur": 0.5
+     "dur": 0.5,
+     "gain": 0.85
     },
     {
      "bar": 6,
      "beat": 2.0,
      "note": "E5",
-     "dur": 2.0
+     "dur": 2.0,
+     "gain": 0.85
     },
     {
      "bar": 7,
      "beat": 0.0,
      "note": "D5",
-     "dur": 1.0
+     "dur": 1.0,
+     "gain": 1.15
     },
     {
      "bar": 7,
      "beat": 1.0,
      "note": "C5",
-     "dur": 1.0
+     "dur": 1.0,
+     "gain": 0.85
     },
     {
      "bar": 7,
      "beat": 2.0,
      "note": "D5",
-     "dur": 2.0
+     "dur": 2.0,
+     "gain": 0.85
     },
     {
      "bar": 8,
      "beat": 0.0,
      "note": "F5",
-     "dur": 2.0
+     "dur": 2.0,
+     "gain": 1.15
     },
     {
      "bar": 8,
      "beat": 2.0,
      "note": "E5",
-     "dur": 1.0
+     "dur": 1.0,
+     "gain": 0.85
     },
     {
      "bar": 8,
      "beat": 3.0,
      "note": "D5",
-     "dur": 1.0
+     "dur": 1.0,
+     "gain": 0.85
     },
     {
      "bar": 9,
      "beat": 0.0,
      "note": "E5",
-     "dur": 4.0
+     "dur": 4.0,
+     "gain": 1.15
     },
     {
      "bar": 10,
      "beat": 0.0,
      "note": "G5",
-     "dur": 2.0
+     "dur": 2.0,
+     "gain": 1.15
     },
     {
      "bar": 10,
      "beat": 2.0,
      "note": "F5",
-     "dur": 1.0
+     "dur": 1.0,
+     "gain": 0.85
     },
     {
      "bar": 10,
      "beat": 3.0,
      "note": "E5",
-     "dur": 1.0
+     "dur": 1.0,
+     "gain": 0.85
     },
     {
      "bar": 11,
      "beat": 0.0,
      "note": "D5",
-     "dur": 2.0
+     "dur": 2.0,
+     "gain": 1.15
     },
     {
      "bar": 11,
      "beat": 2.0,
      "note": "C5",
-     "dur": 1.0
+     "dur": 1.0,
+     "gain": 0.85
     },
     {
      "bar": 11,
      "beat": 3.0,
      "note": "B4",
-     "dur": 1.0
+     "dur": 1.0,
+     "gain": 0.85
     },
     {
      "bar": 12,
      "beat": 0.0,
      "note": "C5",
-     "dur": 2.0
+     "dur": 2.0,
+     "gain": 1.15
     },
     {
      "bar": 12,
      "beat": 2.0,
      "note": "D5",
-     "dur": 1.0
+     "dur": 1.0,
+     "gain": 0.85
     },
     {
      "bar": 12,
      "beat": 3.0,
      "note": "E5",
-     "dur": 1.0
+     "dur": 1.0,
+     "gain": 0.85
     },
     {
      "bar": 13,
      "beat": 0.0,
      "note": "A5",
-     "dur": 4.0
+     "dur": 4.0,
+     "gain": 1.15
     }
    ],
    "intensityGain": [
@@ -453,103 +451,119 @@
    "tier": 3,
    "name": "voix",
    "instrument": "choir",
-   "gain": 0.25,
+   "gain": 0.35,
    "events": [
     {
      "bar": 0,
      "beat": 0,
      "note": "A2",
-     "dur": 32
+     "dur": 32,
+     "gain": 1.15
     },
     {
      "bar": 0,
      "beat": 0,
      "note": "E3",
-     "dur": 32
+     "dur": 32,
+     "gain": 1.15
     },
     {
      "bar": 0,
      "beat": 0,
      "note": "A3",
-     "dur": 32
+     "dur": 32,
+     "gain": 1.15
     },
     {
      "bar": 0,
      "beat": 0,
      "note": "C4",
-     "dur": 32
+     "dur": 32,
+     "gain": 1.15
     },
     {
      "bar": 8,
      "beat": 0,
      "note": "A2",
-     "dur": 8
+     "dur": 8,
+     "gain": 1.15
     },
     {
      "bar": 8,
      "beat": 0,
      "note": "F3",
-     "dur": 8
+     "dur": 8,
+     "gain": 1.15
     },
     {
      "bar": 8,
      "beat": 0,
      "note": "C4",
-     "dur": 8
+     "dur": 8,
+     "gain": 1.15
     },
     {
      "bar": 8,
      "beat": 0,
      "note": "A4",
-     "dur": 8
+     "dur": 8,
+     "gain": 1.15
     },
     {
      "bar": 10,
      "beat": 0,
      "note": "G2",
-     "dur": 8
+     "dur": 8,
+     "gain": 1.15
     },
     {
      "bar": 10,
      "beat": 0,
      "note": "G3",
-     "dur": 8
+     "dur": 8,
+     "gain": 1.15
     },
     {
      "bar": 10,
      "beat": 0,
      "note": "B3",
-     "dur": 8
+     "dur": 8,
+     "gain": 1.15
     },
     {
      "bar": 10,
      "beat": 0,
      "note": "D4",
-     "dur": 8
+     "dur": 8,
+     "gain": 1.15
     },
     {
      "bar": 12,
      "beat": 0,
      "note": "A2",
-     "dur": 16
+     "dur": 16,
+     "gain": 1.15
     },
     {
      "bar": 12,
      "beat": 0,
      "note": "E3",
-     "dur": 16
+     "dur": 16,
+     "gain": 1.15
     },
     {
      "bar": 12,
      "beat": 0,
      "note": "A3",
-     "dur": 16
+     "dur": 16,
+     "gain": 1.15
     },
     {
      "bar": 12,
      "beat": 0,
      "note": "C4",
-     "dur": 16
+     "dur": 16,
+     "gain": 1.15
     }
    ]
   },
@@ -557,7 +571,7 @@
    "tier": 3,
    "name": "clarines",
    "instrument": "hand_chimes",
-   "gain": 0.18,
+   "gain": 0.25,
    "events": [
     {
      "bar": 7,

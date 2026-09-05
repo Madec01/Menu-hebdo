@@ -6,12 +6,15 @@
 // Jingles (resonance_1..4, level_up, achievement, fusion, lore_unlock, victory_bell), levée `moment_start`
 // et grelot `pickup` / `xp_pickup` : rejoués par le sampler sur l'accord courant (jingles.js) ; les fichiers
 // du manifeste restent le repli hors partition ou avant le chargement des instruments.
-import { ctx, now, busNode, loadBuffer, getBuffer, assetUrl, acquireVoice, releaseVoice } from './audio.js';
+import { ctx, now, busNode, loadBuffer, getBuffer, assetUrl, acquireVoice, releaseVoice, voiceCount } from './audio.js';
 import { isRunning, beatIndex, beatDuration } from './conductor.js';
 import * as jingles from './jingles.js';
 
 const MAX_SAME_PER_100MS = 6;
-const RARE_PER_BEAT = { hit_light: 1, hit_heavy: 1, hit_crit: 1, enemy_die: 2, enemy_die_big: 2 };
+const RARE_PER_BEAT = { hit_light: 1, hit_heavy: 1, hit_crit: 1, enemy_die: 2, enemy_die_big: 2, silence_burst: 2, silence_cry: 2, resonance_drop: 1, boss_hit: 1 };   // les anneaux du boss n'éclatent pas 16 fois par seconde
+const SOFT_CAP = 40;         // budget de voix en combat : au-delà, impacts et grelots d'Échos (déjà portés par les Timbres) se taisent d'abord
+const SHEDDABLE = { hit_light: 1, hit_heavy: 1, hit_crit: 1, enemy_die: 1, enemy_die_big: 1, xp_pickup: 1, pickup: 1, player_step: 1, boss_hit: 1 };
+const counts = {};           // id → lectures effectives (sondes / tests : stats())
 const rareSeen = new Map();  // id[:source] → { beat, n }
 const HEAR_FULL = 64;        // px : pleine puissance en deçà
 const HEAR_MAX = 520;        // px : silence au-delà
@@ -76,6 +79,8 @@ export function play(id, { volume = 1, pitchVar = null, x = null, y = null, bus 
   const def = defs[id];
   const ac = ctx();
   if (!def || !ac || !rareAllowed(id, source) || !allowed(id)) return;
+  if (SHEDDABLE[id] && voiceCount() >= SOFT_CAP) return;   // la musique et les voix passent avant les coups
+  counts[id] = (counts[id] || 0) + 1;
   let atten = 1;
   let pan = 0;
   if (x !== null && y !== null) {
@@ -151,6 +156,8 @@ export function stopAmbience(id, fadeSec = 2) {
 
 export function stopAllAmbiences(fadeSec = 1) { for (const id of Object.keys(ambiences)) stopAmbience(id, fadeSec); }
 export function activeAmbiences() { return Object.keys(ambiences); }
+/** Lectures effectives par identifiant depuis le départ (sondes / tests). */
+export function stats() { return { ...counts }; }
 /** L'identifiant existe dans le manifeste (fichier de repli) ou comme jingle du sampler. */
 export function has(id) { return Boolean(defs[id]) || (jingles.handles(id) && jingles.ready()); }
 /** L'identifiant est actuellement rendu par le sampler sur l'accord courant (et non par son fichier). */

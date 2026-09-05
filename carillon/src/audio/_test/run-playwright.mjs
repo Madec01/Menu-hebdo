@@ -71,8 +71,10 @@ try {
   await sleep(400);
   const g4 = await page.evaluate(`${T}.music.layerTargets()`);
   const v4 = await page.evaluate(`${T}.music.layerGains()`);
+  const info = await page.evaluate(`${T}.music.layerInfo()`);
   check('cran 0 : seules les couches tier 0 sont ouvertes', g1.filter((g) => g > 0.01).length < g1.length && g1[0] > 0.01, `cibles=${g1.map((g) => g.toFixed(2))}`);
-  check('cran 3 : toutes les couches ouvertes (crossfade 200 ms)', g4.every((g) => g > 0.01) && Math.abs(v4[0] - g4[0]) < 0.02, `cibles=${g4.map((g) => g.toFixed(2))} bourdon=${v4[0].toFixed(2)}`);
+  // les couches `minIntensity` (mains dans les assauts) restent fermées à l'intensité de base : elles sont exclues
+  check('cran 3 : toutes les couches ouvertes (crossfade 200 ms)', g4.every((g, i) => g > 0.01 || info[i].minIntensity !== null) && Math.abs(v4[0] - g4[0]) < 0.02, `cibles=${g4.map((g) => g.toFixed(2))} bourdon=${v4[0].toFixed(2)}`);
   await page.evaluate(`${T}.bus.emit('resonance:change', { tier: 1, mult: 1.4, value: 0.4, direction: 1 })`);
   await sleep(350);
   const g2 = await page.evaluate(`${T}.music.layerTargets()`);

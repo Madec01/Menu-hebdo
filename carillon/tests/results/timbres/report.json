@@ -6,22 +6,27 @@
  "phases": {
   "battant": {
    "label": "battant",
-   "t0": 4.2811791383219955,
-   "t1": 27.74204081632653,
+   "t0": 4.3014965986394555,
+   "t1": 27.78267573696145,
    "screen": "run",
    "acState": "running",
    "gameActive": true,
-   "elapsedAudio": 23.460861678004534,
-   "bpm": 96,
-   "beatDur": 0.625,
+   "elapsedAudio": 23.481179138321995,
+   "bpm": 98,
+   "beatDur": 0.6122448979591837,
    "barSec": 2.857142857142857,
-   "maxVoices": 42,
+   "maxVoices": 27,
    "voices": {
     "sampleRate": 44100,
     "seconds": 23.45997732426304,
     "samples": 1034585
    },
    "master": {
+    "sampleRate": 44100,
+    "seconds": 23.45997732426304,
+    "samples": 1034585
+   },
+   "music": {
     "sampleRate": 44100,
     "seconds": 23.45997732426304,
     "samples": 1034585
@@ -35,25 +40,30 @@
   },
   "quatre": {
    "label": "quatre",
-   "t0": 29.280362811791385,
-   "t1": 49.9112925170068,
+   "t0": 31.24244897959184,
+   "t1": 51.45251700680272,
    "screen": "run",
    "acState": "running",
    "gameActive": true,
-   "elapsedAudio": 20.630929705215415,
-   "bpm": 96,
-   "beatDur": 0.625,
-   "barSec": 2.5,
-   "maxVoices": 40,
+   "elapsedAudio": 20.210068027210884,
+   "bpm": 100,
+   "beatDur": 0.6,
+   "barSec": 2.4489795918367347,
+   "maxVoices": 48,
    "voices": {
     "sampleRate": 44100,
-    "seconds": 20.579977324263037,
-    "samples": 907577
+    "seconds": 20.15997732426304,
+    "samples": 889055
    },
    "master": {
     "sampleRate": 44100,
-    "seconds": 20.579977324263037,
-    "samples": 907577
+    "seconds": 20.15997732426304,
+    "samples": 889055
+   },
+   "music": {
+    "sampleRate": 44100,
+    "seconds": 20.15997732426304,
+    "samples": 889055
    },
    "roster": [
     "bourdon",
@@ -70,25 +80,30 @@
   },
   "six": {
    "label": "six",
-   "t0": 51.78049886621315,
-   "t1": 62.400725623582765,
+   "t0": 53.09242630385488,
+   "t1": 63.300498866213154,
    "screen": "run",
    "acState": "running",
    "gameActive": true,
-   "elapsedAudio": 10.620226757369615,
-   "bpm": 96,
-   "beatDur": 0.625,
-   "barSec": 2.5,
-   "maxVoices": 31,
+   "elapsedAudio": 10.208072562358275,
+   "bpm": 100,
+   "beatDur": 0.6,
+   "barSec": 2.4,
+   "maxVoices": 48,
    "voices": {
     "sampleRate": 44100,
-    "seconds": 10.619977324263038,
-    "samples": 468341
+    "seconds": 10.199977324263038,
+    "samples": 449819
    },
    "master": {
     "sampleRate": 44100,
-    "seconds": 10.619977324263038,
-    "samples": 468341
+    "seconds": 10.199977324263038,
+    "samples": 449819
+   },
+   "music": {
+    "sampleRate": 44100,
+    "seconds": 10.139977324263038,
+    "samples": 447173
    },
    "roster": [
     "bourdon",

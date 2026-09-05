@@ -117,10 +117,11 @@ def analyze(phase, strict_pitch):
     bad = [name_of(x) for x in logged if x % 12 not in SCALE_PC]
     check(f'{phase} : aucune note journalisée hors gamme', not bad, ' '.join(bad))
     bars = {}
-    for n in notes: bars.setdefault(n['bar'], []).append((n['weaponId'], int(round(n['midi']))))
-    seq = [tuple(sorted(bars[b])) for b in sorted(bars)]
+    for n in notes: bars.setdefault(n['bar'], []).append((round(n['t'], 3), n['weaponId'], int(round(n['midi']))))
+    # séquence ORDONNÉE dans la mesure (au cran 0 le vocabulaire se réduit à fondamentale / quinte : c'est l'ordre qui varie)
+    seq = [tuple((w, m) for _, w, m in sorted(bars[b])) for b in sorted(bars)]
     same = sum(1 for i in range(1, len(seq)) if seq[i] == seq[i - 1])
-    print('  par mesure :', ' | '.join(f"m{b}: " + ' '.join(name_of(x) for _, x in sorted(bars[b])) for b in sorted(bars)))
+    print('  par mesure :', ' | '.join(f"m{b}: " + ' '.join(name_of(x) for _, _, x in sorted(bars[b])) for b in sorted(bars)))
     check(f'{phase} : deux mesures consécutives jamais identiques', same == 0, f'{same} répétition(s)')
     # plafond de voix tonales par point de grille
     slots = {}

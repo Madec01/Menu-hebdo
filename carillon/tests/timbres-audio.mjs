@@ -85,7 +85,7 @@ async function main() {
       const R = await import('./src/game/resonance.js');
       const cur = R.tier(); if (tier > cur) R.bump(tier - cur);
       if (tier > 0 && !window.__hold) window.__hold = setInterval(() => { try { R.onRhythmInput('parfait', true); } catch (e) {} }, 1000);
-    }, { ws, tier });
+    }, { ws: weapons, tier });
     await page.waitForTimeout(tier > 0 ? 600 : 0);
     const res = await page.evaluate(async ({ bars, label }) => {
       const { ac, A, T } = window.__rec;

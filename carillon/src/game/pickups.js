@@ -106,7 +106,7 @@ function collect(world, o, p) {
   }
   itemPayload.kind = o.kind;
   bus.emit('pickup:item', itemPayload);
-  playSfx('bell_tier', { volume: 0.7 });
+  playSfx('pickup', { volume: 0.7 });
   emitParticles('bell', o.x, o.y);
 }
 

@@ -118,7 +118,11 @@ function hash(n) {
   return x >>> 0;
 }
 
-function variantFor(v, bar, seed) {
+/** Clé du motif tel qu'il sonnera au cran `tier` (registre + harmonie du cran) : deux motifs différents
+ *  peuvent se réduire au même dessin au cran 0 (fondamentale / quinte seulement). */
+function patternKey(def, pattern, tier) { return pattern.map((d) => degreeFor(def, d, tier)).join(','); }
+
+function variantFor(v, bar, seed, tier = 0) {
   const n = v.def.patterns.length;
   if (n <= 1) return 0;
   const st = v.sel;
@@ -126,7 +130,11 @@ function variantFor(v, bar, seed) {
   while (st.bar < bar) {
     st.bar++;
     const h = hash(st.bar * 131 + seed);
-    st.idx = st.idx < 0 ? h % n : (st.idx + 1 + (h % (n - 1))) % n;   // pas ∈ [1, n-1] : toujours différent
+    if (st.idx < 0) { st.idx = h % n; continue; }
+    const prevKey = patternKey(v.def, v.def.patterns[st.idx], tier);
+    let next = (st.idx + 1 + (h % (n - 1))) % n;               // pas ∈ [1, n-1] : toujours un autre motif…
+    for (let k = 0; k < n && patternKey(v.def, v.def.patterns[next], tier) === prevKey; k++) next = (next + 1) % n;   // …qui sonne différemment
+    st.idx = next;
   }
   return st.idx;
 }
@@ -203,7 +211,7 @@ export function playTimbre(weaponId, { at, x = null, y = null, rhythm = 1, tier 
   const canon = cfg.canon ? Math.min(rank, cfg.canon.maxRank ?? 3) * (cfg.canon.stepBeats ?? 0.25) * bd : 0;
   const t0 = at + canon;
 
-  const pattern = def.patterns[variantFor(v, bar, seedOf(weaponId))];
+  const pattern = def.patterns[variantFor(v, bar, seedOf(weaponId), tier)];
   const degree = degreeFor(def, pattern[slot % pattern.length], tier);
   const octave = def.octave ?? 5;
   const tierGain = Math.pow(10, ((cfg.tierGainDb ?? 1) * Math.max(0, tier)) / 20);
@@ -228,8 +236,8 @@ export function playTimbre(weaponId, { at, x = null, y = null, rhythm = 1, tier 
     playNote(v.inst, m, t0 + i * strum, gain * (i === 0 ? 1 : 0.8), dur, dest, tunedKey, def.tuned ?? null, release);
     bus.emit('timbre:note', { weaponId, midi: m, at: t0 + i * strum, gain, bar, degree: d });
   });
-  // cran 3 : tierce ET quinte ajoutées sur les temps accentués (l'accord se remplit)
-  if (tonal && tier >= 3 && accent >= 0.8 && !def.chord) {
+  // cran 3 : tierce ET quinte ajoutées sur le « 1 » (l'accord se remplit ; un temps, budget de voix)
+  if (tonal && tier >= 3 && accent >= 1 && !def.chord) {
     const added = (cfg.harmony && cfg.harmony.tier3Added) || [2, 4];
     const addDur = dur === null ? 1 : Math.min(dur, 1);     // notes ajoutées : un temps (budget de voix)
     added.forEach((iv, i) => {

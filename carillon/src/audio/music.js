@@ -18,7 +18,7 @@ const XFADE_IN = 0.2;                    // fondu d'ouverture d'une couche (cont
 const XFADE_OUT = 0.7;                   // fondu de fermeture : un chœur qui s'éteint ne doit pas « couper »
 const AUDIBLE = 0.01;                    // gain cible au-delà duquel une couche est planifiée
 const DETUNE_BACK_SEC = 1;               // retour à l'accord après un désaccord
-const HIT_MAX_SEC = { percussion: 1.6, pitched: 2.4 };   // queue max d'une frappe de motif (budget de voix : ≤ 40 en combat)
+const HIT_MAX_SEC = { percussion: 1.2, pitched: 2.0 };   // queue max d'une frappe de motif (budget de voix : ≤ 40 en combat)
 const HIT_RELEASE_SEC = 0.35;
 const tracks = new Map();                // trackId → { score, compiled, instruments }
 let manifestPromise = null;
@@ -237,7 +237,7 @@ export function layers() { return layersWanted; }
 export function layerGains() { return active ? active.gains.map((g) => g.gain.value) : []; }
 export function layerTargets() { return active ? active.targets.slice() : []; }
 /** Noms des couches de la piste active, avec leur section (tests). */
-export function layerInfo() { return active ? active.track.compiled.layers.map((l) => ({ name: l.name, tier: l.tier, section: l.section })) : []; }
+export function layerInfo() { return active ? active.track.compiled.layers.map((l) => ({ name: l.name, tier: l.tier, section: l.section, minIntensity: l.minIntensity ?? null })) : []; }
 
 /** Variation continue 0..1 : gains `intensityGain` des couches et couches `minIntensity` (ornements). */
 export function setIntensity(v) {

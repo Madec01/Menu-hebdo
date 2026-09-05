@@ -189,9 +189,9 @@ const PATTERNS = {
   meute: { sfx: 'silence_cry', start: meuteStart },
   ligne: { sfx: 'silence_cry', start: ligneStart },
   pluie_de_suie: { sfx: 'silence_cry', tick: pluieTick },
-  procession: { sfx: 'bell_tier', tick: processionTick },
-  accalmie: { sfx: 'bell_tier', start: accalmieStart, end: accalmieEnd },
-  cierge_errant: { sfx: 'bell_tier', start: ciergeStart, tick: ciergeTick, end: ciergeEnd },
+  procession: { sfx: 'moment_start', tick: processionTick },
+  accalmie: { sfx: 'moment_start', start: accalmieStart, end: accalmieEnd },
+  cierge_errant: { sfx: 'moment_start', start: ciergeStart, tick: ciergeTick, end: ciergeEnd },
   veuves_en_cercle: { sfx: 'silence_cry', start: veuvesStart },
 };
 /** Identifiants des motifs connus (tests). */
