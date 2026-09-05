@@ -303,6 +303,16 @@ Identifiants de bruitages obligatoires (contrat entre B et D/E) :
 
 Identifiants de pistes obligatoires : `menu`, `hub`, `cendrelune`, `tourbes`, `val_des_cordes`, `nef_noyee`, `beffroi_mere`, `boss`, `victory`, `death`.
 
+### 8 bis. Contrats ajoutés après les audits (vague « approfondissement »)
+
+- `conductor.setInputLatencyMs(ms)` / `inputLatencyMs()` : décalage soustrait à `inputAt` dans `judge()` (calibration dans les options, −150…+150 ms). `judge()` renvoie aussi `early: boolean` (en avance) pour le retour « avance / retard ».
+- Résonance (game/resonance.js) : 4 crans ; le cran 3 (×2.5) ne se **tient** qu'avec des frappes « parfait » : un « bon » au cran 3 n'ajoute rien, un « raté » fait perdre un cran immédiatement (avant : 3 ratés). `resonance:change` inchangé ; nouvel événement `resonance:streak {count}` (Parfaits consécutifs).
+- Parade (player/collision) : recharge d'un temps (`balance.player.parryCooldownBeats` = 1) ; une parade qui ne pare rien (ni contact ni projectile) est une frappe rythmique **sans gain** ; une parade réussie donne le gain normal + `player:parry {success:true}`.
+- Musique (audio/music.js) écoute : `run:start {parishId}` → joue l'ambiance de la paroisse (`parishes.json.ambience`, id de `manifest.samples/ambiences`) ; `run:tier {tier}` → `setIntensity` par palier et `conductor.setBpm(base + 2·tier)` appliqué à la mesure suivante ; `run:fissure {phase:'start'}` → pont (couche « pont » de la partition, 4 mesures) ; `run:boss {phase:'intro'}` → levée de 2 mesures puis piste `boss` ; `run:moment {id:'accalmie'}` → intensité basse. `audio.js` : limiteur doux sur le master (`DynamicsCompressorNode`, seuil −6 dB, ratio 12, c'est un traitement, pas une source), coupe-bas 35 Hz, ducking uniquement sur `enemy:hit {crit}` et `weapon:fusion`.
+- Bruitages : `bell_minute` n'est joué que par `bell-hour.js` (le spawner n'appelle plus de son) ; `bell_tier` réservé au palier ; `moment_start` (levée courte) et `pickup` (grelot bref) sont de nouveaux identifiants à fournir par l'audio.
+- Jingles (`resonance_1..4`, `level_up`, `achievement`, `fusion`) : joués par le sampler sur l'accord courant (`music.currentChord()`), plus de fichiers en majeur fixe.
+- Événements ajoutés : `resonance:streak`, `enemy:desaccord {x, y, depth}` (ennemi qui fausse la musique : `music.setDetune(cents)` local), `boss:phase {bossId, phase}` (bannière), `player:hit` porte désormais `dirX, dirY`.
+
 ## 9. Manifestes d'assets
 
 ### 9.1 `assets/manifest.json` (visuel, agent A)
