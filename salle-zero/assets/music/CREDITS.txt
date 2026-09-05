@@ -1,0 +1,14 @@
+Musiques : Kevin MacLeod (incompetech.com) — Licence Creative Commons Attribution 4.0 (CC BY 4.0)
+https://creativecommons.org/licenses/by/4.0/
+
+Crédit à afficher dans le jeu (formulation demandée par Incompetech), une ligne par piste :
+"Basement Floor" Kevin MacLeod (incompetech.com) Licensed under Creative Commons: By Attribution 4.0 License http://creativecommons.org/licenses/by/4.0/
+"Latin Industries" Kevin MacLeod (incompetech.com) Licensed under Creative Commons: By Attribution 4.0 License http://creativecommons.org/licenses/by/4.0/
+"In a Heartbeat" Kevin MacLeod (incompetech.com) Licensed under Creative Commons: By Attribution 4.0 License http://creativecommons.org/licenses/by/4.0/
+"Ouroboros" Kevin MacLeod (incompetech.com) Licensed under Creative Commons: By Attribution 4.0 License http://creativecommons.org/licenses/by/4.0/
+
+Fichiers :
+hub_basement_floor.mp3      -> Basement Floor   (1:44, 192 kb/s) : hub / installation
+biome1_latin_industries.mp3 -> Latin Industries (3:20, 128 kb/s) : biome 1
+boss_in_a_heartbeat.mp3     -> In a Heartbeat   (3:37, 128 kb/s) : boss
+alt_ouroboros.mp3           -> Ouroboros        (2:41, 128 kb/s) : alternative biome 1 / mini-boss

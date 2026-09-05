@@ -1,0 +1,5 @@
+0x72 Dungeon Tileset II (v1.4 et v1.7)
+Auteur : 0x72 (Robert Norenberg) — https://0x72.itch.io/dungeontileset-ii
+Licence : CC0 1.0 Universal (domaine public) — https://creativecommons.org/publicdomain/zero/1.0/
+Aucune attribution obligatoire ; crédit recommandé : "Dungeon Tileset II by 0x72".
+Fichiers récupérés via des dépôts GitHub publics rehébergeant le pack (voir ASSETS.md).

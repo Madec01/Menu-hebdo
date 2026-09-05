@@ -1,0 +1,4 @@
+Game Icons — Kenney (www.kenney.nl) — https://kenney.nl/assets/game-icons
+Licence : Creative Commons Zero (CC0) — http://creativecommons.org/publicdomain/zero/1.0/
+(Le License.txt d'origine n'était pas dans le dépôt miroir ; texte reconstitué d'après la page Kenney et les autres packs.)
+Fichiers : PNG/White/1x/*.png (50×50).
