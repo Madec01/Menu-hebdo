@@ -20,6 +20,7 @@ import { beatDuration } from '../audio/conductor.js';
 import { balance } from './data.js';
 import { spawnEnemy } from './enemies.js';
 import { spawnGiantEcho } from './pickups.js';
+import { holdDecay } from './resonance.js';
 
 const payload = { id: '', phase: 'start' };
 const pos = { x: 0, y: 0 };
@@ -142,10 +143,12 @@ function processionTick(world, st, m, dt, p) {
 }
 function accalmieStart(world, st, m, p) {
   st.noSpawn = true;
-  // Un Écho géant au centre (là où se tient le sonneur, un peu devant lui) : Volée sur le temps pour le prendre.
+  // Un Écho géant au centre de la scène (à quelques pas devant le sonneur) : il faut aller le chercher et
+  // faire une Volée sur le temps à sa portée. Rien à frapper pendant l'Accalmie : la jauge ne retombe pas.
   const M = balance().moments;
-  const x = p.x + p.facing.x * 40, y = p.y + p.facing.y * 30;
-  spawnGiantEcho(world, x, y, M.accalmieEchoXp || 60, m.sec + 4);
+  const fx = p.facing.x || 0, fy = p.facing.y || 1;
+  spawnGiantEcho(world, p.x + fx * 120, p.y + fy * 80, M.accalmieEchoXp || 60, m.sec + 4);
+  holdDecay(m.sec + 2);
 }
 function accalmieEnd(world, st) { st.noSpawn = false; }
 function ciergeStart(world, st, m, p) {

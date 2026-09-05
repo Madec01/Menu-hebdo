@@ -7,7 +7,8 @@
 //     (rien à perdre) : −lossRate pas ;
 //   · le cran maximal ne se TIENT qu'avec des « parfait » : un « bon » au cran 3 n'ajoute rien et ne
 //     retient pas la décroissance (en mode 'assisted', un « bon » y compte comme un parfait) ;
-//   · sans action rythmique chargée pendant decayAfterBeats temps, la jauge décroît d'un pas par temps ;
+//   · sans action rythmique chargée pendant decayAfterBeats temps, la jauge décroît d'un pas par temps
+//     (suspendu par holdDecay : l'Accalmie, où il n'y a rien à frapper) ;
 //   · `resonance:streak {count}` : Parfaits consécutifs ; à streakBonusAt (8) et au-delà, bonus de zone
 //     +streakAreaBonus (10 %) tant que la streak dure (annoncé par `streakBonus` dans resonance:change,
 //     appliqué par player.recomputeStats via areaBonus()).
@@ -37,6 +38,7 @@ const st = {
   charDecay: 1,      // trait du sonneur (Maren ×1,5)
   perfectOnly: false, // trait du Muet
   perfectTiers: 0,
+  holdT: 0,          // secondes sans décroissance (Accalmie : rien à frapper, la jauge ne tombe pas)
   emitAcc: 0,
   cfg: null,
 };
@@ -57,7 +59,7 @@ export function initResonance({ assist = 'none', gain = 1, traits = null } = {})
   st.cfg = balance().resonance;
   st.assist = assist;
   st.gain = gain;
-  st.sinceInput = 0; st.blockT = 0; st.maxTimeSec = 0; st.perfectStreak = 0; st.streakBonusOn = false; st.decayMult = 1; st.emitAcc = 0;
+  st.sinceInput = 0; st.blockT = 0; st.maxTimeSec = 0; st.perfectStreak = 0; st.streakBonusOn = false; st.decayMult = 1; st.emitAcc = 0; st.holdT = 0;
   st.charDecay = traits && traits.resonanceDecay > 0 ? traits.resonanceDecay : 1;
   st.perfectOnly = !!(traits && traits.perfectOnly);
   st.perfectTiers = traits && traits.perfectTiers > 0 ? traits.perfectTiers : 0;
@@ -172,6 +174,8 @@ export function maxTierTime() { return st.maxTimeSec; }
 
 /** Bloque les gains pendant sec secondes (nuage d'Ouateux). */
 export function block(sec) { if (sec > st.blockT) st.blockT = sec; }
+/** Suspend la décroissance pendant sec secondes (Accalmie : aucune menace à frapper). */
+export function holdDecay(sec) { if (sec > st.holdT) st.holdT = sec; }
 
 /** Tick logique : décroissance et compteurs. */
 export function update(dt) {
@@ -179,6 +183,7 @@ export function update(dt) {
   if (st.blockT > 0) st.blockT -= dt;
   if (st.tier >= maxTier()) st.maxTimeSec += dt;
   if (st.assist === 'norhythm') return;
+  if (st.holdT > 0) { st.holdT -= dt; st.sinceInput = 0; return; }
   st.sinceInput += dt;
   const beat = beatDuration() || 0.625;
   const decay = st.decayMult * st.charDecay;
