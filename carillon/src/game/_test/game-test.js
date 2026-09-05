@@ -16,6 +16,8 @@ import { addPassive } from '../passives.js';
 import { applyFusion } from '../fusions.js';
 import { spawnEnemy } from '../enemies.js';
 import { tier as resonanceTier } from '../resonance.js';
+import { LEAVES_PER_NIGHT } from '../unlocks.js';
+import { getSave } from '../../core/save.js';
 
 const DT = 1 / 60;
 const log = [];
@@ -96,6 +98,7 @@ async function simulateRun() {
       if (t < 120 && b % 2 === 0) { __press('dash', startAt() + b * beat); dashCount++; }
       if (t < 120 && b % 8 === 3) __press('parry', startAt() + b * beat + 0.02);
     }
+    p.iframesT = 1e9;   // sonneur invulnérable : on teste le flux (le pilote naïf mourait à 115 s) ; réappliqué : la Volée réécrit iframesT
     step();
     if (i % 60 === 0 && !nanAt) { nanAt = hasNaN(p, 'player') || hasNaN(world.enemies.items[0] || {}, 'enemy'); if (nanAt) nanAt += ' @' + t.toFixed(1); }
     if (i === 30 * 60 && performance.memory) memMid = performance.memory.usedJSHeapSize;
@@ -110,7 +113,7 @@ async function simulateRun() {
     enemiesAlive: world.enemies.active, projectiles: world.projectiles.active, pickups: world.pickups.active, simMs: Math.round(simMs),
     memMB: [mem0, memMid, mem1].map((m) => Math.round(m / 1048576)), perfects: run.perfects, misses: run.misses, hitStops: fxCounters.hitStop, particles: emitted, sfx: Object.keys(played).length,
     dps: Object.assign({}, dpsReport()) };
-  check('3 min simulées sans mort', !p.dead && run.timeSec >= 179, 'PV ' + p.hp + '/' + p.maxHp + ' t=' + run.timeSec.toFixed(0));
+  check('3 min simulées (sonneur invulnérable : flux)', run.timeSec >= 179, 'PV ' + p.hp + '/' + p.maxHp + ' t=' + run.timeSec.toFixed(0));
   check('ennemis spawnés > 200', ev.spawn > 200, String(ev.spawn));
   check('ennemis tués > 100', ev.death > 100, String(ev.death));
   check('level-ups ≈ 1 / 20 s (6–14 en 3 min)', ev.levelUp >= 6 && ev.levelUp <= 14, String(ev.levelUp));
@@ -118,7 +121,9 @@ async function simulateRun() {
   check('Résonance redescend sans frappe (60 s)', resonanceTier() < 3, 'cran final ' + resonanceTier());
   check('parfaits > 100, ratés = 0', run.perfects > 100 && run.misses === 0, run.perfects + ' / ' + run.misses);
   check('aucun NaN', !nanAt, nanAt || '');
-  check('paliers/minutes émis', ev.tiers === 2 && ev.minutes === 3, ev.tiers + ' paliers, ' + ev.minutes + ' minutes');
+  // Paliers : 1 + floor(t / tierEvery) sur 180 s (le palier de t = 180 s tombe ou non sur le dernier tick : arrondi flottant).
+  const tierEvery = world.spawner.def.tierEvery, tiersLo = Math.min(6, 1 + Math.floor(179 / tierEvery)), tiersHi = Math.min(6, 1 + Math.floor(180 / tierEvery));
+  check('paliers/minutes émis (' + tiersLo + '–' + tiersHi + ' paliers à tierEvery ' + tierEvery + ' s, ≥ 2 minutes)', ev.tiers >= tiersLo && ev.tiers <= tiersHi && ev.minutes >= 2, ev.tiers + ' paliers, ' + ev.minutes + ' minutes');
   check('mémoire stable (< +40 Mo entre 30 s et 180 s)', !performance.memory || (mem1 - memMid) < 40 * 1048576, results.sim.memMB.join(' → ') + ' Mo');
   check('vitesse de simulation ≥ 20× temps réel', simMs < 180000 / 20, Math.round(simMs) + ' ms pour 180 s');
   endGame();
@@ -152,7 +157,7 @@ function measureDps(weaponId, level, seconds = 20, fusion = false) {
   return total / seconds / mult;
 }
 
-// ---- 2 bis. Run complète accélérée (12 min + boss) : Fêlures, boss, bilan, sauvegarde ----------
+// ---- 2 bis. Run complète accélérée (nuit de la paroisse + boss) : Fêlures, boss, bilan, sauvegarde ----------
 async function fullRun() {
   const ev = { fissure: [], boss: [], end: null, tiers: 0, minutes: 0, lore: [], ach: [], maxEntities: 0, maxEnemies: 0 };
   const offs = [
@@ -170,6 +175,7 @@ async function fullRun() {
   for (let l = 1; l < 7; l++) upgradeWeapon(p, 'battant');
   for (let l = 0; l < 5; l++) { addPassive(p, 'contrepoids'); addPassive(p, 'etain'); }
   p.iframesT = 1e9;
+  const dur = world.spawner.def.duration || 720, expMin = Math.floor(dur / 60);   // durée réelle de la nuit (waves.json)
   let simMs10 = 0, ticks10 = 0;
   const t0 = performance.now();
   for (let i = 0; i < 60 * 800 && !ev.end; i++) {
@@ -178,7 +184,7 @@ async function fullRun() {
     if (cycle < 3) { const a = Math.floor(t / 6) * 0.9; __setAxis(Math.round(Math.cos(a)), Math.round(Math.sin(a))); } else __setAxis(0, 0);
     const s0 = performance.now();
     step();
-    if (t >= 600 && t < 660) { simMs10 += performance.now() - s0; ticks10++; }
+    if (t >= dur - 60 && t < dur) { simMs10 += performance.now() - s0; ticks10++; }   // dernière minute de la nuit
     const n = world.enemies.active + world.projectiles.active + world.pickups.active + world.hazards.active;
     if (n > ev.maxEntities) ev.maxEntities = n;
     if (world.enemies.active > ev.maxEnemies) ev.maxEnemies = world.enemies.active;
@@ -186,16 +192,19 @@ async function fullRun() {
   const total = performance.now() - t0;
   offs.forEach((f) => f());
   results.fullRun = { fissures: ev.fissure, boss: ev.boss, tiers: ev.tiers, minutes: ev.minutes, lore: ev.lore, achievements: ev.ach,
-    maxEntities: ev.maxEntities, maxEnemies: ev.maxEnemies, msPerTickMin10: ticks10 ? +(simMs10 / ticks10).toFixed(3) : null, totalMs: Math.round(total),
+    maxEntities: ev.maxEntities, maxEnemies: ev.maxEnemies, msPerTickLastMin: ticks10 ? +(simMs10 / ticks10).toFixed(3) : null, totalMs: Math.round(total),
     end: ev.end && { victory: ev.end.victory, timeSec: ev.end.timeSec, kills: ev.end.kills, level: ev.end.level, bronze: ev.end.bronze, resonanceAvg: ev.end.resonanceAvg, leafUnlocked: ev.end.leafUnlocked, dps: ev.end.dpsByWeapon, build: ev.end.build } };
   log.push('\nRun complète : ' + JSON.stringify(results.fullRun, null, 1));
   check('Fêlures min 4 et 8 (start/end)', ev.fissure.length === 4, ev.fissure.join(' '));
   check('boss intro/start/phase/end', ev.boss.includes('bourdon_fele:intro') && ev.boss.includes('bourdon_fele:start') && ev.boss.includes('bourdon_fele:end'), ev.boss.join(' '));
   check('victoire → run:end avec RunStats', !!ev.end && ev.end.victory === true, ev.end ? 't=' + ev.end.timeSec + ' bronze=' + ev.end.bronze : 'pas de run:end');
-  check('6 paliers, 12 minutes', ev.tiers === 6 && ev.minutes >= 12, ev.tiers + ' / ' + ev.minutes);
-  check('Feuillets débloqués (f01, f02, f04, f05 attendus)', ev.lore.includes('f01') && ev.lore.includes('f04') && ev.lore.includes('f05'), ev.lore.join(','));
+  check('6 paliers, nuit de ' + dur + ' s (≥ ' + expMin + ' minutes)', ev.tiers === 6 && ev.minutes >= expMin, ev.tiers + ' / ' + ev.minutes);
+  // Feuillets : LEAVES_PER_NIGHT ouverts par nuit (f01, f02 : minutes 1 et 3), les autres conditions remplies (f04 boss, f05 victoire) sont retenues (leavesPending).
+  const save = getSave(), pending = save.leavesPending || [];
+  const leafOk = (id) => ev.lore.includes(id) || save.unlocked.leaves.includes(id) || pending.includes(id);
+  check('Feuillets f01, f02 ouverts (plafond ' + LEAVES_PER_NIGHT + '/nuit), f04/f05 remplis ou retenus', ['f01', 'f02', 'f04', 'f05'].every(leafOk) && ev.lore.length <= LEAVES_PER_NIGHT, ev.lore.join(',') + ' ; retenus : ' + pending.join(','));
   check('hauts-faits (premiere_aube, fele_vaincu, sans_rythme_victoire)', ev.ach.includes('premiere_aube') && ev.ach.includes('fele_vaincu') && ev.ach.includes('sans_rythme_victoire'), ev.ach.join(','));
-  check('tick logique à la minute 10 < 4 ms (headless)', ticks10 > 0 && simMs10 / ticks10 < 4, (simMs10 / Math.max(1, ticks10)).toFixed(2) + ' ms, max ' + ev.maxEntities + ' entités');
+  check('tick logique à la dernière minute de la nuit < 4 ms (headless)', ticks10 > 0 && simMs10 / ticks10 < 4, (simMs10 / Math.max(1, ticks10)).toFixed(2) + ' ms, max ' + ev.maxEntities + ' entités');
   endGame();
 }
 

@@ -1,7 +1,9 @@
 // game/cards.js — tirage des 3 cartes de montée de niveau (sous-module de progression.js).
 // Pondération (ARCHITECTURE.md § 11) : 60 % Timbres non maxés, 40 % Accords ; un objet déjà possédé
 // pèse × ownedWeight, × fusionPartnerWeight si son partenaire de fusion est déjà au niveau requis ou si le
-// couple est engagé (voir plus bas) ; une
+// couple est engagé (voir plus bas) ; la PREMIÈRE carte d'un objet non possédé pèse aussi × fusionPartnerWeight
+// quand son partenaire est déjà au seuil (Timbre ≥ seuil → le nouvel Accord de la recette, et l'inverse) : sans
+// cela la « nouvelle carte » de l'Accord (poids 40 sur ≈ 900) était le goulot des fusions ; une
 // fusion disponible (seuils `unlock` de fusions.json) est TOUJOURS proposée en première carte ; jamais deux
 // fois la même carte ; max 6 Timbres + 6 Accords ; à défaut, cartes bonus (soin, bronze). Tout aléa passe
 // par run.cardRng (déterministe).
@@ -53,6 +55,7 @@ function bonusCard(id, value) {
 // un Accord peut entrer dans deux recettes.)
 function partnerReady(p, id, isWeapon) {
   for (const f of allFusions().values()) {
+    if (p.fusions.indexOf(f.id) >= 0) continue;
     if (isWeapon && f.weapon === id && passiveReady(p, f)) return true;
     if (!isWeapon && f.passive === id && weaponReady(p, f)) return true;
   }
@@ -84,13 +87,13 @@ function buildCandidates(p) {
   for (const def of allWeapons().values()) {
     const w = findWeapon(p, def.id);
     if (w) { if (w.level < def.maxLevel) { pool.push(weaponCard(def, w.level + 1, false)); weights.push(C.weaponWeight * (partnerReady(p, def.id, true) || engaged(p, def.id, true) ? partner : owned)); } }
-    else if (nWeapons < C.maxWeapons && !fusedFrom(p, def.id)) { pool.push(weaponCard(def, 1, true)); weights.push(C.weaponWeight); }
+    else if (nWeapons < C.maxWeapons && !fusedFrom(p, def.id)) { pool.push(weaponCard(def, 1, true)); weights.push(C.weaponWeight * (partnerReady(p, def.id, true) ? partner : 1)); }
   }
   const nPassives = p.passives.length;
   for (const def of allPassives().values()) {
     const pa = findPassive(p, def.id);
     if (pa) { if (pa.level < def.maxLevel) { pool.push(passiveCard(def, pa.level + 1, false)); weights.push(C.passiveWeight * (partnerReady(p, def.id, false) || engaged(p, def.id, false) ? partner : owned)); } }
-    else if (nPassives < C.maxPassives) { pool.push(passiveCard(def, 1, true)); weights.push(C.passiveWeight); }
+    else if (nPassives < C.maxPassives) { pool.push(passiveCard(def, 1, true)); weights.push(C.passiveWeight * (partnerReady(p, def.id, false) ? partner : 1)); }
   }
 }
 
@@ -103,7 +106,11 @@ function fusedFrom(p, weaponId) {
   return false;
 }
 
-function isPartnerCard(p, c) { return (c.type === 'weapon' || c.type === 'passive') && !c.isNew && engaged(p, c.id, c.type === 'weapon'); }
+function isPartnerCard(p, c) {
+  if (c.type !== 'weapon' && c.type !== 'passive') return false;
+  const isWeapon = c.type === 'weapon';
+  return c.isNew ? partnerReady(p, c.id, isWeapon) : engaged(p, c.id, isWeapon);
+}
 
 function take(out, idx) { out.push(pool[idx]); pool.splice(idx, 1); weights.splice(idx, 1); }
 

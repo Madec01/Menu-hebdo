@@ -19,7 +19,7 @@ import { SPEC, resetSpec, spawnProjectile, spawnRing, nearestEnemy, hasHit, reco
 import { damageEnemy, markEnemy } from './collision.js';
 import { playerAttack } from './player.js';
 import { mult as resonanceMult, assist as resonanceAssist } from './resonance.js';
-import { balance } from './data.js';
+import { balance, weaponDef } from './data.js';
 import { passiveLevel, passiveSpecial } from './passives.js';
 import { spawnHazard, HAZARD_OPTS } from './hazards.js';
 
@@ -314,6 +314,15 @@ function chain(w, p, world) {
  * Étain (crit) s'applique ; Contrepoids (area) étend la marque aux voisins (spreadPx × (area − 1)).
  * Requiem : exécute sous le seuil (collision.damageEnemy).
  */
+const MARK_PER_ACCORD_DEFAULT = 0.03, MARK_FALLBACK_DAMAGE = 8;
+// Taux « + dégâts de marque par niveau d'Accord » : special.perAccordLevel du Timbre, sinon celui du Timbre d'origine
+// de la fusion (Requiem → weapons.json diapason.special), sinon balance.mark, sinon 0,03 — toujours fini (jamais NaN).
+function markPerAccordLevel(w, M) {
+  const src = w.def.weapon ? weaponDef(w.def.weapon) : null;
+  for (const v of [w.def.special && w.def.special.perAccordLevel, src && src.special && src.special.perAccordLevel, M && M.perAccordLevel]) if (Number.isFinite(v)) return v;
+  return MARK_PER_ACCORD_DEFAULT;
+}
+
 function mark(w, p, world) {
   const M = balance().mark;
   const range = w.stats.range * w.stats.area;
@@ -330,9 +339,10 @@ function mark(w, p, world) {
   // Résonance de la marque : un tick de dégâts sur chaque marqué par ce Timbre.
   let accords = 0;
   for (let i = 0; i < p.passives.length; i++) accords += p.passives[i].level;
-  const base = w.stats.damage > 0 ? w.stats.damage : M.fallbackDamage;
-  const perLevel = w.def.special && w.def.special.perAccordLevel !== undefined ? w.def.special.perAccordLevel : M.perAccordLevel;
-  const dmg = base * (1 + perLevel * accords) * p.stats.damageMult * resonanceMult() * (w.dmgMult || 1);
+  const base = w.stats.damage > 0 ? w.stats.damage : (Number.isFinite(M.fallbackDamage) ? M.fallbackDamage : MARK_FALLBACK_DAMAGE);
+  const perLevel = markPerAccordLevel(w, M);
+  let dmg = base * (1 + perLevel * accords) * p.stats.damageMult * resonanceMult() * (w.dmgMult || 1);
+  if (!Number.isFinite(dmg)) dmg = 0;   // garde-fou : un NaN rendrait tout marqué immortel
   const items = world.enemies.items;
   const onBeat = weaponOnBeat(w);
   let hits = 0;

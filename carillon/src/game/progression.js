@@ -186,7 +186,8 @@ export function finishRun(run, victory) {
     + (run.timeSec / 60) * B.perMinute + run.kills * B.perKill + resonanceAvg * B.perResonance;
   if (!victory) bronze *= B.lossMult;
   const sm = sourdineMult(parish, run.sourdine);
-  bronze = Math.round(bronze * (p ? p.stats.bronzeGain : 1) * sm.bronze) + (world ? world.bronzePicked : 0);
+  // Bronze ramassé (toujours) + Bronze promis par la dernière cloche (bell-hour : victoire seulement).
+  bronze = Math.round(bronze * (p ? p.stats.bronzeGain : 1) * sm.bronze) + (world ? world.bronzePicked + (victory ? world.bellBronze || 0 : 0) : 0);
   // Contrats de nuit : Bronze en prime, ou le prochain Feuillet fermé de la paroisse.
   const settled = settleContracts(run, victory, p);
   const contractLeaves = [];

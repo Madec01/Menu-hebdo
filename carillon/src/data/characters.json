@@ -79,7 +79,7 @@
     "sprite": "le_muet",
     "startWeapon": "diapason",
     "stats": {
-      "maxHp": 80,
+      "maxHp": 70,
       "speed": 115,
       "armor": 0,
       "windowMult": 1.1,

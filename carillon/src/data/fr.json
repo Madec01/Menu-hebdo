@@ -220,7 +220,7 @@
     },
     "contretemps": {
       "name": "Contretemps",
-      "lore": "Un fossoyeur qui a appris à creuser entre les coups. Il ne s'ouvre qu'à la croche, quand la cloche se tait, et c'est là qu'il faut frapper — à contretemps."
+      "lore": "Un fossoyeur qui a appris à creuser entre les coups. Il ne s'ouvre qu'à la croche, quand la cloche se tait, et c'est là qu'il faut frapper — à contretemps : tant qu'il est à portée, la Mesure compte ce coup sur la croche pour bon."
     },
     "voleur_de_cran": {
       "name": "Voleur de cran",
@@ -234,15 +234,25 @@
   "boss": {
     "bourdon_fele": {
       "name": "Le Bourdon Fêlé",
-      "lore": "La grande cloche de Cendrelune, tombée du beffroi le jour où le suif a manqué. Elle sonne encore, mais faux, et chaque coup fêlé appelle ce qui dort dans la brume."
+      "lore": "La grande cloche de Cendrelune, tombée du beffroi le jour où le suif a manqué. Elle sonne encore, mais faux, et chaque coup fêlé appelle ce qui dort dans la brume.",
+      "phase_cri": "Le cri fêlé : la Mesure glisse d'une croche",
+      "phase_double": "Le bronze se fend : deux anneaux, et les Chœurs",
+      "phase_envers": "Il sonne à l'envers"
     },
     "veuve_suie": {
       "name": "La Veuve de Suie",
-      "lore": "Elle a tenu la veillée de tout Val-des-Cordes, seule, jusqu'à ce qu'il ne reste plus rien à veiller. Sa suie est faite de tous les cierges qu'elle a laissés brûler."
+      "lore": "Elle a tenu la veillée de tout Val-des-Cordes, seule, jusqu'à ce qu'il ne reste plus rien à veiller. Sa suie est faite de tous les cierges qu'elle a laissés brûler.",
+      "phase_enfants": "Elle appelle ses enfants",
+      "phase_deuil": "Le grand deuil : toiles et charges redoublées"
     },
     "maitre": {
       "name": "Ce qui reste du Maître",
-      "lore": "Il sonne à l'envers, du dernier coup vers le premier. Ce n'est pas lui qui est là : c'est ce que Cendrelune a gardé de lui, et cela ne veut pas être fait taire."
+      "lore": "Il sonne à l'envers, du dernier coup vers le premier. Ce n'est pas lui qui est là : c'est ce que Cendrelune a gardé de lui, et cela ne veut pas être fait taire.",
+      "phase_annonce": "Il annonce le Timbre suivant",
+      "phase_expose": "Exposé : ta Résonance le met à nu",
+      "phase_normal": "Il reprend sa Mesure",
+      "phase_enrage": "Enragé : ta Résonance s'est tue",
+      "phase_coda": "La coda : le dernier coup vers le premier"
     }
   },
   "parish": {

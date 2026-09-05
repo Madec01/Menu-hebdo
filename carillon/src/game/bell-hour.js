@@ -8,7 +8,9 @@
 //   · 'card' : carte offerte — minutes de la table balance.bell.cardMinutes[nb de minutes de la nuit]
 //     (nuit de 4 min : minute 2 ; 5 min : 2 et 4 ; 6 min : 2 et 4) ;
 //   · 'bronze' : dernière cloche de la nuit, qui sonne balance.bell.lastLeadSec (8 s) AVANT l'arrivée du
-//     boss (jamais pendant son intro) : `run:minute` de cette minute-là est ignoré.
+//     boss (jamais pendant son intro) : `run:minute` de cette minute-là est ignoré. Le Bronze promis
+//     (world.bellBronze = bronzeReward de la paroisse) n'est versé qu'à l'aube : progression.finishRun l'ajoute
+//     en cas de VICTOIRE seulement (une mort pendant le boss ne le garde pas).
 // Manqué : rien. `bell:ring {minute, at}` ouvre la sonnerie (HUD). L'état (bellState) est lu par le HUD
 // via gameState().bell : coups allumés, réponse, chrono.
 
@@ -122,7 +124,7 @@ function applyBonus(bonus) {
       if (resonanceTier() >= maxTierIndex()) { if (p) healPlayer(p, Math.ceil(p.maxHp * (B.maxTierHealPct || DEFAULTS.maxTierHealPct))); return 'heal'; }
       resonanceBump(1); return 'resonance';
     case 'card': grantBonusLevel(run); return 'card';
-    case 'bronze': { const parish = parishDef(run.parishId); if (world) world.bronzePicked += parish ? parish.bronzeReward : 0; return 'bronze'; }
+    case 'bronze': { const parish = parishDef(run.parishId); if (world) world.bellBronze = (world.bellBronze || 0) + (parish ? parish.bronzeReward : 0); return 'bronze'; }
   }
   return bonus;
 }

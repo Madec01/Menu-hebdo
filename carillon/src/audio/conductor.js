@@ -173,15 +173,18 @@ export function conductorTick() {
   if (inBar === 0) bus.emit('bar', { bar: barIdx, at });
 }
 
-/** Juge une frappe (temps audio de l'entrée, corrigé de la latence d'entrée) contre le temps le plus
- *  proche. `early` = la frappe est arrivée AVANT le temps (retour « avance / retard » du HUD). */
-export function judge(inputAt) {
+/** Juge une frappe (temps audio de l'entrée, corrigé de la latence d'entrée) contre le point de grille le plus
+ *  proche de `subdivision` temps (1 = le temps ; 0,5 = temps OU croche : « frappe au contretemps », quand un
+ *  Contretemps est à portée). `early` = la frappe est arrivée AVANT le point ; `offbeat` = le point retenu est
+ *  une croche (beat fractionnaire). */
+export function judge(inputAt, subdivision = 1) {
+  const sub = subdivision > 0 ? subdivision : 1;
   const bf = beatFloat(inputAt - st.inputLatencyMs / 1000);
-  const nearest = Math.round(bf);
+  const nearest = Math.round(bf / sub) * sub;
   const offsetMs = (bf - nearest) * st.beatDur * 1000;
   const a = Math.abs(offsetMs);
   const grade = a <= st.windowMs / 3 ? 'parfait' : a <= st.windowMs ? 'bon' : 'rate';
-  return { grade, offsetMs, beat: nearest, early: offsetMs < 0 };
+  return { grade, offsetMs, beat: nearest, early: offsetMs < 0, offbeat: nearest !== Math.round(nearest) };
 }
 
 export function setWindowMs(ms) { st.windowMs = ms; }

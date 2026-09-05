@@ -220,7 +220,7 @@
     },
     "contretemps": {
       "name": "Offbeat",
-      "lore": "A gravedigger who learned to dig between the strokes. He only opens on the eighth, when the bell falls silent, and that is when you must strike — against the beat."
+      "lore": "A gravedigger who learned to dig between the strokes. He only opens on the eighth, when the bell falls silent, and that is when you must strike — against the beat: while he is in reach, the Measure counts that stroke on the eighth as good."
     },
     "voleur_de_cran": {
       "name": "Notch Thief",
@@ -234,15 +234,25 @@
   "boss": {
     "bourdon_fele": {
       "name": "The Cracked Bourdon",
-      "lore": "The great bell of Cendrelune, fallen from the belfry the day the tallow ran out. It still rings, but false, and every cracked stroke calls what sleeps in the fog."
+      "lore": "The great bell of Cendrelune, fallen from the belfry the day the tallow ran out. It still rings, but false, and every cracked stroke calls what sleeps in the fog.",
+      "phase_cri": "The cracked cry: the Measure slips an eighth",
+      "phase_double": "The bronze splits: two rings, and the Choirs",
+      "phase_envers": "It rings backwards"
     },
     "veuve_suie": {
       "name": "The Soot Widow",
-      "lore": "She kept the wake for all of Val-des-Cordes, alone, until there was nothing left to watch over. Her soot is made of every candle she let burn down."
+      "lore": "She kept the wake for all of Val-des-Cordes, alone, until there was nothing left to watch over. Her soot is made of every candle she let burn down.",
+      "phase_enfants": "She calls her children",
+      "phase_deuil": "The great mourning: webs and charges doubled"
     },
     "maitre": {
       "name": "What Remains of the Master",
-      "lore": "It rings backwards, from the last stroke toward the first. It is not him standing there: it is what Cendrelune kept of him, and it does not want to be silenced."
+      "lore": "It rings backwards, from the last stroke toward the first. It is not him standing there: it is what Cendrelune kept of him, and it does not want to be silenced.",
+      "phase_annonce": "It announces the next Timbre",
+      "phase_expose": "Exposed: your Resonance lays it bare",
+      "phase_normal": "It takes up its Measure again",
+      "phase_enrage": "Enraged: your Resonance has fallen silent",
+      "phase_coda": "The coda: the last stroke toward the first"
     }
   },
   "parish": {

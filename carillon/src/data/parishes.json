@@ -13,7 +13,7 @@
     ],
     "ambience": "wind",
     "unlock": null,
-    "bronzeReward": 100,
+    "bronzeReward": 90,
     "leaves": [
       "f01",
       "f02",
@@ -70,7 +70,7 @@
       "type": "win",
       "parish": "cendrelune"
     },
-    "bronzeReward": 160,
+    "bronzeReward": 100,
     "leaves": [
       "f06",
       "f07",
@@ -127,7 +127,7 @@
       "type": "win",
       "parish": "tourbes"
     },
-    "bronzeReward": 200,
+    "bronzeReward": 110,
     "leaves": [
       "f11",
       "f13",
@@ -188,7 +188,7 @@
       "type": "win",
       "parish": "val_des_cordes"
     },
-    "bronzeReward": 240,
+    "bronzeReward": 130,
     "leaves": [
       "f12",
       "f16",
@@ -253,7 +253,7 @@
       "type": "win",
       "parish": "nef_noyee"
     },
-    "bronzeReward": 300,
+    "bronzeReward": 145,
     "leaves": [
       "f21",
       "f22",

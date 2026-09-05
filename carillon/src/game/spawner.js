@@ -1,5 +1,5 @@
 // game/spawner.js — lit waves.json : spawns par fenêtre temporelle (perSec × densité du palier,
-// cap par type), paliers de Sourdine toutes les tierEvery s (`run:tier`), sonnerie horaire
+// cap par type fixe — une seule échelle : la densité ne multiplie pas le cap), paliers de Sourdine toutes les tierEvery s (`run:tier`), sonnerie horaire
 // (`run:minute`, sans son : la sonnerie est à bell-hour.js), Fêlures (élites) et boss aux `events`.
 // Les ennemis apparaissent hors écran,
 // sur un anneau autour du joueur (angle tiré au rng du run). Après le boss, le flux régulier
@@ -88,7 +88,7 @@ export function updateSpawner(world, dt, p) {
     if (sp.acc[i] < 1) continue;
     const n = Math.floor(sp.acc[i]);
     sp.acc[i] -= n;
-    if (countKind(world, s.kind) >= Math.ceil(s.cap * density)) continue;
+    if (countKind(world, s.kind) >= s.cap) continue;   // cap par type FIXE : la densité n'échelonne que perSec
     for (let k = 0; k < n; k++) {
       offscreenPos(world, p, pos);
       if (!spawnEnemy(world, s.kind, pos.x, pos.y)) break;

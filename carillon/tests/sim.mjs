@@ -11,7 +11,8 @@
 // (Volée sans direction) quand une menace est à portée, ou dash s'il fuit. Profil `parade_seule` : parade sur
 // chaque temps quoi qu'il arrive, jamais de Volée (diagnostic : ne doit pas dépasser le cran 1 en moyenne).
 // Vague 2 : Contretemps (le robot pose une parade À VIDE sur la croche quand un Contretemps est à portée : elle
-// l'ouvre un temps sans coûter de cran — une Volée sur la croche serait jugée « raté »), Voleur de cran (le robot
+// l'ouvre un temps ; depuis le correctif « frappe au contretemps », une Volée sur la croche y est aussi jugée
+// bon/parfait), Voleur de cran (le robot
 // poursuit celui qui emporte un cran ; durée de la chasse mesurée), Désaccordeur (rien), phases de boss
 // (`boss:phase` journalisé ; le cri fêlé décale la grille du stub et le robot s'y réadapte après `adaptBeats`
 // temps selon son profil), fusions (PAIRS = fusions.json ; instant de la première fusion mesuré). Profil `naif` :

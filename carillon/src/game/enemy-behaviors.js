@@ -4,7 +4,8 @@
 // Paramètres `special` d'enemies.json documentés au-dessus de chaque comportement.
 // Ennemis rythmiques (audit § 3.2) :
 //   contretemps  — invulnérable sauf dans la fenêtre de la croche entre deux temps (e.vulnMult 0 → 1 dégât
-//                  minimal, voir hook demandé au cœur) ; une frappe du sonneur SUR la croche l'ouvre un temps ;
+//                  minimal, voir hook demandé au cœur) ; une frappe du sonneur SUR la croche l'ouvre un temps
+//                  (et, à portée, elle est jugée contre la croche : bon/parfait, pas un raté — player.judgeAction) ;
 //                  il tire sur le contretemps.
 //   voleur       — au contact, vole un cran de Résonance qu'il emporte (e.carry, halo bronze) puis fuit à
 //                  distance ; le tuer rend le cran (enemies.killEnemy).
@@ -31,10 +32,13 @@ let openUntil = -1;          // temps (world.time) jusqu'auquel les Contretemps 
 let musicMod = null;         // audio/music.js (chargé à la demande : setDetune est fourni par l'agent audio)
 import('../audio/music.js').then((m) => { musicMod = m; }).catch(() => {});
 
-// Une frappe rythmique tombée SUR la croche (à mi-temps, dans la fenêtre) ouvre les Contretemps un temps.
-bus.on('rhythm:input', () => {
-  const ph = phase();
-  if (Math.abs(ph - 0.5) * (beatDuration() || 0.625) * 1000 <= windowMs()) openUntil = (beatDuration() || 0.625);
+// Une frappe rythmique tombée SUR la croche ouvre les Contretemps un temps : « frappe au contretemps » jugée
+// bon/parfait contre la croche (player.judgeAction, quand un Contretemps est à portée — elle n'est PAS un raté),
+// ou frappe dans la fenêtre de la croche (Contretemps hors de portée : elle reste jugée contre le temps).
+bus.on('rhythm:input', (e) => {
+  const bd = beatDuration() || 0.625;
+  if (e && e.offbeat && e.grade !== 'rate') { openUntil = bd; return; }
+  if (Math.abs(phase() - 0.5) * bd * 1000 <= windowMs()) openUntil = bd;
 });
 
 /** Direction normalisée de e vers p (objet réutilisé) et distance. */
@@ -104,7 +108,7 @@ function voleur(e, dt, world, p) {
   const t = toward(e, p);
   if (t.d < s.fleeDistance) moveTo(e, -t.x, -t.y, e.speed * s.fleeSpeedMult);
   else moveTo(e, -t.y, t.x, e.speed * 0.6);   // rôde autour, hors de portée de mêlée
-  e.flashT = 0;
+  // (flashT n'est pas touché : les coups reçus doivent clignoter, la teinte bronze du cran emporté reste e.tint)
 }
 
 /** Ouateux — { cloudRadius, cloudSec, blockSec, triggerRange, drainBeats } : explose en nuage qui bloque la Résonance

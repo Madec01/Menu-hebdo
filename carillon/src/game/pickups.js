@@ -19,7 +19,7 @@ import { flash } from '../render/fx.js';
 import { balance } from './data.js';
 import { phase } from '../audio/conductor.js';
 import { healPlayer } from './player.js';
-import { onRhythmInput } from './resonance.js';
+import { bump as resonanceBump } from './resonance.js';
 import { damageEnemy } from './collision.js';
 
 const xpPayload = { amount: 0 };
@@ -101,7 +101,7 @@ function collect(world, o, p) {
       return;
     case 'heal': healPlayer(p, Math.ceil(p.maxHp * P.healPct)); break;
     case 'chime': chime(world, p); break;
-    case 'relic': onRhythmInput('parfait'); onRhythmInput('parfait'); healPlayer(p, Math.ceil(p.maxHp * P.relicHealPct)); break;
+    case 'relic': resonanceBump(1); healPlayer(p, Math.ceil(p.maxHp * P.relicHealPct)); break;   // +1 cran : pas de Parfaits fictifs (streak, sans_faute)
     case 'bronze': world.bronzePicked += o.value; break;
   }
   itemPayload.kind = o.kind;
@@ -110,7 +110,8 @@ function collect(world, o, p) {
   emitParticles('bell', o.x, o.y);
 }
 
-/** Carillon : tout ce qui est à l'écran (sauf boss) est frappé d'un coup mortel. */
+/** Carillon : tout ce qui est à l'écran (sauf boss) est frappé d'un coup mortel — un « son sur le temps » global :
+ *  un Contretemps fermé (vulnMult 0) est ouvert de force pour ce coup (collision.damageEnemy l'ignorerait). */
 function chime(world, p) {
   const v = viewRect();
   const items = world.enemies.items;
@@ -119,6 +120,7 @@ function chime(world, p) {
     if (e.state !== 'alive' || e.boss) continue;
     if (e.x < v.x - 16 || e.x > v.x + v.w + 16 || e.y < v.y - 16 || e.y > v.y + v.h + 16) continue;
     HIT.knockX = 0; HIT.knockY = 0;
+    if (e.vulnMult <= 0) e.vulnMult = 1;
     damageEnemy(world, e, e.elite ? e.maxHp * 0.25 : e.hp + 1, HIT);
   }
   flash('#d8cdb4', 2);

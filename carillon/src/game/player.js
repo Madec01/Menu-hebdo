@@ -30,7 +30,7 @@ const STAT_KEYS = ['maxHp', 'speed', 'armor', 'windowMult', 'resonanceGain', 'da
 // Stats multiplicatives (valeur de base 1) : les bonus s'ajoutent à 1.
 const MULT_STATS = { area: 1, magnet: 1, xpGain: 1, bronzeGain: 1, windowMult: 1, damageMult: 1, resonanceGain: 1 };
 
-const rhythmPayload = { action: 'dash', grade: 'bon', offsetMs: 0 };
+const rhythmPayload = { action: 'dash', grade: 'bon', offsetMs: 0, offbeat: false };
 const hitPayload = { damage: 0, from: '', source: '', dirX: 0, dirY: 0, hp: 0, maxHp: 0 };
 const dashPayload = { x: 0, y: 0, dirX: 0, dirY: 0 };
 const parryPayload = { x: 0, y: 0, success: false };
@@ -137,13 +137,30 @@ function threatNear(p, world) {
   return false;
 }
 
+// Un Contretemps vivant est-il à portée (balance.resonance.offbeatRadius) ? Alors la frappe est jugée en croches :
+// frapper SUR la croche (ce qui l'ouvre, enemy-behaviors) est une frappe valide, pas un raté.
+const OFFBEAT_RADIUS_DEFAULT = 260;
+let offbeatFound = false;
+function offbeatHit(e) { if (!offbeatFound && e.state === 'alive' && e.def && e.def.behavior === 'contretemps') offbeatFound = true; }
+function contretempsNear(p, world) {
+  if (!world || !world.grid) return false;
+  const c = balance().resonance;
+  const r = Number.isFinite(c.offbeatRadius) ? c.offbeatRadius : OFFBEAT_RADIUS_DEFAULT;
+  if (r <= 0) return false;
+  offbeatFound = false;
+  world.grid.query(p.x, p.y, r, offbeatHit);
+  return offbeatFound;
+}
+
 /**
  * Juge une action rythmique et émet rhythm:input. Volée : la Résonance ne se charge que si une menace
  * est proche. Parade : le crédit est différé (notifyParry / fin de parade), voir updatePlayer.
+ * « Frappe au contretemps » : un Contretemps à portée → jugement contre la subdivision 0,5 (temps ou croche),
+ * `offbeat` dans le payload quand la croche est retenue.
  */
 function judgeAction(action, p, world) {
-  const j = judge(pressedAt(action));
-  rhythmPayload.action = action; rhythmPayload.grade = j.grade; rhythmPayload.offsetMs = j.offsetMs;
+  const j = judge(pressedAt(action), contretempsNear(p, world) ? 0.5 : 1);
+  rhythmPayload.action = action; rhythmPayload.grade = j.grade; rhythmPayload.offsetMs = j.offsetMs; rhythmPayload.offbeat = !!j.offbeat;
   bus.emit('rhythm:input', rhythmPayload);
   if (action !== 'parry') onRhythmInput(j.grade, threatNear(p, world));
   return j.grade;

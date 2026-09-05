@@ -498,7 +498,7 @@
       "bonus_heal": "Soin 15 %",
       "bonus_resonance": "Résonance +1 (soin 25 % au cran max)",
       "bonus_card": "Carte offerte",
-      "bonus_bronze": "Bronze",
+      "bonus_bronze": "Bronze (versé à l'aube seulement)",
       "answer_hint": "Réponds sur le 4ᵉ coup : {bonus}"
     },
     "touch": {

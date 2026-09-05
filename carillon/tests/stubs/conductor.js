@@ -22,9 +22,10 @@ export function beatsPerBar() { return st.bpb; }
 export function phase() { if (!st.running) return 0; const b = bf(); return b < 0 ? 0 : b - Math.floor(b); }
 export function nextBeatAt(sub = 1) { const step = st.beatDur * sub; const k = Math.floor((now() - st.startAt) / step + 1e-6) + 1; return st.startAt + Math.max(k, 0) * step; }
 export function schedule(sub, fn) { const e = { sub, fn, nextK: null }; st.entries.add(e); return () => st.entries.delete(e); }
-export function judge(inputAt) {
-  const b = bf(inputAt - st.latency / 1000); const n = Math.round(b); const offsetMs = (b - n) * st.beatDur * 1000; const a = Math.abs(offsetMs);
-  return { grade: a <= st.windowMs / 3 ? 'parfait' : a <= st.windowMs ? 'bon' : 'rate', offsetMs, beat: n, early: offsetMs < 0 };
+export function judge(inputAt, subdivision = 1) {
+  const sub = subdivision > 0 ? subdivision : 1;
+  const b = bf(inputAt - st.latency / 1000); const n = Math.round(b / sub) * sub; const offsetMs = (b - n) * st.beatDur * 1000; const a = Math.abs(offsetMs);
+  return { grade: a <= st.windowMs / 3 ? 'parfait' : a <= st.windowMs ? 'bon' : 'rate', offsetMs, beat: n, early: offsetMs < 0, offbeat: n !== Math.round(n) };
 }
 export function setWindowMs(ms) { st.windowMs = ms; } export function windowMs() { return st.windowMs; }
 export function setInputLatencyMs(ms) { st.latency = Math.max(-150, Math.min(150, Number(ms) || 0)); }

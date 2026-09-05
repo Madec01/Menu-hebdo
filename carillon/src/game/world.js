@@ -34,7 +34,7 @@ export function createWorld({ parishDef, rng, waveDef }) {
     enemies: createEnemyPool(), projectiles: createProjectilePool(), pickups: createPickupPool(), hazards: createHazardPool(),
     grid: createGrid(64), spawner: createSpawner(waveDef), moments: createMoments(waveDef, rng), ground: createGround(parishDef, rng.seed),
     beat: -1, bar: -1, beatInBar: 0, beatChanged: false, barChanged: false, offbeatChanged: false, lastPhase: 0,
-    kills: 0, killsByKind: {}, spawned: 0, echoes: 0, bronzePicked: 0, auraDepth: 0, auraWasIn: false,
+    kills: 0, killsByKind: {}, spawned: 0, echoes: 0, bronzePicked: 0, bellBronze: 0, auraDepth: 0, auraWasIn: false,
     fissure: null, fissureId: 0, boss: null, bossId: 0, bossKind: '', bossKilled: null, victory: false, ended: false,
     player: null, allParishes: Array.from(allParishes().values()),
     // Règles modifiées par une Relique (game/relics.js) : lues par spawner, collision et le rendu.
