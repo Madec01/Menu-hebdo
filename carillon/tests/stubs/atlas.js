@@ -6,4 +6,5 @@ export function image() { return undefined; } export function prepareTint() { re
 export function animFrames() { return INFO; } export function frameAt() { return 0; }
 export function animDone(id, anim, t) { return t >= 0.5; }
 export function isDirectional() { return false; } export function dirAnim(id, base) { return base; }
-export function draw() {} export function drawShadow() {} export function drawTile() {} export function drawNineSlice() {} export function drawIcon() {}
+export function isImportant() { return false; }
+export function draw() {} export function drawOutlined() {} export function drawShadow() {} export function drawTile() {} export function drawNineSlice() {} export function drawIcon() {}

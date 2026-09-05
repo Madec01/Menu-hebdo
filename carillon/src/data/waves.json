@@ -1,19 +1,19 @@
 {
  "balance": {
   "xp": {
-   "base": 26,
-   "perLevel": 4,
-   "growth": 1.045,
+   "base": 20,
+   "perLevel": 3,
+   "growth": 1.04,
    "startLevel": 1
   },
   "enemyHp": {
-   "perTier": 1.32,
+   "perTier": 1.3,
    "damagePerTier": 1.16,
    "speedPerTier": 1.03
   },
   "spawn": {
-   "densityPerTier": 0.28,
-   "globalCap": 400,
+   "densityPerTier": 0.18,
+   "globalCap": 220,
    "minDist": 290,
    "maxDist": 360,
    "afterBossRate": 0.3
@@ -31,7 +31,7 @@
    "lightRadius": 90,
    "pulseRadius": 60,
    "pulseKnock": 120,
-   "parryCooldownBeats": 1,
+   "parryCooldownBeats": 2,
    "hitKnock": 140
   },
   "resonance": {
@@ -43,9 +43,9 @@
    "decayPerBeat": 1,
    "mults": [
     1,
-    1.4,
-    1.8,
-    2.5
+    1.5,
+    2,
+    2.6
    ],
    "windowMs": 110,
    "threatRadius": 140,
@@ -56,7 +56,8 @@
   },
   "mark": {
    "spreadPx": 200,
-   "fallbackDamage": 8
+   "fallbackDamage": 8,
+   "perAccordLevel": 0.03
   },
   "combat": {
    "critMult": 2,
@@ -86,8 +87,8 @@
    "win": 1.0,
    "perMinute": 10,
    "perKill": 0.05,
-   "perResonance": 30,
-   "lossMult": 0.5
+   "perResonance": 35,
+   "lossMult": 0.6
   },
   "cards": {
    "weaponWeight": 60,
@@ -95,8 +96,8 @@
    "fusionWeight": 300,
    "maxWeapons": 6,
    "maxPassives": 6,
-   "ownedWeight": 3,
-   "fusionPartnerWeight": 6,
+   "ownedWeight": 4,
+   "fusionPartnerWeight": 12,
    "bonusHeal": 0.3,
    "bonusBronze": 20
   },
@@ -151,7 +152,7 @@
  },
  "cendrelune": {
   "duration": 240,
-  "tierEvery": 40,
+  "tierEvery": 45,
   "difficulty": {
    "hp": 1,
    "damage": 1
@@ -159,66 +160,73 @@
   "spawns": [
    {
     "from": 0,
-    "to": 240,
-    "kind": "feutre",
-    "perSec": 0.8,
-    "cap": 60
-   },
-   {
-    "from": 7,
-    "to": 40,
-    "kind": "choeur_muet",
-    "perSec": 0.3,
-    "cap": 20
-   },
-   {
-    "from": 40,
-    "to": 240,
-    "kind": "choeur_muet",
-    "perSec": 0.5,
-    "cap": 40
-   },
-   {
-    "from": 27,
     "to": 60,
-    "kind": "baillon",
-    "perSec": 0.15,
-    "cap": 6
+    "kind": "feutre",
+    "perSec": 0.45,
+    "cap": 28
    },
    {
     "from": 60,
     "to": 240,
-    "kind": "baillon",
-    "perSec": 0.22,
-    "cap": 12
+    "kind": "feutre",
+    "perSec": 0.6,
+    "cap": 30
    },
    {
-    "from": 53,
+    "from": 10,
+    "to": 45,
+    "kind": "choeur_muet",
+    "perSec": 0.2,
+    "cap": 15
+   },
+   {
+    "from": 45,
+    "to": 240,
+    "kind": "choeur_muet",
+    "perSec": 0.4,
+    "cap": 20
+   },
+   {
+    "from": 40,
+    "to": 70,
+    "kind": "baillon",
+    "perSec": 0.12,
+    "cap": 5
+   },
+   {
+    "from": 70,
+    "to": 240,
+    "kind": "baillon",
+    "perSec": 0.2,
+    "cap": 8
+   },
+   {
+    "from": 55,
     "to": 240,
     "kind": "fossoyeur",
-    "perSec": 0.14,
-    "cap": 8
+    "perSec": 0.12,
+    "cap": 5
    },
    {
     "from": 87,
     "to": 240,
     "kind": "ouateux",
     "perSec": 0.08,
-    "cap": 5
+    "cap": 4
    },
    {
     "from": 120,
     "to": 240,
     "kind": "rampe_suie",
-    "perSec": 0.1,
-    "cap": 8
+    "perSec": 0.08,
+    "cap": 6
    },
    {
     "from": 153,
     "to": 240,
     "kind": "veuve_grise",
-    "perSec": 0.08,
-    "cap": 6
+    "perSec": 0.07,
+    "cap": 5
    },
    {
     "from": 193,
@@ -240,6 +248,13 @@
     "kind": "voleur_de_cran",
     "perSec": 0.05,
     "cap": 2
+   },
+   {
+    "from": 170,
+    "to": 240,
+    "kind": "desaccordeur",
+    "perSec": 0.03,
+    "cap": 1
    }
   ],
   "events": [
@@ -265,14 +280,14 @@
     "id": "procession",
     "sec": 18,
     "kind": "feutre",
-    "count": 12
+    "count": 10
    },
    {
     "at": 57,
     "id": "cercle",
     "sec": 15,
     "kind": "feutre",
-    "count": 10,
+    "count": 8,
     "radius": 260
    },
    {
@@ -280,7 +295,7 @@
     "id": "nuee",
     "sec": 12,
     "kind": "choeur_muet",
-    "count": 24
+    "count": 18
    },
    {
     "at": 117,
@@ -292,7 +307,7 @@
     "id": "meute",
     "sec": 12,
     "kind": "baillon",
-    "count": 6
+    "count": 5
    },
    {
     "at": 180,
@@ -306,14 +321,14 @@
     "id": "veuves_en_cercle",
     "sec": 12,
     "kind": "veuve_grise",
-    "count": 4,
+    "count": 3,
     "radius": 110
    }
   ]
  },
  "tourbes": {
   "duration": 270,
-  "tierEvery": 41,
+  "tierEvery": 51,
   "difficulty": {
    "hp": 1.25,
    "damage": 1.12
@@ -323,8 +338,8 @@
     "from": 0,
     "to": 270,
     "kind": "feutre",
-    "perSec": 0.9,
-    "cap": 60
+    "perSec": 0.675,
+    "cap": 45
    },
    {
     "from": 8,
@@ -476,7 +491,7 @@
  },
  "val_des_cordes": {
   "duration": 300,
-  "tierEvery": 42,
+  "tierEvery": 57,
   "difficulty": {
    "hp": 1.55,
    "damage": 1.25
@@ -486,22 +501,22 @@
     "from": 0,
     "to": 300,
     "kind": "baillon",
-    "perSec": 0.2,
-    "cap": 12
+    "perSec": 0.15,
+    "cap": 9
    },
    {
     "from": 4,
     "to": 300,
     "kind": "feutre",
-    "perSec": 1.0,
-    "cap": 70
+    "perSec": 0.75,
+    "cap": 52
    },
    {
     "from": 25,
     "to": 300,
     "kind": "choeur_muet",
-    "perSec": 0.7,
-    "cap": 50
+    "perSec": 0.525,
+    "cap": 38
    },
    {
     "from": 50,
@@ -638,7 +653,7 @@
  },
  "nef_noyee": {
   "duration": 330,
-  "tierEvery": 44,
+  "tierEvery": 62,
   "difficulty": {
    "hp": 1.7,
    "damage": 1.3
@@ -648,15 +663,15 @@
     "from": 0,
     "to": 330,
     "kind": "choeur_muet",
-    "perSec": 0.8,
-    "cap": 60
+    "perSec": 0.6,
+    "cap": 45
    },
    {
     "from": 6,
     "to": 330,
     "kind": "feutre",
-    "perSec": 1.0,
-    "cap": 80
+    "perSec": 0.75,
+    "cap": 60
    },
    {
     "from": 21,
@@ -801,7 +816,7 @@
  },
  "beffroi_mere": {
   "duration": 360,
-  "tierEvery": 45,
+  "tierEvery": 68,
   "difficulty": {
    "hp": 2.0,
    "damage": 1.4
@@ -811,22 +826,22 @@
     "from": 0,
     "to": 360,
     "kind": "feutre",
-    "perSec": 1.1,
-    "cap": 90
+    "perSec": 0.825,
+    "cap": 68
    },
    {
     "from": 5,
     "to": 360,
     "kind": "choeur_muet",
-    "perSec": 0.9,
-    "cap": 60
+    "perSec": 0.675,
+    "cap": 45
    },
    {
     "from": 18,
     "to": 360,
     "kind": "baillon",
-    "perSec": 0.35,
-    "cap": 18
+    "perSec": 0.262,
+    "cap": 14
    },
    {
     "from": 36,

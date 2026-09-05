@@ -27,7 +27,7 @@ node tests/checks.mjs --json
 
 Vérifie : tous les JSON de `src/data/` et les deux manifestes sont valides ; les identifiants du registre
 (sonneurs, Timbres, Accords, fusions et leurs couples, ennemis, boss, paroisses, 20 améliorations, 25 hauts-faits (dont les 20 du registre),
-24 Feuillets, 43 bruitages, 10 pistes) existent ; chaque clé i18n référencée par les JSON et chaque `t('…')`
+24 Feuillets, 43 bruitages, 10 pistes, 9 fusions et leurs couples, 11 ennemis dont contretemps / voleur_de_cran / desaccordeur) existent ; chaque clé i18n référencée par les JSON et chaque `t('…')`
 littéral du code existe dans **fr et en** ; `fr.json`/`en.json` et `ui-fr.json`/`ui-en.json` ont les mêmes clés ;
 chaque sprite, tileset, icône, bruitage, piste et preset de particules référencé existe dans les manifestes, et
 chaque fichier des manifestes existe sur le disque ; aucun `src/**/*.js` > 400 lignes ; aucun `Math.random`

@@ -10,6 +10,12 @@
 // pare que si c'est « utile » (contact imminent ou projectile de Silence qui arrive), sinon il bat sur place
 // (Volée sans direction) quand une menace est à portée, ou dash s'il fuit. Profil `parade_seule` : parade sur
 // chaque temps quoi qu'il arrive, jamais de Volée (diagnostic : ne doit pas dépasser le cran 1 en moyenne).
+// Vague 2 : Contretemps (le robot pose une parade À VIDE sur la croche quand un Contretemps est à portée : elle
+// l'ouvre un temps sans coûter de cran — une Volée sur la croche serait jugée « raté »), Voleur de cran (le robot
+// poursuit celui qui emporte un cran ; durée de la chasse mesurée), Désaccordeur (rien), phases de boss
+// (`boss:phase` journalisé ; le cri fêlé décale la grille du stub et le robot s'y réadapte après `adaptBeats`
+// temps selon son profil), fusions (PAIRS = fusions.json ; instant de la première fusion mesuré). Profil `naif` :
+// le robot du lead (Espace sur chaque temps + déplacement en cercle, jamais tourné vers l'ennemi).
 //
 //   node tests/sim.mjs                                  # une run : Wren, parfait, seed 1, Cendrelune
 //   node tests/sim.mjs --char le_muet --profile moyen --seed 3 --parish tourbes
@@ -21,8 +27,9 @@
 // Options : --seeds N, --cards honnete|premiere|fusion, --upgrades coeur_de_bronze:3,battant_lourd:2,
 //           --secondWeapon <id> (variante : arme supplémentaire au départ), --inputEvery 1 (frappe à chaque temps),
 //           --minutes 13 (défaut : durée de la
-//           paroisse waves.json + 2 min 30 pour le boss), --jobs 4. Les Moments scriptés (run:moment) sont traversés
-//           et listés (id@seconde) ; le bilan agrégé lit la durée de la nuit (niv@fin = niveau à `duration`).
+//           paroisse waves.json + 2 min 30 pour le boss), --jobs 4, --out fichier.json (matrice brute sauvegardée),
+//           --summary fichier.json [--md] (retableau d'une matrice sauvegardée). Les Moments scriptés (run:moment)
+//           sont traversés et listés (id@seconde) ; le bilan agrégé lit la durée de la nuit (niv@fin = niveau à `duration`).
 
 import { register } from 'node:module';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -41,31 +48,34 @@ const PROFILES = {
   // frappes (1 = à chaque temps, comme un joueur qui tient la Mesure ; 0 = seulement des Volées d'urgence) ;
   // fleeThreat = menace cumulée (Σ (dégâts+4)/d²) qui fait
   // passer en fuite ; fleeHp = fraction de PV sous laquelle le robot devient prudent.
-  parfait: { parfait: 1, bon: 0, rate: 0, faceRate: 1, emergency: false, inputEvery: 1, assist: 'none', cards: 'honnete', fleeThreat: 0.12, fleeHp: 0.35 },
+  parfait: { parfait: 1, bon: 0, rate: 0, faceRate: 1, emergency: false, inputEvery: 1, assist: 'none', cards: 'honnete', fleeThreat: 0.12, fleeHp: 0.35, adaptBeats: 1 },
   // moyen : un joueur qui tombe presque toujours dans la fenêtre (Wren ±143 ms) mais rarement dans le Parfait ;
   // faible : l'ancien « moyen » (40 % de ratés), gardé comme référence basse.
-  moyen: { parfait: 0.2, bon: 0.55, rate: 0.25, faceRate: 0.6, emergency: true, inputEvery: 1, assist: 'none', cards: 'honnete', fleeThreat: 0.1, fleeHp: 0.35 },
-  faible: { parfait: 0.1, bon: 0.5, rate: 0.4, faceRate: 0.6, emergency: true, inputEvery: 1, assist: 'none', cards: 'honnete', fleeThreat: 0.1, fleeHp: 0.35 },
-  norhythm: { parfait: 0, bon: 0, rate: 1, faceRate: 0.6, emergency: true, inputEvery: 0, assist: 'norhythm', cards: 'honnete', fleeThreat: 0.1, fleeHp: 0.35 },
-  passif: { parfait: 0, bon: 0.2, rate: 0.8, faceRate: 0.35, emergency: false, inputEvery: 8, assist: 'none', cards: 'premiere', fleeThreat: 0.2, fleeHp: 0.2 },
+  moyen: { parfait: 0.2, bon: 0.55, rate: 0.25, faceRate: 0.6, emergency: true, inputEvery: 1, assist: 'none', cards: 'honnete', fleeThreat: 0.1, fleeHp: 0.35, adaptBeats: 2 },
+  faible: { parfait: 0.1, bon: 0.5, rate: 0.4, faceRate: 0.6, emergency: true, inputEvery: 1, assist: 'none', cards: 'honnete', fleeThreat: 0.1, fleeHp: 0.35, adaptBeats: 3 },
+  norhythm: { parfait: 0, bon: 0, rate: 1, faceRate: 0.6, emergency: true, inputEvery: 0, assist: 'norhythm', cards: 'honnete', fleeThreat: 0.1, fleeHp: 0.35, adaptBeats: 4 },
+  passif: { parfait: 0, bon: 0.2, rate: 0.8, faceRate: 0.35, emergency: false, inputEvery: 8, assist: 'none', cards: 'premiere', fleeThreat: 0.2, fleeHp: 0.2, adaptBeats: 4 },
+  // Diagnostic (constat du lead) : Espace sur chaque temps + déplacement en cercle, jamais tourné vers l'ennemi,
+  // première carte proposée. Borne basse : un humain qui découvre le jeu.
+  naif: { parfait: 0.3, bon: 0.5, rate: 0.2, faceRate: 0, emergency: false, inputEvery: 1, dashAlways: true, circle: true, assist: 'none', cards: 'premiere', fleeThreat: 9, fleeHp: 0, adaptBeats: 4 },
   // Diagnostic : le style « Volée sur chaque temps » observé par le lead (dash permanent, jamais de parade).
-  lead: { parfait: 1, bon: 0, rate: 0, faceRate: 1, emergency: false, inputEvery: 1, dashAlways: true, assist: 'none', cards: 'honnete', fleeThreat: 0.1, fleeHp: 0.35 },
+  lead: { parfait: 1, bon: 0, rate: 0, faceRate: 1, emergency: false, inputEvery: 1, dashAlways: true, assist: 'none', cards: 'honnete', fleeThreat: 0.1, fleeHp: 0.35, adaptBeats: 1 },
   // Diagnostic : la stratégie dominante de l'audit — se déplacer comme « parfait » mais presser la parade sur
   // CHAQUE temps, jamais de Volée (parryAlways). Avec la recharge et le gain conditionnel, elle ne doit pas
   // dépasser le cran 1 en moyenne.
-  parade_seule: { parfait: 1, bon: 0, rate: 0, faceRate: 1, emergency: false, inputEvery: 1, parryAlways: true, assist: 'none', cards: 'honnete', fleeThreat: 0.12, fleeHp: 0.35 },
+  parade_seule: { parfait: 1, bon: 0, rate: 0, faceRate: 1, emergency: false, inputEvery: 1, parryAlways: true, assist: 'none', cards: 'honnete', fleeThreat: 0.12, fleeHp: 0.35, adaptBeats: 1 },
 };
 const WEAPON_PREF = ['bourdon', 'grelots', 'clarine', 'tocsin', 'chaine_d_angelus', 'cor_de_brume', 'crecelle', 'battant', 'diapason'];
 const PASSIVE_PREF = ['ferrure', 'contrepoids', 'cire_d_abeille', 'corde_de_chanvre', 'souffle', 'etain', 'echo', 'metronome'];
 
 function parseArgs(argv) {
   const o = { seed: 1, seeds: 5, char: 'wren', profile: 'parfait', parish: 'cendrelune', cards: null, data: null, upgrades: '', secondWeapon: null, trace: null,
-    minutes: 0, json: false, matrix: false, chars: 'wren,le_muet', profiles: 'parfait,moyen,norhythm', jobs: 4, quiet: false, weapons: 4, relic: 'first', inputEvery: 0 };
+    minutes: 0, json: false, matrix: false, chars: 'wren,le_muet', profiles: 'parfait,moyen,norhythm', jobs: 4, quiet: false, weapons: 4, relic: 'first', inputEvery: 0, out: null };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (!a.startsWith('--')) continue;
     const k = a.slice(2);
-    if (k === 'json' || k === 'matrix' || k === 'quiet') { o[k] = true; continue; }
+    if (k === 'json' || k === 'matrix' || k === 'quiet' || k === 'md') { o[k] = true; continue; }
     o[k] = argv[++i];
   }
   for (const k of ['seed', 'seeds', 'minutes', 'jobs', 'weapons', 'inputEvery']) o[k] = +o[k] || 0;
@@ -84,6 +94,7 @@ function makeRobot(profile, opts, mods, rng, PAIRS = {}) {
   const R = {
     dirX: 0, dirY: 0, lastBeat: -1, grades: { parfait: 0, bon: 0, rate: 0 }, dashes: 0, parries: 0, pulses: 0,
     lastFire: -1, facing: false, flee: false, hpHist: new Array(180), hpIdx: 0,
+    crocheAt: 0, crocheParries: 0, lastSA: null, believedSA: 0, adaptAt: 0, circleA: 0, chaseId: 0, fleeSince: -1, standUntil: 0,
   };
   function grade() {
     const r = rng.next();
@@ -119,12 +130,18 @@ function makeRobot(profile, opts, mods, rng, PAIRS = {}) {
       if (!hasMelee) engage = 120;
       // 1. Menaces : répulsion 1/d² pondérée par les dégâts (ennemis, projectiles de Silence, zones).
       let sx = 0, sy = 0, nearest = null, nd = 1e9, boss = null, threat = 0, nearTouch = false, parryContact = false;
+      let contretemps = null, thief = null, thiefD = 1e9;
       const items = world.enemies.items;
       for (let i = 0; i < items.length; i++) {
         const e = items[i];
         if (e.state !== 'alive') continue;
         const dx = e.x - p.x, dy = e.y - p.y, d2 = dx * dx + dy * dy, d = Math.sqrt(d2) || 1;
         if (e.boss) boss = e;
+        const beh = e.def.behavior;
+        // Contretemps à portée d'arme (fermé) : on frappera sur la croche pour l'ouvrir.
+        if (beh === 'contretemps' && d < engage + 30 && e.vulnMult <= 0 && !contretemps) contretemps = e;
+        // Voleur qui emporte un cran : on le poursuit (cible prioritaire), jusqu'à 420 px.
+        if (beh === 'voleur' && e.carry > 0 && d < 420 && d < thiefD) { thief = e; thiefD = d; }
         if (d < nd) { nd = d; nearest = e; }
         if (d > 260) continue;
         const w = (e.damage + 4) / (d2 + 400) * (e.boss ? 4 : e.elite ? 2 : 1);
@@ -187,20 +204,28 @@ function makeRobot(profile, opts, mods, rng, PAIRS = {}) {
       const hp3s = R.hpHist[R.hpIdx] === undefined ? p.hp : R.hpHist[R.hpIdx];
       const hurting = hp3s - p.hp > p.maxHp * 0.12;
       const th = profile.fleeThreat * (R.flee ? 0.6 : 1); // hystérésis : on cesse de fuir sous 60 % du seuil
-      const flee = (threat > th && hurting) || threat > th * 2.5 || (lowHp && threat > th * 0.4) || projThreat > (bossFight ? 0.15 : 0.05);
+      const chasing = thief && !lowHp;   // chasse au Voleur : on n'abandonne que si les PV sont bas
+      let flee = !chasing && ((threat > th && hurting) || threat > th * 2.5 || (lowHp && threat > th * 0.4) || projThreat > (bossFight ? 0.4 : 0.05));   // boss : on traverse les anneaux (Volée, parade) au lieu de les fuir
+      // Un humain ne fuit pas une foule indéfiniment : après 4 s de fuite continue avec plus de la moitié des PV,
+      // il se retourne et tient sa zone 3 s (sinon le robot tourne autour de la foule sans jamais la frapper).
+      if (flee && !lowHp && p.hp > p.maxHp * 0.5) { if (R.fleeSince < 0) R.fleeSince = t0now(); if (t0now() - R.fleeSince > 4) { flee = false; R.standUntil = t0now() + 3; } }
+      else R.fleeSince = -1;
+      if (R.standUntil > t0now() && !lowHp) flee = false;
+      function t0now() { return audio.now(); }
       R.flee = flee; R.threat = threat; R.projThreat = projThreat; R.bossD = bossFight ? Math.hypot(boss.x - p.x, boss.y - p.y) : -1;
+      R.chaseId = chasing ? thief.id : 0;
       let mx = 0, my = 0;
       if (flee) { mx = sx * 4 + px * 4 + ax * 0.3; my = sy * 4 + py * 4 + ay * 0.3; }
       else {
-        const xpW = bossFight ? 0.1 : 1, pw = bossFight ? 1.5 : 4; // boss : on esquive localement, on n'abandonne pas l'approche
+        const xpW = bossFight || chasing ? 0.1 : 1, pw = bossFight ? 1.5 : 4; // boss : on esquive localement, on n'abandonne pas l'approche
         mx = px * pw + ax * xpW; my = py * pw + ay * xpW;
-        const target = bossFight ? boss : nearest;
+        const target = chasing ? thief : bossFight ? boss : nearest;
         if (target) {
           const td = Math.hypot(target.x - p.x, target.y - p.y) || 1;
           const ux = (target.x - p.x) / td, uy = (target.y - p.y) / td;
           const contact = target.r + p.r + 6;
-          const reach = engage + (bossFight ? target.r : 0);
-          const approach = bossFight ? 0.15 : 0.02;
+          const reach = chasing ? Math.min(engage, 60) : engage + (bossFight ? target.r : 0);
+          const approach = chasing ? 0.3 : bossFight ? 0.3 : 0.02;
           if (td > reach * 0.85) { mx += ux * approach; my += uy * approach; }    // approcher
           else if (td < contact) { mx -= ux * 0.03; my -= uy * 0.03; }               // reculer d'un pas
           else if (!hasMelee || td < reach * 0.5) { mx -= ux * 0.005; my -= uy * 0.005; } // rester à distance
@@ -244,17 +269,29 @@ function makeRobot(profile, opts, mods, rng, PAIRS = {}) {
 
       // 5. Frappes rythmiques sur les temps : Volée (dash) si l'on fuit, Contre-battement s'il est utile ET
       //    rechargé (p.parryCdT), sinon battement sur place (Volée sans direction) si une menace est à portée.
-      const beat = Math.floor((t - conductor.startAt()) / conductor.beatDuration());
+      //    La grille que le robot CROIT : après un décalage (cri fêlé), il garde l'ancienne pendant adaptBeats temps.
+      const bd = conductor.beatDuration();
+      const sa = conductor.startAt();
+      if (R.lastSA === null) { R.lastSA = sa; R.believedSA = sa; }
+      else if (sa !== R.lastSA) { R.lastSA = sa; R.adaptAt = t + (profile.adaptBeats || 0) * bd; }
+      if (t >= R.adaptAt) R.believedSA = sa;
+      const beat = Math.floor((t - R.believedSA) / bd);
       let dashNow = false, pulseNow = false;
       const fleeDx = sx + px, fleeDy = sy + py, fleeLen = Math.hypot(fleeDx, fleeDy);
       const parryOk = p.parryT <= 0 && p.parryCdT <= 0;
+      // Contretemps : parade à vide posée SUR la croche (elle ouvre l'ennemi un temps sans coûter de cran).
+      if (R.crocheAt > 0 && t >= R.crocheAt - DT * 0.5) {
+        R.crocheAt = 0;
+        if (parryOk && !p.dead) { input.__press('parry', t + offsetFor(grade()) * 0.5); R.parries++; R.crocheParries++; }
+      }
       if (beat !== R.lastBeat) {
         R.lastBeat = beat;
-        const beatT = conductor.beatTime(beat);
+        const beatT = R.believedSA + beat * bd;
         const bell = g.bell;
         const bellNext = bell && bell.ringing && beat === bell.fourthBeat - 1;   // garder la parade pour le 4ᵉ coup
+        const bellNow = bell && bell.ringing && beat === bell.fourthBeat;
         // Cloche horaire (§ 11 bis) : Contre-battement sur le 4ᵉ coup, avec le grade du profil.
-        if (bell && bell.ringing && beat === bell.fourthBeat && profile.inputEvery > 0 && parryOk) press('parry', beatT);
+        if (bellNow && profile.inputEvery > 0 && parryOk) press('parry', beatT);
         else if (profile.parryAlways) { if (parryOk) press('parry', beatT); }
         else if (profile.inputEvery > 0 && beat % profile.inputEvery === 0 && beat > 0) {
           if (profile.dashAlways && p.dashT <= 0) { press('dash', beatT); dashNow = true; R.dashDir = len > 0 ? 1 : 0; }
@@ -264,6 +301,15 @@ function makeRobot(profile, opts, mods, rng, PAIRS = {}) {
         } else if (profile.inputEvery === 0 && (flee || nearTouch) && p.dashT <= 0 && fleeLen > 0) {
           input.__press('dash', beatT); R.dashes++; dashNow = true;
         }
+        // Contretemps fermé à portée et parade libre au prochain demi-temps : viser la croche de ce temps.
+        if (contretemps && profile.inputEvery > 0 && !profile.parryAlways && !profile.dashAlways && !bellNext && !bellNow && !parryUseful) R.crocheAt = beatT + bd * 0.5;
+      }
+      // Sans rythme : la Volée reste une esquive (i-frames) — un projectile ou un bond imminent la déclenche hors grille.
+      if (!dashNow && profile.inputEvery === 0 && parryUseful && p.dashT <= 0 && p.iframesT <= 0 && fleeLen > 0) { input.__press('dash', t); R.dashes++; dashNow = true; }
+      if (profile.circle) {   // le robot naïf : tourne en rond, Volée dans sa direction de marche
+        R.circleA += DT * 0.9;
+        input.__setAxis(Math.cos(R.circleA), Math.sin(R.circleA) * 0.75);
+        return;
       }
       if (profile.still) { input.__setAxis(0, 0); return; }
       if (!dashNow && profile.emergency && nearTouch && p.dashT <= 0 && p.iframesT <= 0 && fleeLen > 0 && lowHp) {
@@ -348,7 +394,10 @@ export async function runOne(o) {
     boss: { startSec: null, endSec: null, hpAtStart: null, fightSec: null }, fissures: [], dps: {}, resonanceAvg: 0, bronze: 0,
     grades: null, dashes: 0, parries: 0, pulses: 0, parriesOk: 0, maxEnemies: 0, tierHist: [0, 0, 0, 0], streakMax: 0, build: null, achievements: [], leaves: [], firstDeathRisk: null, minHp: 1e9, minHpSec: 0,
     relic: null, relicOffer: null, bellRings: 0, bellAnswers: 0, duration: 0, moments: [], momentsTotal: 0,
+    bossPhases: [], gridShifts: 0, fusionAt: null, fusionsDone: [], enemiesAtBoss: null, killsByKind: {}, contretempsKills: 0, contretempsPct: 0,
+    thefts: 0, thiefKills: 0, thiefChaseSec: [], thiefChaseMean: null, crocheParries: 0, sfx: {}, bellMinuteSfx: 0,
   };
+  const carrying = new Map();   // id du Voleur → seconde du vol (chasse mesurée jusqu'à sa mort)
   const offs = [];
   offs.push(bus.on('level:up', (e) => {
     out.levelUps++;
@@ -361,8 +410,13 @@ export async function runOne(o) {
   offs.push(bus.on('player:parry', (e) => { if (e.success) out.parriesOk++; }));
   offs.push(bus.on('resonance:streak', (e) => { if (e.count > out.streakMax) out.streakMax = e.count; }));
   offs.push(bus.on('player:hit', (e) => { out.hitsTaken++; out.dmgTaken[e.from] = (out.dmgTaken[e.from] || 0) + e.damage; out.dmgTakenTotal += e.damage; }));
+  offs.push(bus.on('boss:phase', (e) => { out.bossPhases.push(e.phase + (e.timbre ? ':' + e.timbre : '') + '@' + Math.round(g.run.timeSec)); }));
+  offs.push(bus.on('weapon:fusion', (e) => { if (out.fusionAt === null) out.fusionAt = Math.round(g.run.timeSec); out.fusionsDone.push(e.fusionId + '@' + Math.round(g.run.timeSec)); }));
+  offs.push(bus.on('enemy:death', (e) => {
+    if (carrying.has(e.id)) { out.thiefKills++; out.thiefChaseSec.push(Math.round((g.run.timeSec - carrying.get(e.id)) * 10) / 10); carrying.delete(e.id); }
+  }));
   offs.push(bus.on('run:boss', (e) => {
-    if (e.phase === 'start') { out.boss.startSec = g.run.timeSec; out.boss.hpAtStart = g.player.hp; }
+    if (e.phase === 'start') { out.boss.startSec = g.run.timeSec; out.boss.hpAtStart = g.player.hp; out.enemiesAtBoss = g.world.enemies.active; }
     if (e.phase === 'end') { out.boss.endSec = g.run.timeSec; out.boss.fightSec = +(out.boss.endSec - out.boss.startSec).toFixed(1); }
   }));
   offs.push(bus.on('run:fissure', (e) => out.fissures.push(e.bossId + ':' + e.phase + '@' + Math.round(g.run.timeSec))));
@@ -400,6 +454,10 @@ export async function runOne(o) {
     game.updateGame(DT);
     input.tickInput();
     if (world.enemies.active > out.maxEnemies) out.maxEnemies = world.enemies.active;
+    if (i % 6 === 0) {   // Voleurs chargés : début de la chasse (10 fois par seconde suffit)
+      const items = world.enemies.items;
+      for (let k = 0; k < items.length; k++) { const e = items[k]; if (e.state === 'alive' && e.carry > 0 && !carrying.has(e.id)) { carrying.set(e.id, g.run.timeSec); out.thefts++; } }
+    }
     if (o.trace === 'boss' && world.boss && i % 60 === 0) console.error(`[robot] t=${g.run.timeSec.toFixed(1)} dBoss=${robot.R.bossD.toFixed(0)} flee=${robot.R.flee} threat=${robot.R.threat.toFixed(3)} proj=${robot.R.projThreat.toFixed(3)} hp=${p.hp} alive=${world.enemies.active} bossHp=${world.boss.hp} bossState=${world.boss.aiState}`);
     if (!p.dead && p.hp < out.minHp) { out.minHp = p.hp; out.minHpSec = Math.round(g.run.timeSec); }
     out.tierHist[resonance.tier()]++;
@@ -418,7 +476,15 @@ export async function runOne(o) {
     out.build = { weapons: p.weapons.map((w) => ({ id: w.id, level: w.level })), passives: p.passives.map((x) => ({ id: x.id, level: x.level })) };
     if (world.boss) out.boss.hpLeft = Math.round(world.boss.hp);
   }
-  out.grades = robot.R.grades; out.dashes = robot.R.dashes; out.parries = robot.R.parries; out.pulses = robot.R.pulses;
+  out.grades = robot.R.grades; out.dashes = robot.R.dashes; out.parries = robot.R.parries; out.pulses = robot.R.pulses; out.crocheParries = robot.R.crocheParries;
+  out.killsByKind = Object.assign({}, world.killsByKind); out.kills = out.kills || world.kills;
+  out.contretempsKills = world.killsByKind.contretemps || 0; out.contretempsPct = Math.round(out.contretempsKills / Math.max(1, world.kills) * 1000) / 10;
+  out.thiefChaseMean = out.thiefChaseSec.length ? Math.round(out.thiefChaseSec.reduce((a, b) => a + b, 0) / out.thiefChaseSec.length * 10) / 10 : null;
+  out.gridShifts = conductor.gridShiftCount ? conductor.gridShiftCount() : 0;
+  const sfxMod = await import('../src/audio/sfx.js');
+  out.sfx = { bell_minute: sfxMod.played.bell_minute || 0, moment_start: sfxMod.played.moment_start || 0, bell_tier: sfxMod.played.bell_tier || 0, fusion: sfxMod.played.fusion || 0 };
+  out.bellMinuteSfx = out.sfx.bell_minute;
+  if (out.outcome === 'timeout') out.bronze = null;
   const th = out.tierHist.reduce((a, b) => a + b, 0) || 1;
   out.tierPct = out.tierHist.map((n) => Math.round(n / th * 100));
   out.minHp = out.minHp === 1e9 ? p.maxHp : Math.round(out.minHp);
@@ -440,7 +506,9 @@ function fmtRun(r) {
   lines.push(`  PV mini ${r.minHp} à ${r.minHpSec} s ; ennemis max ${r.maxEnemies} ; Fêlures ${r.fissures.join(' ')}`);
   lines.push(`  nuit de ${r.duration} s ; Moments ${r.moments.length}/${r.momentsTotal} : ${r.moments.join(' ')}`);
   lines.push(`  Relique : ${r.relic || 'aucune'} (proposées : ${(r.relicOffer || []).join(', ')}) ; cloche : ${r.bellAnswers}/${r.bellRings} réponses`);
-  if (r.boss.startSec !== null) lines.push(`  boss : début ${Math.round(r.boss.startSec)} s avec ${r.boss.hpAtStart} PV, durée ${r.boss.fightSec === null ? 'non vaincu (' + r.boss.hpLeft + ' PV restants)' : r.boss.fightSec + ' s'}`);
+  if (r.boss.startSec !== null) lines.push(`  boss : début ${Math.round(r.boss.startSec)} s avec ${r.boss.hpAtStart} PV et ${r.enemiesAtBoss} ennemis vivants, durée ${r.boss.fightSec === null ? 'non vaincu (' + r.boss.hpLeft + ' PV restants)' : r.boss.fightSec + ' s'} ; phases ${r.bossPhases.join(' ')} ; décalages de grille ${r.gridShifts}`);
+  lines.push(`  nouveaux ennemis : Contretemps ${r.contretempsKills} tués (${r.contretempsPct} % des tués, ${r.crocheParries} parades sur la croche) ; Voleur ${r.thefts} vols, ${r.thiefKills} repris en ${r.thiefChaseMean === null ? '–' : r.thiefChaseMean + ' s'} ; Désaccordeur ${r.killsByKind.desaccordeur || 0} tués`);
+  lines.push(`  fusions : ${r.fusionsDone.length ? r.fusionsDone.join(' ') : 'aucune'} ; bruitages : bell_minute ${r.sfx.bell_minute}, moment_start ${r.sfx.moment_start}, bell_tier ${r.sfx.bell_tier}`);
   if (r.build) lines.push('  build : ' + r.build.weapons.map((w) => w.id + ':' + w.level).join(' ') + ' | ' + r.build.passives.map((w) => w.id + ':' + w.level).join(' '));
   return lines.join('\n');
 }
@@ -457,8 +525,13 @@ export function summarize(results) {
     rows.push({
       key: k, n: rs.length, victoires: rs.filter((r) => r.outcome === 'victory').length, morts: rs.filter((r) => r.outcome === 'death').length,
       minuteMort: mean(rs.filter((r) => r.outcome === 'death').map((r) => r.endSec / 60)),
+      niv60: mean(rs.map((r) => levelAt(r, 60))), niv120: mean(rs.map((r) => levelAt(r, 120))),
       niv90: mean(rs.map((r) => levelAt(r, 90))), niv180: mean(rs.map((r) => levelAt(r, 180))), nivEnd: mean(rs.map((r) => levelAt(r, r.duration) ?? (r.endSec >= r.duration - 20 ? r.level : null))),
       moments: mean(rs.map((r) => r.moments.length)), duration: rs[0].duration,
+      en120: mean(rs.map((r) => { const s = r.samples.find((x) => x.t === 120); return s ? s.enemies : null; })), enMax: mean(rs.map((r) => r.maxEnemies)),
+      enBoss: mean(rs.map((r) => r.enemiesAtBoss)), fusions: rs.filter((r) => r.fusionAt !== null).length, fusionAt: mean(rs.map((r) => r.fusionAt)),
+      ctpsPct: mean(rs.map((r) => r.contretempsPct)), thiefSec: mean(rs.flatMap((r) => r.thiefChaseSec || [])), phases: mean(rs.map((r) => (r.bossPhases || []).length)),
+      timeouts: rs.filter((r) => r.outcome === 'timeout').length, bronzeWin: mean(rs.filter((r) => r.outcome === 'victory').map((r) => r.bronze)), bronzeLoss: mean(rs.filter((r) => r.outcome === 'death').map((r) => r.bronze)),
       pvBoss: mean(rs.map((r) => r.boss.hpAtStart !== null ? r.boss.hpAtStart / (r.samples[0] ? r.samples[r.samples.length - 1].maxHp : 100) * 100 : null)),
       bossSec: mean(rs.map((r) => r.boss.fightSec)), kills: mean(rs.map((r) => r.kills)), reso: mean(rs.map((r) => r.resonanceAvg)),
       bronze: mean(rs.map((r) => r.bronze)), minHp: mean(rs.map((r) => r.minHp)),
@@ -467,14 +540,14 @@ export function summarize(results) {
   return rows;
 }
 export function tableText(rows) {
-  const h = 'sonneur/profil        n  vict  morts  min.mort  niv@90s  niv@3min  niv@fin  PV%boss  boss(s)  tués   réso  bronze  moments';
+  const h = 'sonneur/profil        n  vict  morts  t.out  min.mort  niv@60s  niv@2min  niv@fin  en@2min  en@boss  enMax  PV%boss  boss(s)  phases  fusions  tués   réso  brz.vict  brz.déf  ctps%  voleur(s)';
   const lines = [h];
-  for (const r of rows) lines.push(`${r.key.padEnd(20)} ${String(r.n).padStart(2)}  ${String(r.victoires).padStart(4)}  ${String(r.morts).padStart(5)}  ${f1(r.minuteMort).padStart(8)}  ${f1(r.niv90).padStart(7)}  ${f1(r.niv180).padStart(8)}  ${f1(r.nivEnd).padStart(7)}  ${f1(r.pvBoss).padStart(7)}  ${f1(r.bossSec).padStart(7)}  ${f1(r.kills).padStart(5)}  ${f1(r.reso).padStart(4)}  ${f1(r.bronze).padStart(6)}  ${f1(r.moments).padStart(7)}`);
+  for (const r of rows) lines.push(`${r.key.padEnd(20)} ${String(r.n).padStart(2)}  ${String(r.victoires).padStart(4)}  ${String(r.morts).padStart(5)}  ${String(r.timeouts).padStart(5)}  ${f1(r.minuteMort).padStart(8)}  ${f1(r.niv60).padStart(7)}  ${f1(r.niv120).padStart(8)}  ${f1(r.nivEnd).padStart(7)}  ${f1(r.en120).padStart(7)}  ${f1(r.enBoss).padStart(7)}  ${f1(r.enMax).padStart(5)}  ${f1(r.pvBoss).padStart(7)}  ${f1(r.bossSec).padStart(7)}  ${f1(r.phases).padStart(6)}  ${(r.fusions + (r.fusionAt !== null ? '@' + Math.round(r.fusionAt) : '')).padStart(7)}  ${f1(r.kills).padStart(5)}  ${f1(r.reso).padStart(4)}  ${f1(r.bronzeWin).padStart(8)}  ${f1(r.bronzeLoss).padStart(7)}  ${f1(r.ctpsPct).padStart(5)}  ${f1(r.thiefSec).padStart(9)}`);
   return lines.join('\n');
 }
 export function markdownTable(rows) {
-  const lines = ['| sonneur/profil | n | vict. | morts | min. mort | niv 90 s | niv 3 min | niv fin | PV % au boss | boss (s) | tués | réso | bronze | moments |', '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|'];
-  for (const r of rows) lines.push(`| ${r.key} | ${r.n} | ${r.victoires} | ${r.morts} | ${f1(r.minuteMort)} | ${f1(r.niv90)} | ${f1(r.niv180)} | ${f1(r.nivEnd)} | ${f1(r.pvBoss)} | ${f1(r.bossSec)} | ${f1(r.kills)} | ${f1(r.reso)} | ${f1(r.bronze)} | ${f1(r.moments)} |`);
+  const lines = ['| sonneur/profil | n | vict. | morts | t.out | min. mort | niv 60 s | niv 2 min | niv fin | enn. 2 min | enn. boss | enn. max | PV % au boss | boss (s) | fusions | tués | réso | bronze vict. | bronze déf. | ctps % | voleur (s) |', '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|'];
+  for (const r of rows) lines.push(`| ${r.key} | ${r.n} | ${r.victoires} | ${r.morts} | ${r.timeouts} | ${f1(r.minuteMort)} | ${f1(r.niv60)} | ${f1(r.niv120)} | ${f1(r.nivEnd)} | ${f1(r.en120)} | ${f1(r.enBoss)} | ${f1(r.enMax)} | ${f1(r.pvBoss)} | ${f1(r.bossSec)} | ${r.fusions}${r.fusionAt !== null ? '@' + Math.round(r.fusionAt) : ''} | ${f1(r.kills)} | ${f1(r.reso)} | ${f1(r.bronzeWin)} | ${f1(r.bronzeLoss)} | ${f1(r.ctpsPct)} | ${f1(r.thiefSec)} |`);
   return lines.join('\n');
 }
 
@@ -522,8 +595,13 @@ export async function runMatrix(o) {
 const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) {
   const o = parseArgs(process.argv.slice(2));
-  if (o.matrix) {
+  if (o.summary) {   // --summary fichier.json [--md] : retableau d'une matrice sauvegardée (--out)
+    const saved = JSON.parse(readFileSync(path.resolve(o.summary), 'utf8'));
+    const rows = summarize(saved.results);
+    console.log(o.md ? markdownTable(rows) : tableText(rows));
+  } else if (o.matrix) {
     const results = await runMatrix(o);
+    if (o.out) { const { writeFileSync } = await import('node:fs'); writeFileSync(o.out, JSON.stringify({ options: o, results, summary: summarize(results) })); }
     if (o.json) console.log(JSON.stringify({ options: o, results, summary: summarize(results) }));
     else {
       for (const r of results) console.log(fmtRun(r) + '\n');

@@ -7,6 +7,11 @@
 // sprites, tuiles, icônes, bruitages, pistes, presets de particules référencés existent dans les manifestes
 // et sur le disque ; aucun src/**/*.js > 400 lignes ; aucun Math.random hors src/audio ; aucun
 // OscillatorNode ; aucun alert/prompt/confirm ; aucune chaîne française en dur dans src/ui et src/main.js.
+// Vague 2 : registre à jour (9 fusions et leurs couples, 11 ennemis dont contretemps / voleur_de_cran / desaccordeur,
+// 19–20 hauts-faits réels, 9 motifs de Moments) ; aucun `duck()` par tir (audio.js n'écoute que enemy:hit crit et
+// weapon:fusion) ; `bell_minute` joué par bell-hour.js seulement ; clés i18n des nouveaux contenus (fusion.<id>.hint,
+// enemy.<nouveaux>.name|lore, relic.<id>.*, moment.<id>.name, boss.<id>.phase_<phase> — informatif) ;
+// balance.mark.perAccordLevel (Requiem : sans lui, dégâts NaN) ; `special` requis par les comportements des ennemis.
 
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -50,8 +55,10 @@ const REG = {
   characters: ['wren', 'osric', 'maren', 'le_muet'],
   weapons: ['battant', 'clarine', 'bourdon', 'grelots', 'tocsin', 'cor_de_brume', 'crecelle', 'chaine_d_angelus', 'diapason'],
   passives: ['ferrure', 'souffle', 'contrepoids', 'corde_de_chanvre', 'cire_d_abeille', 'metronome', 'etain', 'echo'],
-  fusions: { glas: ['tocsin', 'contrepoids'], carillon: ['clarine', 'echo'], tonnerre: ['bourdon', 'etain'], requiem: ['diapason', 'metronome'] },
-  enemies: ['feutre', 'baillon', 'ouateux', 'fossoyeur', 'choeur_muet', 'rampe_suie', 'veuve_grise', 'cierge'],
+  fusions: { glas: ['tocsin', 'contrepoids'], carillon: ['clarine', 'echo'], tonnerre: ['bourdon', 'etain'], requiem: ['diapason', 'metronome'],
+    grande_volee: ['battant', 'corde_de_chanvre'], transhumance: ['grelots', 'souffle'], corne_de_guet: ['cor_de_brume', 'ferrure'],
+    crecelle_du_vendredi: ['crecelle', 'etain'], angelus_de_veillee: ['chaine_d_angelus', 'cire_d_abeille'] },
+  enemies: ['feutre', 'baillon', 'ouateux', 'fossoyeur', 'choeur_muet', 'rampe_suie', 'veuve_grise', 'cierge', 'contretemps', 'voleur_de_cran', 'desaccordeur'],
   bosses: ['bourdon_fele', 'veuve_suie', 'maitre'],
   parishes: ['cendrelune', 'tourbes', 'val_des_cordes', 'nef_noyee', 'beffroi_mere'],
   upgrades: ['coeur_de_bronze', 'semelles_de_cuir', 'ferrure_du_beffroi', 'oreille_fine', 'battant_lourd', 'aimant_d_echos', 'reliquaire', 'cire_de_veillee', 'main_sure', 'bourse_de_cuivre', 'second_souffle', 'contrepoids_de_fonte', 'corde_neuve', 'troisieme_carte'],
@@ -78,6 +85,28 @@ checkIds('boss', REG.bosses, ids(D('enemies')));
 checkIds('paroisses', REG.parishes, ids(D('parishes')));
 checkIds('améliorations du Beffroi', REG.upgrades, ids(D('upgrades')));
 checkIds('hauts-faits', REG.achievements, ids(D('achievements')));
+{
+  const ach = D('achievements') || [];
+  const extra = ach.map((a) => a.id).filter((id) => !REG.achievements.includes(id));
+  const dup = ach.map((a) => a.id).filter((id, i, arr) => arr.indexOf(id) !== i);
+  check(`achievements.json : ≥ 19 hauts-faits réels (${ach.length}), ids uniques, chacun avec une condition`, ach.length >= 19 && dup.length === 0 && ach.every((a) => a.condition && a.condition.type), (dup.length ? 'doublons : ' + dup.join(', ') : '') + (extra.length ? ' hors registre § 10 bis (méta) : ' + extra.join(', ') : ''));
+}
+check('fusions.json : exactement 9 fusions, chaque Timbre fusionne une fois', (D('fusions') || []).length === 9 && new Set((D('fusions') || []).map((f) => f.weapon)).size === 9, '');
+// Ennemis rythmiques (vague 1) : chaque comportement d'enemy-behaviors.js a ses paramètres `special`.
+{
+  const NEED = { contretemps: ['keepDistance', 'fireBeats', 'projSpeed', 'projRadius', 'projLife', 'openTint', 'openScale'], voleur: ['leapRange', 'leapSpeed', 'leapBeats', 'fleeDistance', 'fleeSpeedMult', 'carryTint'],
+    desaccordeur: ['detuneRadius', 'detuneCents', 'fireBeats', 'fireRange', 'projSpeed', 'projRadius', 'projLife', 'wobble', 'wobbleHz'], leap: ['leapRange', 'leapSpeed', 'leapBeats', 'silenceSec'],
+    ranged: ['keepDistance', 'fireBeats', 'projSpeed', 'projRadius', 'projLife'], explode: ['cloudRadius', 'cloudSec', 'blockSec', 'triggerRange'], crawl: ['trailRadius', 'trailSec', 'trailEvery', 'slow'],
+    veuve_grise: ['teleportBeats', 'teleportDist', 'chargeSpeed', 'chargeSec', 'pauseSec'], summon: ['summonKind', 'summonCount', 'summonBeats', 'keepDistance'], chase: ['auraRadius'], swarm: ['wobble', 'wobbleHz'] };
+  const bad = [];
+  for (const e of D('enemies') || []) { const need = NEED[e.behavior]; if (!need) continue; for (const k of need) if (!e.special || e.special[k] === undefined) bad.push(e.id + '.' + k); }
+  check('enemies.json : paramètres `special` requis par chaque comportement', bad.length === 0, bad.join(', '));
+  const bal = (D('waves') || {}).balance || {};
+  check('waves.json : balance.mark.perAccordLevel présent (Requiem sans `special` : sinon dégâts NaN, weapon-behaviors.js:334)', !!(bal.mark && typeof bal.mark.perAccordLevel === 'number'), '');
+  check('waves.json : balance.player.parryCooldownBeats et pulseRadius (parade avec recharge, battement sur place)', !!(bal.player && bal.player.parryCooldownBeats >= 1 && bal.player.pulseRadius > 0), '');
+  const W0 = D('waves') || {}; const parishesWithNew = Object.keys(W0).filter((k) => k !== 'balance' && (W0[k].spawns || []).some((s) => ['contretemps', 'voleur_de_cran', 'desaccordeur'].includes(s.kind)));
+  check('waves.json : les nouveaux ennemis apparaissent dans les 5 paroisses', parishesWithNew.length === 5, parishesWithNew.join(', '));
+}
 checkIds('Reliques (§ 11 bis)', REG.relics, ids(D('relics')));
 check('relics.json : ≥ 10 Reliques avec effets et revers', (D('relics') || []).length >= 10 && (D('relics') || []).every((r) => r.effects && r.drawbacks && r.icon), '');
 checkIds('Feuillets', Array.from({ length: 24 }, (_, i) => 'f' + String(i + 1).padStart(2, '0')), ids(D('lore')));
@@ -157,7 +186,7 @@ function collectKeys(o) {
   if (!o || typeof o !== 'object') return;
   for (const k of Object.keys(o)) {
     const v = o[k];
-    if (typeof v === 'string' && ['name', 'desc', 'lore', 'title', 'text', 'trait'].includes(k) && KEY_RE.test(v)) refKeys.add(v);
+    if (typeof v === 'string' && ['name', 'desc', 'lore', 'title', 'text', 'trait', 'hint'].includes(k) && KEY_RE.test(v)) refKeys.add(v);
     else if (v && typeof v === 'object') collectKeys(v);
   }
 }
@@ -178,6 +207,24 @@ for (const f of jsFiles) {
 }
 const missT = [...tKeys.keys()].filter((k) => !(k in fr) || !(k in en));
 check(`clés t('…') du code présentes dans fr et en (${tKeys.size})`, missT.length === 0, missT.slice(0, 10).map((k) => k + ' (' + tKeys.get(k) + ')').join(', '));
+// Nouveaux contenus (vague 1) : fusions (name/desc/hint), ennemis rythmiques, Reliques, Moments, phases de boss.
+{
+  const want = [];
+  for (const f of D('fusions') || []) want.push('fusion.' + f.id + '.name', 'fusion.' + f.id + '.desc', 'fusion.' + f.id + '.hint');
+  for (const id of ['contretemps', 'voleur_de_cran', 'desaccordeur']) want.push('enemy.' + id + '.name', 'enemy.' + id + '.lore');
+  for (const r of D('relics') || []) want.push('relic.' + r.id + '.name', 'relic.' + r.id + '.desc');
+  for (const id of MOMENTS) want.push('moment.' + id + '.name');
+  const miss = want.filter((k) => !(k in fr) || !(k in en));
+  check(`clés i18n des nouveaux contenus (fusions name/desc/hint, ennemis rythmiques, Reliques, Moments : ${want.length})`, miss.length === 0, miss.slice(0, 10).join(', '));
+  // Phases de boss : boss.js émet boss:phase {phase} ; hud-banners lit boss.<id>.phase_<phase> si la clé existe (repli générique sinon).
+  let bossSrc = '';
+  try { bossSrc = readFileSync(path.join(ROOT, 'src', 'game', 'boss.js'), 'utf8'); } catch (e) { /* absent */ }
+  const phases = new Set([...bossSrc.matchAll(/emitPhase\(e\.kind, '([a-z]+)'/g)].map((m) => m[1]));
+  const PHASE_BOSS = { cri: ['bourdon_fele'], double: ['bourdon_fele'], envers: ['bourdon_fele'], enfants: ['veuve_suie'], deuil: ['veuve_suie'], coda: ['maitre'], annonce: ['maitre'], expose: ['maitre'], enrage: ['maitre'] };
+  const missP = [];
+  for (const ph of phases) for (const b of PHASE_BOSS[ph] || []) { const k = 'boss.' + b + '.phase_' + ph; if (!(k in fr) || !(k in en)) missP.push(k); }
+  check(`phases de boss nommées (boss.<id>.phase_<phase>, ${phases.size} phases émises par boss.js) — informatif : repli ui.hud.boss_phase sinon`, true, missP.length ? 'sans nom : ' + missP.join(', ') : 'toutes nommées');
+}
 
 // ---- 4. Assets référencés ---------------------------------------------------------------------------
 const sprites = new Set(Object.keys(manifest.sprites || {})), tiles = new Set(Object.keys(manifest.tiles || {}));
@@ -256,6 +303,20 @@ for (const f of jsFiles) {
   }
 }
 check('aucun Math.random hors src/audio', rnd.length === 0, rnd.join(', '));
+// § 8 bis : ducking seulement sur enemy:hit {crit} et weapon:fusion (jamais par tir) ; bell_minute seulement dans bell-hour.js.
+{
+  const duckCalls = [], fireDuck = [], bellMinute = [];
+  for (const f of jsFiles) {
+    const r = rel(f), src = stripComments(readFileSync(f, 'utf8')), lines = src.split('\n');
+    lines.forEach((l, i) => {
+      if (/\bduck(Now)?\s*\(/.test(l) && !/function\s+duck(Now)?\s*\(/.test(l) && r !== 'src/audio/audio.js') duckCalls.push(r + ':' + (i + 1));
+      if (/'bell_minute'/.test(l) && r !== 'src/game/bell-hour.js') bellMinute.push(r + ':' + (i + 1));
+    });
+    if (r.startsWith('src/audio/')) for (const m of src.matchAll(/bus\.on\(\s*'weapon:fire'[^\n]*\n?[^\n]*/g)) if (/duck/.test(m[0])) fireDuck.push(r);
+  }
+  check("aucun duck() par tir : duck/duckNow appelés seulement dans src/audio/audio.js, jamais sur weapon:fire", duckCalls.length === 0 && fireDuck.length === 0, [...duckCalls, ...fireDuck].join(', '));
+  check("bell_minute joué seulement par src/game/bell-hour.js", bellMinute.length === 0, bellMinute.join(', '));
+}
 check('aucun OscillatorNode', osc.length === 0, osc.join(', '));
 check('aucun alert/prompt/confirm', dlg.length === 0, dlg.join(', '));
 check('aucune chaîne française en dur dans src/ui et src/main.js', hard.length === 0, hard.slice(0, 12).join(' ; '));
