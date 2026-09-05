@@ -37,8 +37,10 @@ function weaponCard(def, level, isNew) {
 }
 function passiveCard(def, level, isNew) {
   const v = def.perLevel * level;
-  // {value} = perLevel × niveau (points d'armure, px/s, PV/s), {pct} = la même en % ({level} = niveau).
-  return { type: 'passive', id: def.id, level, name: def.name, desc: def.desc, icon: def.icon, isNew, params: { value: Math.round(v * 100) / 100, level, pct: Math.round(def.perLevel * 100) * level } };
+  // {value} = perLevel × niveau (points d'armure, px/s, PV/s), {pct} = la même en %, {level} = niveau,
+  // {reflect} = recul renvoyé (Ferrure, %), {echo} = chance d'écho (Écho, %).
+  const sp = def.special || {};
+  return { type: 'passive', id: def.id, level, name: def.name, desc: def.desc, icon: def.icon, isNew, params: { value: Math.round(v * 100) / 100, level, pct: Math.round(def.perLevel * 100) * level, reflect: Math.round((sp.reflectPerLevel || 0) * 100) * level, echo: Math.round((sp.echoChancePerLevel || 0) * 100) * level } };
 }
 function fusionCard(def) {
   return { type: 'fusion', id: def.id, level: 1, name: def.name, desc: def.desc, icon: def.icon, isNew: true, params: levelParams(def, 1), hint: def.hint || null };

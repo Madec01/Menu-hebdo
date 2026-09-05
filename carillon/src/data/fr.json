@@ -75,7 +75,7 @@
   "passive": {
     "ferrure": {
       "name": "Ferrure",
-      "desc": "Le fer qui cercle la cloche. Chaque coup reçu fait {value} de moins, et renvoie {pct} % du recul de parade à ce qui te touche."
+      "desc": "Le fer qui cercle la cloche. Chaque coup reçu fait {value} de moins, et renvoie {reflect} % du recul de parade à ce qui te touche."
     },
     "souffle": {
       "name": "Souffle",
@@ -103,7 +103,7 @@
     },
     "echo": {
       "name": "Écho",
-      "desc": "Ce que la vallée renvoie. Grelots et Crécelle rebondissent {level} fois de plus, la Clarine relance un éclair sur ce qu'elle touche, et tes frappes ont {pct} % de chance de faire écho une croche plus tard."
+      "desc": "Ce que la vallée renvoie. Grelots et Crécelle rebondissent {level} fois de plus, la Clarine relance un éclair sur ce qu'elle touche, et tes frappes ont {echo} % de chance de faire écho une croche plus tard."
     }
   },
   "fusion": {

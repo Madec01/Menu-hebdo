@@ -75,7 +75,7 @@
   "passive": {
     "ferrure": {
       "name": "Ironwork",
-      "desc": "The iron that hoops the bell. Every blow you take hurts {value} less, and sends {pct}% of a parry's recoil back into whatever touches you."
+      "desc": "The iron that hoops the bell. Every blow you take hurts {value} less, and sends {reflect}% of a parry's recoil back into whatever touches you."
     },
     "souffle": {
       "name": "Breath",
@@ -103,7 +103,7 @@
     },
     "echo": {
       "name": "Echo",
-      "desc": "What the valley sends back. Sleigh Bells and Rattle bounce {level} more {level|time|times}, the Cowbell throws a bolt at what it strikes, and your blows have a {pct}% chance to echo an eighth later."
+      "desc": "What the valley sends back. Sleigh Bells and Rattle bounce {level} more {level|time|times}, the Cowbell throws a bolt at what it strikes, and your blows have a {echo}% chance to echo an eighth later."
     }
   },
   "fusion": {
