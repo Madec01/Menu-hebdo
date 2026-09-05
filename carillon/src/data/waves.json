@@ -28,7 +28,9 @@
    "contactCooldownSec": 0.6,
    "auraSlow": 0.3,
    "reviveHp": 0.5,
-   "lightRadius": 90
+   "lightRadius": 90,
+   "pulseRadius": 60,
+   "pulseKnock": 120
   },
   "resonance": {
    "stepsPerTier": 4,

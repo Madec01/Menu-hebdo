@@ -8,6 +8,7 @@
 
 import { bus } from '../core/events.js';
 import { axis, justPressed, pressedAt } from '../core/input.js';
+import { spawnRing } from './projectiles.js';
 import { judge, setWindowMs } from '../audio/conductor.js';
 import { play as playSfx } from '../audio/sfx.js';
 import { draw, drawShadow, frameAt, animDone } from '../render/atlas.js';
@@ -38,6 +39,22 @@ function listen() {
   listening = true;
   bus.on('player:silenced', (e) => { if (current && current.unique !== 'sans_voix') current.silencedT = Math.max(current.silencedT, e.durationSec); });
   bus.on('player:inAura', (e) => { if (current) current.auraDepth = e.depth; });
+}
+
+/** Battement sur place : anneau au sol, éclats de bronze, recul des ennemis proches (sans dégâts). */
+function beatPulse(p, world) {
+  const bp = balance().player, R = bp.pulseRadius || 60, force = bp.pulseKnock || 120;
+  spawnRing(world, p.x, p.y + 2, R, 0.28);
+  for (let k = 0; k < 4; k++) emitParticles('bell', p.x + (k - 1.5) * 8, p.y - 6);
+  playSfx('dash', { volume: 0.55, x: p.x, y: p.y });
+  if (!world.grid) return;
+  world.grid.query(p.x, p.y, R, (e) => {
+    if (e.state !== 'alive' || (e.def && (e.def.boss || e.def.elite))) return;
+    const dx = e.x - p.x, dy = e.y - p.y, len = Math.hypot(dx, dy) || 1;
+    if (len > R + e.r) return;
+    const m = (world.knockbackMult || 1) / Math.max(0.2, e.mass || 1);
+    e.kx += dx / len * force * m; e.ky += dy / len * force * m;
+  });
 }
 
 /** Crée le joueur. upgradesApplied : { [upgradeId]: level } (améliorations du Beffroi achetées). */
@@ -128,8 +145,14 @@ export function updatePlayer(p, dt, world) {
   p.moving = a.x !== 0 || a.y !== 0;
   if (p.moving) { p.facing.x = a.x; p.facing.y = a.y; }
 
-  // Volée (dash) : jugée sur la grille, i-frames, traînée.
-  if (p.dashT <= 0 && justPressed('dash')) {
+  // Volée : jugée sur la grille. Avec une direction = dash (i-frames, traînée) ; sans direction =
+  // battement sur place (onde de bronze qui repousse, i-frames courtes) : tenir la Mesure ne
+  // déplace pas le sonneur malgré lui.
+  if (p.dashT <= 0 && justPressed('dash') && !p.moving) {
+    judgeAction('dash', p, world);
+    p.iframesT = B.iframesSec * 0.6;
+    beatPulse(p, world);
+  } else if (p.dashT <= 0 && justPressed('dash')) {
     judgeAction('dash', p, world);
     p.dashT = B.dashSec; p.iframesT = B.iframesSec;
     const len = Math.hypot(p.facing.x, p.facing.y) || 1;
