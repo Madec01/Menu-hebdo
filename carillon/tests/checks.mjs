@@ -96,7 +96,7 @@ for (const pid of REG.parishes) {
 check('vagues : ennemis/boss référencés existent', badWave.length === 0, badWave.join(', '));
 // Rythme de la nuit : durées par paroisse, Fêlures à 40 % / 70 %, boss à 100 %, Moments scriptés (5 à 8 par
 // paroisse, motifs du registre, toutes les 40–60 s ±8 s, 10–25 s chacun) et leurs clés i18n.
-const NIGHT = { cendrelune: 360, tourbes: 420, val_des_cordes: 480, nef_noyee: 540, beffroi_mere: 600 };
+const NIGHT = { cendrelune: 240, tourbes: 270, val_des_cordes: 300, nef_noyee: 330, beffroi_mere: 360 };
 const MOMENTS = ['cercle', 'nuee', 'meute', 'ligne', 'pluie_de_suie', 'procession', 'accalmie', 'cierge_errant', 'veuves_en_cercle'];
 const badNight = [];
 for (const pid of REG.parishes) {
@@ -104,7 +104,7 @@ for (const pid of REG.parishes) {
   if (!w) continue;
   const D = w.duration;
   if (D !== NIGHT[pid]) badNight.push(pid + ' durée ' + D + ' ≠ ' + NIGHT[pid]);
-  if (!(w.tierEvery >= 60 && w.tierEvery <= 75)) badNight.push(pid + ' tierEvery ' + w.tierEvery);
+  if (!(w.tierEvery >= 35 && w.tierEvery <= 75)) badNight.push(pid + ' tierEvery ' + w.tierEvery);
   if (!w.difficulty || !(w.difficulty.hp >= 1) || !(w.difficulty.damage >= 1)) badNight.push(pid + ' difficulty absente');
   const fis = (w.events || []).filter((e) => e.type === 'fissure').map((e) => e.at), boss = (w.events || []).filter((e) => e.type === 'boss').map((e) => e.at);
   if (fis.length !== 2 || Math.abs(fis[0] - D * 0.4) > 1 || Math.abs(fis[1] - D * 0.7) > 1) badNight.push(pid + ' Fêlures ' + fis.join('/'));
@@ -119,12 +119,12 @@ for (const pid of REG.parishes) {
     if (!MOMENTS.includes(m.id)) badNight.push(pid + ' motif ' + m.id);
     if (!(m.sec >= 10 && m.sec <= 25)) badNight.push(pid + ' ' + m.id + ' durée ' + m.sec);
     if (m.kind && !enemyIds.has(m.kind)) badNight.push(pid + ' ' + m.id + ' ennemi ' + m.kind);
-    if (prev && (m.at - prev < 40 - 8 || m.at - prev > 60 + 8)) badNight.push(pid + ' ' + m.id + '@' + m.at + ' écart ' + (m.at - prev));
+    if (prev && (m.at - prev < 25 - 8 || m.at - prev > 45 + 8)) badNight.push(pid + ' ' + m.id + '@' + m.at + ' écart ' + (m.at - prev));
     if (m.at + m.sec > D) badNight.push(pid + ' ' + m.id + ' déborde sur le boss');
     prev = m.at;
   }
 }
-check('rythme de la nuit : durées 360→600, Fêlures 40/70 %, boss 100 %, variété initiale, 5–8 Moments toutes les 40–60 s', badNight.length === 0, badNight.join(', '));
+check('rythme de la nuit : durées 240→360, Fêlures 40/70 %, boss 100 %, variété initiale, 5–8 Moments toutes les 25–45 s', badNight.length === 0, badNight.join(', '));
 check('waves.json : bloc balance.moments et balance.bronze', !!(waves.balance && waves.balance.moments && waves.balance.moments.jitterSec >= 0 && waves.balance.bronze), '');
 try {
   const src = readFileSync(path.join(ROOT, 'src', 'game', 'moments.js'), 'utf8');
