@@ -414,4 +414,6 @@ Toutes les compétences et effets passent par un **système de hooks** central :
 | 2026-09-11 | 1 | Ballon : ne tombe pas (sert de sol), monte d'une case contre la gravité à chaque rotation, éclate au plafond ou après 2 activations. Bulle et fusée tombent | Seule lecture cohérente de « monte contre la gravité » |
 | 2026-09-11 | 1 | Une spéciale seule est tapable (elle explose) | Sinon elle reste coincée sans groupe |
 | 2026-09-11 | 1 | Salles anarchiques : la rotation imposée est toujours annoncée avant l'action du joueur (Tempête tire ±1/2 au hasard, Pendule suit +1,+1,−1,−1) | Préserve le pilier 1 (prévisibilité) |
+| 2026-09-11 | 1 | Une pierre détruite par adjacence ne propage rien (ni pierres voisines, ni éléments) | Sinon un amas de pierres disparaît d'un coup (audit code) |
+| 2026-09-11 | 1 | Avidité plafonnée à 3 par salle ; Propagation verte limitée aux groupes tapés | Combo à coups infinis, XP ×10 (audit gameplay) |
 | 2026-09-11 | 1 | Compétence *Coup de trop* reformulée : « à 0 coup, un dernier tap gratuit (une fois par salle) » | Avec la jauge, une rotation gratuite à 0 coup ne servait à rien |

@@ -113,13 +113,14 @@ rendu.enAnimation                 // booléen
 rendu.surligner([{x,y}])          // halo sur un groupe (survol souris) ; [] pour effacer
 rendu.previsualiserRotation(sens|null)   // optionnel : fantôme de la chute
 rendu.redimensionner()
+rendu.pause() / rendu.reprendre()  // coupe / relance la boucle d'animation (retour au menu)
 rendu.detruire()
 ```
 - Le rendu convertit pointeur → case plateau en inversant la rotation. Il ne connaît rien au moteur : il ne lit que `etat` et les événements.
 - Chute : intégrateur visuel par bille (accélération, rebond à l'arrivée avec restitution ~0.25), en unités de cases le long de `G`. Durée cible d'une chute complète ≈ 350 ms.
 - Rotation : le conteneur tourne de `sens*90°` en ≈ 380 ms (ease in-out), l'échelle s'adapte au nouveau rapport largeur/hauteur pendant la rotation.
 - Sprites pré-rendus par couleur sur canvas hors écran (billes cerclées, plateau), dessinés en `source-over`. Jamais de `filter` par frame. Les textes flottants et les mots de combo sont dessinés dans le canvas (police système grasse, contour encre).
-- Particules : pool fixe (≤ 600), zéro allocation par frame. Screenshake proportionnel à la taille de la salve, plafonné.
+- Particules : pool fixe (≤ 800), textes flottants (≤ 16), zéro allocation par frame. Screenshake proportionnel à la taille de la salve, plafonné.
 - Icônes : `ligne` et `fusee` pointent le long de la gravité **à l'écran** (donc contre-rotation par rapport au plateau).
 
 ## 6. Audio (src/audio/audio.js) — Web Audio, synthèse en couches

@@ -176,7 +176,7 @@ export function creerRendu(canvas, { onTap, onSurvol } = {}) {
     const plateau = sprites.plateau(); if (plateau) ctx.drawImage(plateau, -plateau.width / 2, -plateau.height / 2);
     for (const [, bv] of billes) {
       const lx = (bv.x - w / 2 + 0.5) * cellPixBase, ly = (bv.y - h / 2 + 0.5) * cellPixBase;
-      if (surligneesSet.has(`${Math.round(bv.x)},${Math.round(bv.y)}`)) dessinerSurlignage(lx, ly);
+      if (surligneesSet.size && surligneesSet.has(`${Math.round(bv.x)},${Math.round(bv.y)}`)) dessinerSurlignage(lx, ly); // pas de chaîne allouée sans survol
       ctx.save();
       ctx.translate(lx, ly); ctx.globalAlpha = bv.alpha; ctx.scale(bv.echelle * bv.squashX, bv.echelle * bv.squashY);
       if (bv.type === 'pierre') dessinerCentre(sprites.pierre());
@@ -220,8 +220,11 @@ export function creerRendu(canvas, { onTap, onSurvol } = {}) {
     if (typeof document !== 'undefined' && document.hidden) { rafId = null; return; } // repris par 'visibilitychange'
     rafId = requestAnimationFrame(tick);
   }
+  let enPause = false; // retour au menu : plus rien à dessiner, on coupe la boucle (audit code 2026-09-11)
+  function pause() { enPause = true; if (rafId != null) cancelAnimationFrame(rafId); rafId = null; }
+  function reprendre() { enPause = false; demarrerBoucle(); }
   function demarrerBoucle() {
-    if (rafId != null || (typeof document !== 'undefined' && document.hidden)) return;
+    if (enPause || rafId != null || (typeof document !== 'undefined' && document.hidden)) return;
     dernierT = null; rafId = requestAnimationFrame(tick);
   }
   // --- gestion des événements du journal (§4) : chacun anime puis attend sa propre durée ------
@@ -393,7 +396,7 @@ export function creerRendu(canvas, { onTap, onSurvol } = {}) {
     particules.vider(); juice.vider(); billes.clear();
   }
   return {
-    synchroniser, jouer, surligner, previsualiserRotation, redimensionner, detruire,
+    synchroniser, jouer, surligner, previsualiserRotation, redimensionner, detruire, pause, reprendre,
     get enAnimation() { return !rienNAnime(); },
   };
 }

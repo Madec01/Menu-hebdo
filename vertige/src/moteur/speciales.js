@@ -102,6 +102,8 @@ export function resoudre(ctx, initiale) {
       for (const i of aDetruire) g.cellules[i] = null;
       ctx.emettre({ t: 'detruit', cellules: evt, cause: s.cause, origine: s.origine, profondeur: s.profondeur });
       xpSalve(ctx, s, nBilles, nPierres);
+      // Choix assumé : une pierre détruite par adjacence ne propage rien (ni pierres voisines, ni éléments),
+      // sinon un amas de pierres disparaîtrait d'un coup.
       if (s.cause !== 'pierre') {
         for (const i of aDetruire) for (const v of voisins(g, i)) {
           const cv = g.cellules[v];

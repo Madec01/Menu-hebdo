@@ -6,12 +6,11 @@ Tableau de bord du projet. Tenu à jour en direct. Voir `CLAUDE.md` pour le cadr
 
 ## À faire maintenant
 
-1. Martin joue un run complet (`npm run dev`) : ressenti de la rotation, de la chute, des sons, du style.
-2. Audit code (agent en cours) : appliquer les bloquants.
-3. Feel du tap : jouer chute et remplissage en parallèle dans le rendu (cible < 450 ms par tap simple, audit gameplay).
-4. Télégraphe de rotation : brancher `previsualiserRotation` (fantôme de la chute à l'appui long).
-5. Polish visuel selon retour de Martin : menu (plus de vie), écran de fin de run avec stats.
-6. Décider D7 (trou sous le ballon), D8 (audio synthèse ou samples), D9-D11 ci-dessous après la partie de Martin.
+1. Martin joue un run complet (`cd vertige && npm install && npm run dev`, http://localhost:5174) : rotation, chute, sons, style. Retour franc.
+2. Feel du tap : jouer chute et remplissage en parallèle dans `src/rendu/rendu.js` (aujourd'hui ~800 ms séquentiels par tap, cible < 450 ms — audit gameplay).
+3. Télégraphe de rotation : brancher `previsualiserRotation` (fantôme de la chute à l'appui long sur un bouton de rotation).
+4. Trancher D7 à D11 (ci-dessous) après la partie de Martin, puis appliquer.
+5. Polish : menu (plateau décoratif animé), écran de fin de run avec stats (spéciales créées, plus grosse chaîne, XP par salle).
 
 ---
 
@@ -53,7 +52,7 @@ Décisions D0-D6 tranchées le 2026-09-11 (voir CLAUDE.md §12).
 - [x] Test de fumée Playwright vert (`npm run smoke`) : 24 taps, 6 rotations, 10 choix, 0 erreur
 - [x] Captures vérifiées à l'œil (menu, jeu, niveau, fin de salle, mode test)
 - [ ] Ressenti validé par Martin en jouant
-- [ ] Audit code + audit gameplay de fin de phase (agents lancés le 2026-09-11)
+- [x] Audit code + audit gameplay de fin de phase (`docs/AUDIT_CODE.md`, `docs/AUDIT_GAMEPLAY.md`), bloquants et importants appliqués
 
 ## Phase 2 — Le run
 
@@ -73,6 +72,10 @@ Décisions D0-D6 tranchées le 2026-09-11 (voir CLAUDE.md §12).
 
 ## Bugs
 
+- [x] (important) Rendu : la boucle rAF tournait après retour au menu — `pause()`/`reprendre()` appelés par main.js (audit code, 2026-09-11).
+- [x] (mineur) Rendu : une chaîne allouée par bille et par frame sans survol (audit code, 2026-09-11).
+- [ ] (à trancher, D7) Case vide sous un ballon jamais comblée tant qu'on ne tourne pas : l'audit code le classe bloquant, c'est un choix de design à valider en jouant.
+- [ ] (mineur) Niveau atteint au tour où l'objectif est atteint : le choix d'effet est sauté (choix assumé : il serait sans effet), à confirmer.
 - [x] (bloquant) Plateau minuscule : la taille CSS du canvas n'était pas suivie après la mise en page — ResizeObserver dans le rendu + resize fenêtre (2026-09-11).
 - [x] (mineur) HUD : un effet valable toute la salle affichait « null » (2026-09-11).
 - [x] (mineur) Après « Salle terminée », l'écran de choix de compétence ne s'affichait pas (journal vide non traité dans main.js) (2026-09-11).
@@ -102,5 +105,6 @@ Agent idées 2026-09-11 (18 idées dans `docs/IDEES.md`), son Top 5 :
 
 ## Fait
 
+- 2026-09-11 — Phase 1 jouable : rendu Cartoon pop + juice, UI bonbon, audits code et gameplay appliqués, build 412 Ko avec sourcemaps, zéro réseau.
 - 2026-09-11 — Phase 1 : moteur complet (1 200 lignes), données, UI, audio, sim, tests. Reste le rendu et l'intégration.
 - 2026-09-11 — Import du document de cadrage dans `vertige/CLAUDE.md`, création de `ROADMAP.md`, mesure des seuils (`tools/seuils.mjs`).

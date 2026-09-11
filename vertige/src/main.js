@@ -65,6 +65,7 @@ const ui = creerUI(document.getElementById('ui'), {
 
 function demarrer(evenements) {
   ui.afficherJeu();
+  rendu.reprendre();
   rendu.synchroniser(run.etat);
   ui.majHud(run.etat);
   jouer(evenements);
@@ -110,6 +111,7 @@ function sauvegarder() {
 function quitter() {
   sauvegarder();
   run = null;
+  rendu.pause();
   ui.masquerAttente();
   ui.afficherMenu({ profil, runEnCours: !!localStorage.getItem(CLE_RUN) });
 }
