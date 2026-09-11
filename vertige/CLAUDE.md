@@ -34,7 +34,7 @@ Références : Candy Crush (satisfaction, lisibilité), Angry Birds Dream Blast 
 - Graphismes : assets libres de droit (Kenney, OpenGameArt CC0) dans `assets/` quand c'est plus beau que du dessin procédural. Le style néon reste la référence.
 - Sauvegarde **localStorage** (profil méta, run en cours, options).
 - Doit tourner sur mobile (tactile) et desktop (souris). Ratio portrait prioritaire, la grille occupe le centre.
-- Esthétique **néon / dark / glassmorphism** cohérente avec les autres projets de Martin : fond sombre profond, billes lumineuses avec halo, panneaux translucides flous, accents saturés. Pas de style "flat cartoon".
+- Esthétique **« Atelier »** (décision 2026-09-11, remplace le néon prévu initialement) : jouet en bois posé sur du papier chaud — plateau en bois clair, billes de verre avec reflet et ombre courte, panneaux en papier kraft / carton, titres en serif. Lumière chaude et tactile. Pas de néon, pas de fond sombre, pas de glassmorphism, pas de "flat cartoon". Détail dans `docs/CONTRATS.md` §2.
 - Performance : 60 fps sur mobile milieu de gamme. Object pooling pour particules. Pas de garbage à chaque frame.
 - Code en **français** pour les commentaires et noms de données de jeu (compétences, salles), en anglais pour le code technique si plus naturel. Tout le texte joueur en français.
 - **Mode Test** accessible depuis le menu : tout débloqué, choix de la salle, choix des compétences, curseur de difficulté, seed fixable. Le mode Normal est le vrai jeu.
@@ -407,3 +407,11 @@ Toutes les compétences et effets passent par un **système de hooks** central :
 | — | 0 | Document initial | — |
 | 2026-09-11 | 0 | Document importé dans `Menu-hebdo/vertige/`, création de `ROADMAP.md` | Règle 8 : la feuille de route existe dès le premier commit |
 | 2026-09-11 | 0 | `tools/seuils.mjs` : mesure de la distribution des tailles de groupes | Chiffrer les seuils de spéciales au lieu de les deviner (§4.3) |
+| 2026-09-11 | 1 | Style « Atelier » (bois, verre, papier) au lieu du néon | Martin veut un style jamais fait dans ses projets, tous sombres |
+| 2026-09-11 | 1 | D1 : gravité mobile sur données fixes ; D3 : remplissage par le haut visuel ; D4 : jauge de rotation séparée, +1 par groupe de 6+ ; D6 : seuils 4/6/8/10 | Validés par Martin (« je te fais confiance ») ; argumentaire dans la session |
+| 2026-09-11 | 1 | Aucune bibliothèque à l'exécution : Canvas 2D, Web Audio en synthèse, mulberry32 maison. Vite + Playwright en dev seulement | Pixi n'apportait rien d'utilisé (filtres interdits sur mobile, UI en HTML) ; zéro réseau garanti par construction |
+| 2026-09-11 | 1 | Les cascades ne se déclenchent pas ; les pierres adjacentes à toute destruction sont détruites ; une explosion enclenche les spéciales adjacentes ; les éléments s'activent par adjacence (groupe) ou contact (explosion), une fois par tour | Lecture de §3.1, §4.3 et §5, tranchée pour la phase 1 |
+| 2026-09-11 | 1 | Ballon : ne tombe pas (sert de sol), monte d'une case contre la gravité à chaque rotation, éclate au plafond ou après 2 activations. Bulle et fusée tombent | Seule lecture cohérente de « monte contre la gravité » |
+| 2026-09-11 | 1 | Une spéciale seule est tapable (elle explose) | Sinon elle reste coincée sans groupe |
+| 2026-09-11 | 1 | Salles anarchiques : la rotation imposée est toujours annoncée avant l'action du joueur (Tempête tire ±1/2 au hasard, Pendule suit +1,+1,−1,−1) | Préserve le pilier 1 (prévisibilité) |
+| 2026-09-11 | 1 | Compétence *Coup de trop* reformulée : « à 0 coup, un dernier tap gratuit (une fois par salle) » | Avec la jauge, une rotation gratuite à 0 coup ne servait à rien |

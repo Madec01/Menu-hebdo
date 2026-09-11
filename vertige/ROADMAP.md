@@ -6,11 +6,11 @@ Tableau de bord du projet. Tenu à jour en direct. Voir `CLAUDE.md` pour le cadr
 
 ## À faire maintenant
 
-1. **Martin tranche les 6 décisions en attente ci-dessous** (surtout D1 rotation, D4 coût de rotation, D0 emplacement).
-2. Phase 0 — prototype de ressenti (voir ci-dessous) : grille + tap + rotation + chute, rien d'autre.
-3. Jouer la phase 0 et trancher D1/D3/D4 au doigt plutôt qu'à l'argument.
-4. Geler le contrat du bus de hooks dans `docs/CONTRATS.md` avant tout code de compétence.
-5. Lancer l'agent idées (salles + compétences) une fois la phase 0 jouable.
+1. Intégrer le rendu (agent en cours), lancer `npm run smoke:shot`, regarder les captures, corriger.
+2. Jouer un run complet à la main (Martin) : ressenti de la rotation, de la chute, des sons.
+3. Audit code + audit gameplay de fin de phase 1 (agents), appliquer les bloquants.
+4. Équilibrer avec `npm run sim` : Puits (46 % avec un bot qui ignore la couleur), Pendule.
+5. Trier `docs/IDEES.md` (agent idées) dans « Idées en plus » ci-dessous.
 
 ---
 
@@ -18,42 +18,33 @@ Tableau de bord du projet. Tenu à jour en direct. Voir `CLAUDE.md` pour le cadr
 
 | # | Question | Ma recommandation |
 |---|---|---|
-| D0 | Dépôt : `blast` (CLAUDE.md §2) ou `Menu-hebdo/vertige/` ? | `Menu-hebdo/vertige/`, comme `terra-nova/`. Même outillage, un seul dépôt à suivre. Déplaçable en une commande. |
-| D1 | §11.1 Rotation : tourner les données, ou garder les données fixes et déplacer la gravité ? | **Gravité mobile, données fixes.** Voir argumentaire dans le récap de session. Contredit §4.1. |
-| D2 | §11.2 Murs / cages tournent-ils ? | Tout tourne avec le plateau par défaut. Séparer deux champs distincts : `tombe` (la gravité le déplace) et `ancrage` (`plateau` / `ecran`). Aucun élément en `ecran` en phase 1. |
-| D3 | §11.3 Remplissage par le haut visuel ou le haut d'origine ? | **Haut visuel** (côté opposé à la gravité). Champ par salle `entree`. La marée est un système séparé qui pousse depuis le côté gravité. |
-| D4 | §11.4 La rotation coûte un coup ou une jauge ? | **Jauge séparée**, avec le coût en donnée (`{source:'coups'\|'jauge', valeur}`) et un curseur en mode Test. Un coût en coups rend la rotation dominée. |
-| D5 | Bibliothèques (§2) | Pixi.js (rendu + halo), anime.js (UI et plateau), Howler.js (son, samples CC0), mulberry32 maison (RNG, déjà la convention de `terra-nova`). **Pas de matter.js.** |
-| D6 | Seuils des spéciales (§4.3) | 5/7/9/12 → **4/6/8/10**, chiffres à l'appui (`tools/seuils.mjs`). À revalider sur le vrai simulateur. |
+| D7 | Le trou sous un ballon (il flotte et fait sol) reste vide jusqu'à la prochaine rotation. Garder ce comportement ou faire tomber le ballon comme les autres ? | Garder : c'est ce qui rend la rotation utile autour d'un ballon. À juger en jouant. |
+| D8 | Audio en synthèse Web Audio (aucun fichier). Si ça sonne « 8-bit » à l'oreille de Martin, passer aux samples CC0 (Kenney) en phase 2 ? | Écouter d'abord. |
+
+Décisions D0-D6 tranchées le 2026-09-11 (voir CLAUDE.md §12).
 
 ---
 
-## Phase 0 — prototype de ressenti (proposée, hors CLAUDE.md)
-
-Objectif : répondre à D1, D3, D4 en jouant, pas en discutant. Aucune spéciale, aucune XP, aucune salle.
-
-- [ ] Squelette du projet (Vite, `src/moteur/` pur + `src/rendu/`, `tests/`, `tools/`)
-- [ ] Grille 8×10, 5 couleurs, seed déterministe
-- [ ] Détection de groupe et tap
-- [ ] Rotation 90°/180° avec animation du plateau
-- [ ] Chute avec accélération et rebond
-- [ ] Remplissage par le haut visuel
-- [ ] Mode Test minimal : seed, nombre de couleurs, coût de rotation, approche de rotation
-- [ ] Simulateur headless `tools/sim.mjs` (le moteur tourne sans DOM)
-
 ## Phase 1 — Le cœur
 
-- [ ] Spéciales : bombe, ligne, croix, bombe de couleur, orientées par la gravité
-- [ ] Chaînes de spéciales
-- [ ] XP et niveau en salle 1 → 7
-- [ ] ~12 effets de niveau (paliers 1-3 et 4-7)
-- [ ] Bus de hooks central + `docs/CONTRATS.md`
-- [ ] Éléments : Bulle, Ballon, Fusée dormante
-- [ ] 5 salles enchaînées : normale, Puits, Marée haute, Tempête, Le Pendule (boss)
-- [ ] Écran de choix de compétence entre les salles (~10 compétences)
-- [ ] Sons (non chiptune), particules, screenshake
-- [ ] Sauvegarde du run en cours (localStorage)
-- [ ] Mode Test complet (tout débloqué, choix de salle et de compétences, difficulté, seed)
+- [x] Squelette Vite, `src/moteur/` pur, `src/rendu/`, `src/ui/`, `src/audio/`, `tests/`, `tools/`
+- [x] Contrats entre modules (`docs/CONTRATS.md`)
+- [x] Grille, gravité mobile, groupes, tap, rotation 90/180, chute, remplissage par le haut visuel
+- [x] Spéciales bombe / ligne / croix / couleur orientées par la gravité, chaînes, spéciales adjacentes
+- [x] Éléments bulle, ballon, fusée (activation par proximité)
+- [x] Pierres (détruites par adjacence et par explosion)
+- [x] XP, niveau en salle 1 → 7, 13 effets de niveau (paliers 1-2) par hooks
+- [x] Bus de hooks central
+- [x] 10 compétences de run par hooks, écran de choix entre les salles
+- [x] 5 salles linéaires : Vestibule, Puits, Marée haute, Tempête, Le Pendule
+- [x] Jauge de rotation (+1 par groupe de 6+), coût en donnée
+- [x] Sauvegarde du run (localStorage) et profil méta minimal
+- [x] Simulateur headless `tools/sim.mjs`, tests `node --test` (8)
+- [x] UI HTML/CSS style Atelier, panneau mode Test (salle, compétences, seed, difficulté, couleurs, jauge)
+- [x] Audio Web Audio en synthèse (13 familles de sons)
+- [ ] Rendu Canvas 2D style Atelier (agent en cours)
+- [ ] Test de fumée Playwright vert (`npm run smoke`)
+- [ ] Captures vérifiées à l'œil, ressenti validé par Martin
 - [ ] Audit code + audit gameplay de fin de phase
 
 ## Phase 2 — Le run
@@ -74,7 +65,7 @@ Objectif : répondre à D1, D3, D4 en jouant, pas en discutant. Aucune spéciale
 
 ## Bugs
 
-Aucun (pas encore de code).
+- [ ] (mineur) `tools/sim.mjs` : la politique gourmande ignore l'objectif couleur, ce qui sous-estime le Puits.
 
 ---
 
@@ -91,4 +82,5 @@ Aucun (pas encore de code).
 
 ## Fait
 
+- 2026-09-11 — Phase 1 : moteur complet (1 200 lignes), données, UI, audio, sim, tests. Reste le rendu et l'intégration.
 - 2026-09-11 — Import du document de cadrage dans `vertige/CLAUDE.md`, création de `ROADMAP.md`, mesure des seuils (`tools/seuils.mjs`).

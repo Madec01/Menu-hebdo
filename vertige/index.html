@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f4ecdd">
+<title>VERTIGE</title>
+<link rel="stylesheet" href="./src/styles/main.css">
+</head>
+<body>
+<div id="app">
+  <header id="hud"></header>
+
+  <main id="scene">
+    <canvas id="plateau"></canvas>
+  </main>
+
+  <footer id="commandes">
+    <button id="btn-rotation-gauche" class="touche" type="button" aria-label="Tourner 90 degres a gauche">⟲</button>
+    <button id="btn-rotation-droite" class="touche" type="button" aria-label="Tourner 90 degres a droite">⟳</button>
+    <button id="btn-rotation-180" class="touche touche-accent" type="button" aria-label="Tourner 180 degres">↻</button>
+  </footer>
+
+  <div id="ui"></div>
+</div>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

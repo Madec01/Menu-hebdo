@@ -1,0 +1,411 @@
+/* =========================================================================
+   VERTIGE — style « Atelier »
+   Un jouet en bois posé sur du papier. Pas de fond sombre, pas de flou,
+   pas de transparence de panneau, pas de lueur. Lumière chaude et tactile.
+   ========================================================================= */
+
+:root {
+  --papier: #f4ecdd;
+  --encre: #2b2118;
+  --encre-15: rgba(43, 33, 24, .15);
+  --encre-35: rgba(43, 33, 24, .35);
+  --bois-clair: #d9b382;
+  --bois-fonce: #b98b5a;
+  --kraft: #efe3c9;
+  --accent: #d9772b;
+  --accent-clair: #e2924f;
+  --rare: #2a6fdb;
+  --ombre-basse: rgba(60, 40, 20, .25);
+  --ombre-portee: rgba(60, 40, 20, .15);
+
+  --rayon: 12px;
+  --rayon-petit: 10px;
+
+  --police-titre: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --police-corps: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* --- Reset minimal --- */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  overflow-x: hidden;
+  font-family: var(--police-corps);
+  color: var(--encre);
+  background-color: var(--papier);
+  /* Texture papier : dégradés radiaux à peine visibles */
+  background-image:
+    radial-gradient(circle at 15% 20%, rgba(185, 139, 90, .07), transparent 55%),
+    radial-gradient(circle at 85% 15%, rgba(185, 139, 90, .05), transparent 50%),
+    radial-gradient(circle at 50% 90%, rgba(140, 100, 60, .05), transparent 60%);
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+}
+input, select, textarea { user-select: text; -webkit-user-select: text; }
+h1, h2, h3 { margin: 0; font-family: var(--police-titre); font-weight: 600; }
+p { margin: 0; }
+button { font-family: inherit; }
+img, canvas { max-width: 100%; }
+
+/* =========================================================================
+   Structure générale
+   ========================================================================= */
+
+#app {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+/* --- HUD (en-tête) --- */
+#hud.hud {
+  flex: none;
+  padding: max(10px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) 8px max(14px, env(safe-area-inset-left));
+  background: var(--kraft);
+  border-bottom: 1px solid var(--encre-15);
+  box-shadow: 0 3px 0 var(--ombre-basse), 0 8px 14px var(--ombre-portee);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+  z-index: 5;
+}
+
+.hud-ligne { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.hud-salle { font-family: var(--police-titre); font-size: 1rem; letter-spacing: .02em; }
+.hud-coups {
+  font-size: 1.6rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-jauge { display: flex; gap: 6px; flex-wrap: wrap; }
+.jauge-pastille {
+  width: 14px; height: 14px; border-radius: 50%; flex: none;
+  background: var(--kraft);
+  border: 1.5px solid var(--encre-35);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, .5), 0 1px 0 var(--ombre-portee);
+}
+.jauge-pastille.allumee {
+  background: linear-gradient(180deg, var(--accent-clair), var(--accent));
+  border-color: rgba(43, 33, 24, .25);
+}
+
+.hud-xp { display: flex; align-items: center; gap: 8px; }
+.hud-niveau { font-size: .85rem; font-weight: 600; white-space: nowrap; }
+.barre-xp {
+  flex: 1;
+  height: 10px;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #c99a63, #a97c4c);
+  box-shadow: inset 0 1px 3px rgba(60, 40, 20, .45);
+  overflow: hidden;
+}
+.barre-xp .remplissage {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(180deg, var(--accent-clair), var(--accent));
+  border-radius: 6px 0 0 6px;
+  transition: width .3s ease;
+}
+
+.hud-objectif { display: flex; align-items: center; gap: 6px; font-size: .9rem; }
+
+.hud-annonce {
+  font-size: .85rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.hud-entrees { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.hud-entrees-label { font-size: .78rem; opacity: .75; }
+.hud-entrees-billes { display: flex; gap: 4px; }
+
+.hud-effets { display: flex; gap: 6px; flex-wrap: wrap; }
+.hud-effet {
+  font-size: .75rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--papier);
+  border: 1px solid var(--encre-15);
+}
+
+/* --- Bille de verre miniature (pastilles de couleur d'objectif / entrées) --- */
+.bille-mini {
+  --c: #999999;
+  width: 16px; height: 16px; border-radius: 50%; flex: none;
+  background:
+    radial-gradient(circle at 32% 26%, rgba(255, 255, 255, .95), rgba(255, 255, 255, 0) 42%),
+    radial-gradient(circle at 68% 72%, rgba(0, 0, 0, .28), rgba(0, 0, 0, 0) 55%),
+    var(--c);
+  box-shadow: 0 1px 2px rgba(60, 40, 20, .35), inset 0 0 0 1px rgba(0, 0, 0, .08);
+}
+
+/* --- Scène / plateau --- */
+#scene {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  display: flex;
+  background: var(--papier);
+}
+#plateau {
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+}
+
+/* --- Commandes (footer) --- */
+#commandes {
+  flex: none;
+  display: flex;
+  gap: 10px;
+  padding: 10px max(14px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+  background: var(--kraft);
+  border-top: 1px solid var(--encre-15);
+  box-shadow: 0 -3px 0 var(--ombre-basse), 0 -8px 14px var(--ombre-portee);
+  position: relative;
+  z-index: 5;
+}
+#commandes .touche { flex: 1 1 0; font-size: 1.4rem; }
+
+/* =========================================================================
+   Boutons — touches en bois
+   ========================================================================= */
+
+.touche {
+  min-height: 48px;
+  min-width: 48px;
+  padding: .6em 1.1em;
+  border: none;
+  border-radius: var(--rayon-petit);
+  background: linear-gradient(180deg, var(--bois-clair), var(--bois-fonce));
+  color: var(--encre);
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  box-shadow: 0 4px 0 rgba(120, 80, 40, .55), 0 8px 14px var(--ombre-portee);
+  transition: transform .08s ease, box-shadow .08s ease, opacity .15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.touche:hover { filter: brightness(1.03); }
+.touche:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 rgba(120, 80, 40, .55), 0 3px 6px var(--ombre-portee);
+}
+.touche:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 2px 0 rgba(120, 80, 40, .3);
+}
+.touche-accent {
+  background: linear-gradient(180deg, var(--accent-clair), var(--accent));
+  color: #fff8ee;
+  box-shadow: 0 4px 0 #a5570f, 0 8px 14px var(--ombre-portee);
+}
+.touche-accent:active { box-shadow: 0 1px 0 #a5570f, 0 3px 6px var(--ombre-portee); }
+.touche-large { width: 100%; font-size: 1.1rem; padding: .8em 1.2em; }
+
+/* =========================================================================
+   Couches plein écran (menu, attente, test) — papier opaque, jamais de flou
+   ========================================================================= */
+
+.couche {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: var(--papier);
+  overflow-y: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding:
+    max(20px, env(safe-area-inset-top))
+    max(16px, env(safe-area-inset-right))
+    max(20px, env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-left));
+}
+
+/* --- Menu --- */
+.panneau-menu { width: min(420px, 100%); text-align: center; }
+.titre-vertige {
+  font-size: clamp(2.4rem, 12vw, 3.6rem);
+  letter-spacing: .04em;
+  margin: 0 0 .3rem;
+}
+.titre-vertige::after {
+  content: '';
+  display: block;
+  width: 130px; height: 6px;
+  margin: .6rem auto 1.4rem;
+  border-radius: 3px;
+  background: linear-gradient(180deg, var(--bois-clair), var(--bois-fonce));
+  box-shadow: 0 2px 0 var(--ombre-basse);
+}
+.menu-boutons { display: flex; flex-direction: column; gap: 12px; margin-bottom: 18px; }
+.menu-son {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  font-size: .95rem; margin-bottom: 20px; cursor: pointer;
+}
+.menu-son input { width: 18px; height: 18px; }
+.menu-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  background: var(--kraft);
+  border: 1px solid var(--encre-15);
+  border-radius: var(--rayon);
+  box-shadow: 0 3px 0 var(--ombre-basse), 0 8px 18px var(--ombre-portee);
+  padding: 14px 10px;
+}
+.menu-stat { display: flex; flex-direction: column; gap: 4px; }
+.menu-stat-label { font-size: .7rem; opacity: .7; }
+.menu-stat-valeur { font-size: 1.15rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* --- Attente (cartes de choix / fin de salle / fin de run) --- */
+.panneau-attente { width: min(480px, 100%); text-align: center; }
+.attente-titre { font-size: clamp(1.6rem, 7vw, 2.2rem); margin-bottom: .3rem; }
+.attente-soustitre { font-size: 1rem; opacity: .85; margin-bottom: 1.2rem; }
+.grille-cartes {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 1fr;
+  margin: 1.2rem 0;
+}
+@media (min-width: 520px) {
+  .grille-cartes { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+}
+.attente-pied { display: flex; justify-content: center; gap: 12px; margin-top: 8px; }
+
+/* --- Carte (jeton de choix, carton posé sur la table) --- */
+.carte {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: var(--encre);
+  cursor: pointer;
+  background: var(--kraft);
+  border: 1px solid var(--encre-15);
+  border-radius: var(--rayon);
+  box-shadow: 0 3px 0 var(--ombre-basse), 0 8px 18px var(--ombre-portee);
+  padding: 14px 16px;
+  transform: rotate(-1deg);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.carte:nth-child(even) { transform: rotate(1deg); }
+.carte:hover, .carte:focus-visible {
+  transform: rotate(0deg) translateY(-3px);
+  box-shadow: 0 5px 0 var(--ombre-basse), 0 14px 22px var(--ombre-portee);
+  outline: none;
+}
+.carte:active { transform: rotate(0deg) translateY(0); }
+.carte h3 { font-size: 1.02rem; margin-bottom: 4px; }
+.carte p { font-size: .85rem; opacity: .85; line-height: 1.35; }
+.carte-rare { border-left: 5px solid var(--rare); }
+.carte-epique { border-left: 5px solid var(--accent); }
+
+.pastille-rarete {
+  display: inline-block;
+  width: 10px; height: 10px; border-radius: 50%;
+  margin-bottom: 6px;
+  background: var(--encre);
+}
+.pastille-rare { background: var(--rare); }
+.pastille-epique { background: var(--accent); }
+
+/* =========================================================================
+   Toasts
+   ========================================================================= */
+
+.couche-toasts {
+  position: fixed;
+  left: 0; right: 0;
+  bottom: max(72px, calc(64px + env(safe-area-inset-bottom)));
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+  padding: 0 16px;
+}
+.toast {
+  background: var(--kraft);
+  border: 1px solid var(--encre-15);
+  border-radius: 999px;
+  box-shadow: 0 3px 0 var(--ombre-basse), 0 8px 16px var(--ombre-portee);
+  padding: 8px 18px;
+  font-size: .9rem;
+  max-width: 90vw;
+  text-align: center;
+  animation: toast-in .18s ease-out;
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* =========================================================================
+   Panneau Mode Test
+   ========================================================================= */
+
+.panneau-test { width: min(480px, 100%); }
+.panneau-test h2 { text-align: center; margin-bottom: 1rem; font-size: 1.6rem; }
+.test-champs { display: flex; flex-direction: column; gap: 14px; }
+.test-champ, .test-champ-large {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--kraft);
+  border: 1px solid var(--encre-15);
+  border-radius: var(--rayon-petit);
+  padding: 10px 12px;
+  box-shadow: 0 2px 0 var(--ombre-basse), 0 5px 10px var(--ombre-portee);
+}
+.test-champ > span:first-child, .test-champ-large > span:first-child {
+  font-size: .78rem; font-weight: 600; opacity: .75; text-transform: uppercase; letter-spacing: .04em;
+}
+.test-champ select, .test-champ input[type="number"] {
+  min-height: 40px;
+  border-radius: 8px;
+  border: 1px solid var(--encre-15);
+  background: var(--papier);
+  color: var(--encre);
+  padding: 4px 8px;
+  font-size: 1rem;
+}
+.test-champ input[type="range"] { width: 100%; }
+.test-valeur { font-variant-numeric: tabular-nums; font-size: .85rem; opacity: .8; }
+.test-case-defaut { display: flex; align-items: center; gap: 6px; font-size: .82rem; }
+
+.test-competences { display: flex; flex-wrap: wrap; gap: 8px; }
+.test-competence {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--papier);
+  border: 1.5px solid var(--encre-15);
+  font-size: .82rem;
+  cursor: pointer;
+}
+.test-competence.pastille-rare { border-color: var(--rare); }
+.test-competence.pastille-epique { border-color: var(--accent); }
+
+.test-pied { display: flex; gap: 12px; margin-top: 18px; }
+.test-pied .touche { flex: 1; }
+
+/* =========================================================================
+   Divers
+   ========================================================================= */
+
+@media (max-width: 380px) {
+  .hud-coups { font-size: 1.35rem; }
+  .titre-vertige { font-size: 2.1rem; }
+}
