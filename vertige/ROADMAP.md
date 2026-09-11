@@ -6,11 +6,11 @@ Tableau de bord du projet. Tenu à jour en direct. Voir `CLAUDE.md` pour le cadr
 
 ## À faire maintenant
 
-1. Intégrer le rendu (agent en cours), lancer `npm run smoke:shot`, regarder les captures, corriger.
-2. Jouer un run complet à la main (Martin) : ressenti de la rotation, de la chute, des sons.
-3. Audit code + audit gameplay de fin de phase 1 (agents), appliquer les bloquants.
-4. Équilibrer avec `npm run sim` : Puits (46 % avec un bot qui ignore la couleur), Pendule.
-5. Trier `docs/IDEES.md` (agent idées) dans « Idées en plus » ci-dessous.
+1. Restyle « Cartoon pop » (Toon Blast + juice Candy Crush) : rendu et UI par agents, en cours.
+2. `npm run smoke:shot`, regarder les captures, itérer jusqu'à ce que ça donne envie de jouer.
+3. Jouer un run complet à la main (Martin) : ressenti de la rotation, de la chute, des sons.
+4. Audit code + audit gameplay de fin de phase 1 (agents), appliquer les bloquants.
+5. Équilibrer avec `npm run sim` : Puits, Pendule, boucle Propagation + Avidité.
 
 ---
 
@@ -40,10 +40,12 @@ Décisions D0-D6 tranchées le 2026-09-11 (voir CLAUDE.md §12).
 - [x] Jauge de rotation (+1 par groupe de 6+), coût en donnée
 - [x] Sauvegarde du run (localStorage) et profil méta minimal
 - [x] Simulateur headless `tools/sim.mjs`, tests `node --test` (8)
-- [x] UI HTML/CSS style Atelier, panneau mode Test (salle, compétences, seed, difficulté, couleurs, jauge)
+- [x] UI HTML/CSS, panneau mode Test (salle, compétences, seed, difficulté, couleurs, jauge)
+- [ ] Restyle « Cartoon pop » de l'UI (agent en cours)
 - [x] Audio Web Audio en synthèse (13 familles de sons)
-- [ ] Rendu Canvas 2D style Atelier (agent en cours)
-- [ ] Test de fumée Playwright vert (`npm run smoke`)
+- [x] Rendu Canvas 2D (première version « Atelier », rejetée : trop sobre)
+- [ ] Restyle « Cartoon pop » du rendu + juice (textes flottants, combos, confettis, squash) (agent en cours)
+- [x] Test de fumée Playwright vert (`npm run smoke`) : 24 taps, 6 rotations, 10 choix, 0 erreur
 - [ ] Captures vérifiées à l'œil, ressenti validé par Martin
 - [ ] Audit code + audit gameplay de fin de phase
 
@@ -65,6 +67,10 @@ Décisions D0-D6 tranchées le 2026-09-11 (voir CLAUDE.md §12).
 
 ## Bugs
 
+- [x] (bloquant) Plateau minuscule : la taille CSS du canvas n'était pas suivie après la mise en page — ResizeObserver dans le rendu + resize fenêtre (2026-09-11).
+- [x] (mineur) HUD : un effet valable toute la salle affichait « null » (2026-09-11).
+- [x] (mineur) Après « Salle terminée », l'écran de choix de compétence ne s'affichait pas (journal vide non traité dans main.js) (2026-09-11).
+- [ ] (important) Équilibrage : Propagation verte + Avidité = coups quasi infinis et XP ×30 sur le Puits. Plafonner l'XP par salle ou Avidité une fois par tour.
 - [ ] (mineur) `tools/sim.mjs` : la politique gourmande ignore l'objectif couleur, ce qui sous-estime le Puits.
 
 ---

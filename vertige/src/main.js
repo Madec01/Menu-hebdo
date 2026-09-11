@@ -71,10 +71,11 @@ function demarrer(evenements) {
 }
 
 async function jouer(evenements) {
-  if (!evenements || !evenements.length) return;
+  evenements = evenements ?? [];
   occupe = true;
   for (const ev of evenements) if (ev.t === 'message') ui.message(ev.texte);
-  try { await rendu.jouer(evenements, { audio }); } catch (err) { console.error('rendu', err); rendu.synchroniser(run.etat); }
+  if (evenements.some((ev) => ev.t === 'salle')) rendu.synchroniser(run.etat); // nouvelle salle : le rendu repart de l'état
+  if (evenements.length) { try { await rendu.jouer(evenements, { audio }); } catch (err) { console.error('rendu', err); rendu.synchroniser(run.etat); } }
   occupe = false;
   if (!run) return;
   ui.majHud(run.etat);
@@ -114,6 +115,7 @@ function quitter() {
 }
 
 audio.muet(profil.muet);
+window.addEventListener('resize', () => rendu.redimensionner());
 document.addEventListener('pointerdown', () => audio.init(), { once: true });
 ui.afficherMenu({ profil, runEnCours: !!localStorage.getItem(CLE_RUN) });
 

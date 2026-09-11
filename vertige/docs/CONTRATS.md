@@ -25,25 +25,29 @@ Web Audio maison, aucune dépendance à l'exécution.
 - `tombe` : bille, pierre, bulle, fusée tombent ; **ballon ne tombe pas** (il flotte, sert de sol, monte d'une case
   contre la gravité à chaque rotation, éclate au plafond ou après 2 activations).
 
-## 2. Style « Atelier » et couleurs (src/data/couleurs.js)
+## 2. Style « Cartoon pop » et couleurs (src/data/couleurs.js)
 
-**Décision 2026-09-11 : pas de néon, pas de dark, pas de glassmorphism.** Direction artistique : un **jouet en bois posé sur du papier**.
-Le plateau est un plateau en bois clair avec rebord et ombre douce ; les billes sont des **billes de verre** (couleur saturée,
-reflet spéculaire haut-gauche, ombre portée courte, aucun halo lumineux) ; les panneaux d'interface sont du **papier kraft / carton**
-(aplat chaud, ombre portée nette, coins légèrement arrondis, pas de flou ni de transparence) ; typographie : titres en serif d'affichage
-(Georgia / « Iowan Old Style » / serif), texte en sans système ; encre `#2b2118`. Particules = éclats de verre et confettis de papier avec gravité,
-jamais de lueur additive. Ambiance : lumière chaude, tactile, satisfaisante — Monument Valley / jouets Grimm's plutôt que Tron.
+**Décision 2026-09-11 (remplace « Atelier », jugé trop sobre par Martin).** Référence : **Toon Blast** pour le dessin, **Candy Crush** pour le juice.
+Tout est saturé, contrasté, cerné : contours épais couleur encre `#1d1b3a` sur chaque bille, chaque panneau, chaque bouton, chaque titre.
+Rien de beige, rien de sobre, rien de néon.
 
-| index | nom | hex (verre) |
-|---|---|---|
-| 0 | rouge cerise | `#e63946` |
-| 1 | vert prairie | `#3fa34d` |
-| 2 | bleu cobalt | `#2a6fdb` |
-| 3 | jaune ambre | `#f4b400` |
-| 4 | violet prune | `#8e44ad` |
-| 5 | turquoise | `#1aa7b8` |
+- **Fond** : ciel bleu vif en dégradé (`#38b6ff` en haut → `#8fe1ff` en bas), nuages blancs cartoon (formes de bulles superposées, contour encre fin) qui dérivent lentement, quelques étoiles/confettis qui flottent. Un léger éventail de rayons blancs à 8 % derrière le plateau.
+- **Plateau** : cadre épais peint (jaune-orange `#ffb347` avec bord clair `#ffd27a` en haut, bord foncé `#e0801a` en bas, contour encre 3 px, coins très arrondis, quatre boulons/étoiles aux coins). Intérieur : champ indigo `#3a2f8f` → `#2b2270` en bas avec cuvettes en losange un ton plus clair. Le contraste champ sombre / billes claires est ce qui fait « pop ».
+- **Billes** : grosses (elles remplissent 88 % de la case), aplat saturé + dégradé léger, **contour encre 2,5 px**, gros reflet blanc en haut-gauche (goutte allongée) + petit point, ombre interne au bord bas-droit, petite ombre portée sur le champ. Style « gomme brillante ».
+- **Spéciales** : bombe = bombe noire cartoon avec mèche et étincelle animée ; ligne = bille avec fusée/flèche blanche épaisse alignée sur la gravité à l'écran ; croix = étoile à 4 branches blanche sur la bille ; couleur = sucette arc-en-ciel (spirale 6 couleurs) qui tourne lentement. Pierre : rocher gris-bleu cartoon avec facettes et contour. Bulle : sphère transparente avec contour blanc et reflet, contenu miniature. Ballon : ballon rouge/rose brillant avec nœud et ficelle, contour encre. Fusée : fusée cartoon rouge et blanche pointant vers le bas de l'écran.
+- **Juice (obligatoire)** : texte flottant `+XP` à chaque salve (police grasse blanche cernée d'encre, monte et s'efface) ; mots de combo sur la case tapée selon la taille (4 « Joli ! », 6 « Super ! », 8 « Énorme ! », 10+ « VERTIGE ! ») en très gros, avec rebond élastique et rotation ±6° ; confettis multicolores (rectangles qui tournent, gravité) + étoiles à 4 branches à chaque destruction ; anneau d'onde de choc sur les explosions ; le plateau entier fait un petit « squash » élastique à l'atterrissage des billes et à la fin d'une rotation ; screenshake proportionnel ; les billes rebondissent (restitution 0,25) et se déforment légèrement (squash vertical 10 %) à l'impact.
+- **Interface** : boutons « bonbon » 3D (dégradé clair→saturé, bande inférieure foncée de 6 px, contour encre 3 px, texte blanc gras cerné d'encre, enfoncement au :active) — vert `#5ad341` pour l'action principale, orange `#ff9f1c`, rose `#ff5fa2`, bleu `#2f8cff`. Panneaux et cartes : blanc cassé `#fff8e7`, contour encre 3 px, coins 20 px, ombre portée nette encre à 25 %, bandeau de titre coloré. Titres en police ronde et grasse système (`"Arial Rounded MT Bold", "Trebuchet MS", "Nunito", "Segoe UI", sans-serif`, 900) avec `-webkit-text-stroke` encre et `paint-order: stroke fill`. HUD : compteurs dans des badges (coups dans un badge rouge, jauge = étoiles jaunes, XP = barre verte cernée avec le niveau dans une pastille, objectif dans un badge bleu avec icône).
 
-Papier (fond) `#f4ecdd` · bois clair `#d9b382` · bois foncé / rebord `#b98b5a` · kraft (panneaux) `#efe3c9` · encre `#2b2118` · accent orange brûlé `#d9772b` · ombres `rgba(60,40,20,.25)`.
+| index | nom | hex | contour |
+|---|---|---|---|
+| 0 | rouge | `#ff3b5c` | `#8a1030` |
+| 1 | vert | `#3ad24f` | `#12702a` |
+| 2 | bleu | `#2f8cff` | `#123f9a` |
+| 3 | jaune | `#ffcc1f` | `#9a6a00` |
+| 4 | violet | `#b04cff` | `#4f1a8a` |
+| 5 | cyan | `#22d3ee` | `#0b6a7a` |
+
+Encre `#1d1b3a` · ciel `#38b6ff`/`#8fe1ff` · champ du plateau `#3a2f8f`/`#2b2270` · cadre `#ffb347`/`#e0801a` · panneau `#fff8e7` · vert action `#5ad341` · orange `#ff9f1c` · rose `#ff5fa2`.
 
 ## 3. API du moteur (src/moteur/run.js) — pur JS, aucun DOM, déterministe
 
@@ -93,7 +97,7 @@ Liste ordonnée ; le rendu la joue séquentiellement, l'UI et l'audio y réagiss
 | `competence` | `id,nom` | une compétence a été prise |
 | `objectif` | `progres,cible,atteint` | progression de l'objectif |
 | `coups` | `coups,jauge` | ressources mises à jour |
-| `salle` | `index,nom` | nouvelle salle : le rendu doit `synchroniser(etat)` avec une animation d'entrée |
+| `salle` | `index,nom` | nouvelle salle : l'orchestrateur appelle `synchroniser(etat)` avant `jouer()` ; le rendu joue une entrée en cascade |
 | `finSalle` | `victoire,raison` | la salle est terminée |
 | `finRun` | `victoire` | le run est terminé |
 | `message` | `texte,duree?` | texte flottant |
@@ -114,7 +118,7 @@ rendu.detruire()
 - Le rendu convertit pointeur → case plateau en inversant la rotation. Il ne connaît rien au moteur : il ne lit que `etat` et les événements.
 - Chute : intégrateur visuel par bille (accélération, rebond à l'arrivée avec restitution ~0.25), en unités de cases le long de `G`. Durée cible d'une chute complète ≈ 350 ms.
 - Rotation : le conteneur tourne de `sens*90°` en ≈ 380 ms (ease in-out), l'échelle s'adapte au nouveau rapport largeur/hauteur pendant la rotation.
-- Halo néon : sprite pré-rendu par couleur (dégradé radial) sur canvas hors écran, dessiné en `globalCompositeOperation='lighter'`. Jamais de `filter` par frame.
+- Sprites pré-rendus par couleur sur canvas hors écran (billes cerclées, plateau), dessinés en `source-over`. Jamais de `filter` par frame. Les textes flottants et les mots de combo sont dessinés dans le canvas (police système grasse, contour encre).
 - Particules : pool fixe (≤ 600), zéro allocation par frame. Screenshake proportionnel à la taille de la salve, plafonné.
 - Icônes : `ligne` et `fusee` pointent le long de la gravité **à l'écran** (donc contre-rotation par rapport au plateau).
 
