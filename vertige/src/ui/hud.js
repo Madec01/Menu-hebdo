@@ -38,8 +38,9 @@ export function creerHud(elHud) {
 
   const xpEl = document.createElement('div');
   xpEl.className = 'hud-xp';
+  // Niveau affiché dans une pastille ronde (style Cartoon pop) plutôt qu'en texte.
   const niveauEl = document.createElement('span');
-  niveauEl.className = 'hud-niveau';
+  niveauEl.className = 'niveau-pastille';
   const barreXp = document.createElement('div');
   barreXp.className = 'barre-xp';
   const remplissageXp = document.createElement('div');
@@ -83,6 +84,7 @@ export function creerHud(elHud) {
       for (let i = 0; i < jaugeMax; i += 1) {
         const pastille = document.createElement('span');
         pastille.className = 'jauge-pastille';
+        pastille.textContent = '★'; // étoile allumée/éteinte selon .allumee (CSS)
         jaugeEl.appendChild(pastille);
       }
       jaugeMaxPrecedent = jaugeMax;
@@ -100,7 +102,8 @@ export function creerHud(elHud) {
       majJauge(etat.jauge ?? 0, etat.jaugeMax ?? 0);
 
       const niveau = etat.niveau ?? 1;
-      niveauEl.textContent = `Niveau ${niveau} / 10`;
+      niveauEl.textContent = String(niveau);
+      niveauEl.setAttribute('aria-label', `Niveau ${niveau} sur 10`);
       const bas = etat.xpNiveau ?? 0, haut = etat.xpProchain;
       const fraction = haut === null || haut === undefined ? 1 : (etat.xpSalle - bas) / Math.max(1, haut - bas);
       remplissageXp.style.width = `${Math.min(100, Math.max(0, fraction * 100))}%`;
@@ -143,7 +146,7 @@ export function creerHud(elHud) {
       effets.forEach((effet) => {
         const chip = document.createElement('span');
         chip.className = 'hud-effet';
-        chip.textContent = `${effet.nom} · ${effet.restant}`;
+        chip.textContent = effet.restant === null || effet.restant === undefined ? `${effet.nom} · salle` : `${effet.nom} · ${effet.restant} tour${effet.restant > 1 ? 's' : ''}`;
         effetsEl.appendChild(chip);
       });
     },

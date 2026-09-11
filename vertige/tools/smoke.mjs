@@ -54,7 +54,7 @@ async function main() {
   await page.waitForFunction(() => window.vertige.run !== null);
 
   const attendre = () => page.waitForFunction(() => !window.vertige.occupe, null, { timeout: 20000 });
-  let taps = 0, rotations = 0, choix = 0, shotsNiveau = 0;
+  let taps = 0, rotations = 0, choix = 0, shotsNiveau = 0, shotJeu = 0;
   for (let i = 0; i < 40; i++) {
     await attendre();
     const etat = await page.evaluate(() => {
@@ -72,7 +72,7 @@ async function main() {
       await boutons.first().click(); choix++;
       continue;
     }
-    if (i === 6) await shot('02-jeu');
+    if (i >= 3 && !shotJeu++) await shot('02-jeu');
     if (i % 5 === 4 && etat.jauge > 0) { await page.locator('#btn-rotation-droite').click(); rotations++; continue; }
     if (!etat.meilleur) { await page.locator('#btn-rotation-gauche').click(); rotations++; continue; }
     // Un vrai tap par le pointeur : la case est projetée comme le rendu le fait (centrage, marge 6 %, rotation).

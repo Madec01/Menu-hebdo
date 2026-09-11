@@ -78,7 +78,7 @@ export function creerUI(racine, actions) {
 
     const btnTest = doc.createElement('button');
     btnTest.type = 'button';
-    btnTest.className = 'touche touche-large';
+    btnTest.className = 'touche touche-orange touche-large';
     btnTest.textContent = 'Mode Test';
     // Le contrat §7 ne définit pas d'action dédiée pour ouvrir le panneau
     // Test depuis le menu (seul actions.lancerTest(config) existe, pour le
