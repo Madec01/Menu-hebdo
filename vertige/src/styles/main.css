@@ -98,6 +98,8 @@ body::after {
 #app {
   height: 100dvh;
   width: 100%;
+  position: relative;
+  z-index: 1; /* au-dessus des nuages CSS du body : en jeu, le canvas dessine ses propres nuages */
   display: flex;
   flex-direction: column;
 }
@@ -219,7 +221,7 @@ body::after {
 }
 
 /* --- Prochaines entrées (compétence Prévoyance) --- */
-.hud-entrees {
+.hud-entrees { overflow: hidden; max-width: 100%;
   display: flex; align-items: center; gap: 6px; flex: none;
   background: var(--panneau);
   border: 2px solid var(--encre-15);
@@ -359,7 +361,7 @@ body::after {
 }
 
 /* --- Confettis (menu uniquement), rectangles animés en CSS pur --- */
-.couche-menu { position: fixed; }
+.couche-menu { position: fixed; background: linear-gradient(180deg, var(--ciel-haut, #38b6ff), var(--ciel-bas, #8fe1ff)); /* opaque : le HUD ne transparaît pas */ }
 .couche-menu::before, .couche-menu::after {
   content: '';
   position: absolute;
@@ -617,3 +619,6 @@ body::after {
   .niveau-pastille { width: 22px; height: 22px; font-size: .72rem; }
   #commandes .touche { font-size: 1.7rem; }
 }
+
+/* Le panneau Test est plus haut que l'écran : on l'aligne en haut au lieu de le centrer (sinon le titre est coupé). */
+.couche-test { align-items: flex-start; }

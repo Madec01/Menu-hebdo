@@ -6,11 +6,11 @@ Tableau de bord du projet. Tenu à jour en direct. Voir `CLAUDE.md` pour le cadr
 
 ## À faire maintenant
 
-1. Restyle « Cartoon pop » (Toon Blast + juice Candy Crush) : rendu et UI par agents, en cours.
-2. `npm run smoke:shot`, regarder les captures, itérer jusqu'à ce que ça donne envie de jouer.
-3. Jouer un run complet à la main (Martin) : ressenti de la rotation, de la chute, des sons.
-4. Audit code + audit gameplay de fin de phase 1 (agents), appliquer les bloquants.
-5. Équilibrer avec `npm run sim` : Puits, Pendule, boucle Propagation + Avidité.
+1. Martin joue un run complet (`npm run dev`) : ressenti de la rotation, de la chute, des sons, du style.
+2. Audits code + gameplay de fin de phase 1 (agents lancés), appliquer les bloquants.
+3. Équilibrer avec `npm run sim` : Puits, Pendule, boucle Propagation + Avidité.
+4. Polish visuel selon retour de Martin : menu (plus de vie), nuages, écran de fin de run.
+5. Décider D7 (trou sous le ballon) et D8 (audio synthèse ou samples) après la partie de Martin.
 
 ---
 
@@ -41,13 +41,14 @@ Décisions D0-D6 tranchées le 2026-09-11 (voir CLAUDE.md §12).
 - [x] Sauvegarde du run (localStorage) et profil méta minimal
 - [x] Simulateur headless `tools/sim.mjs`, tests `node --test` (8)
 - [x] UI HTML/CSS, panneau mode Test (salle, compétences, seed, difficulté, couleurs, jauge)
-- [ ] Restyle « Cartoon pop » de l'UI (agent en cours)
+- [x] Restyle « Cartoon pop » de l'UI (boutons bonbon 3D, badges, cartes qui rebondissent, ciel)
 - [x] Audio Web Audio en synthèse (13 familles de sons)
 - [x] Rendu Canvas 2D (première version « Atelier », rejetée : trop sobre)
-- [ ] Restyle « Cartoon pop » du rendu + juice (textes flottants, combos, confettis, squash) (agent en cours)
+- [x] Restyle « Cartoon pop » du rendu + juice (textes flottants +XP, mots de combo, confettis, ondes de choc, squash du plateau, nuages)
 - [x] Test de fumée Playwright vert (`npm run smoke`) : 24 taps, 6 rotations, 10 choix, 0 erreur
-- [ ] Captures vérifiées à l'œil, ressenti validé par Martin
-- [ ] Audit code + audit gameplay de fin de phase
+- [x] Captures vérifiées à l'œil (menu, jeu, niveau, fin de salle, mode test)
+- [ ] Ressenti validé par Martin en jouant
+- [ ] Audit code + audit gameplay de fin de phase (agents lancés le 2026-09-11)
 
 ## Phase 2 — Le run
 

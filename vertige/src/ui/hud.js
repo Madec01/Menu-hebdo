@@ -126,7 +126,7 @@ export function creerHud(elHud) {
       }
 
       const aPrevoyance = etat.competences?.includes('prevoyance');
-      const entrees = etat.prochainesEntrees ?? [];
+      const entrees = (etat.prochainesEntrees ?? []).slice(0, 8);
       if (aPrevoyance && entrees.length) {
         entreesEl.hidden = false;
         entreesBilles.innerHTML = '';
