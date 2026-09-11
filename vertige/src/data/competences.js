@@ -45,10 +45,14 @@ export const COMPETENCES = [
       }, src('domino'));
     } },
   { id: 'avidite', nom: 'Avidité', rarete: 'commun', stackable: false,
-    desc: '+1 coup par groupe de 7 ou plus.',
+    desc: '+1 coup par groupe de 7 ou plus (3 fois par salle au plus).',
     installer(ctx) {
       ctx.bus.on('groupeDetruit', (c, evt) => {
         if (evt.taille + 1 < 7) return; // +1 : la bille tapée devenue spéciale
+        // Plafond par salle : avec Propagation verte, les coups devenaient infinis (audit gameplay 2026-09-11).
+        const cle = 'avidite:' + c.etat.salleIndex;
+        if ((c.memo[cle] ?? 0) >= 3) return;
+        c.memo[cle] = (c.memo[cle] ?? 0) + 1;
         c.etat.coups++; c.emettre({ t: 'coups', coups: c.etat.coups, jauge: c.etat.jauge }); c.emettre({ t: 'message', texte: 'Avidité : +1 coup' });
       }, src('avidite'));
     } },

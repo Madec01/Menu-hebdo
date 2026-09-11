@@ -7,10 +7,11 @@ Tableau de bord du projet. Tenu à jour en direct. Voir `CLAUDE.md` pour le cadr
 ## À faire maintenant
 
 1. Martin joue un run complet (`npm run dev`) : ressenti de la rotation, de la chute, des sons, du style.
-2. Audits code + gameplay de fin de phase 1 (agents lancés), appliquer les bloquants.
-3. Équilibrer avec `npm run sim` : Puits, Pendule, boucle Propagation + Avidité.
-4. Polish visuel selon retour de Martin : menu (plus de vie), nuages, écran de fin de run.
-5. Décider D7 (trou sous le ballon) et D8 (audio synthèse ou samples) après la partie de Martin.
+2. Audit code (agent en cours) : appliquer les bloquants.
+3. Feel du tap : jouer chute et remplissage en parallèle dans le rendu (cible < 450 ms par tap simple, audit gameplay).
+4. Télégraphe de rotation : brancher `previsualiserRotation` (fantôme de la chute à l'appui long).
+5. Polish visuel selon retour de Martin : menu (plus de vie), écran de fin de run avec stats.
+6. Décider D7 (trou sous le ballon), D8 (audio synthèse ou samples), D9-D11 ci-dessous après la partie de Martin.
 
 ---
 
@@ -20,6 +21,10 @@ Tableau de bord du projet. Tenu à jour en direct. Voir `CLAUDE.md` pour le cadr
 |---|---|---|
 | D7 | Le trou sous un ballon (il flotte et fait sol) reste vide jusqu'à la prochaine rotation. Garder ce comportement ou faire tomber le ballon comme les autres ? | Garder : c'est ce qui rend la rotation utile autour d'un ballon. À juger en jouant. |
 | D8 | Audio en synthèse Web Audio (aucun fichier). Si ça sonne « 8-bit » à l'oreille de Martin, passer aux samples CC0 (Kenney) en phase 2 ? | Écouter d'abord. |
+
+| D9 | Audit gameplay : jauge de rotation 3 → 2 et bonus XP ×1,2 sur le tap qui suit une rotation, pour que tourner devienne une décision (le bot tourne 1 fois pour 25 taps). | Oui aux deux, après ton ressenti en jouant. |
+| D10 | Audit gameplay : seuil croix 8 → 7 (croix = 3,5 % des spéciales créées). | Attendre : à revoir avec les compétences de conversion de la phase 2. |
+| D11 | Audit gameplay : mettre fusées et ballons dès le Vestibule et le Puits pour que la rotation serve dès la première salle. | Oui, une fusée dans le Vestibule, un ballon dans le Puits. |
 
 Décisions D0-D6 tranchées le 2026-09-11 (voir CLAUDE.md §12).
 
@@ -71,7 +76,8 @@ Décisions D0-D6 tranchées le 2026-09-11 (voir CLAUDE.md §12).
 - [x] (bloquant) Plateau minuscule : la taille CSS du canvas n'était pas suivie après la mise en page — ResizeObserver dans le rendu + resize fenêtre (2026-09-11).
 - [x] (mineur) HUD : un effet valable toute la salle affichait « null » (2026-09-11).
 - [x] (mineur) Après « Salle terminée », l'écran de choix de compétence ne s'affichait pas (journal vide non traité dans main.js) (2026-09-11).
-- [ ] (important) Équilibrage : Propagation verte + Avidité = coups quasi infinis et XP ×30 sur le Puits. Plafonner l'XP par salle ou Avidité une fois par tour.
+- [x] (important) Équilibrage : Propagation verte + Avidité = coups quasi infinis. Avidité plafonnée à 3 par salle ; Propagation limitée aux groupes tapés (2026-09-11).
+- [x] (important) Le Puits (salle 2) plus dur que le boss : coups 22 → 26 ; Marée haute triviale : cible 8 → 12 (audit gameplay, 2026-09-11).
 - [ ] (mineur) `tools/sim.mjs` : la politique gourmande ignore l'objectif couleur, ce qui sous-estime le Puits.
 
 ---
